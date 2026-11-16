@@ -22,7 +22,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
       <head><BrandStyle brand={s?.brand} /></head>
       <body>
         <Landing />
-        <header className="top"><Link href="/" className="brand"><Logo brand={s?.brand} name={s?.name ?? 'Store'} /></Link><nav><Link href="/bag">Bag</Link></nav></header>
+        <header className="top"><Link href="/" className="brand"><Logo brand={s?.brand} name={s?.name ?? 'Store'} fallback={s?.logo ?? null} /></Link><nav><Link href="/bag">Bag</Link></nav></header>
         <main>{children}</main>
         {s ? (
           <footer className="legal">

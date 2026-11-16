@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import { brandFamily } from './fonts'
+import { brandFamily } from './brand-fonts'
 import { PAPER } from '@/domains/documents/paper'
 import { FIELD_HEIGHT, type BrandRecord } from '@/domains/brand/record'
 import { formatInr } from '@/lib/format'

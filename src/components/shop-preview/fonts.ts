@@ -16,11 +16,6 @@ const schibsted = localFont({ src: '../fonts/schibsted-grotesk/schibsted-grotesk
 const schibstedExt = localFont({ src: '../fonts/schibsted-grotesk/schibsted-grotesk-latin-ext-600-normal.woff2', weight: '600', display: 'swap', preload: false, adjustFontFallback: false, variable: '--font-store-schibsted-ext',
   declarations: [{ prop: 'unicode-range', value: 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF' }] })
 
-// One brand record (one-address P1·8, owner call 2): Mukta and Tiro Devanagari Hindi join the list for code-site stores'
-// brand previews. Self-hosted the same way (Fontsource 5.3.0, OFL 1.1, 2026-11-16), Latin only, never preloaded.
-const mukta = localFont({ src: [{ path: '../fonts/mukta/mukta-latin-400-normal.woff2', weight: '400' }, { path: '../fonts/mukta/mukta-latin-600-normal.woff2', weight: '600' }], display: 'swap', preload: false, variable: '--font-store-mukta' })
-const tiro = localFont({ src: '../fonts/tiro-devanagari-hindi/tiro-devanagari-hindi-latin-400-normal.woff2', weight: '400', display: 'swap', preload: false, variable: '--font-store-tiro' })
-
 // Hindi shop words (themes T2): the console's self-hosted Noto Sans Devanagari, used only under [lang="hi"]
 // (globals.css) and never preloaded, so an English shop never downloads it.
 const deva = localFont({ src: '../shell/noto/noto-sans-devanagari-devanagari-wght-normal.woff2', weight: '100 900', preload: false, adjustFontFallback: false, display: 'swap', variable: '--font-store-deva',
@@ -42,15 +37,4 @@ export function displayFamily(font: string): string {
   if (font === 'dmserif') return 'var(--font-store-dmserif), Georgia, serif'
   if (font === 'schibsted') return 'var(--font-store-schibsted), var(--font-store-schibsted-ext), var(--font-inter), system-ui, sans-serif'
   return 'var(--font-store-fraunces), Georgia, serif'
-}
-
-/** The brand faces' variables beside the store's (Console › Brand only; a theme shop's pages never load them). */
-export const BRAND_FONT_VARS = `${mukta.variable} ${tiro.variable}`
-
-/** A brand record's font on Frrata's own pages (Console › Brand's preview): the self-hosted face by its variable, then a
- *  fallback of its kind. What leaves Frrata (the API, the kit) names the family instead (src/domains/brand/record.ts). */
-export function brandFamily(font: string): string {
-  if (font === 'mukta') return 'var(--font-store-mukta), var(--font-store-deva), system-ui, sans-serif'
-  if (font === 'tiro') return 'var(--font-store-tiro), var(--font-store-deva), Georgia, serif'
-  return displayFamily(font)
 }

@@ -209,6 +209,9 @@ export default {
           const home = await (await fetch('http://127.0.0.1:4093/')).text()
           assert.ok(home.includes('Chanderi kurta set'), 'the starter lists the store')
           assert.ok(home.includes('Kesar Studio LLP'), 'the legal block on every page')
+          // One-address P1·7: the store's brand reaches the site through <BrandStyle> and <Logo>, never the site's own copies.
+          assert.match(home, /--brand-accent:#[0-9A-F]{6};/, 'the brand record as CSS variables')
+          assert.match(home, /<header class="top">[\s\S]*?Kesar Studio[\s\S]*?<\/header>/, 'the header draws the store (its logo, or its name)')
           const prod = await fetch('http://127.0.0.1:4093/products/chanderi-kurta-set')
           assert.equal(prod.status, 200)
           assert.ok(!(await prod.text()).includes(key), 'the key never reaches a page')

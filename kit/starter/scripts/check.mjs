@@ -12,9 +12,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 // .env*.local holds the developer's own key and git ignores it: never scanned (the check keeps keys out of git).
-const SKIP = new Set(['node_modules', '.next', '.git'])
+const SKIP = new Set(['node_modules', '.next', '.git', '.vercel', 'out'])
 const walk = (d) => readdirSync(d).flatMap((n) => { if (SKIP.has(n) || /^\.env(\..+)?\.local$/.test(n)) return []; const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
-const code = walk('.').filter((f) => /\.(tsx?|mjs|js|json|md|css|env\.example)$/.test(f) || f.endsWith('.env.example'))
+const code = walk('.').filter((f) => /\.(tsx?|jsx?|mjs|json|md|css|env\.example)$/.test(f) || f.endsWith('.env.example'))
 const problems = []
 const KEY = /frs_(pub|test)_[0-9A-Za-z]{6,}/
 for (const f of walk('.').filter((x) => !x.endsWith('.png'))) if (KEY.test(readFileSync(f, 'latin1'))) problems.push(`${f}: a Frrata key in source. Put it in .env.local (FRRATA_KEY), never in a file.`)
@@ -29,25 +29,37 @@ for (const f of code.filter((x) => /\.tsx?$/.test(x) && !x.endsWith('lib/money.t
   if (/dangerouslySetInnerHTML/.test(src)) problems.push(`${f}: dangerouslySetInnerHTML. API text is text, never HTML.`)
   if (/\/cart\?l=/.test(src)) problems.push(`${f}: a hand-made bag link. Use cartLink() (lib/cart-link.ts).`)
 }
-// 6. The brand record (one-address P1·7).
-const BRAND_FILE = /(^|[\/])(logo|brand|monogram)[^\/]*\.(svg|png|webp|jpe?g|gif|avif|ico)$/i
+// 6. The brand record (one-address P1·7). The two files the kit ships (components/frrata/) set the variables and draw the
+// logo; every other file uses them.
+const BRAND_FILE = /(^|[\\/])(logos?[\\/][^\\/]+|(logo|monogram|brand[-_]?(logo|mark))[^\\/]*)\.(svg|png|webp|jpe?g|gif|avif|ico)$/i
 for (const f of walk('.')) if (BRAND_FILE.test(f)) problems.push(`${f}: a logo file in the site. The store's logo is in Console › Brand; draw it with <Logo>.`)
-if (!/<Logo\b/.test(layout)) problems.push('app/layout.tsx: the header must draw the store\'s logo with <Logo> (components/frrata/logo.tsx).')
-if (/<svg\b/i.test(layout)) problems.push('app/layout.tsx: an inline <svg> in the header. The logo comes from the store: use <Logo>.')
+const header = /<header\b[\s\S]*?<\/header>/.exec(layout)?.[0] ?? ''
+if (!/<Logo\b/.test(header)) problems.push('app/layout.tsx: the header must draw the store\'s logo with <Logo> (components/frrata/logo.tsx).')
+if (/<svg\b/i.test(header.replace(/<nav\b[\s\S]*?<\/nav>/g, ''))) problems.push('app/layout.tsx: an inline <svg> beside the header\'s logo. The logo comes from the store: use <Logo>.')
 if (!/<BrandStyle\b/.test(layout)) problems.push('app/layout.tsx: render <BrandStyle brand={shop.brand} /> once, so colours and fonts come from the store.')
-const OWN = /(^|[\/])components[\/]frrata[\/]/
-const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-for (const f of code.filter((x) => /\.(css|tsx?)$/.test(x) && !OWN.test(x) && !x.endsWith('lib/cart-link.ts'))) {
+const KIT_OWN = new Set(['components/frrata/logo.tsx', 'components/frrata/brand-style.tsx'])
+const rel = (f) => f.replace(/\\/g, '/').replace(/^\.\//, '')
+// Comments are blanked with their line breaks kept, so a problem's line number stays right.
+const blank = (m) => m.replace(/[^\n]/g, '')
+const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/^\s*\/\/.*$/gm, blank)
+const COLOUR_FN = /\b(rgba?|hsla?|oklch|oklab|hwb|lab|lch)\(/
+const GENERIC = /^(inherit|initial|unset|revert|serif|sans-serif|monospace|ui-monospace|ui-sans-serif|ui-serif|system-ui|cursive|emoji|math)$/
+const fontOk = (v) => /var\(--brand-(headings|body)\)/.test(v) || v.split(',').every((x) => GENERIC.test(x.trim().replace(/['"]/g, '')))
+for (const f of code.filter((x) => /\.(css|jsx?|tsx?)$/.test(x) && !KIT_OWN.has(rel(x)) && !x.endsWith('lib/cart-link.ts'))) {
   const src = stripComments(readFileSync(f, 'utf8'))
   src.split('\n').forEach((l, i) => {
     const at = `${f}:${i + 1}`
     if (f.endsWith('.css')) {
-      if (/#[0-9a-fA-F]{3,8}\b/.test(l) || /\b(rgba?|hsla?|oklch|hwb|lab|lch)\(/.test(l)) problems.push(`${at}: a colour of the site's own. Use the store's: var(--brand-…) from <BrandStyle>.`)
-      const fam = /font-family\s*:\s*([^;}]+)/.exec(l)?.[1] ?? /(?<![-\w])font\s*:\s*([^;}]+)/.exec(l)?.[1]
-      if (fam && !/var\(--brand-(headings|body)\)|^\s*inherit\b/.test(fam)) problems.push(`${at}: a font of the site's own. Use var(--brand-headings) or var(--brand-body).`)
+      // Values only (after a colon), url(#…) references left out: an id selector or a mask isn't a colour.
+      for (const decl of l.matchAll(/([-\w]+)\s*:\s*([^;{}]+)/g)) {
+        const [, prop, raw] = decl, v = raw.replace(/url\([^)]*\)/g, '')
+        if (/#[0-9a-fA-F]{3,8}\b/.test(v) || COLOUR_FN.test(v)) problems.push(`${at}: a colour of the site's own. Use the store's: var(--brand-…) from <BrandStyle> (a shadow: color-mix(in srgb, var(--brand-text) 12%, transparent)).`)
+        if (prop === 'font-family' && !fontOk(v)) problems.push(`${at}: a font of the site's own. Use var(--brand-headings) or var(--brand-body).`)
+        if (prop === 'font' && !/^\s*(inherit|initial|unset|revert)\s*$/.test(v) && !/var\(--brand-(headings|body)\)/.test(v)) problems.push(`${at}: a font of the site's own. Use var(--brand-headings) or var(--brand-body).`)
+      }
     } else {
-      if (/['"`]#[0-9a-fA-F]{3,8}['"`]/.test(l) || /['"`](rgba?|hsla?)\(/.test(l)) problems.push(`${at}: a colour in code. Use the store's: var(--brand-…) from <BrandStyle>.`)
-      if (/fontFamily\s*:\s*['"`](?!var\(--brand-)/.test(l)) problems.push(`${at}: a font in code. Use var(--brand-headings) or var(--brand-body).`)
+      if (/\b(color|colou?r|fill|stroke|background(Color)?|border(Color)?|outlineColor|stopColor)\s*[:=]\s*\{?\s*['"`]\s*(#[0-9a-fA-F]{3,8}|(rgba?|hsla?)\()/.test(l)) problems.push(`${at}: a colour in code. Use the store's: var(--brand-…) from <BrandStyle>.`)
+      if (/fontFamily\s*[:=]\s*\{?\s*['"`](?!var\(--brand-)/.test(l)) problems.push(`${at}: a font in code. Use var(--brand-headings) or var(--brand-body).`)
     }
   })
 }

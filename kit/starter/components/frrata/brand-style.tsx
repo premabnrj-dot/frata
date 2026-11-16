@@ -20,7 +20,8 @@ const fontsHref = (b: Brand) => {
 export function BrandStyle({ brand }: { brand: Brand | null | undefined }) {
   const c = { ...DEFAULT, ...(brand ? Object.fromEntries(Object.entries(brand.colours).filter(([, v]) => SAFE_HEX.test(v))) : {}) }
   const radius = brand && Number.isInteger(brand.radius) && brand.radius >= 0 && brand.radius <= 64 ? brand.radius : 8
-  const field = FIELD[brand?.density ?? 'standard'] ?? 48
+  const d = brand?.density ?? 'standard'
+  const field = Object.hasOwn(FIELD, d) ? FIELD[d]! : 48
   const css = `:root{--brand-background:${c.background};--brand-panel:${c.panel};--brand-text:${c.text};--brand-secondary-text:${c.secondaryText};` +
     `--brand-accent:${c.accent};--brand-on-accent:${c.onAccent};--brand-control-edge:${c.controlEdge};--brand-hairline:${c.hairline};` +
     `--brand-success:${c.success};--brand-warning:${c.warning};--brand-error:${c.error};--brand-radius:${radius}px;--brand-field:${field}px;` +

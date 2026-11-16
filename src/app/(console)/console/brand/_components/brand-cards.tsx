@@ -35,7 +35,7 @@ export function LogoCard({ b, edit, errors, shopName, slots, onPick, onRemove }:
           const url = b.logos[slot], st = slots[slot] ?? {}, dark = slot === 'reversed'
           const id = `logo-${slot}`
           const pick = (label: string, variant: 'secondary' | 'ghost') => (
-            <label className={cn(button({ variant, size: 'sm' }), st.uploading && 'pointer-events-none opacity-45')} aria-disabled={st.uploading || undefined}>
+            <label className={cn(button({ variant, size: 'sm' }), variant === 'ghost' && 'px-1.5', st.uploading && 'pointer-events-none opacity-45')} aria-disabled={st.uploading || undefined}>
               {st.uploading ? <><Spinner />Uploading…</> : label}
               <input type="file" accept="image/svg+xml,image/png,image/webp,.svg" className="sr-only" disabled={st.uploading} aria-describedby={st.error ? `${id}-error` : undefined}
                 onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPick(slot, f) }} />
@@ -49,12 +49,12 @@ export function LogoCard({ b, edit, errors, shopName, slots, onPick, onRemove }:
                 {url ? <img src={url} alt={`${LOGO_NAMES[slot]}, ${shopName}`} className="max-h-20 max-w-[85%] object-contain" />
                   : n === 0 && <BrandName b={b} name={shopName} />}
               </div>
-              <div className="flex min-h-11.5 flex-wrap items-center gap-x-2 gap-y-1 py-2 pr-2 pl-3">
+              <div className="flex min-h-11.5 flex-wrap items-center gap-x-2 gap-y-1 py-2 pr-1 pl-3">
                 <b className="font-medium">{LOGO_NAMES[slot]}</b>
                 {n > 0 && !url && <span className="text-muted-foreground">(optional)</span>}
                 {url && <Tag>{KIND(url)}</Tag>}
                 <span className="flex-1" />
-                {edit && (url && !st.uploading ? <>{pick('Replace', 'ghost')}<Button variant="ghost" size="sm" onClick={() => onRemove(slot)}>Remove</Button></>
+                {edit && (url && !st.uploading ? <span className="flex">{pick('Replace', 'ghost')}<Button variant="ghost" size="sm" className="px-1.5" onClick={() => onRemove(slot)}>Remove</Button></span>
                   : pick(n === 0 ? 'Upload logo' : 'Upload', 'secondary'))}
               </div>
               {st.error && <FieldError id={`${id}-error`} message={st.error} className="px-3 pb-2.5" />}
