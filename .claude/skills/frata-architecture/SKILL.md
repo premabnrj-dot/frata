@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.1.0
+  version: 3.2.0
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
@@ -232,13 +232,14 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   in words (`BUILDER_REFUSED`, drawn once by `Panel`). A Builder enters only through `requireCapability(cap)` in the
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
   read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
-  column grants on eight catalogue tables and nothing else, with `builder_rows` + restrictive `builder_only` policies.
+  column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0152), the live
+  `brand_tokens` columns and five `shop_settings` columns, and nothing else, with `builder_rows` + restrictive `builder_only` policies.
   Builder reads live in `src/lib/queries/builder.ts` and call the owner list's own SQL (`listProductsWith`,
   `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
   store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through
   `previewTenantOf`. `check:capabilities` and `check:tenant` § 7b hold all of it. Notices reach members through
-  allow-lists (`app_notice_members(notice)`, `app_member_email`), never a Builder; a partner's ask (`ask_owner`, PP1) only
-  owners and Managers.
+  allow-lists (`app_notice_members(notice)`, `app_member_email`), never a Builder; a partner's ask (`ask_owner`, PP1) and a
+  partner's waiting brand change (`brand`, one-address P1, 0152) only owners and Managers.
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing

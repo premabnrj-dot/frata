@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
+import { brandFileCheck } from './brand-file-check'
 import {
   bigint, boolean, check, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
 } from 'drizzle-orm/pg-core'
@@ -311,6 +312,7 @@ export const shopSettings = pgTable('shop_settings', {
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   check('shop_settings_accent', sql`${t.accent} in ('oxide','indigo','moss','wine','ink')`),
+  check('shop_settings_logo', brandFileCheck(t.logoUrl, t.tenantId)),
   check('shop_settings_font', sql`${t.displayFont} in ('fraunces','cormorant','inter')`),
   check('shop_settings_language', sql`${t.shopLanguage} in ('en','hi')`),
   check('shop_settings_site', sql`(${t.siteOrigin} is null) = (${t.siteDomainId} is null) and (${t.siteOrigin} is null or ${t.siteOrigin} ~ '^https://[a-z0-9.-]+$')`),
