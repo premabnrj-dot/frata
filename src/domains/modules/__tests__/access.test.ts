@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { moduleAccess, outboxDecision, type ModuleFacts } from '../access'
+import { moduleAccess, outboxDecision, switchFacts, type ModuleFacts } from '../access'
 import { ADD_ONS, MODULE_KEYS, MODULES, PLAN_GRANTABLE } from '../registry'
 
 const now = new Date('2026-11-07T10:00:00Z')
 const day = (n: number) => new Date(now.getTime() + n * 86_400_000)
-const none: ModuleFacts = { planCode: 'growth', planFeatures: [], addons: [], switchedOn: [], paused: [] }
+const none: ModuleFacts = { planCode: 'growth', planFeatures: [], addons: [], switchedOn: [], touched: [], paused: [] }
 /** The registry with chosen modules marked built, so the access rules can be exercised before any module ships. */
 const built = (...keys: (keyof typeof MODULES)[]) => { for (const k of keys) (MODULES[k] as { status: string }).status = 'now' }
 const unbuilt = (...keys: (keyof typeof MODULES)[]) => { for (const k of keys) (MODULES[k] as { status: string }).status = 'next' }
@@ -95,7 +95,44 @@ describe('addOnFor (owner 2026-11-09: Reviews on Growth and Scale only)', () => 
   })
 })
 
+describe('on by default (docs/specs/2026-11-16-ekcode-default-on.md)', () => {
+  it('a defaultOn module with no switch row reads on and usable', () => {
+    const a = moduleAccess(none, now).ekcode
+    expect(a.on).toBe(true); expect(a.usable).toBe(true); expect(a.why).toBe('usable')
+  })
+  it('a store that turned it off stays off: a closed row and no open one', () => {
+    const a = moduleAccess({ ...none, ...switchFacts([{ module: 'ekcode', open: false }]) }, now).ekcode
+    expect(a.on).toBe(false); expect(a.usable).toBe(false); expect(a.why).toBe('off')
+  })
+  it('turned on again after off reads on (an open row beside closed ones)', () => {
+    const a = moduleAccess({ ...none, ...switchFacts([{ module: 'ekcode', open: true }]) }, now).ekcode
+    expect(a.on).toBe(true); expect(a.usable).toBe(true)
+  })
+  it('Frrata\'s pause still holds a module that is on by default', () => {
+    const a = moduleAccess({ ...none, paused: ['ekcode'] }, now).ekcode
+    expect(a.on).toBe(true); expect(a.usable).toBe(false); expect(a.why).toBe('paused')
+  })
+  it('a module that is not defaultOn reads exactly as before: no row is off', () => {
+    for (const k of MODULE_KEYS.filter((k) => !MODULES[k].defaultOn)) {
+      expect(moduleAccess(none, now)[k].on).toBe(false)
+      expect(moduleAccess({ ...none, ...switchFacts([{ module: k, open: true }]) }, now)[k].on).toBe(true)
+      expect(moduleAccess({ ...none, ...switchFacts([{ module: k, open: false }]) }, now)[k].on).toBe(false)
+    }
+  })
+  it('switchFacts drops unknown modules and keeps open and touched apart', () => {
+    expect(switchFacts([{ module: 'gst', open: true }, { module: 'ekcode', open: false }, { module: 'gone', open: true }]))
+      .toEqual({ switchedOn: ['gst'], touched: ['gst', 'ekcode'] })
+  })
+})
+
 describe('registry', () => {
+  it('defaultOn only on a core, built module that sends nothing (spec m8)', () => {
+    for (const k of MODULE_KEYS.filter((k) => MODULES[k].defaultOn)) {
+      expect(MODULES[k].billing).toBe('core'); expect(MODULES[k].status).toBe('now'); expect(MODULES[k].outboxKinds).toEqual([])
+    }
+    expect(MODULES.ekcode.defaultOn).toBe(true)
+  })
+
   it('every dependency is a module; plan-grantable excludes core; add-ons are add_on', () => {
     for (const k of MODULE_KEYS) for (const d of MODULES[k].dependsOn) expect(MODULE_KEYS).toContain(d)
     expect(PLAN_GRANTABLE).not.toContain('communication')

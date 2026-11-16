@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { codeScreen, flowState, type CodeFacts, type FlowFacts } from '../flow'
 import { armFor, HOLDOUT_EVERY } from '../holdout'
-import { breakerTripped, DEFAULT_LIMITS, powBits, shopDayCap, withinBounds } from '../limits'
+import { breakerTripped, DEFAULT_LIMITS, globalHourHeadroom, powBits, shopDayCap, withinBounds } from '../limits'
 import { shareItems } from '../notice'
 import { EK } from '../brand'
 
@@ -101,5 +101,20 @@ describe('leadingZeroBits', async () => {
     expect(leadingZeroBits(new Uint8Array([0, 0, 0x0f, 0xff]))).toBe(20)
     expect(leadingZeroBits(new Uint8Array([0x80]))).toBe(0)
     expect(leadingZeroBits(new Uint8Array([0, 0]))).toBe(16)
+  })
+})
+
+describe('globalHourHeadroom (default-on E5)', () => {
+  it('warns at 80% of the hourly limit and suggests about three times the busiest hour, within bounds', () => {
+    expect(globalHourHeadroom(1_599, 2_000)).toMatchObject({ warn: false })
+    expect(globalHourHeadroom(1_600, 2_000)).toEqual({ share: 0.8, warn: true, raiseTo: 4_800, atBound: false })
+    expect(globalHourHeadroom(40_000, 45_000).raiseTo).toBe(50_000)
+    expect(globalHourHeadroom(45_000, 50_000)).toMatchObject({ warn: true, raiseTo: 50_000, atBound: true })
+    expect(globalHourHeadroom(10, 2_000).raiseTo).toBe(2_000)
+    expect(globalHourHeadroom(0, 0).warn).toBe(true)
+  })
+  it('on Launch with no raised cap the daily cap comes before the breaker; a sale-day raise brings it back', () => {
+    expect(shopDayCap('launch', null)).toBeLessThan(DEFAULT_LIMITS.breakerAfter)
+    expect(shopDayCap('launch', 300)).toBeGreaterThanOrEqual(DEFAULT_LIMITS.breakerAfter)
   })
 })

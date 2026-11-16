@@ -8,7 +8,7 @@ import { currentPlan } from '@/domains/plans/entitlements'
 import { addonPrices, appInterest, modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import { plans as planRows, planVersions, tenantPlans } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
-import { moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
+import { moduleAccess, switchFacts, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
 import { ADD_ONS, isModuleKey, type ModuleKey } from '@/domains/modules/registry'
 
 // =============================================================================
@@ -30,7 +30,9 @@ export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<
         .where(eq(tenantPlans.tenantId, tenantId)),
       tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt, byShop: tenantAddons.byShop })
         .from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId)),
-      tx.select({ module: tenantModules.module }).from(tenantModules).where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt))),
+      // One row per module the store ever switched: open, or touched and closed (spec 2026-11-16, review M2).
+      tx.select({ module: tenantModules.module, open: sql<boolean>`bool_or(${tenantModules.disabledAt} is null)` }).from(tenantModules)
+        .where(eq(tenantModules.tenantId, tenantId)).groupBy(tenantModules.module),
       tx.select({ module: modulePauses.module }).from(modulePauses).where(isNull(modulePauses.resumedAt)),
     ])
     const plan = currentPlan(plans, now)
@@ -38,7 +40,7 @@ export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<
       planCode: plan?.code ?? null,
       planFeatures: plan?.features ?? [],
       addons: addons.filter((a) => isModuleKey(a.module)).map((a) => ({ ...a, module: a.module as ModuleKey })),
-      switchedOn: switches.map((s) => s.module).filter(isModuleKey),
+      ...switchFacts(switches),
       paused: pauses.map((p) => p.module).filter(isModuleKey),
     }
   }

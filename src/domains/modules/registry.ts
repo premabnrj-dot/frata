@@ -39,6 +39,9 @@ export type ModuleDef = {
   setup?: string
   /** The outbox kinds this module sends (e.g. whatsapp.send): the sweep holds or cancels them with the module. */
   outboxKinds: readonly string[]
+  /** On for a store that never switched it either way; a store that turned it off stays off (docs/specs/
+   *  2026-11-16-ekcode-default-on.md). Only a core, built module with no outbox kinds may carry it (registry test). */
+  defaultOn?: boolean
 }
 
 export const MODULES: Record<ModuleKey, ModuleDef> = {
@@ -74,7 +77,9 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
   },
   ekcode: {
     key: 'ekcode', name: 'EkCode', job: 'Shoppers filled in at checkout.', group: 'grow', billing: 'core', status: 'now', dependsOn: [], outboxKinds: [],
-    setup: '/console/apps/ekcode',
+    // On in every store's checkout unless the store turned it off (owner, 2026-11-16). Admin's shop list reads this
+    // flag too (src/lib/admin/ekcode.ts passes it to the definer): there is no SQL copy of the default.
+    defaultOn: true, setup: '/console/apps/ekcode',
   },
   product_video: {
     // PV·1 (docs/plans/2026-11-10-product-video-pv1.md): core, so every plan has it; a module, so Admin › Modules can
