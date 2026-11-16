@@ -7,6 +7,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
+import { readdirSync, readFileSync } from 'node:fs'
 import http from 'node:http'
 import { CONSOLE, FAKE_CHECKOUT, PORTS, RZP, RZP_KEYS, SHOP, playwright, signedIn, until, expectToast } from '../lib.mjs'
 const { devices } = playwright
@@ -88,6 +89,26 @@ export default {
       await g.getByRole('button', { name: 'in' }).click()
       await p.goBack()
       await g.waitFor({ state: 'hidden' })
+    })
+
+    await t.step('the drawer’s lines are not in the page’s first load: their chunk unreachable, the drawer says so; the next open shows them', async () => {
+      // Every built chunk holding the drawer's lines fails, as on a dropped connection; every other script loads.
+      const dir = new URL('../../.next/static/chunks/', import.meta.url)
+      const held = new Set(readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('.js') && readFileSync(new URL(f, dir), 'utf8').includes('Pricing your bag')))
+      assert.ok(held.size > 0, 'a chunk holds the drawer’s lines')
+      const lines = (u) => u.pathname.startsWith('/_next/static/chunks/') && held.has(decodeURIComponent(u.pathname.slice('/_next/static/chunks/'.length)))
+      const cut = (r) => r.abort()
+      await p.route(lines, cut)
+      await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'load' })
+      await p.getByRole('button', { name: /^Bag, \d+ items?$/ }).first().click()
+      const d = p.getByRole('dialog', { name: 'Your bag' })
+      await d.getByText('No connection. Check your internet and try again.').waitFor()
+      await p.unroute(lines, cut)
+      await d.getByRole('button', { name: 'Close bag' }).click(); await d.waitFor({ state: 'hidden' })
+      await p.getByRole('button', { name: /^Bag, \d+ items?$/ }).first().click()
+      await d.getByText('Your bag is empty.').waitFor()
+      assert.equal(await d.getByText('No connection').count(), 0)
+      await d.getByRole('button', { name: 'Close bag' }).click()
     })
 
     await t.step('checkout mistakes (§ Feedback 3): marked at the fields, focus on the first, one quiet summary that leaves once fixed', async () => {

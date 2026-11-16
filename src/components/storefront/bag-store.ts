@@ -1,6 +1,5 @@
 'use client'
 
-import { isTagged, landingParams } from '@/domains/analytics/attribution'
 import { readBagBy, type BagBy } from '@/domains/checkout/bag-fill'
 import { useSyncExternalStore } from 'react'
 
@@ -27,17 +26,13 @@ function read(): BagItem[] {
 let snapshot: BagItem[] | null = null
 // Who last filled the bag (src/domains/checkout/bag-fill.ts): `link` (a bag link), `shop` (the shopper on the store's
 // own pages), or `keep` (checkout's corrections and its gift button: the marker stays as it was). `shop` stays until
-// the bag is cleared or a link from the store's own website replaces it. Every writer names its kind (no default). Page-only when storage is unavailable, as the bag is.
+// the bag is cleared or a link from the store's own website replaces it. Every writer names its kind (no default).
+// Without storage there is no marker, so a link joins (the safe direction); kept small, it ships on every shop page.
 const BY_KEY = 'frrata.bag.by.v1'
 export type BagWrite = BagBy | 'keep'
-let memoryBy: BagBy | null = null
-function readBy(): BagBy | null {
-  try { return readBagBy(localStorage.getItem(BY_KEY)) } catch { return memoryBy }
-}
 function write(items: BagItem[], by: BagWrite | 'clear') {
   memory = items
   snapshot = items
-  if (by !== 'keep') memoryBy = by === 'clear' ? null : by
   try {
     localStorage.setItem(KEY, JSON.stringify(items))
     if (by === 'clear') localStorage.removeItem(BY_KEY)
@@ -49,7 +44,7 @@ function write(items: BagItem[], by: BagWrite | 'clear') {
 export const bag = {
   get: (): BagItem[] => (snapshot ??= read()),
   /** Who last filled the bag: `link`, `shop`, or null (an empty bag, or one from before the marker). */
-  by: (): BagBy | null => readBy(),
+  by: (): BagBy | null => { try { return readBagBy(localStorage.getItem(BY_KEY)) } catch { return null } },
   add(variantId: string, qty: number, by: BagWrite) {
     const items = bag.get()
     const at = items.find((i) => i.variantId === variantId)
@@ -103,32 +98,5 @@ export const offerCode = {
 }
 export const useOfferCode = () => useSyncExternalStore((l) => { codeListeners.add(l); return () => codeListeners.delete(l) }, offerCode.get, () => '')
 
+// How the shopper arrived, for this tab (written by capture-attribution.ts, sent with the order).
 export const ATTR_KEY = 'frata.attr.v1'
-const SEEN_KEY = 'frrata.attr.seen'
-/**
- * Remember how the shopper arrived, for this tab, so the order can say where it came from (Analytics A·1; the keys are
- * the domain's ATTRIBUTION_KEYS). A tagged landing (utm or a click id) replaces the whole touch; the referring site is
- * read once, on the tab's first page, and kept as its hostname only (never a path or query). Never on the console's
- * own address (a preview), and a creator's `?code=` still fills the code, credited as a link.
- */
-let capturedAt: string | null = null
-export function captureAttribution() {
-  try {
-    if (window.location.pathname.startsWith('/console')) return
-    // Once per page: a second run (React's dev double effect, the shell mounting again) must not rewrite the touch.
-    if (capturedAt === window.location.href) return
-    capturedAt = window.location.href
-    const landing = landingParams(window.location.search)
-    const first = !sessionStorage.getItem(SEEN_KEY)
-    let ref: string | null = null
-    if (first && document.referrer) {
-      try { const u = new URL(document.referrer); ref = u.hostname || null } catch { /* not a URL */ }
-      if (ref === window.location.hostname) ref = null
-    }
-    if (isTagged(landing)) sessionStorage.setItem(ATTR_KEY, JSON.stringify(ref ? { ...landing, ref_host: ref } : landing))
-    else if (ref) sessionStorage.setItem(ATTR_KEY, JSON.stringify({ ref_host: ref }))
-    sessionStorage.setItem(SEEN_KEY, '1')
-    const code = new URLSearchParams(window.location.search).get('code')
-    if (code && /^[A-Za-z0-9]{1,20}$/.test(code)) offerCode.set(code, 'link')
-  } catch { /* storage unavailable */ }
-}

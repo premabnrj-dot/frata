@@ -1,0 +1,2 @@
+ALTER TABLE "platform_switches" DROP CONSTRAINT "platform_switches_until";--> statement-breakpoint
+ALTER TABLE "platform_switches" ADD CONSTRAINT "platform_switches_until" CHECK ("platform_switches"."until" <= "platform_switches"."created_at" + interval '30 days');

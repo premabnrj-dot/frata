@@ -4783,8 +4783,9 @@ begin
                             'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
     if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
   end loop;
-  -- At most 7 days, counted from the database's own now (a hand-set start can't stretch it), and it ends by itself.
-  begin update public.platform_switches set until = now() + interval '8 days'; raise exception 'FAIL: 88 a switch was set for more than 7 days';
+  -- At most 30 days (owner 2026-11-16; was 7), counted from the database's own now (a hand-set start can't stretch it),
+  -- and it ends by itself.
+  begin update public.platform_switches set until = now() + interval '31 days'; raise exception 'FAIL: 88 a switch was set for more than 30 days';
   exception when check_violation then null; end;
   begin update public.platform_switches set created_at = now() + interval '55 days', until = now() + interval '60 days';
     raise exception 'FAIL: 88 a hand-set start stretched the switch';
