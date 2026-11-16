@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 1.4.0
+  version: 2.1.0
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -78,8 +78,10 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `previewOnWebsiteAction`. `check:api` holds the preview routes; `STOREFRONT_PREVIEW_SECRET` unset = none.
 11. **The bag link is a frozen grammar** (`src/domains/storefront-api/cart-link.ts`): `<checkoutOrigin>/cart?l=<size
    id>:<qty>,…`, the quote's limits (20 lines, 10 a line, lowered not refused), `code` and `utm_*` beside it. Anything
-   new is a new parameter. The page (`s/[host]/(cart)/cart`) fills the shopper's own bag (replace when the referrer is
-   the site or the bag is empty, else merge), marks `via_site`, opens checkout. The starter's copy is generated
+   new is a new parameter. The page (`s/[host]/(cart)/cart`) fills the shopper's own bag by `fillMode`
+   (`src/domains/checkout/bag-fill.ts`): replace when the bag is empty, the referrer is the site, or only bag links filled
+   it (the `frrata.bag.by.v1` marker, every bag writer naming its kind); else join, so no other site empties a bag the
+   shopper built on the store's pages. It marks `via_site`, opens checkout. The starter's copy is generated
    (`node scripts/kit-sync.mjs`) and held equal by a test.
 12. **Filters (D2):** `facets` (cached) and `filter/page/{n}` (dynamic like search) over the same capped, listed set,
    cards from `cardOut` only; one URL per filter (fixed parameter order, defaults left out); a value the store doesn't

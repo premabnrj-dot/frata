@@ -110,7 +110,17 @@ rebuilds 2026-10-08 and 2026-11-12T08:15Z: a lastmod on those days is not proof 
 - `callback_url`: "Ensure that the domain of the Callback URL is allowlisted" [V, standard/integration-steps, 2026-10-08].
 - Payment Links and Invoices need no website [V, payment-links/faqs + business-website-details, 2026-10-08]; UPI
   Payment Links skip `callback_url` on Android [V]. UPI Intent on by default, desktop shows QR [V, upi-intent,
-  2026-10-08]. Instagram/Facebook in-app browsers: UPI Intent only [V Custom Checkout FAQ, undated; Standard U].
+  2026-10-08]. Instagram/Facebook in-app browsers (Standard): "UPI Intent and Cards will appear"; methods that open a pop-up page
+  (netbanking) don't; the Checkout pop-up "does not appear" there → `callback_url` [V, standard/troubleshooting-faqs lastmod
+  2026-11-12, checked 2026-11-16]. Custom Checkout FAQ: UPI Intent only [V undated].
+- **Checkout in a frame (checked 2026-11-16):** Razorpay documents neither support nor a ban, nor UPI intent / 3-D Secure /
+  netbanking from a frame, nor whether the registered website is the top page's or the frame's [U]. checkout.js (served
+  2026-11-16, undocumented) builds its own iframe with `allow="otp-credentials; payment; clipboard-write;
+  publickey-credentials-get https://api.razorpay.com; …"` and knows when it runs framed; a frame of ours must itself allow
+  those features or Razorpay's inner frame loses them [V MDN Permissions Policy 2026-10-23]. No CSP host list is published [U];
+  seen in the script: checkout.razorpay.com, api.razorpay.com (+ api-dark, api-<region>), lumberjack(-cx,-metrics).razorpay.com,
+  cdn.razorpay.com, express.razorpay.com [V-observed]. Apple Pay in a frame: `allow="payment"` (Safari 17+), same origin
+  (≤ 16) [V apple-pay lastmod 2026-11-12].
 
 ## Merchant billing (Frrata bills merchants) — checked 2026-11-08
 

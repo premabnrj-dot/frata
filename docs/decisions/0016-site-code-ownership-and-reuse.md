@@ -48,3 +48,24 @@ spec (§ 3 Starters, § 7 retention and export)
 - The kit spec § 7 and the intake answer on export are made to agree.
 - A partner can leave without taking a brand's site down, and can grow a house style across clients without carrying
   one brand's identity, key or customers into another.
+
+## Amendment (§ 2, owner 2026-11-16: "approve all", and the organisation's name the same day; Studio spec decisions 8 and 22, § 5 and § 6.1; Studio plan V0·6)
+**Where the repositories live, and who may write them.** § 2's "repositories live in Frrata's organisation … the live
+branch is protected" reads as follows.
+1. **The organisation is `frrata`** (https://github.com/frrata; owner, 2026-11-16, in place of the drafted
+   `frrata-sites`, which stays the Vercel team's name). Free plan now, GitHub Actions off for the whole organisation;
+   **GitHub Team before V2a puts the first partner site there** (rulesets on private organisation repositories need
+   Team; organisation-wide rulesets need Enterprise, so every rule is per repository). Members sign in with passkeys. One private repository per site, named by site id (`site-<id8>`), made
+   from the starter template, never forked.
+2. **Two GitHub Apps.** The **session App** holds contents read and write on one repository, minted per Studio session,
+   rotated within the hour, revoked at the end, and is never exempt from a ruleset; it also adds a partner's developer
+   to that one repository, and removing the person or the partner removes them. The **fleet App** is the only one that
+   may update `main` and tags; only the fleet service holds it, and the fleet's own repository and Vercel team sit
+   outside the `frrata` organisation and the `frrata-sites` team.
+3. **Rulesets on each repository:** `main` and tags by the fleet App only, and only after a publish a person made; new
+   branches only `studio/*` and `dev/*`; no force-push. If a bypass can't name one App (a spike item), `main` takes no
+   direct push and the fleet records the SHA it promoted. The fleet builds the commit SHA recorded in
+   `site_deployments`, never `main`'s head.
+4. **Partner skills** come from a partner-level repository holding no brand content (point 1's layers).
+5. **Unchanged:** no organisation-wide token; secret scanning on; no key in a repository (the gate refuses every
+   key-shaped string, `frs_build_` included); the fleet sets each deployment's key.

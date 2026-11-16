@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react'
 import { ATTR_KEY, bag, captureAttribution } from './bag-store'
 import { parseCartLink } from '@/domains/storefront-api/cart-link'
+import { fillMode, fromSite } from '@/domains/checkout/bag-fill'
 
 /**
  * The bag link's island (Storefront API SA1b, plan D·1). In order: how the shopper arrived (the tab's first page, so
  * the referrer is the brand's site and its `utm_*` and `?code=` are the site's), the bag link's marker for "Your
- * website" (classifier v3), then the bag: the link's lines become the whole bag when the shopper came from the site or
- * the bag is empty, else they join it (security review L1: any site could otherwise empty a shopper's bag); then
- * checkout, on this same host. A link that doesn't read shows one state and changes nothing.
+ * website" (classifier v3), then the bag (`fillMode`, one-address plan P0): the link's lines become the whole bag when
+ * the bag is empty, came from the site, or only bag links filled it; they join a bag the shopper built on this store's
+ * own pages (security review L1: no other site can empty it); then checkout, on this same host. A link that doesn't read shows one state and changes nothing.
  */
 export function CartLink({ site, words }: { site: string | null; words: { opening: string; broken: string; again: string; goTo: string } }) {
   const [broken, setBroken] = useState(false)
@@ -21,8 +22,9 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
       const a = JSON.parse(sessionStorage.getItem(ATTR_KEY) ?? '{}') as Record<string, string>
       sessionStorage.setItem(ATTR_KEY, JSON.stringify({ ...a, via_site: '1' }))
     } catch { /* storage unavailable: the order reads its other evidence */ }
-    if (fromSite(document.referrer, site) || bag.get().length === 0) bag.replace(lines)
-    else for (const l of lines) bag.add(l.variantId, l.qty)
+    const mode = fillMode({ by: bag.by(), empty: bag.get().length === 0, fromSite: fromSite(document.referrer, site) })
+    if (mode === 'replace') bag.replace(lines)
+    else for (const l of lines) bag.add(l.variantId, l.qty, 'keep')
     window.location.replace('/checkout')
   }, [site])
   if (broken) return (
@@ -42,12 +44,3 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
   )
 }
 
-/** Whether the referrer is the brand's own site (its host or its www twin). */
-function fromSite(referrer: string, site: string | null): boolean {
-  if (!referrer || !site) return false
-  try {
-    // The same site, www on either side (siteHostKey's rule, copied: this island stays small).
-    const bare = (h: string) => h.toLowerCase().replace(/\.$/, '').replace(/^www\./, '')
-    return bare(new URL(referrer).hostname) === bare(new URL(site).hostname)
-  } catch { return false }
-}

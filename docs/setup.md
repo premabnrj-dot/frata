@@ -138,7 +138,9 @@ removing a passkey still needs a real one. Afterwards, check `audit_events` for 
 **Domains (owner, 2026-11-16: "frrata.com will be the public domain. .shop will remain the subdomain, frratamail will
 remain the mailing email."):** `frrata.com` is Frrata's public domain (the homepage, `app.frrata.com` for the console
 when it moves); store addresses stay `<store>.frrata.shop`; Frrata's mail is sent from the frratamail domain. Any plan
-that proposes another domain (the Studio plan's `frrata.store`, `frrata-preview.site`) is re-checked against this.
+that proposes another domain is re-checked against this. Re-checked 2026-11-16 (ADR-0019, one address): code sites stay on
+`<store>.frrata.shop` or the brand's domain; the Studio plan's sites domain (`frrata.store`) was dropped, and only a
+preview domain is bought (O6 below).
 
 
 1. Supabase → Authentication → Emails: set the **sender name** to "Frrata" and the sign-in email's **subject** to
@@ -430,7 +432,9 @@ SNS `frrata-ses` (SignatureVersion 2) confirmed to `/api/webhooks/ses`; sets `sh
 OIDC role `frrata-ses`; sign-in codes through the Supabase Send Email hook from `Frrata <notices@notify.frrata.shop>`.
 **Production access granted (2026-11-11, case 179441775400698):** 50,000 a day, 14 a second; enforcement healthy. A send
 over 14 a second is throttled (429) and waits in the outbox (`Later`, no attempt spent). Ask for more in SES → Account
-dashboard before a festive sale nears either limit. **Open:** the notices domain moves to Frrata's main domain when the shop domain moves (owner's plan: frrata.shop main site, frrata.store shops).
+dashboard before a festive sale nears either limit. **Open:** before `frrata.shop` goes to the Public Suffix List, `_dmarc.notify.frrata.shop` exists or notices move to the
+frratamail domain (one-address plan P4b·1). Stores stay on `frrata.shop`; Frrata's public domain is `frrata.com` (owner,
+2026-11-16). *(Was: "the notices domain moves … frrata.shop main site, frrata.store shops", stale since that call.)*
 Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
 **Asia Pacific (Mumbai) ap-south-1** for every step.
 
@@ -518,17 +522,31 @@ After SA1b's migration is applied and the release is live:
 
 ## Owner steps from the Studio and one-address decisions (owner, 2026-11-16: "approve all")
 Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unblocks the phase named.
-1. **O23 · Vercel billing** — Vercel › Settings › Billing for team premabnrj-dots-projects: say whether Flat Rate CDN
-   is on and which tier; turn it on if it is off. Unblocks: pricing hosting (P5·0, S18).
-2. **S19 · GST on Anthropic's invoices** — ask the CA whether the GST input credit on Anthropic's bills can be claimed.
-   Unblocks: selling credits (C1). Building C1 does not wait.
-3. **S3 · Claude Console** — create an organisation in the company's name with workspaces `studio` and `studio-eval`;
-   set a monthly spend limit. Never share the key in chat: the session asks for it through the secure form. Unblocks:
-   the agent spike (V3a·1).
-4. **S8 · GitHub** — create the organisation `frrata-sites` on GitHub Team, require passkeys, turn Actions off.
-   Unblocks: sites on Frrata's account (V2a).
-5. **S22 · Vercel teams** — create the site-hosting team, the build-service team and a staging team (about $40 a
-   month). Unblocks: V2a.
+1. **O23 · Vercel billing — answered 2026-11-16.** Team premabnrj-dots-projects is on Pro with usage billing. Vercel's
+   billing record for 13–14 Nov shows no flat-rate CDN line: CDN requests and Fast Data Transfer are metered and fall
+   inside the plan's included usage ($0 billed, "Committed"); about $0.47 was billed that day, mostly build minutes. The
+   Runtime Cache migration banner (Legacy Data Cache, 53.6K reads in 30 days) needs nothing: Vercel moves the team itself
+   and the cost at that volume is cents. Pricing hosting (decision 18) uses the pilot's own 30 days (P5·0, V2a·11).
+2. **S19 · GST — answered 2026-11-16 (owner): Frrata claims the GST input credit on every bill it pays** (Anthropic,
+   Vercel, GitHub, Supabase, AWS and the rest). Costs in `frata-unit-economics` are taken net of GST from now on; this is
+   never asked again.
+3. **S3 · Claude Console — done 2026-11-16.** Still to do in it, when convenient: workspaces `studio` and `studio-eval`,
+   each with a monthly spend limit (suggested: `studio-eval` $100, `studio` $300 until the 20-task proof prices it). When
+   the agent spike starts (V3a·1), this session sends a secure form for a `studio-eval` API key; never paste a key in chat.
+   Later (V3a) the Managed Agents webhook is registered in the Console and its signing secret goes into Vercel
+   (Production, Sensitive): the session gives the exact steps then.
+4. **S8 · GitHub — done 2026-11-16: the organisation is `frrata`** (https://github.com/frrata), Free plan, Actions off.
+   Partner sites live there instead of `frrata-sites`. Turn on Settings › Authentication security › **Require two-factor
+   authentication** (free). Upgrade to **Team** before V2a puts the first partner site in it: branch rulesets on private
+   repositories need Team (about $4 a member a month). The fleet's own repository stays outside it (decision S8).
+5. **S22 · Vercel teams** — three new teams, so partner sites never share Frrata's own team or its secrets. In Vercel,
+   open the team switcher (top left) › **Create Team**, three times:
+   - `frrata-sites`: where partner websites are hosted. **Pro.** Then Settings › Deployment Protection › **Standard
+     Protection** on.
+   - `frrata-fleet`: Frrata's build service that deploys those sites. **Pro.**
+   - `frrata-sites-staging`: a copy of `frrata-sites` for testing the build service. Pro (no shopper ever reaches it).
+   Each Pro team is $20 a month plus its usage; nothing is hosted there until V2a. Then add this session's Vercel
+   access to each (the Vercel connector asks). Unblocks: V2a.
 6. **O4 · frrata.shop** — renew it to 3 years at Hostinger (about ₹9,150 with GST). Then the Public Suffix List
    submission (P4b) is opened from your GitHub account.
 7. **O6 · Preview domain** — buy one `.com`-priced domain for previews (about ₹3,200 for 3 years); tell me the name.

@@ -98,3 +98,22 @@ shoppers' names, phones and addresses, or a merchant's costs, with nothing to ca
 - **members.role** is derived from `partner_members.role` by trigger; `frata_app` holds no UPDATE on `members`.
 - **Gates and proofs:** `check:capabilities`, `check:tenant` § 7b, `verify:tenancy` § 82, e2e `86-builders` (the sweep
   reads every page and route file).
+
+## Amendment (§ 5, owner 2026-11-16: "approve all"; Studio spec decision 25; Studio plan V0·4; ADR-0020)
+**§ 5 is replaced for Studio's agent.** The test-key proxy and the preview snapshot it described are not built; a
+Builder's Studio turn runs as follows.
+1. **Through `asTurn(turn, cap, work)`**, the second sanctioned Actor maker beside `require-capability.ts`, pinned in
+   `check:capabilities` and listed in `check:actions` beside `asMember` (ADR-0020 point 4). The turn comes from Frrata's
+   own open-turn row, never from a webhook or a tool's input; `app_turn_actor` re-checks the membership, the partner's
+   link, the assignment and the partner's passkey step-up in its own short transaction, which then closes.
+2. **Every read tool runs as `frata_builder`, whatever the person's role:** the catalogue's public-page columns, drafts
+   included, outside any transaction, through `withActor`. Never orders, shoppers, costs or members (§ 3 unchanged).
+3. **Builders propose and apply nothing.** Every propose tool (content, brand words, tokens, logos) refuses a Builder's
+   turn; Apply, Send, Publish and Hand over are refused to a Builder in words. A Builder's turn gets the read tools, the
+   sandbox and `preview_build`.
+4. **Studio's rows are written by definers keyed on the turn**, never by the Builder's role (which executes no definer:
+   § As built, departure 2). A Builder selects only its own partner's sessions and messages for that store.
+5. **The session reads the store with a build key** held in the session's vault and sent as a header (ADR-0018's
+   build-key amendment), never a live key.
+6. **Unchanged:** code a Builder writes reaches shoppers only after a Lead or the Owner publishes; `shopCached` runs
+   only under the `shop` actor; no capability is added (Builders preview checkout's design only: one-address decision 9).

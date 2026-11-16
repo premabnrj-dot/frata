@@ -241,7 +241,7 @@ depends on telling Frrata's document from the partner's: on one origin nothing c
 |---|---|
 | The bag lines and their prices, offers, the store's delivery and Pay on delivery rules, the legal block, the design | Mobile number, email, name, address, PIN code, GST invoice fields |
 | The order page's number, items and state | EkCode sign-in and its saved address, "Not you?", "Save this address" (EkCode keeps its own look) |
-| The bag (`frata.bag.v1`, `frata.bag.by.v1`) and the offer code | The typed form's reload copy, the pending order, the order token |
+| The bag (`frata.bag.v1`, `frrata.bag.by.v1`) and the offer code | The typed form's reload copy, the pending order, the order token |
 | `/api/shop/quote` without a PIN code, `/pincode`, `/delivery`, `/e` | `/api/secure/*`: price for the address, place, view, pay, retry, switch to Pay on delivery, change, invoice, EkCode, email opt-in |
 | — | The order's summary priced for the address (lines, delivery, the server's total) and **Place order · ₹<amount>**, the only button that places an order |
 The frame prices the address itself and sends the page back only a delivery fee or zone name to show (never the PIN code
@@ -365,10 +365,10 @@ dropped (`source.ts:133`), which is right: on a one-address store the website is
 landing page's own tags and the outside referrer, as for theme shops; "Your website" is not a channel there.
 
 **The bag link, a frozen contract** (`cart-link.ts`, ADR-0018 § 11), keeps working: on one address a same-origin referrer
-replaces the bag; any other joins it (L1). Links in Instagram DMs, WhatsApp, emails and split sites keep working.
+replaces the bag, and so does any link when only bag links filled it (P0's marker); any other joins it (L1). Links in Instagram DMs, WhatsApp, emails and split sites keep working.
 
 **P0, the pilot's fix now:**
-- The bag remembers who last filled it (`frata.bag.by.v1`), written inside `write()` itself: `link` when a bag link fills
+- The bag remembers who last filled it (`frrata.bag.by.v1`), written inside `write()` itself: `link` when a bag link fills
   it; `shop` when the shopper adds, sets or removes on the store's own Frrata pages (theme product pages, the bag drawer).
   `shop` stays until `clear`. Checkout's own changes leave it as it is: reconcile, the gift button and, from P2, checkout's
   Remove and stepper. `clear` empties it.
@@ -544,7 +544,7 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
     row's tenant. Never from a frame message, a URL or a body.
   - Proof blocks: § 98 (`brand_tokens`, `brand_seasons`, `shop_settings` Builder columns), § 99 (`checkout_design`), § 100
     (the predicate `app_website_of`, the rewritten `app_storefront_key`, § 81 and § 86 updated). § 87 and § 88 are taken;
-    the Studio plan's § 88–96 need renumbering.
+    the Studio plan's blocks are renumbered (V2a § 90).
   `tenancy-auditor` on P1, P2, P3, P5.
 - **Modularity.** Pure: `src/domains/brand/` (tokens, check, lines, `accentOf`), `src/domains/tenancy/reserved.ts`,
   `secureHostOf` in `host.ts`, `src/domains/checkout/frame-messages.ts`, `src/domains/checkout/bag-fill.ts`,
@@ -659,7 +659,7 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
 | Medium | `shopModules` is only React `cache()`: every frame render would read module facts | `src/lib/queries/modules.ts:55` | a `shopCached` loader |
 | Medium | `quoteIp` allows 300 quotes per 10 minutes a network | `src/lib/db/rate-limit.ts:30` | re-sized for 4G; the drawer quotes only while open |
 | Info | Checkout's cold render is already 14 statements (budget 12) | speed review, 2026-11-16 | pre-existing; the brand loader adds 1 |
-| Info | Studio's `93-site-hosting` collides with `93-owner-only`; Studio's proof § 88–96 collide with 0151's § 88 | Studio plan | renumber |
+| Info | Studio's `93-site-hosting` collides with `93-owner-only`; Studio's proof § 88–96 collide with 0151's § 88 | Studio plan | renumbered 2026-11-16: V2a § 90; the flow `site-hosting` |
 
 ## Out of scope
 - Checkout extension slots for partner code (signal: a paying brand's partner asks with a use case).
@@ -676,7 +676,8 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
 ADR-0014 amendments 4 and 7, ADR-0017 rules 3, 4 and 6 and the kit spec's § 1; amends ADR-0014 rules 2 and 3 and
 ADR-0018 §§ 4, 10 and its test-key amendment; and records the reserved paths, the predicate and the frame. Studio's
 proposed runtime record becomes **ADR-0020** (the Studio spec's decision 27 and plan V0·5).
-**Left for the Studio files once the owner approves** (a pointer is in each now):
+**Made in the Studio files on 2026-11-16** (owner: "approve all"; execution plan W0·2), each with a line on what it
+replaced:
 1. Studio spec *In short* and the address row: `<store>.frrata.shop`, one address with checkout.
 2. § 12.1: the Frrata address is the store's `frrata.shop` host; Opening soon is Frrata's page at the edge.
 3. § 12.3: Frrata's app sets headers on partner responses at the edge; the fleet's overlay is a second layer.

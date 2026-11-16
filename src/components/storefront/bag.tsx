@@ -75,17 +75,17 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
               <p className="text-sm text-store-sub">{l.values.join(' · ')}</p>
               {kindLine(l) && <p className="text-xs text-store-sub">{kindLine(l)}</p>}
               {/* feedback-ok: a line's state (sold out since it was added), on the line with its Remove */}
-              {l.problem === 'sold_out' || l.problem === 'gone' ? <p className="text-sm text-store-bad">{l.problem === 'gone' ? 'No longer sold.' : 'Sold out since you added it.'} <button type="button" className="underline" onClick={() => bag.remove(l.variantId)}>Remove</button></p> : (
+              {l.problem === 'sold_out' || l.problem === 'gone' ? <p className="text-sm text-store-bad">{l.problem === 'gone' ? 'No longer sold.' : 'Sold out since you added it.'} <button type="button" className="underline" onClick={() => bag.remove(l.variantId, 'shop')}>Remove</button></p> : (
                 <div className="flex items-center justify-between gap-2">
                   <span className="store-qty inline-flex items-center rounded-[var(--store-radius)] border border-store-line">
-                    <button type="button" aria-label={`One fewer ${l.title}`} className="grid size-10 place-items-center text-lg" onClick={() => bag.set(l.variantId, l.qty - 1)}>−</button>
+                    <button type="button" aria-label={`One fewer ${l.title}`} className="grid size-10 place-items-center text-lg" onClick={() => bag.set(l.variantId, l.qty - 1, 'shop')}>−</button>
                     <span className="min-w-6 text-center tabular-nums" aria-live="polite">{l.qty}</span>
-                    <button type="button" aria-label={`One more ${l.title}`} className="grid size-10 place-items-center text-lg" disabled={l.qty >= 10} onClick={() => bag.set(l.variantId, l.qty + 1)}>+</button>
+                    <button type="button" aria-label={`One more ${l.title}`} className="grid size-10 place-items-center text-lg" disabled={l.qty >= 10} onClick={() => bag.set(l.variantId, l.qty + 1, 'shop')}>+</button>
                   </span>
                   <span className="tabular-nums">{inr(l.unitPrice * l.qty)}</span>
                 </div>
               )}
-              {l.problem !== 'sold_out' && l.problem !== 'gone' && <button type="button" className="text-xs text-store-sub underline" onClick={() => bag.remove(l.variantId)}>Remove</button>}
+              {l.problem !== 'sold_out' && l.problem !== 'gone' && <button type="button" className="text-xs text-store-sub underline" onClick={() => bag.remove(l.variantId, 'shop')}>Remove</button>}
             </div>
           </li>
         ))}

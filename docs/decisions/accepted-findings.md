@@ -15,6 +15,7 @@ Rules for this file:
 |---|---|---|---|---|
 | 1 | The Vercel domains token is a team token, not one scoped to the project | Accepted risk while it stays Production only, marked Sensitive, read only in `src/lib/env.ts`, its base URL fixed to api.vercel.com and never logged | owner, 2026-11-08 | `docs/plans/2026-11-08-shop-addresses.md` call 6 |
 | 2 | A late online capture after an abandoned payment can take an offer past its use limit | Accepted in writing, as `refund_due` already accepts it for stock | owner, 2026-11-08 | `docs/specs/2026-11-08-coupons.md` § Uses, locks and limits |
+| 3 | A link from any site can replace a bag that only bag links filled (the bag link's L1, narrowed); the shopper lands on checkout with that site's lines, server-priced | Accepted while (a) checkout lists every line and places only on the shopper's own Place order (re-raise if P3 or EkCode adds one-tap placing), (b) no other site can frame `/cart`, (c) only `bag.replace` writes `link` | owner, 2026-11-16 (decision 2, "approve all") | `docs/plans/2026-11-16-one-address-checkout.md` P0; security-reviewer 2026-11-16 |
 
 ## Proposed, for the owner (not yet ruled — still raised as findings)
 

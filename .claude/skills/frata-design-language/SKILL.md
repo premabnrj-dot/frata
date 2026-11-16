@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 9.1.0
+  version: 10.0.0
   owner: owner
   verified: 2026-11-16
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css"]
@@ -66,8 +66,9 @@ Neel N4 with every rule but the glossary below (merchant, token, API are staff w
 - **Surfaces:** Console (the brand's team and its partner; never "dashboard", "admin"); Partner workspace (never
   "partner console"); Frrata Admin (never "Admin" alone); the store (shoppers; never shop, website, site).
   **Website** is the one exception (owner, 2026-11-15, Storefront API mockup): the brand's own site built as code on the
-  Storefront API, as in Settings › Website ("Runs on Frrata" · "Your own website"). Never for the store itself. Its keys
-  are **Live** or **Test**, and are **deleted** (never "revoked" on screen).
+  Storefront API, as in Settings › Website ("Runs on Frrata" · "Your own website"; the partner's button "New website").
+  Never for the store itself. Its keys are **Live**, **Test** or **Build**, and are **deleted** (never "revoked" on
+  screen). **Brand** is the console page of a code-site store's look (Look's place); Look stays for theme shops.
 - **Roles:** Owner · **Manager** (was Admin; the stored value `admin` keeps its spelling) · Staff · Accountant ·
   Partner · Partner owner and Lead (the agency's) · Frrata support (on a **support visit**). "Admin" is never a person.
 - **Words:** store (never shop; "Shop all", "Shop now", "Shop the look" stay as the store's verbs) · shopper (never
@@ -316,7 +317,7 @@ The rules above bind every screen. Each surface's approved rules are in one file
 | [reference/states.md](reference/states.md) | any screen: its seven states and the primitive for each | Empty, loading, error, one, many, no permission, phone |
 | [reference/ux-foundation.md](reference/ux-foundation.md) | any Console, Admin or partner screen: the shell, page layout, controls, **Motion** (rules 22–29, reduced motion, the phone sheet), accessibility, phone widths | UX foundation |
 | [reference/console-catalogue.md](reference/console-catalogue.md) | a product, collection, import, order edit or offer screen, or the Phase 1 console rules | Phase 1, Product page, Products rework, Import and order edit, Offers |
-| [reference/console-operations.md](reference/console-operations.md) | the orders queue and records, Apps, Content, Settings and GST, Shipping, Analytics, shop addresses, Plan and billing, Neel analytics and finding | Work queues, Apps, Apps gallery, Console › Content, Settings choices, Shipping, Analytics, Shop addresses, Plan and billing, Neel analytics, Neel finding |
-| [reference/shop.md](reference/shop.md) | anything a shopper sees: the storefront, live themes (retiring, ADR-0014), Theme Studio and Signal, EkCode, share cards | Storefront as built, Storefront, Shop themes, Theme Studio, Theme Signal, EkCode, Share cards |
+| [reference/console-operations.md](reference/console-operations.md) | the orders queue and records, Apps, Content, Settings and GST, Shipping, Analytics, shop addresses, Plan and billing, Neel analytics and finding, a code-site store's Brand, Website card, build keys and publishing Notices | Work queues, Apps, Apps gallery, Console › Content, Settings choices, Shipping, Analytics, Shop addresses, Plan and billing, Neel analytics, Neel finding, Brand, Website and publishing |
+| [reference/shop.md](reference/shop.md) | anything a shopper sees: the storefront, live themes (retiring, ADR-0014), Theme Studio and Signal, checkout and order pages on a code-site store, EkCode, share cards | Storefront as built, Storefront, Shop themes, Theme Studio, Theme Signal, Checkout and order pages, EkCode, Share cards |
 | [reference/admin-and-partner.md](reference/admin-and-partner.md) | a Frrata Admin screen or the partner workspace | Frrata Admin, Frata Admin, Partner workspace |
 | [reference/brand-and-public.md](reference/brand-and-public.md) | the Frrata brand (logo, voice of the marketing site) or the public pages (home, pricing, sign-up) | Brand, The public pages |
