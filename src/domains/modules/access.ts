@@ -7,7 +7,7 @@
 // `now` is passed in, never read (check:clock).
 // =============================================================================
 
-import { MODULE_KEYS, MODULES, type ModuleKey } from './registry'
+import { isModuleKey, MODULE_KEYS, MODULES, type ModuleKey } from './registry'
 
 export type AddonFact = { id?: string; module: ModuleKey; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null; byShop?: boolean }
 export type ModuleFacts = {
@@ -17,6 +17,8 @@ export type ModuleFacts = {
   addons: readonly AddonFact[]
   /** Modules with an open switch row (enabled, not disabled). */
   switchedOn: readonly ModuleKey[]
+  /** Modules with any switch row, open or closed: the store chose. A `defaultOn` module it never touched reads on. */
+  touched: readonly ModuleKey[]
   paused: readonly ModuleKey[]
 }
 
@@ -42,6 +44,18 @@ export type ModuleAccess = {
   /** In a trial the shop started itself: when its paid row begins (End trial is the shop's), else null. */
   paidFrom: Date | null
 }
+
+/** A store's switch rows, one per module (`bool_or(disabled_at is null)`), as the two facts access reads. The one
+ *  mapper for the shop's read and Admin's (no ordering, no clock: the unique open index allows one open row, so
+ *  "turned off" is "has a row, none open"). */
+export function switchFacts(rows: readonly { module: string; open: boolean }[]): Pick<ModuleFacts, 'switchedOn' | 'touched'> {
+  const known = rows.filter((r): r is { module: ModuleKey; open: boolean } => isModuleKey(r.module))
+  return { switchedOn: known.filter((r) => r.open).map((r) => r.module), touched: known.map((r) => r.module) }
+}
+
+/** Is the module on? An open switch row, or on by default and never switched (the one rule; spec Design). */
+const switchedOnNow = (key: ModuleKey, f: Pick<ModuleFacts, 'switchedOn' | 'touched'>): boolean =>
+  f.switchedOn.includes(key) || (!!MODULES[key].defaultOn && !f.touched.includes(key))
 
 /** The add-on row in force for a module: a paid one before a trial. The one rule, read by access and by Admin. */
 export function liveAddon<A extends AddonFact>(addons: readonly A[], key: ModuleKey, now: Date): A | null {
@@ -82,7 +96,7 @@ export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, Modul
   const base = (key: ModuleKey): ModuleAccess => {
     const def = MODULES[key]
     const g = grant(key, f, now)
-    const on = f.switchedOn.includes(key)
+    const on = switchedOnNow(key, f)
     const paused = f.paused.includes(key)
     let why: Why = 'usable'
     if (def.status === 'next') why = 'next'

@@ -8,14 +8,8 @@
 // by a lawyer once (Phase 1 owner call 13).
 // =============================================================================
 
-export const POLICY_PAGES = [
-  ['returns', 'Returns and exchanges'],
-  ['shipping', 'Shipping'],
-  ['privacy', 'Privacy'],
-  ['terms', 'Terms of sale'],
-  ['contact', 'Contact'],
-] as const
-export type PolicyPage = (typeof POLICY_PAGES)[number][0]
+import { POLICY_PAGES, type PolicyPage } from './pages'
+export { POLICY_PAGES, type PolicyPage }
 
 import type { PublicZone } from '@/domains/delivery/public'
 
@@ -47,6 +41,36 @@ export type PolicyFacts = {
   countsVisits?: boolean
   /** Delivery Zones, while the app is usable: the zones in order; the shipping policy states them (architecture M2). */
   zones?: readonly PublicZone[] | null
+  /** EkCode is usable and configured at this shop (on by default, docs/specs/2026-11-16-ekcode-default-on.md
+   *  precondition b): the privacy policy then says what EkCode does at checkout. */
+  offersEkcode?: boolean
+}
+
+/**
+ * What the privacy page says when the checkout offers EkCode. DRAFT FOR COUNSEL (docs/setup.md § EkCode A4(e)): the
+ * wording is to be settled with counsel before a store with real shoppers offers EkCode. It names EkCode, what it fills
+ * in and when a shop gets it, the address saved unless unticked, and the `ek_v` browser id and its daily beacon (the
+ * holdout, src/components/modules/ekcode/island.tsx). A rewritten page counts as saying it when it names EkCode.
+ */
+export const EKCODE_PRIVACY = [
+  'This checkout offers EkCode, Frrata’s sign-in for shoppers. If you continue with EkCode, it fills in your name, phone number and address. This store gets them only when you do. EkCode saves your delivery address; to stop this, untick “Save this address to EkCode”. EkCode’s own privacy policy is at ekcode.in/privacy.',
+  // Counsel: is a lasting random browser id personal data? "holds no name, phone or address" is the factual claim.
+  'Frrata shows EkCode to some shoppers and not others, to see if it helps. For this, your browser keeps a random number and sends it to Frrata once a day. The number holds no name, phone or address.',
+] as const
+const EKCODE_WORD = /ekcode/i
+
+/** A rewritten privacy page that doesn't mention EkCode while the checkout offers it (precondition c): the console asks
+ *  the merchant to add it. */
+export const ekcodeLineMissing = (f: Pick<PolicyFacts, 'offersEkcode'>, privacyOverride: string | null | undefined): boolean =>
+  !!f.offersEkcode && !!privacyOverride?.trim() && !EKCODE_WORD.test(privacyOverride)
+
+/** One policy page as the console shows it (Settings home and Policies read this, never their own copy): the
+ *  merchant's own words or the settings', the facts it is missing, and whether it must say the checkout offers EkCode. */
+export function policyState(page: PolicyPage, f: PolicyFacts, override: string | null | undefined, inr: (paise: number) => string): { own: boolean; gaps: string[]; ekcodeMissing: boolean; needs: boolean } {
+  const own = !!override?.trim()
+  const gaps = own ? [] : missingFacts(renderPolicy(page, f, inr))
+  const ekcodeMissing = page === 'privacy' && ekcodeLineMissing(f, override)
+  return { own, gaps, ekcodeMissing, needs: gaps.length > 0 || ekcodeMissing }
 }
 
 /** A run of text, or a fact from settings — `value` null when the merchant has not filled it in. */
@@ -103,7 +127,10 @@ export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: numb
           ? ' collects your name, phone number, email and address to deliver your order and to tell you about it, and asks before using them for anything else.'
           : ' collects your name, phone number, email and address to deliver your order and to tell you about it, and nothing else without asking you.')],
         ...(f.countsVisits ? [[t('We count visits to this shop to see which pages and links work: the pages you open, your browser and an approximate city. We don\'t use cookies for this, don\'t store your IP address, and can\'t tell who you are from it. Visit records are deleted after 90 days.')]] : []),
-        [t('Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order.')],
+        ...(f.offersEkcode ? EKCODE_PRIVACY.map((line) => [t(line)]) : []),
+        [t(f.offersEkcode
+          ? 'Online payments are handled by Razorpay; we never see your card or UPI details. We share your details with the courier that delivers your order. If you choose EkCode, we share them with EkCode too.'
+          : 'Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order.')],
         [t('To see, correct or delete what we hold about you, write to our grievance officer, '), fact('grievance officer', f.grievanceName), t(', at '), fact('grievance email', f.grievanceEmail), t('.')],
       ]
     case 'terms':

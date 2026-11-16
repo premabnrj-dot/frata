@@ -14,14 +14,14 @@ Every store's checkout offers "Continue with EkCode" from the day it opens, as t
 unless the store turned EkCode off.
 
 ## Preconditions (architecture review, 2026-11-16: BLOCKER 1)
-Every store's own privacy page says details go "only with the courier" (`src/domains/policies/render.ts:103-106`);
+Every store's own privacy page says details go "only with the courier" (`src/domains/policies/render.ts`, the privacy page's courier line);
 EkCode's "Save this address to EkCode" starts ticked, so a store offering EkCode needs its notice to say so. Building
 can start now (every store is test data, owner 2026-11-15); **a store with real shoppers offers EkCode only when:**
 - (a) counsel has answered `docs/setup.md` § C1's A4(a)–(c) (as today for EkCode at all) **and** a new A4(d): may Frrata
   switch on its own data-fiduciary product in a merchant's checkout by default;
 - (b) the store's privacy page says it: `PolicyFacts.offersEkcode` (filled like `countsVisits` and `zones`: usable and
   configured) adds an EkCode paragraph worded with counsel (EkCode, the `ek_v` browser id and the daily exposure beacon);
-  the text reaches the Storefront API's policies (`2026-12/map.ts`), so `api-contract-reviewer` runs on it;
+  the Storefront API lists the policies as links only (`2026-12/map.ts`), so its contract is unchanged (`check:api`);
 - (c) a store that rewrote its privacy page (`shop_policies`) gets a console notice to add the paragraph;
 - (d) answered by the owner: no Notice (every store is a test store); the signup terms gain the line and their version.
 
@@ -33,6 +33,9 @@ can start now (every store is test data, owner 2026-11-15); **a store with real 
    Apps (one line; the terms version bumps with it).
 3. **Stores without a paid plan: "Yes."** They get the default, under the Launch cap (100 codes a day).
 Preconditions (b) and (c) stand: each store's privacy page says it offers EkCode before real shoppers reach it.
+**(d) is open** (orchestrator, 2026-11-16): Frrata has no merchant terms yet (signup shows none, records no acceptance,
+has no version). When counsel writes them (`docs/setup.md` § EkCode A4(b)), they include "EkCode is on by default; turn
+it off in Apps", and signup records acceptance with a version. No signup line until then.
 
 ## Design
 - **The default is data in one place:** the registry gains `defaultOn: true` for `ekcode` (`src/domains/modules/registry.ts`).
@@ -71,7 +74,7 @@ Preconditions (b) and (c) stand: each store's privacy page says it offers EkCode
   `scripts/verify/tenancy.sql` block (the next free number) shows a store with no row reads On, one with a closed latest
   row reads Off, and Admin's list counts both correctly.
 - **SSOT:** one rule, in `moduleAccess`; SQL mirrors it in one predicate used by the definer, with a parity test.
-- **Performance:** the facts query changes from "open rows" to "latest row per module" (`distinct on`, index
+- **Performance:** the facts query changes from "open rows" to one grouped row per module (`bool_or`, index
   `tenant_modules_tenant`), still one read on the checkout path.
 - **Security:** no new action or route; the turn-off action writes the closed row through the existing `asMember` path.
 - **Unit economics** (unit-economics-reviewer, 2026-11-16): merchants NEUTRAL (EkCode is core, ₹0 to them); Frrata HURTS a
@@ -85,11 +88,11 @@ Preconditions (b) and (c) stand: each store's privacy page says it offers EkCode
 ## Tasks
 | # | Task | Verify |
 |---|---|---|
-| E1 | Registry `defaultOn`; `ModuleFacts.switchedOff`; `moduleAccess` rule; tests: no row → on (default), closed latest → off, open → on, not-default modules unchanged | `npx vitest run src/domains/modules` |
-| E2 | `readFactsIn` reads the latest row per module; the turn-off action writes a closed row when none is open | `npx vitest run src/lib`; `npm run typecheck` |
+| E1 | Registry `defaultOn`; `ModuleFacts.touched` (any row) beside `switchedOn` (an open row), folded by `switchFacts`; `moduleAccess` rule; tests: no row → on (default), closed latest → off, open → on, not-default modules unchanged | `npx vitest run src/domains/modules` |
+| E2 | `readFactsIn` and Admin read one `bool_or(disabled_at is null)` row per module; the turn-off action writes a closed row when none is open | `npx vitest run src/lib`; `npm run typecheck` |
 | E3 | Migration: `app_admin_ekcode_shops` on the same rule (grants re-run); Admin's Apps reader; proof block | `npm run verify:tenancy` |
 | E4 | e2e `67-ekcode` starts from a store with no switch row (it offers EkCode), turns it off, on; the privacy page's paragraph; every flow that opens a checkout now draws EkCode (10, 69, 90, 95's budgets) | `npm run release:check`; the full `npm run e2e` |
-| E4b | `PolicyFacts.offersEkcode` and the privacy paragraph (draft, marked for counsel); the console notice for rewritten privacy pages; the signup terms' line and version (precondition d) | `npx vitest run src/domains/policies`; `npm run check:api` |
+| E4b | `PolicyFacts.offersEkcode` and the privacy paragraph (draft, marked for counsel); the console notice for rewritten privacy pages; the signup terms' line is deferred (precondition d: no merchant terms exist yet; counsel, with the owner) | `npx vitest run src/domains/policies`; `npm run check:api` |
 | E5 | **Limits for default-on** (unit-economics review 2026-11-16): Admin › EkCode shows the busiest hour of the last 7 days against `globalHour` and warns at 80% (the rule: `globalHour` ≈ 3× the measured busiest hour, raised by a new limits version before it binds; Meta's 100K tier before ~400 stores); a sale-day raise is Admin's existing `raised_cap` per store, written into the EkCode runbook; the breaker is written down as not applying on Launch (its daily cap of 100 stops codes before `breakerAfter` 200) | `npx vitest run src/domains/ekcode-core`; `npm run e2e -- --only ekcode` |
 | E6 | Measure for four weeks: delivered codes ÷ placed orders per store, sign-ins that end with no order, the busiest hour each week (from `ekcode_daily` and `app_admin_ekcode_shops`); the figures into `frata-unit-economics` | the dated lines |
 | E7 | Reviews on the diff: `architecture-reviewer`, `tenancy-auditor` (the definer's revokes and grants), `speed-reviewer`, `api-contract-reviewer`, `words-reviewer`, `impact-reviewer` | the reports |

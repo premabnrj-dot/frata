@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/db/admin'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { phoneKeys } from '@/lib/ekcode/keys'
 import { cleanMobile } from '@/domains/checkout/mobile'
+import { MODULES } from '@/domains/modules/registry'
 
 // =============================================================================
 // FILE: src/lib/admin/ekcode.ts — ADMIN › EKCODE (P1 task 10): counts, costs and controls, through the admin definers
@@ -20,8 +21,19 @@ export async function ekStats(staff: StaffOk, days: 1 | 7 | 30): Promise<EkStats
   const rows = (await adminDb().execute(sql`select * from app_admin_ekcode_stats(${staff.userId}::uuid, ${days}::int)`)) as unknown as EkStats[]
   return rows[0] ? num(rows[0]) : null
 }
+/** The registry's default, the one copy (drizzle/0154: the definers take it, never hold it). */
+const EK_DEFAULT = !!MODULES.ekcode.defaultOn
+
+/** Open stores offering EkCode (on by default unless turned off), busiest first, at most 500. */
 export async function ekShops(staff: StaffOk, days: 1 | 7 | 30): Promise<EkShop[]> {
-  return ((await adminDb().execute(sql`select * from app_admin_ekcode_shops(${staff.userId}::uuid, ${days}::int)`)) as unknown as EkShop[]).map(num)
+  return ((await adminDb().execute(sql`select * from app_admin_ekcode_shops(${staff.userId}::uuid, ${days}::int, ${EK_DEFAULT})`)) as unknown as EkShop[]).map(num)
+}
+
+export type EkReach = { offering: number; opened: number; busiest_hour: number; busiest_at: Date | null }
+/** How many open stores offer EkCode, of how many, and the busiest hour of codes in the last 7 days (task E5). */
+export async function ekReach(staff: StaffOk): Promise<EkReach | null> {
+  const rows = (await adminDb().execute(sql`select * from app_admin_ekcode_reach(${staff.userId}::uuid, ${EK_DEFAULT})`)) as unknown as EkReach[]
+  return rows[0] ? { ...num(rows[0]), busiest_at: rows[0].busiest_at ? new Date(rows[0].busiest_at) : null } : null
 }
 export async function ekSettings(staff: StaffOk): Promise<EkSettings | null> {
   return ((await adminDb().execute(sql`select * from app_admin_ekcode_settings(${staff.userId}::uuid)`)) as unknown as EkSettings[])[0] ?? null

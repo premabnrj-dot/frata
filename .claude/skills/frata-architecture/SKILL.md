@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.2.0
+  version: 3.4.0
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -252,7 +252,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
-  `requireShop` does. Console and shops stay on different registrable domains.
+  `requireShop` does; `requireShop` also weighs `Sec-Fetch-Site` (`src/lib/auth/fetch-site.ts`: sibling stores
+  are same-site until the PSL lists frrata.shop; logged, then refused). Console and shops stay on different registrable domains.
 - **A tuple means what its comment says.** An action whose tuple's comment
   excludes the role it lets through is a finding, not a judgement call (S6,
   settled by the owner 2026-11-08: staff edit products and collections).
