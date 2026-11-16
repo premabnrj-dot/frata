@@ -16,6 +16,7 @@ These sections are the owner-approved rules of one surface; they are moved here 
 - Plan and billing
 - Neel analytics
 - Neel finding
+- Brand, Website and publishing on a code-site store
 
 ## Work queues and records (owner-approved with 1D Orders, 2026-11-07)
 
@@ -271,3 +272,32 @@ triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
   desktop only (a phone opens the page).
 - **Phone order rows**: line 1 "KS-5006 · Sneha" with ₹ at the right, line 2 the place and the status chip; the
   customer cell lends its parts to the row's grid (`neel.css`), so the name is in the DOM once.
+
+## Brand, Website and publishing on a code-site store (owner-approved mockups 2026-11-16: `docs/mockups/2026-11-16-p1-brand.html`, `docs/mockups/2026-11-16-website-one-address.html`, `docs/mockups/2026-11-16-v2b-publishing.html`)
+
+- **Brand** takes Look's place in the console menu (Store group) for a code-site store; a theme shop keeps Look and never
+  sees Brand. Tabs "Logo, colours and type" · "Checkout" (§ Checkout and order pages, in the shop file). Cards Logo ·
+  Colours · Type · Shape · Preview; logo slots Main logo · Mark · Stacked · On dark; eleven colour roles, each pair's
+  contrast a chip, a pair under 4.5:1 refused at its field; fonts from a closed list; corners 0, 4, 8, 12, 16; spacing
+  Compact · Standard · Roomy.
+- **A partner's change on an open store waits for the owner:** chip "Waiting for the owner", toast "Sent to the owner.";
+  the owner's Notices row ("Your partner changed your brand · 4 logo files and 2 fonts.") and a card on Brand carry
+  Approve change · Decline. A Builder and a support visit see "Preview only"; Staff and Accountants don't open Brand.
+- **Publishing per partner** (Settings › People, the partner's row, after handover only): Segmented "Publishes freely ·
+  Ask me first", saved on the tap with an ok toast and Undo; a support visit sees it as a fact.
+- **Notices type "Website"** for a publish the owner is told about after: one line per publish ("Neel Studio published
+  v9 · Added Lookbook and Our weavers."), collapsed to one line an hour per partner, with **Preview** and **Undo**. Undo
+  confirms once ("Undo Neel Studio's v9?" · Keep v9 · Go back to v8) and is offered until the next version goes live. A
+  waiting version opens Review and publish: Publish v9 or Not now (no Decline; a newer version replaces it). A version
+  that adds an outside service needs its own confirm naming the host and what it can see ("Allow and publish v10").
+- **The Website card** (Settings › Store › Website): one state chip, **Live · Opening soon · Paused till <date> · Stopped
+  by Frrata · No partner · Not answering**. Stopped by Frrata shows its reason in one line, written by Frrata staff, to
+  the owner and the partner. Facts: Built by, Live version, Latest preview (Open preview, a new tab).
+- **The Address card** holds the one address and Connect my domain. Each record's chip: **Waiting for record ·
+  Securing · Connected** (never "proved" or "certified"); the `secure.` row's (i) "Holds the checkout form. Shoppers
+  never see this address." The website moves only once both records are Connected and the owner taps Make main.
+- **Build keys sit in the keys list** beside live and test keys: chip "Build · ends 17 Nov" (or "Build · ended"), the
+  line "Made by <person>, <partner>", a name Frrata sets (Studio session, Preview v9, <person>'s computer). The owner
+  or a Manager deletes one; its confirm names whose work stops ("Neel Studio's work with it stops within a minute.").
+- The partner's button is **New website**, never "New site". If the website stops answering, shoppers meet "We'll be
+  back soon" with Go to checkout and Your orders.

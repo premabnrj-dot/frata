@@ -10,6 +10,7 @@ These sections are the owner-approved rules of one surface; they are moved here 
 - Shop themes
 - Theme Studio
 - Theme Signal
+- Checkout and order pages on a code-site store
 - EkCode
 - Share cards
 
@@ -213,6 +214,34 @@ These sections are the owner-approved rules of one surface; they are moved here 
   line** (the Hero's, the Statement's), tilted −4° / −6°, never for body or buttons. Section headings 22–34 px, 600,
   −0.02em, balanced. An empty story section shows nothing; it never stops a publish.
 
+## Checkout and order pages on a code-site store (owner-approved mockups P2 and P3, 2026-11-16; `docs/mockups/2026-11-16-p2-checkout.html`, `docs/mockups/2026-11-16-p3-secure-frame.html`)
+
+- **They draw the brand record** (Console › Brand: logo, colours, fonts, corners, spacing), never the theme: checkout,
+  the bag-link page, order pages and policy pages. A theme shop keeps its theme until it moves to code.
+- **What a partner may set**, in Console › Brand › Checkout, and nothing more:
+  - **Header:** the logo left or centred; the back link "Back to <store>" on or off.
+  - **Footer:** policy links in one row or two. The legal block always shows.
+  - **Trust blocks:** up to four, in the partner's order, from a closed set worded from the store's own settings
+    (delivery days, the exchange or returns window, Pay on delivery's limit, secure payment by Razorpay, a GST invoice on
+    every order). Never typed words.
+  - **Two plain lines:** the checkout heading, ≤ 24 characters (empty draws "Checkout"), and the order page's thank-you
+    line, ≤ 120 (empty draws nothing). Each shows its counter ("12/24") and refuses a UPI ID, a phone number, a link and
+    a run of 6 or more digits, **each refusal at the field** ("This line has a UPI ID. Remove it to save."), checked as
+    typed and again on Save; what was typed stays; Save's error toast counts the lines ("2 lines need fixing" · Show).
+- **Everything else is Frrata's only, with no setting:** fields and their labels, the steps and their order, prices,
+  payment and the pay button's words, consent and privacy words, the legal block. No partner pixel or script on these
+  pages.
+- **Who sets it:** the owner, a Manager, the partner's owner and Leads. On an open store a partner's save waits for the
+  owner (chip "Waiting for the owner", toast "Sent to the owner."); a Builder reads the tab as facts beside the preview
+  ("Preview only"). The preview uses the store's own products as sample data.
+- **Layout:** one 560 px column on a computer, as on a phone. On one address the secure frame sits inside that column,
+  under Your bag and How you'll pay, with no edge of its own; the trust line stays under Place order.
+- **Lines:** − and + (1 to 10) and Remove on each; − at 1 removes the line with "Removed <product>. · Undo" in its place; a
+  sold-out line shows Sold out with Remove.
+- **The button** names the amount the server priced: "Place order · ₹<amount>" on delivery, "Pay · ₹<amount>" online.
+  The frame's own states: "Loading the secure form"; "We couldn't load the secure form." with Try again.
+- **The bag-link page:** the logo and "Opening checkout" for under a second; no footer.
+
 ## EkCode (owner-approved 2026-11-09; spec `docs/specs/2026-11-09-shopper-login.md`, mockup https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu)
 
 - **A brand of its own.** Nothing a shopper sees names Frrata: ekcode.in pages, the notice, WhatsApp (sender
@@ -222,7 +251,8 @@ These sections are the owner-approved rules of one surface; they are moved here 
   appears only in the mark: **every word on every screen is English** until the owner plans other languages.
 - **The shop's button** is "Continue with" + the mark, ink on light themes and paper on dark, 52 px, full width on a
   phone, never in the shop's colours, above the guest form with an "or" divider. Guest checkout always stays.
-- **ekcode.in screens**: a real page (top-level, never a pop-up or iframe); the shop's name and initial top right;
+- **ekcode.in screens**: a real page on ekcode.in, **never an iframe** (a popup or a new tab is allowed: checkout's
+  secure frame opens it in a popup, owner 2026-11-16); the shop's name and initial top right;
   one field per screen; the number checks itself as typed (10 digits, 6–9); the code field is `one-time-code`, fills
   itself and submits on the sixth digit (no Verify button); "Open WhatsApp" on a phone; email offered only when
   needed; consent is its own tap, never pre-ticked; the shopper sees exactly what the shop gets and picks the
