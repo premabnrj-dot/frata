@@ -2,9 +2,9 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.17.0
+  version: 2.18.0
   owner: owner
-  verified: 2026-11-12
+  verified: 2026-11-16
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -226,6 +226,45 @@ higher caps, review of big sends, export/API.
 | A ₹ nudge converts better than a feature list | assumption · 2026-11-11 | a 50% holdout if the owner approves; until then `billing.plan.source` upgrades per eligible shop, 30 days |
 | An upgrade from the card is not undone within 60 days | pricing-ladder spec · 2026-11-11 | downgrades within 60 days of a `source: featured` change |
 | Frrata gives up ₹500–₹26,500 a month per shop that moves up from the card | review · 2026-11-11 | invoices before and after, per moved shop |
+
+## Studio credits and code-site hosting (owner-approved 2026-11-16; `docs/specs/2026-11-16-studio-agent.md` § 8; hypotheses)
+
+- **The credit** = ₹6.33 of **loaded** cost. Loaded cost = the vendors' list cost (Managed Agents' `usage.list_cost`, the
+  Haiku calls, the fleet's build minutes) × the day's rate × **1.10** (3% forex and transfer, 5% turns returned when
+  Frrata's side fails, 2% receiving the partner's payment). A turn's credits = ⌈loaded cost ÷ ₹6.33⌉, charged after the
+  turn, never above its reserve; the rate is stored with each turn (in the partner's ledger, never a tenant row).
+- **Prices:** pack ₹1,999 for 100; Studio ₹2,999 a month with 150; Studio Plus ₹9,999 a month with 500; typed top-ups ₹20
+  a credit. Every credit sells at ₹19.99–20.00: **3.16×** before payment fees (₹1,900 for 100 was 2.92× after a card fee).
+  20 free credits once per verified partner (₹126.60 of cost): the first preview needs 11 warm, 16 cold. Seats and credits
+  stay outside the partner share.
+- **GST on Anthropic's invoice** (an imported service): if the input credit is not recovered the multiple falls to
+  2.68× and the loading rises to 1.30. Credits sell nothing until the CA confirms.
+- **Inputs:** Opus 5.5 $4 in, $20 out, cache read $0.20, 5-minute write $5, 1-hour write $8 per million; Managed Agents
+  running time $0.08 an hour; a build 2 minutes × $0.014; ₹94 a dollar (x-rates, 2026-11-16).
+- **A page turn** (25 requests, 80k cached read, 2.4k written, 5k uncached, 20k output each): $1.156 with sandbox and its
+  preview build → ₹119.5 loaded → **19 credits** (₹380). A small edit 3 credits, 4 with a preview build. A preview built
+  outside a turn before handover: 1 credit.
+- **A typical 8-page site:** $14.97 list → ₹1,548 loaded → **251 credits** → ₹5,017 + GST (₹5,921); Frrata keeps ₹3,469
+  before overheads. Without a logo ≈ 249; on Sonnet 5.5 ≈ 137. Sensitivity: 40k output a page 307; every pause re-writes
+  80k 331; both 387; 1-hour writes 279. So the target median is ≤ 280, and the proof includes real pauses.
+- **Budgets:** 40 credits a turn (120 at most), 300 a person a day, a monthly cap per person set by the partner owner, the
+  partner's client budget (warn 80%, pause 100%), ₹25,000 list cost a day platform-wide for the first three months.
+- **Hosting is not priced:** at ADR-0017's guess (0.3 MB and 5 requests a view, bom1 $0.20 a GB, $2.20 a million) Launch
+  ₹294, Growth ₹2,937, Scale ₹9,764 a month, 7.6–19.1% of Frrata's revenue on the illustrative shapes: all three cross
+  ADR-0017's kill line. No paid store is hosted until 30 days of the pilot's measured usage (first and repeat views apart,
+  Blob transfer added) price the allowances at 3×; one address adds the router's requests to the same count.
+- **The baseline:** ≈ ₹40–80 a page on Lovable against ₹380 here (4.75–9.5×); a partner's own Claude Code costs Frrata
+  nothing. The value case is what Lovable doesn't do (the store's catalogue, checkout, COD, content, gate, hosting and
+  handover).
+
+| Figure | Source · date | Test |
+|---|---|---|
+| 251 credits an 8-page Opus site, ≤ 280 median | Studio spec · 2026-11-16 | proof task 1, three runs with real pauses |
+| 19 credits a page turn, 3–4 an edit | same | proof tasks 4–13 |
+| 1.10 loading | unit-economics review · 2026-11-16 | the first two Anthropic invoices against the bank's debits; returned turns ÷ all turns, month 1; Razorpay fees on purchases |
+| Hosting ₹294 / ₹2,937 / ₹9,764 a month | ADR-0017 guess · 2026-11-15 | the pilot's 30 days of Vercel usage |
+| Partners pay ₹380 a page against ₹40–80 elsewhere | review · 2026-11-16 | win/loss notes, first 20 partners |
+| The share repays a site's credits in 7.1 months on Launch, 1.3 on Growth | share table · 2026-11-07 | Phase 6 statements of partner-built stores |
 
 ## Current model (founder's, unvalidated, 2026-11)
 
