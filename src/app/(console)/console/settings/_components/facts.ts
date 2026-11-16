@@ -4,11 +4,11 @@ import type { shopWithSettings } from '@/lib/queries/settings'
 
 type Row = NonNullable<Awaited<ReturnType<typeof shopWithSettings>>>
 
-/** A shop's row as the previews read it: one mapping, used by every Settings page. */
-export function shopFacts(shop: Row, shopDomain: string): ShopFacts {
+/** A shop's row as the previews read it: one mapping, used by every Settings page. `offersEkcode`: from `ekcodeOffered` (src/lib/ekcode/offered.ts), so the privacy preview matches the shop's page. */
+export function shopFacts(shop: Row, shopDomain: string, offersEkcode = false): ShopFacts {
   const s = shop.settings
   return {
-    countsVisits: isCountingVisits(),
+    countsVisits: isCountingVisits(), offersEkcode,
     shopName: shop.name, slug: shop.slug, shopDomain,
     legalName: s.legalName, address: s.address, originCountry: s.originCountry, orderPrefix: s.orderPrefix,
     supportEmail: s.supportEmail, supportPhone: s.supportPhone, whatsapp: s.whatsapp, instagram: s.instagram,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { missingFacts, POLICY_PAGES, renderPolicy, type PolicyFacts } from '../render'
+import { EKCODE_PRIVACY, ekcodeLineMissing, missingFacts, POLICY_PAGES, renderPolicy, type PolicyFacts } from '../render'
 
 const inr = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`
 const full: PolicyFacts = {
@@ -45,5 +45,24 @@ describe('privacy while visits are counted (A·2)', () => {
     expect(counting).not.toContain('nothing else')
     expect(counting).toContain('We count visits to this shop')
     expect(counting).toContain('deleted after 90 days')
+  })
+})
+
+describe('privacy while the checkout offers EkCode (default-on precondition b)', () => {
+  it('says what EkCode does, the browser number and its beacon, and that EkCode gets details only when chosen', () => {
+    const on = text(renderPolicy('privacy', { ...full, offersEkcode: true }, inr))
+    for (const line of EKCODE_PRIVACY) expect(on).toContain(line)
+    expect(on).toContain('and with EkCode when you choose it.')
+    const off = text(renderPolicy('privacy', full, inr))
+    expect(off).not.toMatch(/EkCode/)
+    expect(off).toContain('shared only with the courier that delivers your order.')
+    expect(missingFacts(renderPolicy('privacy', { ...full, offersEkcode: true }, inr))).toEqual([])
+  })
+  it('a rewritten privacy page that never mentions EkCode is flagged while the checkout offers it', () => {
+    expect(ekcodeLineMissing({ offersEkcode: true }, 'We keep your details safe.')).toBe(true)
+    expect(ekcodeLineMissing({ offersEkcode: true }, 'We use ekcode at checkout.')).toBe(false)
+    expect(ekcodeLineMissing({ offersEkcode: false }, 'We keep your details safe.')).toBe(false)
+    expect(ekcodeLineMissing({ offersEkcode: true }, null)).toBe(false)
+    expect(ekcodeLineMissing({ offersEkcode: true }, '   ')).toBe(false)
   })
 })

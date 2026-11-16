@@ -23,6 +23,7 @@ import { pinSuggestionFor } from '@/lib/queries/pin-returns'
 import { errName } from '@/lib/log'
 import { HELD_BY_ZONES } from '@/domains/delivery/lists'
 import { shopModules } from '@/lib/queries/modules'
+import { ekcodeOffered } from '@/lib/ekcode/offered'
 
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }) {
   return { title: sectionFor((await params).section)?.title ?? 'Settings' }
@@ -53,7 +54,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
     manifestsFor(tenantId),
-    zoned ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
+    zoned || section.key === 'policies' ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
     // Best effort: without it the page shows no suggestion, never an error.
     section.key === 'payments' ? pinSuggestionFor(tenantId, new Date()).catch((err) => { console.error('[settings pin]', errName(err)); return null }) : Promise.resolve(null),
     owned,
@@ -65,7 +66,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     ? await liveWithoutRate(tenantId, new Date()).catch((err) => { console.error('[settings taxes] unrated', errName(err)); return null })
     : null
   const theme = resolveStored(live, shop.settings, src)
-  const facts = { ...shopFacts(shop, SHOP_DOMAIN), look: { vars: schemeVars(theme, 'paper'), display: displayFamily(theme.settings.pairing) } }
+  const facts = { ...shopFacts(shop, SHOP_DOMAIN, !!mods && ekcodeOffered(mods.access)), look: { vars: schemeVars(theme, 'paper'), display: displayFamily(theme.settings.pairing) } }
   const lock = ownerOnly ? lockOf(lockedFor(role, ownerOnly.hasOwner, support), section.key, shop.settings as unknown as Record<string, unknown>) : null
   const ask = askPage && ownerOnly && lock && mayAskOwner(role, ownerOnly.hasOwner, support) ? { page: askPage, asked: ownerOnly.askedToday } : null
   // A page locked whole says so beside its title, with Ask the owner as the header's one action; a page locked in part

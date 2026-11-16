@@ -5,7 +5,7 @@ import { Banner } from '@/components/ui/banner'
 import { Badge } from '@/components/ui/badge'
 import { Icon } from '@/components/icons/icon'
 import { Panel } from '@/components/ui/panel'
-import { missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
+import { ekcodeLineMissing, missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
 import { grievanceComplete, missingForLivePayments, type SectionKey } from '@/domains/settings/sections'
 import { paise } from '@/domains/money/paise'
 import { estimateOf } from '@/domains/settings/ship-costs'
@@ -13,7 +13,9 @@ import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { liveNamesFor, mainHostFor } from '@/lib/queries/addresses'
-import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
+import { policyOverrides, shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
+import { shopModules } from '@/lib/queries/modules'
+import { ekcodeOffered } from '@/lib/ekcode/offered'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { planLine } from '@/lib/queries/billing'
 import { takesLivePayments } from '@/lib/payments/keys'
@@ -42,7 +44,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', errName(err)); return null })
   if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const f = shopFacts(shop, SHOP_DOMAIN)
+  // Policies' row counts a rewritten privacy page that doesn't say the checkout offers EkCode (default-on precondition c).
+  const [mods, overrides] = await Promise.all([shopModules(auth.membership.tenantId, new Date().toISOString()).catch(() => null), policyOverrides(auth.membership.tenantId).catch(() => ({} as Record<string, string>))])
+  const f = shopFacts(shop, SHOP_DOMAIN, !!mods && ekcodeOffered(mods.access))
   const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const [pay, plan] = await Promise.all([
     paymentStatusFor(auth.membership.tenantId).catch(() => null),
@@ -57,7 +61,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const current = names.find((n) => !n.added)
   const missing: { label: string; section: PageKey }[] = [...missingForLivePayments(f),
     ...(current && !current.razorpayOk ? [{ label: `Add ${shopHost(current.name)} in Razorpay`, section: 'web-address' as const }] : [])]
-  const policyGaps = POLICY_PAGES.filter(([k]) => missingFacts(renderPolicy(k, f, inr)).length).length
+  const policyGaps = POLICY_PAGES.filter(([k]) => overrides[k]?.trim() ? k === 'privacy' && ekcodeLineMissing(f, overrides[k]) : missingFacts(renderPolicy(k, f, inr)).length).length
 
   // Neel § Screens · Settings: each row its current value, the parts joined by " · ".
   const parts = (...p: (string | null | false)[]) => p.filter(Boolean).join(' · ')

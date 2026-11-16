@@ -47,7 +47,27 @@ export type PolicyFacts = {
   countsVisits?: boolean
   /** Delivery Zones, while the app is usable: the zones in order; the shipping policy states them (architecture M2). */
   zones?: readonly PublicZone[] | null
+  /** EkCode is usable and configured at this shop (on by default, docs/specs/2026-11-16-ekcode-default-on.md
+   *  precondition b): the privacy policy then says what EkCode does at checkout. */
+  offersEkcode?: boolean
 }
+
+/**
+ * What the privacy page says when the checkout offers EkCode. DRAFT FOR COUNSEL (docs/setup.md § EkCode A4(e)): the
+ * wording is to be settled with counsel before a store with real shoppers offers EkCode. It names EkCode, what it fills
+ * in and when a shop gets it, the address saved unless unticked, and the `ek_v` browser id and its daily beacon (the
+ * holdout, src/components/modules/ekcode/island.tsx). Its version is read by `ekcodeLineMissing` through EKCODE_WORD.
+ */
+export const EKCODE_PRIVACY = [
+  'This checkout offers EkCode, Frrata’s sign-in for shoppers. If you continue with EkCode, it fills in your name, phone number and address, and this shop gets them only then. The address you deliver to is saved to your EkCode unless you untick “Save this address to EkCode”. EkCode’s own privacy policy is at ekcode.in/privacy.',
+  'To show EkCode to some shoppers and not others, so we can tell whether it helps, this browser keeps a random number that says nothing about you and sends it to Frrata once a day.',
+] as const
+const EKCODE_WORD = /ekcode/i
+
+/** A rewritten privacy page that doesn't mention EkCode while the checkout offers it (precondition c): the console asks
+ *  the merchant to add it. */
+export const ekcodeLineMissing = (f: Pick<PolicyFacts, 'offersEkcode'>, privacyOverride: string | null | undefined): boolean =>
+  !!f.offersEkcode && !!privacyOverride?.trim() && !EKCODE_WORD.test(privacyOverride)
 
 /** A run of text, or a fact from settings — `value` null when the merchant has not filled it in. */
 export type Piece = { text: string } | { fact: string; value: string | null }
@@ -103,7 +123,10 @@ export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: numb
           ? ' collects your name, phone number, email and address to deliver your order and to tell you about it, and asks before using them for anything else.'
           : ' collects your name, phone number, email and address to deliver your order and to tell you about it, and nothing else without asking you.')],
         ...(f.countsVisits ? [[t('We count visits to this shop to see which pages and links work: the pages you open, your browser and an approximate city. We don\'t use cookies for this, don\'t store your IP address, and can\'t tell who you are from it. Visit records are deleted after 90 days.')]] : []),
-        [t('Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order.')],
+        ...(f.offersEkcode ? EKCODE_PRIVACY.map((line) => [t(line)]) : []),
+        [t(f.offersEkcode
+          ? 'Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order, and with EkCode when you choose it.'
+          : 'Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order.')],
         [t('To see, correct or delete what we hold about you, write to our grievance officer, '), fact('grievance officer', f.grievanceName), t(', at '), fact('grievance email', f.grievanceEmail), t('.')],
       ]
     case 'terms':
