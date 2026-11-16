@@ -33,7 +33,12 @@ export default {
     await y.goto(Y + '/', { waitUntil: 'domcontentloaded' }) // any answer: Y's page is the attacker's code
     assert.ok(y.url().startsWith(Y), `Y's page moved to ${y.url()}`)
     const x = await ctx.newPage(); x.setDefaultTimeout(30_000)
-    const plant = (cookies) => y.evaluate((list) => { for (const c of list) document.cookie = c }, cookies)
+    // document.cookie writes reach the browser's cookie store a moment later: wait until the jar stops changing.
+    const plant = async (cookies) => {
+      await y.evaluate((list) => { for (const c of list) document.cookie = c }, cookies)
+      let last = -1
+      await until(async () => { const n = (await ctx.cookies()).length; const same = n === last; last = n; return same && n > 0 }, 10_000)
+    }
     const domainOnes = async () => (await ctx.cookies()).filter((c) => c.domain === `.${SHOP_DOMAIN}`)
     // A request from Y's page to X with the shopper's cookies (no-cors: Y cannot read the answer); X's answer as seen.
     const fromY = async (path, init = {}) => {

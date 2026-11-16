@@ -21,7 +21,7 @@ export const FETCH_SITE_MODE: 'log' | 'enforce' = 'log'
 /** Requests answered whatever Sec-Fetch-Site says, each with why. Exact method and path. */
 export const FETCH_SITE_EXEMPT: readonly { method: string; path: string; why: string }[] = [
   { method: 'GET', path: '/api/shop/ekcode/return', why: "EkCode's return is a navigation from ekcode.in. It is cross-site by design. Its state cookie and PKCE check it." },
-  { method: 'POST', path: '/api/shop/e', why: 'The visit beacon carries nothing personal. It changes nothing of the shopper. Origin is still checked.' },
+  { method: 'POST', path: '/api/shop/e', why: 'The visit beacon carries nothing personal. It changes nothing of the shopper. Its ingest checks Origin first.' },
 ]
 
 /** Sec-Fetch-Site values a refusal names; anything a browser never sends is 'other' (a fixed set, so logs stay bounded). */
@@ -43,6 +43,9 @@ export function fetchSiteVerdict(site: string | null, method: string, path: stri
 /** Sec-Fetch-Mode for the log line, from a fixed set. */
 export const fetchMode = (m: string | null): string =>
   ['navigate', 'cors', 'no-cors', 'same-origin', 'websocket'].includes((m ?? '').toLowerCase()) ? (m ?? '').toLowerCase() : m ? 'other' : ''
+
+/** The path for the log line: a route-shaped /api/shop path, else 'other' (a token or junk never reaches a log). */
+export const logPath = (p: string): string => (/^\/api\/shop(\/[a-z-]{1,20}){1,3}$/.test(p) ? p : 'other')
 
 /** What requireShop does with a verdict: answer as before, log (naming the site) and answer, or refuse. */
 export function fetchSiteAction(v: FetchSiteVerdict, mode: 'log' | 'enforce'): { act: 'pass' } | { act: 'log'; site: ForeignSite } | { act: 'refuse' } {

@@ -2,7 +2,7 @@ import 'server-only'
 import { routeFor, shopHostParam, surfaceFor } from '@/domains/tenancy/host'
 import { CONSOLE_HOST, SHOP_DOMAIN, API_HOST, EKCODE_HOST } from '@/lib/public-env'
 import { shopIdForHost } from '@/lib/queries/storefront'
-import { FETCH_SITE_MODE, fetchMode, fetchSiteAction, fetchSiteVerdict, logOnce } from '@/lib/auth/fetch-site'
+import { FETCH_SITE_MODE, fetchMode, fetchSiteAction, fetchSiteVerdict, logOnce, logPath } from '@/lib/auth/fetch-site'
 
 // =============================================================================
 // FILE: src/lib/auth/require-shop.ts
@@ -28,8 +28,8 @@ export async function requireShop(request: Request): Promise<Shop> {
   if (site.act === 'refuse') return { ok: false, status: 403, error: 'Not allowed' }
   // No host, IP, cookie or query: which kind of request a week of logs would have refused, nothing about who. Every
   // part is from a fixed set or a route path, so a page cycling junk headers cannot make new lines.
-  if (site.act === 'log' && logOnce(`${site.site} ${request.method} ${path}`, Date.now())) {
-    console.warn('[fetch-site] would refuse', site.site, request.method.slice(0, 10), path.slice(0, 60), fetchMode(request.headers.get('sec-fetch-mode')))
+  if (site.act === 'log' && logOnce(`${site.site} ${request.method.slice(0, 10)} ${logPath(path)}`, Date.now())) {
+    console.warn('[fetch-site] would refuse', site.site, request.method.slice(0, 10), logPath(path), fetchMode(request.headers.get('sec-fetch-mode')))
   }
   if (request.method !== 'GET') {
     const origin = request.headers.get('origin')

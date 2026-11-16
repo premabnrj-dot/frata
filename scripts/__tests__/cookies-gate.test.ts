@@ -16,6 +16,7 @@ jar.get(STATE())?.value
 res.cookies.set('__Host-x', '1', {
   secure: true,
   path: '/',
+  sameSite: 'strict',
 })`)).toEqual([])
   })
   it('fails a Domain attribute, in options or a header string', () => {
@@ -27,6 +28,10 @@ res.cookies.set('__Host-x', '1', {
     expect(run(`jar.get(nameFrom(req))`).join()).toMatch(/cookie name/)
     expect(run(`const N = 'ek_flow'\njar.get(N)`).join()).toMatch(/cookie name N/)
     expect(run(`res.cookies.set({ name: '__Host-a', value: '1' })`).join()).toMatch(/name first/)
+  })
+  it('fails a set whose sameSite is none or missing', () => {
+    expect(run(`jar.set('__Host-a', '1', { secure: true, path: '/', sameSite: 'none' })`).join()).toMatch(/sameSite/)
+    expect(run(`jar.set('__Host-a', '1', { secure: true, path: '/' })`).join()).toMatch(/sameSite/)
   })
   it('fails a set without Secure or without Path=/', () => {
     expect(run(`jar.set('__Host-a', '1', { path: '/' })`).join()).toMatch(/secure/)

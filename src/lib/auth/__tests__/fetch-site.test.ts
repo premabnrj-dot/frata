@@ -62,6 +62,12 @@ describe('fetchSiteVerdict', async () => {
     expect(logOnce('first', 100_001)).toBe(true) // evicted, so logged again
     expect(logOnce('k199', 100_001)).toBe(false)
   })
+  it('the path in the log line is route-shaped, else other', async () => {
+    const { logPath } = await import('../fetch-site')
+    expect(logPath('/api/shop/ekcode/me')).toBe('/api/shop/ekcode/me')
+    expect(logPath('/api/shop/orders/view/Abc123tokenxyz')).toBe('other')
+    expect(logPath('/api/shop/%0d%0aevil')).toBe('other')
+  })
   it('the mode in the log line is from a fixed set', async () => {
     const { fetchMode } = await import('../fetch-site')
     expect(fetchMode('NO-CORS')).toBe('no-cors')

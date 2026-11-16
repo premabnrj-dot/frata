@@ -4,13 +4,14 @@
 //
 // Fails: a cookie the shop and secure host code sets or reads that is not host-only with a __Host- name — a
 // Domain attribute, a name that is neither a __Host- literal nor cookieName(), a set without Secure and Path=/,
-// a delete (Next's sends no Secure, so a browser refuses it for a __Host- name), a getAll, a raw Cookie or
+// a set without sameSite lax or strict, a delete (Next's sends no Secure, so a browser refuses it for a __Host- name), a getAll, a raw Cookie or
 // Set-Cookie header, or a document.cookie or cookieStore write.
 //
 // GATE check:cookies (one-address plan P4a·1, spec § 6). Store hosts are siblings under frrata.shop: a cookie with
 // Domain=frrata.shop set by one store reaches every other, and only __Host- names are guaranteed host-only, Secure
 // and Path=/ (a sibling cannot plant one). Scope: src/app/s, src/app/secure, src/app/api/shop, src/app/api/secure,
-// src/lib/ekcode; and for writes from the browser (document.cookie, cookieStore) the shop's client code too:
+// src/lib/ekcode and the rest of the shop request's server code (src/lib/http, requireShop, src/lib/analytics,
+// src/beacon); and for writes from the browser (document.cookie, cookieStore) the shop's client code too:
 // src/components/storefront, src/components/modules, src/components/ekcode. Named exceptions: the shop_in hint (until P3·7 removes it); cookieName() itself, which gives plain
 // names on the local e2e stack only (plain http), and __Host- everywhere else. The console's Supabase cookies are
 // out of scope. Tests and comment lines are skipped, so this header cannot fail its own check.
@@ -19,7 +20,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-export const SCOPE = ['src/app/s', 'src/app/secure', 'src/app/api/shop', 'src/app/api/secure', 'src/lib/ekcode']
+export const SCOPE = ['src/app/s', 'src/app/secure', 'src/app/api/shop', 'src/app/api/secure', 'src/lib/ekcode',
+  // The rest of the server code a shop request runs through (security review MED-1).
+  'src/lib/http', 'src/lib/auth/require-shop.ts', 'src/lib/auth/fetch-site.ts', 'src/lib/analytics', 'src/beacon']
 /** The shop's browser code: only document.cookie and cookieStore writes are checked there. */
 export const CLIENT_SCOPE = ['src/components/storefront', 'src/components/modules', 'src/components/ekcode']
 /** Scope folders P3 creates; every other one missing fails (a rename would empty the gate). */
@@ -103,6 +106,7 @@ export function checkSource(file, text, { client = false } = {}) {
       if (/\bdomain\b\s*[:,}]/i.test(opts)) add(m.index, 'a cookie Domain attribute (store hosts are siblings: host-only, no Domain)')
       if (!/\bsecure\s*:\s*(true|cookieSecure\(\))/.test(opts)) add(m.index, 'cookies.set without secure: true or cookieSecure()')
       if (!/\bpath\s*:\s*['"]\/['"]/.test(opts)) add(m.index, "cookies.set without path: '/'")
+      if (!/\bsameSite\s*:\s*['"](lax|strict)['"]/.test(opts)) add(m.index, "cookies.set without sameSite: 'lax' or 'strict' (a 'none' cookie rides on every site's requests)")
     }
   }
   for (const m of src.matchAll(/['"]set-cookie['"]/gi)) add(m.index, 'a raw Set-Cookie header — set cookies through cookies().set')
