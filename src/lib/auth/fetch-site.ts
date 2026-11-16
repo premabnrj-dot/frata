@@ -6,7 +6,7 @@
 //
 // The rule, for every request requireShop answers (all of /api/shop: each is personal or changes state): refused
 // when the header is present and not `same-origin`. Absent passes (iOS before 16.4 sends none; require-ek.ts has the
-// same rule). Exemptions are named below with their reason. The secure host's requireSecure (P3) calls the same
+// same rule). Exemptions are named below with their reason; EkCode's start is refused already (FETCH_SITE_ENFORCED_NOW). The secure host's requireSecure (P3) calls the same
 // fetchSiteVerdict, with its own exemptions.
 //
 // Pure (no server-only, no I/O): requireShop logs or refuses on its verdict.
@@ -47,10 +47,19 @@ export const fetchMode = (m: string | null): string =>
 /** The path for the log line: a route-shaped /api/shop path, else 'other' (a token or junk never reaches a log). */
 export const logPath = (p: string): string => (/^\/api\/shop(\/[a-z-]{1,20}){1,3}$/.test(p) ? p : 'other')
 
+/**
+ * Refused already in log mode (orchestrator, 2026-11-16, security review LOW-4). EkCode's start is a state-changing
+ * GET: another site could begin flows, replace a sign-in's state cookie and spend the shop's per-IP limit. Its only
+ * caller is checkout's own link, and its refusal sends the shopper back to checkout.
+ */
+export const FETCH_SITE_ENFORCED_NOW: readonly { method: string; path: string }[] = [{ method: 'GET', path: '/api/shop/ekcode/start' }]
+
 /** What requireShop does with a verdict: answer as before, log (naming the site) and answer, or refuse. */
-export function fetchSiteAction(v: FetchSiteVerdict, mode: 'log' | 'enforce'): { act: 'pass' } | { act: 'log'; site: ForeignSite } | { act: 'refuse' } {
+export function fetchSiteAction(v: FetchSiteVerdict, mode: 'log' | 'enforce', method = '', path = ''):
+  { act: 'pass' } | { act: 'log'; site: ForeignSite } | { act: 'refuse' } {
   if (!v.refuse) return { act: 'pass' }
-  return mode === 'enforce' ? { act: 'refuse' } : { act: 'log', site: v.site }
+  const now = FETCH_SITE_ENFORCED_NOW.some((e) => e.method === method.toUpperCase() && e.path === path)
+  return mode === 'enforce' || now ? { act: 'refuse' } : { act: 'log', site: v.site }
 }
 
 /**

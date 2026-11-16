@@ -24,7 +24,7 @@ export async function requireShop(request: Request): Promise<Shop> {
   const surface = surfaceFor(raw, CONSOLE_HOST, EKCODE_HOST, API_HOST)
   if (surface.kind !== 'storefront' || routeFor(raw, '/api', CONSOLE_HOST, false, SHOP_DOMAIN, EKCODE_HOST, API_HOST).kind !== 'shop' || !shopHostParam(surface.host)) return { ok: false, status: 404, error: 'Not found' }
   const path = new URL(request.url).pathname
-  const site = fetchSiteAction(fetchSiteVerdict(request.headers.get('sec-fetch-site'), request.method, path), FETCH_SITE_MODE)
+  const site = fetchSiteAction(fetchSiteVerdict(request.headers.get('sec-fetch-site'), request.method, path), FETCH_SITE_MODE, request.method, path)
   if (site.act === 'refuse') return { ok: false, status: 403, error: 'Not allowed' }
   // No host, IP, cookie or query: which kind of request a week of logs would have refused, nothing about who. Every
   // part is from a fixed set or a route path, so a page cycling junk headers cannot make new lines.
