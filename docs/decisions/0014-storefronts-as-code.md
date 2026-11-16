@@ -46,8 +46,8 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    ADR-0005 comes before V2.
 5. **Checkout fixes first** (shipped separately, 2026-11-11).
 6. **Partners are verified** (PAN or GSTIN, two-factor) before free credits or publishing; the brand owner grants each
-   partner's scope per shop (build, preview, publish after approval), approves the exact version, and removing a
-   partner stops its sessions and routines and revokes its keys and code access in one step.
+   partner's scope per shop (build, preview, publish after approval), approves the exact version *(after handover,
+   amendment 9 replaces "approves the exact version" with the brand's choice per partner)*, and removing a partner stops its sessions and routines and revokes its keys and code access in one step.
    **Before handover** (owner, 2026-11-12: "if the store isn't handed over, there is no need of owner approval during
    that time for partners"): while a partner-built shop has never had an owner, the partner publishes its website once
    the checks pass, with no approval step. The published version shows on a signed preview; the shop's public address
@@ -84,3 +84,25 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
 5. **A gate before handover.** No code site is handed to a brand before Console › Content edits what that site
    declares. The editor follows what the builders put in the site: each section declares its editable fields as it
    is built (owner, 2026-11-15).
+
+## Amendment 9 (owner, 2026-11-16: asked "shouldn't partners be able to update website as and when they wish, adding pages, redesigning etc?", then "yes. record and plan."; spec `docs/specs/2026-11-16-partner-publishing.md`)
+**After handover, the brand chooses per partner how its partner publishes.** Replaces amendment 6's "approves the exact
+version" for shops that have an owner. Before handover nothing changes (amendment 6, "Before handover").
+1. **The choice, per partner, per shop**, in Settings › People, made by the owner or a Manager (`shop.manage`):
+   **Publishes freely** (the default) — the partner adds pages, redesigns and publishes whenever they wish, with no
+   approval step; or **Ask me first** — each publish waits for the owner's approval of that exact version, as before.
+2. **Checks on every publish, either way.** Frrata's publish gate runs on the build output (kit spec § 4): no key or
+   secret in the code, the legal block on every page, prices as the API gives them, checkout only through the bag
+   link, pages that load and a bag that reaches checkout. A failing version is refused.
+3. **Always the owner's yes, even when publishing freely:** a version that adds an outside script or service (a host
+   not in the live version's scripts, connections, frames or images: pixels, chat widgets, anything loading code from
+   another site); a change to the policy pages or the legal details; and pointing the site at another domain. The
+   gate finds the first from the build output; the console enforces the other two (who edits policies, who sets the
+   Website).
+4. **Told after, with Undo.** Each free publish sends the store one Inbox line: who published, what changed, a
+   preview link and **Undo**, which puts the previous version back in one tap (an owner or Manager). Activity keeps
+   every publish.
+5. **Never, either way:** prices, stock, orders, shoppers, payments or costs. The site reads with a public key and
+   hands the bag to Frrata's checkout (decisions 2 and 3).
+6. **Removing a partner** cuts all their access at once (amendment 6); the site keeps serving its live version.
+
