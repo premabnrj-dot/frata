@@ -14,6 +14,11 @@ Rules for this file:
 | # | Finding | Ruling and the condition it rests on | Owner, date | Source |
 |---|---|---|---|---|
 | 1 | The Vercel domains token is a team token, not one scoped to the project | Accepted risk while it stays Production only, marked Sensitive, read only in `src/lib/env.ts`, its base URL fixed to api.vercel.com and never logged | owner, 2026-11-08 | `docs/plans/2026-11-08-shop-addresses.md` call 6 |
-| 2 | A late online capture after an abandoned payment can take an offer past its use limit | Accepted in writing, as `refund_due` already accepts it for stock; the budget itself is never exceeded | owner, 2026-11-08 | `docs/specs/2026-11-08-coupons.md` § Limits |
-| 3 | The pre-bash hook lets a commit through when it fails by its own error, and does not see git aliases, a remote set to force, `bash -c` or backticks | Accepted: it guards against an agent's mistake, CI's `npm test` is the gate, and GitHub branch protection on `main` is the lock on force-pushes | owner, 2026-11-16 (practices spec, call 2) | `docs/plans/2026-11-16-practices-from-ekatan.md` § Owner |
-| 4 | Nine Console pages are over the 150 kB first-load budget | Accepted at their 2026-11-16 size + 2 kB (`APP_PINNED`), as long as each pin only comes down; a page that grows past its pin is a finding | owner, 2026-11-16 (practices spec, call 1) | `scripts/lib/app-budget.mjs` |
+| 2 | A late online capture after an abandoned payment can take an offer past its use limit | Accepted in writing, as `refund_due` already accepts it for stock | owner, 2026-11-08 | `docs/specs/2026-11-08-coupons.md` § Uses, locks and limits |
+
+## Proposed, for the owner (not yet ruled — still raised as findings)
+
+| # | Finding | Proposed ruling and its condition | Proposed by, date |
+|---|---|---|---|
+| P1 | The pre-bash hook lets a commit through when it fails by its own error, and does not see git aliases, a remote set to force, `bash -c` or backticks | Accept: it guards against an agent's mistake, CI's `npm test` is the gate, and GitHub branch protection on `main` (the owner's setting, not yet confirmed) is the lock on force-pushes | security-reviewer, 2026-11-16 (`docs/plans/2026-11-16-practices-from-ekatan.md` § Owner) |
+| P2 | Nine Console pages at or over 148 kB on 2026-11-16 are pinned at that size + 2 kB, six of them over the 150 kB budget | Accept while each pin only comes down (`scripts/lib/app-budget.mjs`); a page past its pin is a finding | the practices plan, task 7, 2026-11-16 |

@@ -1,4 +1,4 @@
-# tenancy-auditor 1.0.0 — query-outside-withtenant
+# tenancy-auditor 1.1.0 — query-outside-withtenant
 
 **Query:** Audit this proposed diff (it is not in the repo; read the repo only to compare with its rules). Return ranked findings with the fix.
 
@@ -6,76 +6,49 @@
 
 **Verdict: FIX BEFORE MERGE**
 
-**Gates and proof**
-- I couldn't run `npm run check:tenant`, `npm run check:actions` or `npm run verify:tenancy`. Bash is disabled in this session, so I have no gate output to report.
-- The diff isn't in the repo, so the gates would run against the repo as it is, not against these two files. I judged the diff by reading the rules and the sibling files (`saved-views.ts`, `0125_saved_views.sql`, `0126_saved_views_access.sql`, `tenant.ts`, `check-tenant.mjs`).
-- `scripts/verify/tenancy.sql` has no `order_notes` rows. The diff doesn't touch it, so that is a finding (see below).
-- I didn't check caching, the outbox, webhooks, logs or SECURITY DEFINER functions. The diff has none of them.
+**Gates and proof:** I did not run `check:tenant`, `check:actions` or `verify:tenancy`. The diff isn't in the repo, so they would only test the current tree, not this change. No throwaway Postgres was checked. `check:tenant` would fail this diff on the missing RLS and policy. This diff adds a table and has no `scripts/verify/tenancy.sql` entry, so that is a finding below.
+
+**Accepted:** none. Neither row 1 nor row 2 in `docs/decisions/accepted-findings.md` matches. P1 and P2 are only proposed.
 
 **Findings**
 
-**CRITICAL `src/lib/queries/order-notes.ts:1-8`: the query runs on the raw connection with no tenant lock.**
-- It imports the raw `db` and never calls `withTenant`.
-- `check:tenant` rejects the raw db import (`scripts/check-tenant.mjs:93-96`), and the file has no `server-only` import. Fix the shape first, because the gate will fail on it.
-- Once `order_notes` has a policy, a query outside `withTenant` returns nothing, because `app.tenant_id` is unset.
-- Until then, the query returns any merchant's notes for any order id it is handed.
-- The fix is to follow `saved-views.ts`:
-  ```ts
-  import 'server-only'
-  export async function notesFor(tenantId: string, orderId: string) {
-    return withTenant(tenantId, (tx) =>
-      tx.select({ id: orderNotes.id, body: orderNotes.body }).from(orderNotes)
-        .where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, orderId))))
-  }
-  ```
-- The callers must pass `ctx.tenantId` from `requireMember()`.
+- **CRITICAL `drizzle/0150_order_notes.sql:1`: the table has no row-level security.**
+  - It has no `enable row level security` and no `tenant_rows` policy. Both are required by the checklist in `frata-architecture` § Tenancy.
+  - It has no `grant … to frata_app` and no `revoke all … from anon, authenticated`. Supabase's default privileges can leave those roles with access.
+  - The next person to add a grant makes every merchant's notes readable by every other merchant.
+  - Fix: in the same migration, add the `grant select, insert, update, delete … to frata_app` and the `revoke`. Then add `enable row level security` and `create policy tenant_rows … to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant())`. The `with check` half matters as much as `using`.
 
-**CRITICAL `order-notes.ts:7`: `db` is imported as a value, but `src/lib/db/index.ts:59` exports `db()` as a function.**
-- `db.select()` will not typecheck. This is a second reason the file can't ship as written. The fix is the `withTenant` rewrite above, which removes the raw `db` entirely.
+- **CRITICAL `src/lib/queries/order-notes.ts:5`: the query runs outside `withTenant`.**
+  - It has no tenant context and no `tenant_id` filter.
+  - It takes a bare `orderId` from the caller. That is an id from a URL, which ADR-0002 forbids as a tenant source. With RLS added, the query would return nothing. Without RLS, it returns any merchant's notes for a guessed id.
+  - `db` is imported as a value and used as `db.select`. In this repo `db()` is a function (`src/lib/db/tenant.ts:35`), and raw `db()` is allowed only in `src/lib/db/`, `src/lib/outbox/` and `src/app/api/webhooks/`.
+  - Fix: add `import 'server-only'`. Change the signature to `notesFor(tenantId, orderId)`, where the page passes the id from `requireMember()`. Wrap the body in `withTenant(tenantId, tx => tx.select().from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, orderId))))`. If a support-session visit opens notes, read them inside the `asMember` transaction so the audit row is written (as `documentsFor` does).
 
-**CRITICAL `order-notes.ts:6`: `notesFor(orderId)` takes an id and no tenant.**
-- The only filter is a caller-supplied order id. That is the "id from a URL" pattern ADR-0002 forbids.
-- Adding the tenant parameter (above) fixes it. The explicit `tenant_id` where is required beside the policy.
+- **HIGH `drizzle/0150_order_notes.sql:1`: there is no `scripts/verify/tenancy.sql` entry.**
+  - Without one, nothing proves the policy on a real Postgres.
+  - Fix: add a row per tenant plus the cross-tenant read and write checks, then run `npm run verify:tenancy`.
 
-**CRITICAL `drizzle/0150_order_notes.sql:1`: the table has no RLS, no policy and no grants.**
-- This breaks the new-table checklist in `frata-architecture` § Tenancy and `.claude/rules/database.md`.
-- If `anon`, `authenticated` or `service_role` have default grants, they can read the table. The repo revokes all three on every table (see `0126`).
-- The fix is to add this to the migration, or to a paired `0151_order_notes_access.sql` as `0125`/`0126` do:
-  ```sql
-  revoke all on order_notes from anon, authenticated, service_role;
-  alter table order_notes enable row level security;
-  create policy tenant_rows on order_notes for all to frata_app
-    using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
-  grant select, insert on order_notes to frata_app;
-  ```
-- I chose select and insert only, like `saved_views`. Grant update or delete only if the product needs notes to be editable.
+- **HIGH `drizzle/0150_order_notes.sql:1`: `tenant_id` has no index and no foreign key to `tenants`.**
+  - `order_id` has no index and no foreign key either.
+  - Fix: add `references tenants` and an index on `(tenant_id, order_id)`.
 
-**HIGH `0150_order_notes.sql:1`: there is no foreign key from `tenant_id` to `tenants`.**
-- Add `REFERENCES tenants(id) ON DELETE cascade`.
-- `order_id` also has no foreign key. Use a composite `FOREIGN KEY (tenant_id, order_id) REFERENCES orders(tenant_id, id)`, which needs a unique key on `orders(tenant_id, id)`. `saved_views_tenant_id_key` follows the same pattern.
-- Without it, a note can point at another tenant's order.
+- **HIGH: `orderNotes` is not in `src/lib/db/schema.ts`.** The diff shows no schema change, so the import cannot compile. The SQL is also hand-written rather than generated. Fix: add the table to the schema, run `npm run db:generate`, then do the RLS part as a `--custom` migration. The journal and `meta` files must match.
 
-**HIGH `0150_order_notes.sql:1`: there is no index.**
-- Add an index on `(tenant_id, order_id)`.
-- Without one, the order page scans every tenant's notes.
+- **MEDIUM `drizzle/0150_order_notes.sql:1`: `order_id` is a bare uuid.**
+  - A note could point at another merchant's order id.
+  - Fix: add a composite foreign key `(tenant_id, order_id)` to `orders`, which needs a unique `(tenant_id, id)` on `orders`. At minimum, have the writer check that the order belongs to the tenant.
 
-**HIGH `scripts/verify/tenancy.sql`: no `order_notes` rows.**
-- The checklist requires a row per tenant, plus the cross-tenant read and write checks.
-- Without them `verify:tenancy` proves nothing about this table, so add them and run it.
+- **MEDIUM: note text must not leave the table.**
+  - `body` is free text that may hold shopper details.
+  - It must not go into `order_events`, `audit_events` or logs. Those carry field names only.
+  - The writer is not in this diff.
 
-**MEDIUM `0150_order_notes.sql:1`: the table has no `created_at`, no author and no length check.**
-- Add `created_at timestamptz not null default now()`, `created_by uuid not null`, and `CHECK (length(body) between 1 and 2000)`.
-- The check keeps one note from becoming a storage or render problem.
+- **LOW `drizzle/0150_order_notes.sql`: it lacks `created_at` and an author column.** Both are needed to show who wrote a note. It also lacks the CHECK on `body` length that other free-text columns have.
 
-**MEDIUM `0150_order_notes.sql:1`: the migration is hand-written, and `schema.ts` has no matching table.**
-- `orderNotes` must exist in the schema (via `schema-orders.ts` or similar), or the import in the query won't resolve.
-- The checklist says to run `npm run db:generate` and add a `--custom` migration.
-- Check that 0150 doesn't collide with a migration on another branch: `npm run release:check`.
-
-**LOW `order-notes.ts:5`: `select()` returns every column.**
-- Name the columns the page needs, as `saved-views.ts` does.
-
-**Before merge:** rewrite the query, complete the migration, add the `tenancy.sql` rows, then run `npm test`, `npm run typecheck` and `npm run verify:tenancy` on a throwaway Postgres. Then re-run this audit on the real diff.
+**Could not check:**
+- The writer action, which is not in the diff. It needs `asMember` and a conditional `where`.
+- Any caching of the order page. Check that nothing wraps `notesFor` in `unstable_cache` or `cache()` with a key that omits the tenant.
+- That 0150 is the next free number. The latest in the repo is 0149, so it looks right, but `release:check` should confirm it.
 
 ## Expected
 

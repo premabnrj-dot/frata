@@ -62,6 +62,8 @@ on stdin.
 ## Deviations
 | Element | Built | Reason | Owner seen |
 |---|---|---|---|
+| Call 6: split design-language, "the other two follow, one at a time" | All three split in one phase, each its own script run and line check | The same mechanical move (sections moved unchanged, 0 lines lost in each); doing them together keeps parallel lanes from conflicting on three separate days | no: in the report |
+| Task 2: pins at today's length + 20 until G4 | Pins removed the same day | G4 ran in this session, so the pins held for hours, not weeks | no: in the report |
 
 ## Practices recorded in skills
 `frata-planning` (task 8): plan header, proposal opening, measured claims, Stress test, After deploy. `frata-verify`: the
@@ -92,3 +94,13 @@ new gates, the hook and `npm run eval`. CLAUDE.md: `gates:list`, the hook, the d
   plain push). Deviation from task 10: gates run from the worktree's own top (its committed package.json), not the
   project dir, after confirming the worktree shares the project's git dir. Not caught and accepted (in the hook's
   header): git aliases, a remote set to force, `bash -c`, backticks.
+- **G3 built 2026-11-16.** `npm run eval`; 8 planted-flaw scenarios; all pass (33/33 behaviours) after the judge was
+  told that raising a problem or giving its fix counts (the first, literal judge failed the security reviewer on
+  wording). Results in `docs/evals/`. `docs/decisions/accepted-findings.md`: two rulings the owner made; two **proposed**
+  rows (the hook's accepted gaps, the Console pins) wait for the owner. `impact-reviewer` FIX BEFORE COMMIT → fixed:
+  the proposed rows were first written as rulings (they were not the owner's); the judge's verdict must grade every
+  behaviour once; an unknown scenario fails; the deny names HOME's credential folders, not HOME; four agents point at
+  the reference files.
+- **G4 built 2026-11-16.** design-language 1,312 → 305 lines (7 reference files with `states.md`), architecture 1,128
+  → 396 (4), integrations 952 → 38 (7); sections moved unchanged (a line check found 0 missing in each); majors bumped;
+  pins removed; `check:skills` bumps cover reference files.

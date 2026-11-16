@@ -14,7 +14,7 @@
 //
 // ⚠️ THE CHILD IS READ-ONLY AND REACHES NOTHING (security review S1, S7). A scenario is text from a repo file that any
 // lane can add, so it is treated as hostile: built-in tools Read/Grep/Glob/Skill only, no MCP server, project settings
-// only, no reads of /proc, the home folder or .env files, and an environment holding only PATH, HOME, the proxy, the
+// only, no reads of /proc, the credential folders under HOME or .env files, and an environment holding only PATH, HOME, the proxy, the
 // CA and the model's base URL (no GitHub, AWS or cloud tokens). The prompt goes on stdin; nothing runs in a shell.
 // =============================================================================
 import { spawnSync } from 'node:child_process'
@@ -25,10 +25,13 @@ import { readFrontmatter } from './lib/frontmatter.mjs'
 const KEEP_ENV = /^(PATH|HOME|ANTHROPIC_BASE_URL|HTTPS?_PROXY|https?_proxy|NO_PROXY|no_proxy|NODE_EXTRA_CA_CERTS|SSL_CERT_FILE)$/
 export const childEnv = (env) => Object.fromEntries(Object.entries(env).filter(([k]) => KEEP_ENV.test(k)))
 
+// Folders under HOME that hold credentials. Named, not ~/** (a checkout under HOME would be unreadable).
+const HOME_SECRETS = ['.ssh', '.aws', '.config', '.claude', '.gnupg', '.docker', '.kube']
 const LOCKED = ['--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--setting-sources', 'project', '--permission-mode', 'default']
 export const answerArgs = (system) => [
   '-p', '--tools', 'Read,Grep,Glob,Skill', '--allowedTools', 'Read', 'Grep', 'Glob', 'Skill',
-  '--disallowedTools', 'Read(//proc/**)', 'Read(~/**)', 'Read(**/.env*)', ...LOCKED,
+  '--disallowedTools', 'Read(//proc/**)', ...HOME_SECRETS.map((d) => `Read(~/${d}/**)`), 'Read(~/.git-credentials)', 'Read(~/.netrc)',
+  'Read(~/.npmrc)', 'Read(**/.env*)', ...LOCKED,
   ...(system ? ['--append-system-prompt', system] : []),
 ]
 export const judgeArgs = () => ['-p', '--tools', '', ...LOCKED]
@@ -37,6 +40,14 @@ export const judgeArgs = () => ['-p', '--tools', '', ...LOCKED]
 const SECRETS = [/rzp_(live|test)_[A-Za-z0-9]{10,}/, /\bsk-[A-Za-z0-9_-]{20,}/, /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./, /postgres(ql)?:\/\/[^\s:@]+:[^\s@]+@/,
   /\bAKIA[0-9A-Z]{16}\b/, /\bgh[pousr]_[A-Za-z0-9]{30,}/, /-----BEGIN [A-Z ]*PRIVATE KEY-----/]
 export const secretIn = (text) => SECRETS.find((r) => r.test(text))?.source ?? null
+
+// The judge's lines graded: one per behaviour, each MET or NOT MET. Anything else (a missing line, extra prose
+// instead of the format) is a failed scenario, never a pass.
+export function gradeVerdict(verdict, count) {
+  const lines = verdict.split('\n').map((l) => l.trim()).filter((l) => /^(NOT )?MET:/.test(l))
+  const misses = lines.filter((l) => l.startsWith('NOT MET')).length
+  return { ok: lines.length === count && misses === 0, met: lines.length - misses, misses, wellFormed: lines.length === count }
+}
 
 const claude = (args, prompt) => {
   const r = spawnSync('claude', args, { input: prompt, encoding: 'utf8', env: childEnv(process.env), timeout: 15 * 60 * 1000, maxBuffer: 16 << 20, shell: false })
@@ -65,6 +76,10 @@ function main() {
   const isAgent = existsSync(agentFile) && !existsSync(`.claude/skills/${name}`)
   const own = readFrontmatter(readFileSync(isAgent ? agentFile : `.claude/skills/${name}/SKILL.md`, 'utf8'))
   const version = own.data?.metadata?.version ?? '?'
+  if (only && !list.some((ev) => ev.id === only)) {
+    console.error(`eval — no scenario "${only}" for ${name} (have: ${list.map((ev) => ev.id).join(', ')})`)
+    process.exit(1)
+  }
   let failed = 0
   for (const ev of list) {
     if (only && only !== ev.id) continue
@@ -84,9 +99,9 @@ function main() {
         'the answer shows it was run.',
         '', 'BEHAVIOURS:', ...ev.expected_behavior.map((b) => `- ${b}`), '', 'ANSWER:', answer,
       ].join('\n'))
-      const misses = verdict.split('\n').filter((l) => /^NOT MET/.test(l)).length
-      if (misses) failed++
-      console.log(`\nVERDICT (${ev.expected_behavior.length - misses}/${ev.expected_behavior.length}):\n${verdict}`)
+      const g = gradeVerdict(verdict, ev.expected_behavior.length)
+      if (!g.ok) failed++
+      console.log(`\nVERDICT (${g.met}/${ev.expected_behavior.length}${g.wellFormed ? '' : ', the judge did not grade each behaviour once: failed'}):\n${verdict}`)
     }
     if (record) {
       const text = [`# ${name} ${version} — ${ev.id}`, '', `**Query:** ${ev.query}`, '', '## Answer', '', answer, '',

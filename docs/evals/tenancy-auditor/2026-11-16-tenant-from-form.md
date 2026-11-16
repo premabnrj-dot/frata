@@ -1,44 +1,49 @@
-# tenancy-auditor 1.0.0 — tenant-from-form
+# tenancy-auditor 1.1.0 — tenant-from-form
 
 **Query:** Audit this proposed diff (it is not in the repo; read the repo only to compare with its rules). Return ranked findings with the fix.
 
 ## Answer
 
-**Verdict: FIX BEFORE MERGE.** This diff has a CRITICAL cross-tenant write, and the rest of the action is wrong too.
+**Verdict: FIX BEFORE MERGE.** A reachable cross-merchant write exists.
 
-**Gates and proof:** I could not run any. Bash is disabled in this session, so `check:tenant`, `check:actions` and `verify:tenancy` did not run. The diff isn't in the repo, so those gates would only have checked the existing code. The diff adds no migration or table. I compared it with `src/lib/db/tenant.ts`, `src/app/(console)/console/orders/actions.ts`, `src/lib/orders/work.ts` and `src/domains/orders/work.ts`.
+**Gates and proof**
+- `npm run check:tenant`, `npm run check:actions` and `npm run verify:tenancy`: **not run.** Bash is disabled in this session, so I have no output to report. I reviewed the diff by hand against the repo's rules. Run both gates on the real change. `check:actions` should reject this file for bypassing `asMember`.
+- The diff has no migration, so there are no new tables or definers to check. There is no caching, outbox or logging in it.
 
 **Findings**
 
-1. **CRITICAL** `actions.ts:8` — The tenant id is read from `form.get('tenantId')`, which is a form field. ADR-0002 allows only `requireMember()` and `tenantForHost()` (plus the API-host storefront key). Any signed-in member of any shop can post another shop's UUID. `withTenant` only checks that the string is a UUID (`tenant.ts:26`). It does not check membership, so it sets `app.tenant_id` to the victim's id. RLS then passes, and the update cancels the victim's order.
-   - **Fix:** Delete the field. Take the tenant id from the membership, as the existing actions do through `asMember(roles, …, (tx, auth) => auth.membership.tenantId)`.
+CRITICAL `orders/[number]/actions.ts:8` — The tenant id comes from `form.get('tenantId')`. ADR-0002 allows only `requireMember()`, `tenantForHost()` and the storefront key as sources. `withTenant` only checks that the id is a UUID, then sets `app.tenant_id` to it. So the RLS policy passes for whatever shop the caller names. Anyone who knows a victim's tenant UUID and order UUID can cancel that merchant's order. **Fix:** delete the field. Take the tenant from the membership inside `asMember`.
 
-2. **CRITICAL** `actions.ts:9-10` — The order id also comes from the form, with no zod check. Because of finding 1 it can name any shop's order.
-   - **Fix:** Validate it with the same `Id.safeParse` that `orders/actions.ts` uses. Better, take it as a bound argument, as `cancelOrder(orderId)` does in the existing file.
+CRITICAL `:7` — `await requireMember()` throws the result away, so the call checks nothing.
+- The real signature is `requireMember(allowed: readonly MemberRole[])` in `src/lib/auth/require-member.ts:86`. It returns `{ok:false,…}` rather than throwing.
+- With no roles argument, a signed-in caller would hit a `TypeError` on `allowed.includes`. A signed-out caller gets `{ok:false}`, which the code ignores, and the update runs anyway.
+- The action therefore needs no valid session or membership.
+- The import path `@/lib/auth/member` also doesn't exist.
+- **Fix:** don't call `requireMember` directly in an action. Use `asMember(ROLES.cancel, …)` as `src/app/(console)/console/orders/actions.ts:41-58` does.
 
-3. **HIGH** `actions.ts:10` — The `update` has no explicit `tenant_id` filter. ADR-0002 says queries also filter by `tenant_id`, so only RLS stands between this and a leak.
-   - **Fix:** Add `eq(orders.tenantId, tenantId)` to the `where`. `work.cancel` at `src/lib/orders/work.ts:238` already does this.
+HIGH `:9` — The update's `where` has `eq(orders.id, id)` and no `tenant_id`, so the explicit-filter lock is missing. `orderId` is also unvalidated. **Fix:** inside `work.cancel(tx, tenantId, actor, orderId)`, filter on `tenant_id` and validate with `Id.safeParse`.
 
-4. **HIGH** `actions.ts:8` — `requireMember()` is called with no roles, and its result is discarded. `ROLES.cancel` is `MANAGERS` (owner and admin), and "hiding a button is never the guard". As written, any member can cancel, including staff. A partner's Builder is meant to be kept out through `requireCapability`.
-   - **Fix:** Pass the roles through `asMember(ROLES.cancel, …)`.
-   - **Import path:** `@/lib/auth/member` does not exist. The real modules are `src/lib/auth/require-member.ts` and `as-member.ts`. I did not check whether a barrel file re-exports the name, so confirm the import resolves.
+HIGH `:9` — The action duplicates the existing cancel and skips the work `work.cancel` does. That function already exists in `src/lib/orders/work.ts` and is exposed by `orders/actions.ts`. The diff skips:
+- the owner/admin role rule (`ROLES[action]`), so staff or a partner could cancel;
+- the support-session audit row that `asMember` writes;
+- the order history row;
+- the queued cancellation email (outbox);
+- the cancel reason (`CANCEL_REASONS`) and any state guard.
 
-5. **HIGH** `actions.ts:10` — This is a bare `update` of `cancelledAt` that duplicates a function that already exists. `work.cancel` (`src/lib/orders/work.ts:223`) does the real cancellation:
-   - It sets `cancelReason` and `cancelNote`.
-   - It guards on `isNull(cancelledAt)` and `isNull(shippedAt)`, so a shipped order can't be "cancelled".
-   - It handles restock and writes the history row.
-   - `actions.ts` also queues the cancellation email and refreshes the shop pages, and the diff skips both.
-   - **Fix:** Call `work.cancel` through the existing `run('cancel', …)` wrapper. Don't add a second path.
+It also overwrites `cancelledAt` on an order that's already cancelled, shipped or delivered. **Fix:** don't add this file. Use the existing `cancelOrder(orderId)` and `run('cancel', …)` path in `orders/actions.ts`. If a per-order page needs it, call that same wrapper.
 
-6. **MEDIUM** `actions.ts` — The action writes no audit row. In a support session, `asMember` writes the audit row in the same transaction, and `check:actions` expects that. The new action will most likely fail `check:actions`.
-   - **Fix:** Use `asMember`.
+MEDIUM `:3-4,9` — A route-level action imports the `orders` schema and runs Drizzle directly. Merchant rows are meant to be touched only through `src/lib/queries/` and `src/lib/orders/`. `check:tenant` will probably flag this. The action also has no try/catch, no `revalidatePath` and no `drainSoon()`.
 
-7. **LOW** `actions.ts:11` — The action has no error handling and no `ActionResult` return, so a failure surfaces as an unhandled throw. It also never calls `revalidatePath('/console', 'layout')`, so the nav's "To confirm" count stays stale after a cancel.
-   - **Fix:** Reuse `run()`, which does both.
+LOW `:1` — The file sits under `[number]/` but takes `orderId` from the form. Two identifiers for one order is how a mismatch gets in.
 
-**Not checked:** I checked nothing on caching, outbox, webhooks, logs, SECURITY DEFINER functions or new tables, because the diff has none of them. After the rewrite, run `npm run check:actions` and `npm run check:tenant`, and add a test in which a member of shop A posts shop B's order id and nothing changes.
+**Accepted** (`docs/decisions/accepted-findings.md`): none match. Rows 1 and 2 are about the Vercel token and coupon limits. P1 and P2 are proposals the owner hasn't ruled on, and they don't apply here.
 
-**Simplest correct fix:** Delete this file. `cancelOrder` already exists in `orders/actions.ts`, with the correct roles, tenant source and audit. If the dynamic route needs its own wrapper, make it a one-line call to that action.
+**Could not check**
+- Gate output and `verify:tenancy` (no shell).
+- Whether `check:tenant` flags the direct `orders` import. I'm inferring that from the CLAUDE.md rule.
+- Whether `orders.cancelledAt` is the right column. It does appear in `src/lib/db/schema-orders.ts`, but `work.cancel` may set more than that.
+
+**Bottom line:** drop the file and reuse the existing `cancelOrder` in `orders/actions.ts`. As written, a signed-out request can cancel any merchant's order.
 
 ## Expected
 

@@ -149,7 +149,17 @@ describe('check:storefront-build, Console budget', async () => {
 })
 
 describe('eval runner locks', async () => {
-  const { childEnv, answerArgs, judgeArgs, secretIn } = await import('../eval.mjs')
+  const { childEnv, answerArgs, judgeArgs, secretIn, gradeVerdict, scenarios } = await import('../eval.mjs')
+  it('a verdict passes only when every behaviour is graded once and met', () => {
+    expect(gradeVerdict('MET: a\nMET: b', 2).ok).toBe(true)
+    expect(gradeVerdict('MET: a\nNOT MET: b — no', 2)).toMatchObject({ ok: false, misses: 1 })
+    expect(gradeVerdict('Looks good overall.', 2).ok).toBe(false)
+    expect(gradeVerdict('MET: a\nMET: a\nMET: b', 2).ok).toBe(false)
+  })
+  it('finds an agent\'s scenarios, and none for a name without evals', () => {
+    expect(scenarios('tenancy-auditor')?.map((e: { id: string }) => e.id)).toEqual(['query-outside-withtenant', 'tenant-from-form'])
+    expect(scenarios('no-such-agent')).toBeNull()
+  })
   it('hands the child only the path, home, proxy, CA and model URL — no tokens', () => {
     const env = childEnv({ PATH: '/bin', HOME: '/h', HTTPS_PROXY: 'p', ANTHROPIC_BASE_URL: 'u', GH_TOKEN: 'x', AWS_SECRET_ACCESS_KEY: 'y', GITHUB_TOKEN: 'z', CLOUDSDK_AUTH_ACCESS_TOKEN: 'w' })
     expect(Object.keys(env).sort()).toEqual(['ANTHROPIC_BASE_URL', 'HOME', 'HTTPS_PROXY', 'PATH'])
@@ -157,7 +167,8 @@ describe('eval runner locks', async () => {
   it('runs read-only tools with no MCP server and project settings only; the judge gets no tools', () => {
     const a = answerArgs('sys')
     expect(a.slice(a.indexOf('--tools'), a.indexOf('--tools') + 2)).toEqual(['--tools', 'Read,Grep,Glob,Skill'])
-    for (const f of ['--strict-mcp-config', 'Read(//proc/**)', 'Read(~/**)', 'Read(**/.env*)']) expect(a).toContain(f)
+    for (const f of ['--strict-mcp-config', 'Read(//proc/**)', 'Read(~/.ssh/**)', 'Read(~/.aws/**)', 'Read(**/.env*)']) expect(a).toContain(f)
+    expect(a).not.toContain('Read(~/**)')
     expect(a[a.indexOf('--setting-sources') + 1]).toBe('project')
     const j = judgeArgs()
     expect(j[j.indexOf('--tools') + 1]).toBe('')

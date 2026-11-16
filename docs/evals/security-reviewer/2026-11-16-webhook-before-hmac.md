@@ -6,57 +6,52 @@
 
 **Verdict: FIX BEFORE MERGE**
 
-**Gate output:** I did not run `check:actions`, `check:tenant` or `check:config`. Bash is disabled in this session, so there is no output to report. I reviewed the proposed file as pasted; `src/lib/delivery/tracking` does not exist in the repo, so `applyTracking` is unreviewed. Everything below comes from reading the code and the docs.
+**Gate output:** I did not run `check:actions`, `check:tenant` or `check:config`, because Bash is disabled in this session. `npm audit` is not relevant, since no dependencies changed. I also did not read the S1–S14 review. The only S-number I can tie to this route is S13 (size cap before parsing), which the Razorpay route's own comment cites.
 
-**Accepted (docs/decisions/accepted-findings.md):** none of the 4 rows applies to this route.
+**Accepted:** none. I checked all four rows in `docs/decisions/accepted-findings.md` and none cover this route.
 
-**Prior review:** this route reopens S13 (size cap before parsing and before any database read) and S4 (trim the payload after processing). The Razorpay route closes both, and this one doesn't.
+## CRITICAL
 
-### CRITICAL
+**1. The 401 response hands out the valid signature, so authentication is bypassed.** (`route.ts`, the `return NextResponse.json({ error: 'bad signature', expected }, …)` line)
+- An attacker POSTs any JSON body with no header. The 401 reply contains `expected`, the HMAC of that exact body. They resend the same body with `x-api-key: <expected>` and pass the check.
+- The fix is to never put a secret, an expected value or a computed digest in a reply. Reply `{ error: 'unauthorized' }` and nothing else.
 
-**1. The authentication is wrong, so anyone can forge tracking events** (`route.ts:7-9`)
-- Shiprocket sends no signature. The `frata-integrations` doc (line 222) says the account's optional token arrives as `x-api-key`, and ADR-0006 makes requiring that token a documented exception. This code treats the header as an HMAC of the body.
-- Real Shiprocket calls fail the check. Anyone who can compute an HMAC over a body of their choice, if `SHIPROCKET_SECRET` ever leaks, can mark any order Delivered or RTO.
-- The fix is to compare the header token itself with `timingSafeEqual`, after a length check as in `verifyRazorpaySignature` (`src/lib/webhooks/razorpay.ts:12-18`).
+## HIGH
 
-**2. The route leaks the expected signature** (`route.ts:10`)
-- The 401 reply includes `expected`. One request with a bad header returns the valid value for that exact body, so an attacker can sign any body and `applyTracking` accepts it.
-- The fix is to drop `expected`, and reply with the bare `{ error: 'bad signature' }` as the Razorpay route does.
+**2. The auth scheme is invented and cannot work.**
+- Shiprocket sends a static token in `x-api-key` and no signature (`.claude/skills/frata-integrations/reference/shipping.md:76-78`; ADR-0006 amendment).
+- This code compares the header to an HMAC of the re-serialized body, so a real Shiprocket delivery would never match. If the code were "fixed" by loosening the check, it would be open to anyone.
+- The fix is to follow the ADR-0006 amendment. Use the URL key only to find the shop. Take the token from a per-shop sealed secret and compare it in constant time against the `x-api-key` header.
 
-**3. There is no tenant resolution, and the secret is global** (`route.ts:8`, `route.ts:11`)
-- Shiprocket's webhook is set per merchant account (doc line 221), and credentials are per shop, never in env (architecture skill, line 726). This route uses one env secret and passes the raw body to `applyTracking` with no shop, so the AWB-to-shop match is untrusted.
-- A forged or misdirected event can change another merchant's order, which breaks ADR-0002.
-- The fix is a per-shop key in the URL, resolved to a sealed per-shop token, modelled on `webhookFor((await params).key)`. The tenant comes from our key, never the payload. The URL must not contain "shiprocket", "kartrocket", "sr" or "kr" (doc line 223), and the same applies to the key.
+**3. There is no tenant, and the body is trusted as fact.**
+- The route has one global `SHIPROCKET_SECRET` and no shop key, so `applyTracking(body)` can only take the tenant or AWB from the payload. That breaks ADR-0002 (tenant never comes from a body). An AWB belonging to shop A could be updated by anyone holding shop B's token.
+- It also writes state straight from the payload. The amendment requires that the processor read the state back from Shiprocket's API with the shop's own credentials, and clamp the provider's time to now plus a small skew.
+- The fix is to use the route `src/app/api/webhooks/shiprocket/[key]/route.ts`, as the Razorpay route does. Resolve the shop with a definer. Store the event, and drop AWBs that are not that tenant's.
 
-### HIGH
+**4. There is no size cap, and the body is parsed before authentication.** (`await req.json()`, first line)
+- Anyone can send an arbitrarily large body, which is parsed in memory before any check. Malformed JSON throws an unhandled 500.
+- This is the S13 pattern. The fix is to check `content-length` and then `raw.length` against a limit, read `req.text()`, authenticate, and only then `JSON.parse` inside a try/catch that returns 400. Copy `razorpay/[key]/route.ts:14-21`.
 
-**4. The body is parsed before it is verified, with no size cap** (`route.ts:6`)
-- `req.json()` buffers and parses any size before the auth check, so it's an unauthenticated memory and CPU hit. The fix is to check `content-length`, read `request.text()`, return 413 above a limit (`RAZORPAY_BODY_LIMIT` is 256 KB), verify the token, and only then `JSON.parse` inside a try/catch that returns 400. The current code throws a 500 on bad JSON.
+## MED
 
-**5. The event is processed inline, with no idempotency key or stored row** (`route.ts:12`)
-- This breaks ADR-0006 ("a row before a request"). There is no `webhook_events` row and no dedupe. Retries or duplicates replay `applyTracking`, and out-of-order events can regress an order's state.
-- The fix is to store under `shiprocket:awb:shipment_status_id:current_timestamp` with `onConflictDoNothing`, answer 200 at once, and process in `after()`. Order by `current_timestamp` and drop unknown AWBs.
+**5. The compare is not timing-safe.** (`sig != expected`)
+- Use `timingSafeEqual` on equal-length buffers, for example by hashing both sides first. This disappears once finding 2 is fixed.
 
-**6. The payload is not validated or trimmed** (`route.ts:12`)
-- The body goes straight to `applyTracking` with no Zod schema or length caps. The payload includes shopper fields, and the row must keep only reconciliation fields after processing (S4).
-- The fix is a closed Zod schema with named fields (`awb`, `shipment_status_id`, `current_timestamp`, `order_id`), and a trim step like `trimRazorpayEvent`.
+**6. It does not follow ADR-0006: no event row, no idempotency key, and processing happens inline.**
+- `await applyTracking(body)` runs before the 200. Shiprocket retries are undocumented, so a retry re-applies the event, and a slow run risks a timeout.
+- The fix is to insert into `webhook_events` under `shiprocket:<tenant>:<awb>:<status_id>:<current_timestamp>` with `on conflict do nothing`. Answer 200 at once and process in `after()`. Add `export const maxDuration = 60`. Trim the stored payload after processing.
 
-### MED
+**7. Config and gates.**
+- `process.env.SHIPROCKET_SECRET!` bypasses `src/lib/env.ts`, the one owner module. If the variable is unset, `createHmac` throws and the route returns a 500. A single global env secret also contradicts "sealed per shop".
+- The route is probably missing from `scripts/check-actions.mjs` ENTRY_POINTS and lacks the credential comment the other routes carry. I could not run the gates, so this is **unconfirmed**.
 
-**7. Registration and rate limiting are missing**
-- The route is not in `scripts/check-actions.mjs` ENTRY_POINTS. I could not run that gate, so this is unconfirmed, but the file is new and the doc requires it. Add an entry with a credential comment.
-- A failed-auth limiter is also missing. Count per IP (IPv6 per /64) and fail closed. The Razorpay route has no limiter either, so I'm not sure what the house pattern is. Check before copying.
+## LOW
 
-### LOW
+**8. The URL breaks Shiprocket's own rule.** Shiprocket rejects webhook URLs containing "shiprocket", "kartrocket", "sr" or "kr" (`shipping.md:78`). `/api/webhooks/shiprocket` contains "shiprocket", so Shiprocket will likely refuse to register it. Use an opaque `[key]` path segment instead.
 
-**8. A missing env secret fails open into a 500 at best** (`route.ts:8`)
-- `SHIPROCKET_SECRET!` is undefined when unset, and `createHmac` then throws. Once the per-shop token exists, reject an empty token explicitly.
+**9. The import is unconfirmed.** `@/lib/delivery/tracking` and `applyTracking` appear only in eval files. I found no implementation in the repo, so I can't tell whether it is tenant-scoped or reads through `src/lib/queries/`. That must be reviewed with the route.
 
-**9. Logging and the 5 s budget**
-- `applyTracking` errors reach the Vercel logs unless handled. Log only `e.name`, as the Razorpay route does (S10).
-- Also add `export const maxDuration = 60` (the `check-duration.mjs` guardrail).
-
-I was not asked to edit anything and made no changes.
+I edited no files.
 
 ## Expected
 
@@ -68,14 +63,8 @@ I was not asked to edit anything and made no changes.
 
 ## Verdict
 
-MET: Flags that the signature is checked on re-serialised JSON instead of the raw body — Finding 1 and 4 note the code parses with req.json() and treats the header as HMAC of the body, and finding 6 and 4 say to read request.text() raw; the HMAC-over-re-serialised issue is addressed by "passes the raw body" only partially, but the fix of reading raw text before verifying is given.
-
-NOT MET: Flags that the signature is checked on re-serialised JSON instead of the raw body — the answer never states that the HMAC is computed over re-serialised JSON rather than the raw body, only that req.json() parses before verification.
-
-MET: Flags that there is no size cap before the body is parsed — Finding 4 states no size cap and req.json() buffers before auth.
-
-MET: Flags that the reply leaks the expected signature — Finding 2 says the 401 reply includes `expected`.
-
-NOT MET: Flags the non-constant-time comparison — the answer only recommends timingSafeEqual as a fix and never flags the existing comparison as non-constant-time.
-
-MET: Flags that the event is processed inline instead of stored in webhook_events under an idempotency key and answered at once (ADR-0006) — Finding 5 states this explicitly.
+MET: Flags that the signature is checked on re-serialised JSON instead of the raw body — finding 2 states the code compares the header to an HMAC of the re-serialized body, and finding 4 says to read `req.text()` and authenticate before parsing.
+MET: Flags that there is no size cap before the body is parsed — finding 4 states there is no size cap and the body is parsed before authentication.
+MET: Flags that the reply leaks the expected signature — critical finding 1 says the 401 response returns `expected`, the valid HMAC.
+MET: Flags the non-constant-time comparison — finding 5 says the compare is not timing-safe and recommends `timingSafeEqual`.
+MET: Flags that the event is processed inline instead of stored in webhook_events under an idempotency key and answered at once (ADR-0006) — finding 6 says no event row or idempotency key, processing inline, and recommends inserting into `webhook_events` and answering 200 at once.

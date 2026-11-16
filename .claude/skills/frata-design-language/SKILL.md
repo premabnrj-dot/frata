@@ -4,7 +4,7 @@ description: Use when building or changing any Frata UI - a console page, table,
 metadata:
   version: 9.0.0
   owner: owner
-  verified: 2026-11-15
+  verified: 2026-11-16
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css"]
 ---
 
@@ -305,7 +305,7 @@ The rules above bind every screen. Each surface's approved rules are in one file
 | Open | When you build | Sections |
 |---|---|---|
 | [reference/states.md](reference/states.md) | any screen: its seven states and the primitive for each | Empty, loading, error, one, many, no permission, phone |
-| [reference/ux-foundation.md](reference/ux-foundation.md) | any Console, Admin or partner screen: the shell, page layout, controls, motion (rules 22–29), phone widths | UX foundation |
+| [reference/ux-foundation.md](reference/ux-foundation.md) | any Console, Admin or partner screen: the shell, page layout, controls, **Motion** (rules 22–29, reduced motion, the phone sheet), accessibility, phone widths | UX foundation |
 | [reference/console-catalogue.md](reference/console-catalogue.md) | a product, collection, import, order edit or offer screen, or the Phase 1 console rules | Phase 1, Product page, Products rework, Import and order edit, Offers |
 | [reference/console-operations.md](reference/console-operations.md) | the orders queue and records, Apps, Content, Settings and GST, Shipping, Analytics, shop addresses, Plan and billing, Neel analytics and finding | Work queues, Apps, Apps gallery, Console › Content, Settings choices, Shipping, Analytics, Shop addresses, Plan and billing, Neel analytics, Neel finding |
 | [reference/shop.md](reference/shop.md) | anything a shopper sees: the storefront, live themes (retiring, ADR-0014), Theme Studio and Signal, EkCode, share cards | Storefront as built, Storefront, Shop themes, Theme Studio, Theme Signal, EkCode, Share cards |

@@ -4,7 +4,7 @@ description: Use when building, planning or answering questions about a Frata co
 metadata:
   version: 2.0.0
   owner: owner
-  verified: 2026-11-12
+  verified: 2026-11-16
   decisions: [ADR-0006]
 ---
 
