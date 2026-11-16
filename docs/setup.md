@@ -478,8 +478,12 @@ After SA1b's migration is applied and the release is live:
    **Sensitive**. Redeploy. Until it is set, Preview on website is hidden and every preview is refused; everything else
    works. Changing it later ends every preview link (they last 10 minutes anyway).
 2. **The firewall's path rule.** In Vercel → frata → Firewall, edit the first rule ("Storefront API: refuse any other
-   path") and paste the path value from `ops/firewall.json` again: it now also lets through `preview/…`, `facets`,
-   `filter/page/{n}`, the docs (`/`, `/docs…`, `/llms.txt`) and their `/_next/static/…` files. Publish.
+   path"). As entered on 2026-11-15 it is *Hostname equals api.frrata.shop* AND *Request Path does not start with
+   /2026-12/*, which would deny the docs. Add these conditions to the same group (AND), then Publish:
+   *Request Path does not start with /docs* · *Request Path does not equal /llms.txt* · *Request Path does not start
+   with /_next/static/* · *Request Path does not equal /*. The new API paths (`preview/…`, `facets`, `filter/page/{n}`)
+   are under /2026-12/ and need nothing. `ops/firewall.json` keeps the full regex as the target if the dashboard
+   later offers one.
 3. **Check.** `curl -si https://api.frrata.shop/` is a 307 to `/docs`; `https://api.frrata.shop/docs` shows the docs;
    `curl -s https://api.frrata.shop/llms.txt | head -1` is `# Frrata Storefront API`.
 4. **The starter's public repo** (when the first partner needs it): create `frrata/starter` on GitHub (public) and ask
