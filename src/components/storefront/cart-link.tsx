@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ATTR_KEY, bag, captureAttribution } from './bag-store'
+import { ATTR_KEY, bag } from './bag-store'
+import { captureAttribution } from './capture-attribution'
 import { parseCartLink } from '@/domains/storefront-api/cart-link'
 import { fillMode, fromSite } from '@/domains/checkout/bag-fill'
 

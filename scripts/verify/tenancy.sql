@@ -4783,8 +4783,9 @@ begin
                             'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
     if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
   end loop;
-  -- At most 7 days, counted from the database's own now (a hand-set start can't stretch it), and it ends by itself.
-  begin update public.platform_switches set until = now() + interval '8 days'; raise exception 'FAIL: 88 a switch was set for more than 7 days';
+  -- At most 30 days (owner 2026-11-16; was 7), counted from the database's own now (a hand-set start can't stretch it),
+  -- and it ends by itself.
+  begin update public.platform_switches set until = now() + interval '31 days'; raise exception 'FAIL: 88 a switch was set for more than 30 days';
   exception when check_violation then null; end;
   begin update public.platform_switches set created_at = now() + interval '55 days', until = now() + interval '60 days';
     raise exception 'FAIL: 88 a hand-set start stretched the switch';
@@ -4803,7 +4804,7 @@ begin
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
 end $$;
--- § 101 · EkCode on by default (drizzle/0152; docs/specs/2026-11-16-ekcode-default-on.md E3). The SQL mirror of
+-- § 101 · EkCode on by default (drizzle/0153; docs/specs/2026-11-16-ekcode-default-on.md E3). The SQL mirror of
 -- `switchedOnNow` agrees with it on every case (no row, closed only, closed then open, each with and without the
 -- default); Admin's list shows an open store that never chose and leaves out one that turned it off and one not open;
 -- the reach count agrees; and only frata_admin calls the definers, nobody calls the predicate. Everything here is
