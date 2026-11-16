@@ -11,14 +11,18 @@ import { fetchWithTimeout } from '@/lib/http/timeout'
  * Every size named must be read: a file that is missing, answers anything but 2xx, or does not answer in time refuses
  * the photo (security review PI·2). A path outside the shop's folder is left to attachIn's own check.
  */
-export async function photosAreMade(photos: { base: string; widths: number[] }[], waits: readonly number[] = [500, 1500]): Promise<boolean> {
+/** `folder`: products (each base left to attachIn's own check, as before) or brand (one-address P1, security review MED-1:
+ *  a logo's base outside the store's brand folder, or no base at all, refuses). */
+export async function photosAreMade(photos: { base: string; widths: number[] }[], waits: readonly number[] = [500, 1500], folder: 'products' | 'brand' = 'products'): Promise<boolean> {
   const auth = await requireMember(ANY_MEMBER)
   const host = storeHost(BLOB_STORE_ID)
   if (!auth.ok || !host) return true
+  if (folder === 'brand' && !photos.every((ph) => acceptedBase(String(ph.base ?? ''), host, auth.membership.tenantId, 'brand'))) return false
   const urls = photos.flatMap((ph) => {
-    const base = acceptedBase(String(ph.base ?? ''), host, auth.membership.tenantId, 'products')
+    const base = acceptedBase(String(ph.base ?? ''), host, auth.membership.tenantId, folder)
     return base && Array.isArray(ph.widths) ? ph.widths.slice(0, 4).map((w) => ({ url: urlFor(base, Number(w)), format: formatOf(base) })) : []
   })
+  if (folder === 'brand' && urls.length === 0) return false
   // A file just uploaded may not answer at once: a size that is missing or silent is asked again twice (0.5 s, then
   // 1.5 s) before it refuses the photo; wrong bytes refuse at once.
   const read = async (url: string) => {

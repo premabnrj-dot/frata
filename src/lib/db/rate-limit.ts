@@ -136,6 +136,11 @@ export const LIMITS = {
   contentSave: { action: 'content_save:shop', max: 30, windowSeconds: 60 },
   contentUndo: { action: 'content_undo:shop', max: 30, windowSeconds: 60 },
   contentPurge: { action: 'content_purge:shop', max: 1, windowSeconds: 30 },
+  // One brand record (one-address P1·3): saves, decisions and Undo counted like content's, failing closed; an SVG logo's
+  // upload through Frrata's server (it is cleaned there) has its own, smaller bucket.
+  brandSave: { action: 'brand_save:shop', max: 30, windowSeconds: 60 },
+  brandUndo: { action: 'brand_undo:shop', max: 30, windowSeconds: 60 },
+  brandSvg: { action: 'brand_svg:shop', max: 20, windowSeconds: 600 },
   contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 },
   // The Storefront API (V1 SA0, security and unit-economics reviews 2026-11-15), all failing closed. Unknown keys per
   // network (counted after a lookup misses, on the dynamic tree); test keys at 60 a minute per network; a test key's

@@ -9,6 +9,9 @@
 
 import { z } from 'zod'
 import { ICON_NAMES } from '../../icons/names'
+import { FONT_NAMES } from '../../brand/record'
+
+const BRAND_FONT_FAMILIES = Object.values(FONT_NAMES) as [string, ...string[]]
 
 const MAY_GROW = 'New values may appear. Show something sensible for one you don’t know.'
 const paise = z.number().int().nonnegative()
@@ -108,9 +111,30 @@ const Zone = z.strictObject({
   name: text(60), charge: paise, freeAbove: paise.nullable(), days: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]),
   payOnDelivery: z.strictObject({ on: z.boolean(), charge: paise, max: paise.nullable() }),
 })
+// ── The brand record (one-address P1·6; api-contract review m2, M6, M7) ─────────────────────────────────────────────
+const IMG_ONLY = 'Draw it through <img> only. Never inline it in your page.'
+const colour = z.string().regex(/^#[0-9A-F]{6}$/)
+const font = z.enum(BRAND_FONT_FAMILIES).describe(`A Google Fonts family. Load it yourself. ${MAY_GROW}`)
+export const Brand = z.strictObject({
+  logos: z.strictObject({
+    main: https.nullable().describe('The main logo as SVG, WebP or JPEG. When null, draw the store’s name in the headings font.'),
+    mark: https.nullable(), stacked: https.nullable(), reversed: https.nullable().describe('For a dark background.'),
+  }).describe(`Logo files on Frrata’s media store. ${IMG_ONLY}`),
+  colours: z.strictObject({
+    background: colour, panel: colour.describe('Bands, the footer and the legal block.'), text: colour, secondaryText: colour, accent: colour,
+    onAccent: colour.describe('Text on the accent.'), controlEdge: colour, hairline: colour, success: colour, warning: colour, error: colour,
+  }).describe('Every pair a shopper reads is checked: 4.5:1 for text, 3:1 for a control’s edge.'),
+  fonts: z.strictObject({ headings: font, body: font }).describe(`Google Fonts families. Load them yourself. ${MAY_GROW}`),
+  radius: z.number().int().min(0).max(64).describe('Corner radius in px for fields, buttons and cards.'),
+  density: z.enum(['compact', 'standard', 'roomy']).describe(`Fields and buttons 44, 48 or 52 px tall. ${MAY_GROW}`),
+  season: z.strictObject({ name: text(40), until: moment.nullable().describe('When the season ends. Null when it has no end.') }).nullable()
+    .describe('A season running now. Its accent is already in colours. Never a season still to come.'),
+})
+
 export const STORE_STATUS = ['open', 'opening_soon', 'paused'] as const
 export const Shop = z.strictObject({
-  name: text(120), tagline: text(200), language: z.enum(['en', 'hi']).describe(MAY_GROW), logo: https.nullable(),
+  name: text(120), tagline: text(200), language: z.enum(['en', 'hi']).describe(MAY_GROW),
+  logo: https.nullable().describe('The main logo as WebP or JPEG. An SVG logo comes here as its PNG once made, else null. Every logo file is in brand.'),
   status: z.enum(STORE_STATUS).describe(`As of this answer. Show the store as closed unless it is "open". "paused" takes no new orders until pause.to. ${MAY_GROW}`),
   pause: z.strictObject({ from: moment, to: moment.nullable() }).nullable().describe('A pause the store has or will have. Check it against the clock.'),
   pricesIncludeGst: z.boolean(),
@@ -130,6 +154,7 @@ export const Shop = z.strictObject({
   checkoutOrigin: https.describe('Where checkout, orders and policies live. The bag link starts here: <checkoutOrigin>/cart?l=<size id>:<qty>,….'),
   cart: z.strictObject({ url: https.describe('<checkoutOrigin>/cart. Add ?l=<size id>:<qty>,… and, if you like, code= and the shopper’s utm_ tags.'), maxLines: z.number().int().positive(), maxQty: z.number().int().positive().describe('A larger quantity is lowered to this.') })
     .optional().describe('The bag link. It sends your shopper’s bag to the store’s checkout in one URL.'),
+  brand: Brand.nullable().optional().describe('The store’s logo files, colours, fonts, corners and spacing. Draw your site from them, never from copies in code. Frrata’s neutral defaults until the brand saves its own. May be null.'),
 })
 
 // ── Store content and pages (V1 SA1, on lane B's content layer: src/lib/queries/content.ts, queries/pages.ts) ──────────

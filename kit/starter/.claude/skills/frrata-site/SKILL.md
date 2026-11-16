@@ -2,7 +2,7 @@
 name: frrata-site
 description: Use when building or changing an Indian D2C brand's website on its Frrata store with this starter - reading the store through the Frrata Storefront API (keys, products, collections, pages, filters), sending the shopper's bag to checkout with the bag link, caching, previews, the legal block, and Indian shopper conventions.
 metadata:
-  version: 2026.12.0
+  version: 2026.12.1
   api: '2026-12'
   verified: 2026-11-16
 ---
@@ -39,6 +39,14 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    only `/pages/<handle>` in `to`.
 9. **Keep the paths.** `/products/<handle>` and `/collections/<handle>`: the store's own Frrata pages move shoppers
    here by the same paths. A product's old handle answers with its current one: redirect to it.
+
+10. **The brand comes from the store.** `shop.brand` holds the logo files (main, mark, stacked, reversed), eleven
+   colours, the headings and body fonts (Google Fonts families), corners and spacing; a running season's accent is
+   already in `colours`. Render `<BrandStyle brand={shop.brand} />` once in `app/layout.tsx` and use only its
+   variables (`var(--brand-accent)`, `var(--brand-body)`, …); draw logos with `<Logo>`, always through `<img>`
+   (never inline an SVG). Never keep logo files, hex colours, `rgb()` or font families in the site: `npm run check`
+   fails them. A change to the brand is the brand's, in Console › Brand, never a commit. `shop.logo` is never an SVG
+   (for places an SVG can't go). Until the brand saves its own, `brand` holds Frrata's neutral defaults.
 
 ## Indian shoppers
 - Show **Pay on delivery** when `shop.payOnDelivery.on` (most first orders are COD).

@@ -8,6 +8,7 @@ import { momentColumns } from '@/lib/db/order-predicates'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { creditNoteLines, creditNotes, orderLines, orders } from '@/lib/db/schema-orders'
+import { brandPaperLogoWith } from './paper-logo'
 import type { CreditKind } from '@/domains/orders/credits'
 
 // =============================================================================
@@ -31,11 +32,14 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
   /** The GST app reads a period's documents in batches above the print cap (MAX_DOCUMENTS is for a print page). */
   cap = MAX_DOCUMENTS): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper; credit: IssuedCredit | null; credits: IssuedCredit[] }[]; skipped: { number: string; state: OrderState }[] }> {
   const wanted = [...new Set(numbers.filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, cap)
-  const [s] = await tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix,
-    logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
-    .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
+  const [[s], brandLogo] = await Promise.all([
+    tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix,
+      logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
+      .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)),
+    brandPaperLogoWith(tx, tenantId),
+  ])
   const shop: DocShop = { name: s?.name ?? '', legalName: s?.legalName ?? '', address: s?.address ?? '', returnAddress: s?.address ?? '' }
-  const paper: Paper = { logo: s?.logo ?? null, signatory: s?.signatory ?? '', note: s?.note ?? '' }
+  const paper: Paper = { logo: s?.logo ?? brandLogo, signatory: s?.signatory ?? '', note: s?.note ?? '' }
   const prefix = orderPrefix(s?.prefix ?? '', s?.name ?? '')
   if (!wanted.length) return { shop, paper, orders: [], skipped: [] }
   const os = await tx.select({

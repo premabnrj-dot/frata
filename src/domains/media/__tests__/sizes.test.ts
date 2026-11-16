@@ -83,6 +83,14 @@ describe('logo for paper (Documents D2)', () => {
     expect(acceptedDocLogo(`https://evil.test/tenants/${t}/documents/${id}.png`, host, t)).toBeNull()
     expect(acceptedDocLogo(`https://${host}/tenants/${t}/documents/${id}.png?x=1`, host, t)).toBeNull()
   })
+  it('accepts a brand’s PNG rendition, named by a sha256, in this shop’s folder only (one-address P1·4)', async () => {
+    const { acceptedDocLogo, DOC_LOGO_SHAPE, RENDITION_SHAPE } = await import('../sizes')
+    const sha = 'ab'.repeat(32)
+    expect(acceptedDocLogo(`https://${host}/tenants/${t}/documents/${sha}.png`, host, t)).toBeTruthy()
+    expect(acceptedDocLogo(`https://${host}/tenants/${id}/documents/${sha}.png`, host, t)).toBeNull()
+    expect(RENDITION_SHAPE.test(`tenants/${t}/documents/${sha.slice(2)}.png`)).toBe(false)
+    expect(DOC_LOGO_SHAPE.test(`tenants/${t}/documents/${sha}.png`)).toBe(false) // never an upload's path
+  })
   it('knows PNG and JPEG by their bytes, and a PNG’s size', async () => {
     const { imageKind, pngSize } = await import('../sizes')
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 2, 88, 0, 0, 0, 200])

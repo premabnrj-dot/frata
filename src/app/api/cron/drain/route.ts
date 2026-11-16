@@ -37,7 +37,8 @@ export async function GET(request: Request) {
   // a domain gone). The last 6 minutes (one run overlaps the next), ids only, page by page, all by a fixed moment that
   // leaves the outbox at least 20 s of its 50 (architecture review 9).
   const since = new Date(started - 6 * 60_000), until = new Date(started), sweepsBy = started + 25_000
-  await pagedSweep('boundaries', shopsWithBoundary, since, until, sweepsBy, async (ids) => { for (const t of ids) refreshShop(t, 'catalogue') })
+  // A brand season starting or ending is a boundary too (one-address P1, M5): its brand lives under `settings`.
+  await pagedSweep('boundaries', shopsWithBoundary, since, until, sweepsBy, async (ids) => { for (const t of ids) { refreshShop(t, 'catalogue'); refreshShop(t, 'settings') } })
   await pagedSweep('content', shopsWithContentChange, since, until, sweepsBy, async (ids) => { for (const t of ids) refreshShop(t, 'content') })
   // Keys: their cached lookups and "not found" copies live an hour, so each shop's keys are purged through its own withTenant.
   await pagedSweep('key stops', shopsWithKeyStop, since, until, sweepsBy, (ids) => eachLimited(ids, 4, (t) => refreshKeys(t)))

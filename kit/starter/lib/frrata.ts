@@ -19,6 +19,18 @@ export type Shop = {
   name: string; tagline: string; status: string; checkoutOrigin: string; cart?: { url: string; maxLines: number; maxQty: number }
   legal: { legalName: string; address: string; customerCare: { email: string; phone: string }; grievanceOfficer: { name: string; role: string; email: string; phone: string } }
   policies: { kind: string; title: string; url: string }[]; social: { instagram: string | null; whatsapp: string | null }; payOnDelivery: { on: boolean }
+  /** The main logo, never an SVG (an SVG logo comes here as its PNG once made, else null). Every logo file is in brand. */
+  logo: string | null
+  /** The store's brand record (Console › Brand). Draw the site from it: <BrandStyle> and <Logo>, never copies in code. */
+  brand?: Brand | null
+}
+export type Brand = {
+  logos: { main: string | null; mark: string | null; stacked: string | null; reversed: string | null }
+  colours: { background: string; panel: string; text: string; secondaryText: string; accent: string; onAccent: string; controlEdge: string; hairline: string; success: string; warning: string; error: string }
+  fonts: { headings: string; body: string }
+  radius: number
+  density: string
+  season: { name: string; until: string | null } | null
 }
 type Run = { text: string; bold: boolean; italic: boolean; link: string | null }
 export type FaqItem = { question: string; answer: string | null; policy: string | null }

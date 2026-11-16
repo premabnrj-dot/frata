@@ -1,5 +1,6 @@
 'use server'
 
+import { saveBrand } from '@/lib/content/save'
 import { HELD_BY_ZONES } from '@/domains/delivery/lists'
 import { moduleAccessIn } from '@/lib/queries/modules'
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
@@ -24,9 +25,8 @@ import { askedTodayIn, costsVisibleIn, hasOwnerHeldIn } from '@/lib/queries/sett
 import { errName } from '@/lib/log'
 import { docImage } from '@/lib/documents/images'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
-import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
+import { acceptedBase, DOC_LOGO_SHAPE, storeHost, urlFor } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
-import { photosAreMade } from '@/lib/media/uploaded'
 import { liveWithoutRateIn } from '@/lib/queries/catalogue'
 import type { Unrated } from '@/domains/tax/rates'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
@@ -280,7 +280,8 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the store’s logo.' }
   if (!(await withinLimit(LIMITS.uploadShop, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many changes in the last few minutes. Try again shortly.' }
-  if (url !== null && (typeof url !== 'string' || !(await docImage(url, me.membership.tenantId)))) {
+  // The owner's own upload only (documents/<uuid>.png): a brand's rendition is derived, never set here (one-address P1·4).
+  if (url !== null && (typeof url !== 'string' || !DOC_LOGO_SHAPE.test(url.replace(/^https:\/\/[^/]+\//, '')) || !(await docImage(url, me.membership.tenantId)))) {
     return { ok: false, error: 'We couldn’t use that logo. Choose a PNG, JPEG or WebP image.' }
   }
   try {
@@ -302,30 +303,22 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
  * shop's own brand photo (`acceptedBase`, the exact stored shape) whose bytes are WebP or JPEG; null goes back to the name.
  * Never by a Frrata support visit.
  */
-export async function setShopLogo(base: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
-  const editors = editorsOf('store')
-  const me = await requireMember(editors)
+export async function setShopLogo(base: string | null): Promise<{ ok: true; waits: boolean } | { ok: false; error: string }> {
+  // One-address P1·3: the brand record's one writer (src/lib/content/save.ts) saves the logo too, the store's own folder
+  // and its bytes checked there; a code-site store's partner on an open store waits for the owner as on Brand.
+  const me = await requireMember(editorsOf('store'))
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the store’s logo.' }
-  if (!(await withinLimit(LIMITS.uploadShop, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many changes in the last few minutes. Try again shortly.' }
   let url: string | null = null
   if (base !== null) {
     const host = storeHost(BLOB_STORE_ID)
     const accepted = host && typeof base === 'string' ? acceptedBase(base, host, me.membership.tenantId, 'brand') : null
-    if (!accepted || !(await photosAreMade([{ base: accepted, widths: [400] }]))) return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image.' }
+    if (!accepted) return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image.' }
     url = urlFor(accepted, 400)
   }
-  try {
-    const r = await asMember(editors, { action: 'settings.brand.logo', detail: { set: url !== null } }, async (tx, auth) => {
-      await tx.update(shopSettings).set({ logoUrl: url, updatedAt: new Date() }).where(eq(shopSettings.tenantId, auth.membership.tenantId))
-      await tx.insert(auditEvents).values({ tenantId: auth.membership.tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'settings.brand.logo', detail: { set: url !== null } })
-    })
-    if (!r.ok) return { ok: false, error: r.error }
-    refreshShop(r.tenantId, 'shop')
-    revalidatePath('/console/settings', 'layout')
-    return { ok: true }
-  } catch (err) {
-    console.error('[setShopLogo]', errName(err))
-    return { ok: false, error: 'We couldn’t save the logo. Nothing was changed. Try again in a minute.' }
-  }
+  // saveBrand counts the save, checks the file and purges; a partner's change on an open code-site store waits.
+  const r = await saveBrand({ patch: { logos: { main: url } } }, 'settings.brand.logo')
+  if (!r.ok) return { ok: false, error: r.fields?.main ? 'That logo could not be used. Choose a PNG, JPEG or WebP image.' : r.error }
+  revalidatePath('/console/settings', 'layout')
+  return { ok: true, waits: r.outcome === 'waits' }
 }

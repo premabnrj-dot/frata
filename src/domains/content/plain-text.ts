@@ -8,6 +8,9 @@ import { z } from 'zod'
 // ZWJ, which Indic scripts need, private-use and unassigned code points, and < > { } \. Pure.
 // =============================================================================
 
+/** The rule's one sentence, shown wherever it refuses. */
+export const PLAIN_WORDS = 'Use plain words. Leave out < > { } \\ and hidden characters.'
+
 const ZWNJ = 0x200c, ZWJ = 0x200d
 const BAD = /[\p{Cc}\p{Cf}\p{Co}\p{Cn}\p{Zl}\p{Zp}<>{}\\]/u
 
@@ -27,4 +30,4 @@ export function refusedChar(s: string, lines = false): string | null {
 export const plainText = (max: number, opts: { lines?: boolean; min?: number } = {}) =>
   z.string()
     .transform((s) => (opts.lines ? s.replace(/\r\n?/g, '\n') : s).normalize('NFC').trim())
-    .pipe(z.string().min(opts.min ?? 1).max(max).refine((s) => refusedChar(s, !!opts.lines) === null, 'Use plain words. Leave out < > { } \\ and hidden characters.'))
+    .pipe(z.string().min(opts.min ?? 1).max(max).refine((s) => refusedChar(s, !!opts.lines) === null, PLAIN_WORDS))

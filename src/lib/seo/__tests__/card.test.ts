@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cardHash, collectionCard, parseCardPath, productCard, shopCard } from '../card'
+import { cardHash, cardOf, collectionCard, parseCardPath, productCard, shopCard } from '../card'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import type { StoreCard, StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/storefront'
 
@@ -50,5 +50,18 @@ describe('card addresses (S1·3: only canonical shapes are drawn)', () => {
     for (const parts of [['shop', id, '0123456789abcdef.jpg'], ['product', '0123456789abcdef.jpg'], ['product', id.toUpperCase(), '0123456789abcdef.jpg'],
       ['product', id, '0123456789ABCDEF.jpg'], ['product', id, '0123456789abcdef.png'], ['product', id, '0123456789abcde.jpg'], ['brand', id, '0123456789abcdef.jpg'],
       ['product', '..', '0123456789abcdef.jpg'], []]) expect(parseCardPath(parts)).toBeNull()
+  })
+})
+
+describe('a code-site store’s card (one-address P1·5)', () => {
+  const palette = { panel: '#F2EADF', text: '#221A14', muted: '#665A4E' }
+  it('wears the brand record’s panel and text; a theme shop’s card is as before', () => {
+    const p = card({})
+    const theme$ = cardOf(shop, { kind: 'product', product: p }, theme, now)
+    expect(theme$).toEqual(productCard(shop, p, theme, now))
+    expect(cardHash(theme$)).toBe(cardHash(productCard(shop, p, theme, now)))
+    const branded = cardOf(shop, { kind: 'product', product: p }, theme, now, { palette })
+    expect(branded.colours).toEqual({ bg: '#F2EADF', text: '#221A14', sub: '#665A4E' })
+    expect(cardHash(branded)).not.toBe(cardHash(theme$)) // a new record is a new card address
   })
 })

@@ -2,6 +2,8 @@ import './globals.css'
 import Link from 'next/link'
 import { api, type Shop } from '@/lib/frrata'
 import { Landing } from '@/components/landing'
+import { BrandStyle } from '@/components/frrata/brand-style'
+import { Logo } from '@/components/frrata/logo'
 
 // Every page reads the store when asked (the reads themselves are cached 60 s, lib/frrata.ts), so a build needs no key
 // and a preview deploy without one still builds.
@@ -17,9 +19,10 @@ export default async function Layout({ children }: { children: React.ReactNode }
   const s = await api<Shop>('shop')
   return (
     <html lang="en-IN">
+      <head><BrandStyle brand={s?.brand} /></head>
       <body>
         <Landing />
-        <header className="top"><Link href="/" className="brand">{s?.name ?? 'Store'}</Link><nav><Link href="/bag">Bag</Link></nav></header>
+        <header className="top"><Link href="/" className="brand"><Logo brand={s?.brand} name={s?.name ?? 'Store'} fallback={s?.logo ?? null} /></Link><nav><Link href="/bag">Bag</Link></nav></header>
         <main>{children}</main>
         {s ? (
           <footer className="legal">

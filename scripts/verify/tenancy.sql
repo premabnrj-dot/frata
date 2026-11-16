@@ -3732,7 +3732,8 @@ do $$ declare n int; begin
   begin perform hsn from products; raise exception 'FAIL: a Builder read HSN'; exception when insufficient_privilege then null; end;
   begin perform 1 from orders; raise exception 'FAIL: a Builder read orders'; exception when insufficient_privilege then null; end;
   begin perform 1 from order_lines; raise exception 'FAIL: a Builder read order lines'; exception when insufficient_privilege then null; end;
-  begin perform 1 from shop_settings; raise exception 'FAIL: a Builder read settings'; exception when insufficient_privilege then null; end;
+  -- P1·2 (0155): the store's logo (shop_settings.logo_url) for the brand preview (§ 98); everything else stays shut.
+  begin perform legal_name, gstin, support_phone from shop_settings; raise exception 'FAIL: a Builder read settings'; exception when insufficient_privilege then null; end;
   begin perform 1 from members; raise exception 'FAIL: a Builder read members'; exception when insufficient_privilege then null; end;
   begin perform 1 from discounts; raise exception 'FAIL: a Builder read offers'; exception when insufficient_privilege then null; end;
   begin insert into products (tenant_id, handle, title) values (current_setting('proof.nook1')::uuid, 'b', 'B'); raise exception 'FAIL: a Builder wrote';
@@ -3761,7 +3762,9 @@ do $$ declare r record; allowed jsonb := '{
   "product_images": ["tenant_id","product_id","base","widths","position"],
   "collections": ["id","tenant_id","title","handle","kind","rules","match_all"],
   "collection_products": ["tenant_id","collection_id","product_id"],
-  "product_attributes": ["tenant_id","product_id","attribute","values"]}'; begin
+  "product_attributes": ["tenant_id","product_id","attribute","values"],
+  "brand_tokens": ["tenant_id","logo_mark_url","logo_stacked_url","logo_reversed_url","color_bg","color_panel","color_text","color_muted","color_accent","color_on","color_edge","color_line","color_good","color_warn","color_bad","font_display","font_body","radius","density"],
+  "shop_settings": ["tenant_id","logo_url"]}'; begin
   for r in select c.oid as rel, n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where c.relkind in ('r','v','m','p','f') and n.nspname not in ('pg_catalog','information_schema') loop
     if has_table_privilege('frata_builder', r.rel, 'insert') or has_table_privilege('frata_builder', r.rel, 'update')
@@ -3793,7 +3796,7 @@ do $$ declare r record; allowed jsonb := '{
                  where ro.rolname = 'frata_builder' and not (mem.rolname = 'postgres' and m.admin_option))
   then raise exception 'FAIL: frata_builder is in a role, or a role is in it'; end if;
   if exists (select 1 from pg_policies where 'frata_builder' = any(roles) and policyname not in ('builder_rows','builder_only'))
-     or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 16
+     or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 20
   then raise exception 'FAIL: frata_builder''s policies'; end if;
 end $$;
 -- Billing rework R2: the system issuer (0139) never issues test invoices, never alongside a staff member, and its
@@ -4774,6 +4777,127 @@ begin
     if has_function_privilege('frata_app', 'public.' || fn, 'execute') or has_function_privilege('anon', 'public.' || fn, 'execute')
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
+end $$;
+-- § 98 · One brand record (one-address plan P1·2, drizzle/0155; spec § 5). Each store reads and writes only its own
+-- brand_tokens, brand_seasons and brand_proposals; a logo file outside the store's own brand folder is refused, in
+-- brand_tokens and in shop_settings.logo_url; a Builder reads the live record's named columns only (never `previous`, a
+-- proposal or a season) and shop_settings' five; one open proposal a store, decided once; the owner's line is written
+-- for this store's open proposal only, once, and reaches owners and Managers only; no API role and no frata_admin grant.
+begin;
+insert into tenants (id, slug, name) values
+  ('c9800000-0000-0000-0000-000000000001', 'proof-98-a', 'Proof 98 A'), ('c9800000-0000-0000-0000-000000000002', 'proof-98-b', 'Proof 98 B');
+insert into shop_settings (tenant_id) values ('c9800000-0000-0000-0000-000000000001'), ('c9800000-0000-0000-0000-000000000002');
+insert into members (tenant_id, user_id, role) values
+  ('c9800000-0000-0000-0000-000000000001', 'a9800000-0000-0000-0000-0000000000b1', 'owner'), ('c9800000-0000-0000-0000-000000000001', 'a9800000-0000-0000-0000-0000000000b2', 'admin'),
+  ('c9800000-0000-0000-0000-000000000001', 'a9800000-0000-0000-0000-0000000000b3', 'staff');
+insert into brand_tokens (tenant_id, color_bg, color_panel, color_text, color_muted, color_accent, color_on, color_edge, color_line, color_good, color_warn, color_bad,
+    font_display, font_body, radius, density, previous)
+  select t, '#FBF7F1', '#F2EADF', '#221A14', '#665A4E', '#8C1D2C', '#FBF7F1', '#9A8B7A', '#DDD0BE', '#2F6B3B', '#8A5300', '#A3261B', 'tiro', 'mukta', 4, 'standard', '{"x":1}'
+    from (values ('c9800000-0000-0000-0000-000000000001'::uuid), ('c9800000-0000-0000-0000-000000000002'::uuid)) v(t);
+insert into brand_seasons (tenant_id, name, starts_at, color_accent, color_on) values ('c9800000-0000-0000-0000-000000000002', 'Diwali', now(), '#7A1F2B', '#FFFFFF');
+insert into brand_proposals (id, tenant_id, record, summary, base_version, proposed_by) values
+  ('d9800000-0000-0000-0000-0000000000b0', 'c9800000-0000-0000-0000-000000000002', '{}', '1 font.', 1, 'a9800000-0000-0000-0000-0000000000a1');
+set local role frata_app;
+do $$ declare a constant uuid := 'c9800000-0000-0000-0000-000000000001'; b constant uuid := 'c9800000-0000-0000-0000-000000000002';
+  own constant text := 'https://x.public.blob.vercel-storage.com/tenants/c9800000-0000-0000-0000-000000000001/brand/';
+  theirs constant text := 'https://x.public.blob.vercel-storage.com/tenants/c9800000-0000-0000-0000-000000000002/brand/'; n int; p uuid; nid uuid;
+begin
+  if exists (select 1 from brand_tokens) or exists (select 1 from brand_seasons) or exists (select 1 from brand_proposals) then raise exception 'FAIL: 98 a brand row with no store set'; end if;
+  perform set_config('app.tenant_id', a::text, true);
+  select count(*) into n from brand_tokens; if n <> 1 then raise exception 'FAIL: 98 A sees % brand records', n; end if;
+  if exists (select 1 from brand_seasons) or exists (select 1 from brand_proposals) then raise exception 'FAIL: 98 A sees B''s season or proposal'; end if;
+  update brand_tokens set color_accent = '#000000' where tenant_id = b; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: 98 A changed B''s record'; end if;
+  begin insert into brand_seasons (tenant_id, name, starts_at, color_accent, color_on) values (b, 'x', now(), '#000000', '#FFFFFF');
+    raise exception 'FAIL: 98 A wrote a season into B'; exception when insufficient_privilege then null; end;
+  begin insert into brand_proposals (tenant_id, record, summary, base_version, proposed_by) values (b, '{}', 'x', 1, gen_random_uuid());
+    raise exception 'FAIL: 98 A wrote a proposal into B'; exception when insufficient_privilege then null; end;
+  begin update brand_tokens set tenant_id = b where tenant_id = a; raise exception 'FAIL: 98 a record moved stores'; exception when insufficient_privilege then null; end;
+  -- The store's own folder only, for every logo file and for logo_url.
+  update brand_tokens set logo_mark_url = own || repeat('a', 64) || '.svg', logo_stacked_url = own || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a;
+  begin update brand_tokens set logo_mark_url = theirs || repeat('a', 64) || '.svg' where tenant_id = a; raise exception 'FAIL: 98 a mark from B''s folder'; exception when check_violation then null; end;
+  begin update brand_tokens set logo_reversed_url = own || '../x.svg' where tenant_id = a; raise exception 'FAIL: 98 a dot segment'; exception when check_violation then null; end;
+  begin update brand_tokens set logo_reversed_url = own || repeat('a', 64) || '.svg?x' where tenant_id = a; raise exception 'FAIL: 98 a query string'; exception when check_violation then null; end;
+  begin update brand_tokens set logo_reversed_url = 'http://x.public.blob.vercel-storage.com/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
+    raise exception 'FAIL: 98 a plain http logo'; exception when check_violation then null; end;
+  update shop_settings set logo_url = own || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a;
+  begin update shop_settings set logo_url = theirs || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a; raise exception 'FAIL: 98 logo_url from B''s folder'; exception when check_violation then null; end;
+  begin update shop_settings set logo_url = 'https://evil.example/logo.png' where tenant_id = a; raise exception 'FAIL: 98 logo_url off our store'; exception when check_violation then null; end;
+  begin update shop_settings set logo_url = 'https://evil.example/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
+    raise exception 'FAIL: 98 the store''s own path on another host'; exception when check_violation then null; end;
+  begin update brand_tokens set logo_mark_url = 'https://evil.example/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
+    raise exception 'FAIL: 98 a mark on another host'; exception when check_violation then null; end;
+  -- 0155 (orders.invoice_logo): an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
+  insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
+    values (a, 98001, 'cod', now(), replace(own, '/brand/', '/documents/') || repeat('b', 64) || '.png');
+  begin insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
+      values (a, 98002, 'cod', now(), replace(theirs, '/brand/', '/documents/') || repeat('b', 64) || '.png');
+    raise exception 'FAIL: 98 an invoice froze B''s rendition'; exception when check_violation then null; end;
+  begin update brand_tokens set color_text = '#abcdef' where tenant_id = a; raise exception 'FAIL: 98 a lower-case hex'; exception when check_violation then null; end;
+  begin update brand_tokens set font_display = 'comic' where tenant_id = a; raise exception 'FAIL: 98 a font off the list'; exception when check_violation then null; end;
+  begin update brand_tokens set radius = 2 where tenant_id = a; raise exception 'FAIL: 98 a corner off the steps'; exception when check_violation then null; end;
+  -- One open proposal a store; a decision is made once.
+  insert into brand_proposals (tenant_id, record, summary, base_version, proposed_by) values (a, '{}', '4 logo files and 2 fonts.', 1, 'a9800000-0000-0000-0000-0000000000a1') returning id into p;
+  begin insert into brand_proposals (tenant_id, record, summary, base_version, proposed_by) values (a, '{}', '1 font.', 1, 'a9800000-0000-0000-0000-0000000000a1');
+    raise exception 'FAIL: 98 two open proposals'; exception when unique_violation then null; end;
+  begin insert into brand_proposals (tenant_id, record, summary, base_version, proposed_by, decided_at, decision, decided_by)
+      values (a, '{}', 'x', 1, gen_random_uuid(), now(), 'approved', gen_random_uuid()); raise exception 'FAIL: 98 a proposal born decided';
+  exception when check_violation then null; end;
+  -- The owner's line: once, for this store's open proposal; never for B's; reaching owners and Managers only.
+  if app_brand_notice('d9800000-0000-0000-0000-0000000000b0') is not null then raise exception 'FAIL: 98 A wrote a line for B''s proposal'; end if;
+  nid := app_brand_notice(p);
+  if nid is null then raise exception 'FAIL: 98 no line for an open proposal'; end if;
+  if app_brand_notice(p) is not null then raise exception 'FAIL: 98 a second line for one proposal'; end if;
+  if exists (select 1 from notices where id = nid and (type <> 'needs_you' or source_kind <> 'brand' or source_id <> p or title is not null or body is not null
+             or href <> '/console/brand' or by <> 'a9800000-0000-0000-0000-0000000000a1' or required)) then raise exception 'FAIL: 98 the line carries words or the wrong source'; end if;
+  if (select array_agg(role order by role) from app_notice_members(nid)) is distinct from array['admin', 'owner'] then raise exception 'FAIL: 98 a brand line reaches %', (select array_agg(role) from app_notice_members(nid)); end if;
+  update brand_proposals set decided_at = now(), decision = 'approved', decided_by = 'a9800000-0000-0000-0000-0000000000b1' where id = p;
+  if app_brand_notice(p) is not null then raise exception 'FAIL: 98 a line for a decided proposal'; end if;
+  begin update brand_proposals set decision = 'declined' where id = p; raise exception 'FAIL: 98 a decision changed'; exception when check_violation then null; end;
+  begin update brand_proposals set record = '{"x":2}' where id = p; raise exception 'FAIL: 98 frata_app rewrote a proposal'; exception when insufficient_privilege then null; end;
+  begin delete from brand_tokens; raise exception 'FAIL: 98 frata_app deleted a record'; exception when insufficient_privilege then null; end;
+  perform set_config('app.tenant_id', b::text, true);
+  if (select count(*) from brand_seasons) <> 1 or (select count(*) from brand_proposals) <> 1 then raise exception 'FAIL: 98 B lost its own rows'; end if;
+  if exists (select 1 from notices where source_kind = 'brand') then raise exception 'FAIL: 98 B sees A''s line'; end if;
+end $$;
+reset role;
+-- The Builder: named columns of its store's live record, only with its role set.
+set local role frata_builder;
+do $$ declare n int; begin
+  perform set_config('app.tenant_id', 'c9800000-0000-0000-0000-000000000001', true);
+  select count(*) into n from (select tenant_id, color_accent, font_display, logo_mark_url from brand_tokens) x;
+  if n <> 0 then raise exception 'FAIL: 98 a Builder read with no role set'; end if;
+  perform set_config('app.member_role', 'builder', true);
+  select count(*) into n from (select tenant_id, color_accent, font_display, radius, density, logo_mark_url from brand_tokens) x;
+  if n <> 1 then raise exception 'FAIL: 98 the Builder sees % records', n; end if;
+  select count(*) into n from (select tenant_id, logo_url from shop_settings) x;
+  if n <> 1 then raise exception 'FAIL: 98 the Builder sees % settings rows', n; end if;
+  begin perform previous from brand_tokens; raise exception 'FAIL: 98 the Builder read previous'; exception when insufficient_privilege then null; end;
+  begin perform updated_by from brand_tokens; raise exception 'FAIL: 98 the Builder read updated_by'; exception when insufficient_privilege then null; end;
+  begin perform 1 from brand_proposals; raise exception 'FAIL: 98 the Builder read a proposal'; exception when insufficient_privilege then null; end;
+  begin perform 1 from brand_seasons; raise exception 'FAIL: 98 the Builder read a season'; exception when insufficient_privilege then null; end;
+  begin perform legal_name from shop_settings; raise exception 'FAIL: 98 the Builder read the legal name'; exception when insufficient_privilege then null; end;
+  begin perform doc_logo from shop_settings; raise exception 'FAIL: 98 the Builder read the logo for paper'; exception when insufficient_privilege then null; end;
+  begin update brand_tokens set color_accent = '#000000'; raise exception 'FAIL: 98 the Builder wrote'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ declare r text; t text; begin
+  foreach t in array array['brand_tokens', 'brand_seasons', 'brand_proposals'] loop
+    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 98 % has no RLS', t; end if;
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin'] loop
+      if has_table_privilege(r, 'public.' || t, 'select') or has_table_privilege(r, 'public.' || t, 'insert') or has_table_privilege(r, 'public.' || t, 'update')
+         or has_table_privilege(r, 'public.' || t, 'delete') or has_any_column_privilege(r, 'public.' || t, 'select')
+        then raise exception 'FAIL: 98 % holds a grant on %', r, t; end if;
+    end loop;
+    if exists (select 1 from pg_policies where tablename = t and roles @> array['frata_app']::name[] and (qual ~ 'is null' or with_check ~ 'is null'))
+      then raise exception 'FAIL: 98 % has a null-store branch', t; end if;
+  end loop;
+  if has_table_privilege('frata_app', 'brand_tokens', 'delete') or has_table_privilege('frata_app', 'brand_proposals', 'delete') then raise exception 'FAIL: 98 frata_app may delete a record or a proposal'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_function_privilege(r, 'app_brand_notice(uuid)', 'execute') then raise exception 'FAIL: 98 % can run app_brand_notice', r; end if;
+  end loop;
+  if exists (select 1 from pg_proc where proname = 'app_brand_notice' and (not prosecdef or not ('search_path=""' = any (proconfig))))
+    then raise exception 'FAIL: 98 app_brand_notice is not a definer with an empty search_path'; end if;
 end $$;
 -- § 101 · EkCode on by default (drizzle/0154; docs/specs/2026-11-16-ekcode-default-on.md E3). The SQL mirror of
 -- `switchedOnNow` agrees with it on every case (no row, closed only, closed then open, each with and without the

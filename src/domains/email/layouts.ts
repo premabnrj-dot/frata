@@ -20,7 +20,8 @@ export type OrderBlock = {
 
 export type ShopEmail = {
   preview: string
-  shop: { name: string; logoUrl: string | null; accent: string | null }
+  /** `on`: the text on the accent (a brand record's, one-address P1·5); white when left out, as before. */
+  shop: { name: string; logoUrl: string | null; accent: string | null; on?: string | null }
   heading: string
   message: string
   button: { label: string; href: string } | null
@@ -50,6 +51,7 @@ ${o.payLine ? html`<tr><td colspan="2" style="padding:0 14px 12px;font-size:13px
 /** A shop's email to its shopper. */
 export function shopEmail(e: ShopEmail): Rendered {
   const accent = safeColour(e.shop.accent)
+  const on = e.shop.on && /^#[0-9a-f]{6}$/i.test(e.shop.on) ? e.shop.on : '#ffffff'
   const logo = e.shop.logoUrl ? safeHref(e.shop.logoUrl) : ''
   const href = e.button ? safeHref(e.button.href) : ''
   const drops = e.footer.newDropsHref ? safeHref(e.footer.newDropsHref) : ''
@@ -60,7 +62,7 @@ ${logo ? html`<img src="${logo}" alt="${e.shop.name}" height="40" style="display
 <tr><td style="padding:12px 28px 4px;font-size:22px;line-height:1.25;font-weight:600;">${e.heading}</td></tr>
 <tr><td style="padding:4px 28px 16px;font-size:15px;line-height:1.55;">${lines(e.message)}</td></tr>
 ${e.order ? orderHtml(e.order) : null}
-${href && e.button ? html`<tr><td style="padding:12px 28px 24px;"><a href="${href}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 18px;border-radius:4px;">${e.button.label}</a></td></tr>` : null}
+${href && e.button ? html`<tr><td style="padding:12px 28px 24px;"><a href="${href}" style="display:inline-block;background:${accent};color:${on};text-decoration:none;font-weight:600;font-size:14px;padding:11px 18px;border-radius:4px;">${e.button.label}</a></td></tr>` : null}
 <tr><td style="padding:14px 28px 22px;border-top:1px solid #E7E1DA;font-size:12px;line-height:1.5;color:#6B5E55;">
 Questions? Reply to this email or write to ${e.footer.supportEmail}.<br>
 ${e.footer.legalName} · ${e.footer.address}${e.footer.grievance ? html`<br>Grievance officer: ${e.footer.grievance}` : null}

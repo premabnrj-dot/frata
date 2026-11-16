@@ -95,4 +95,10 @@ describe('inboxOf (mail limits count one inbox)', () => {
   it('drops a +tag', () => expect(inboxOf('asha+1@example.in')).toBe('asha@example.in'))
   it('drops Gmail dots and folds googlemail', () => expect(inboxOf('a.s.ha+x@googlemail.com')).toBe('asha@gmail.com'))
   it('keeps dots elsewhere', () => expect(inboxOf('a.sha@example.in')).toBe('a.sha@example.in'))
+  it('a code-site store’s button: the brand’s text on its accent; anything not a colour falls back to white (one-address P1·5)', () => {
+    const base = { preview: 'p', heading: 'h', message: 'm', button: { label: 'View order', href: 'https://ayuda.in/orders' }, order: null, footer: { legalName: 'A', address: 'B', supportEmail: 'c@d.in', grievance: null, newDropsHref: null } }
+    expect(shopEmail({ ...base, shop: { name: 'S', logoUrl: null, accent: '#8C1D2C', on: '#FBF7F1' } }).html).toContain('background:#8C1D2C;color:#FBF7F1;')
+    expect(shopEmail({ ...base, shop: { name: 'S', logoUrl: null, accent: '#8C1D2C', on: 'red;x' } }).html).toContain('color:#ffffff;')
+    expect(shopEmail({ ...base, shop: { name: 'S', logoUrl: null, accent: '#8C1D2C' } }).html).toBe(shopEmail({ ...base, shop: { name: 'S', logoUrl: null, accent: '#8C1D2C', on: null } }).html)
+  })
 })

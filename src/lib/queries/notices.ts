@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, inArray, isNull, ne, notExists, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, ne, notExists, notInArray, or, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { noticePrefs, noticeReads, notices } from '@/lib/db/schema-email'
 import { billingNotices, frrataInvoices } from '@/lib/db/schema-billing'
@@ -7,6 +7,7 @@ import { shopSettings, supportSessions } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
 import { orderEdits } from '@/lib/db/schema-edits'
 import { orders } from '@/lib/db/schema-orders'
+import { brandProposals } from '@/lib/db/schema-brand'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
 import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import { noticeFallback, noticeWords, OPTIONAL_TYPES, DEFAULT_EMAIL, type NoticeSource, type NoticeType, type OptionalType } from '@/domains/email/notices'
@@ -23,10 +24,12 @@ import type { Paise } from '@/domains/money/paise'
 
 type Tx = Parameters<Parameters<typeof withTenant>[1]>[0]
 export type NoticeRow = typeof notices.$inferSelect
-export type ShownNotice = { id: string; type: NoticeType; title: string; body: string; href: string | null; required: boolean; at: Date; read: boolean }
+export type ShownNotice = { id: string; type: NoticeType; title: string; body: string; href: string | null; required: boolean; at: Date; read: boolean
+  /** A partner's waiting brand change (one-address P1): its id and where it stands, for Approve change and Decline. */
+  brand?: { id: string; state: BrandNoticeState } }
 
 /** The words for a set of notices, reading their sources in two queries (billing notices, support visits). */
-export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): Promise<Map<string, { title: string; body: string }>> {
+export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string, brandChanges?: Map<string, { summary: string; state: BrandNoticeState }>): Promise<Map<string, { title: string; body: string }>> {
   const billIds = rows.filter((n) => n.sourceKind === 'billing_notice' && n.sourceId).map((n) => n.sourceId!)
   const visitIds = rows.filter((n) => n.sourceKind === 'support_session' && n.sourceId).map((n) => n.sourceId!)
   const trialIds = rows.filter((n) => n.sourceKind === 'addon_trial' && n.sourceId).map((n) => n.sourceId!)
@@ -49,6 +52,7 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
     .innerJoin(orders, and(eq(orders.tenantId, orderEdits.tenantId), eq(orders.id, orderEdits.orderId)))
     .leftJoin(shopSettings, eq(shopSettings.tenantId, orderEdits.tenantId)).where(and(eq(orderEdits.tenantId, rows[0]!.tenantId), inArray(orderEdits.id, editIds))) : []
   const edit = new Map(edits.map((e) => [e.id, e]))
+  const brand = brandChanges ?? await brandChangesIn(tx, rows)
   const trial = new Map(trials.map((t) => [t.id, t]))
   const bill = new Map(bills.map((b) => [b.id, b])), visit = new Map(visits.map((v) => [v.id, v]))
   const out = new Map<string, { title: string; body: string }>()
@@ -70,16 +74,30 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
       // PP1: worded from its fixed address alone (the definer stores no words).
       const page = askPageOf(n.href)
       if (page) src = { kind: 'ask_owner', page }
+    } else if (n.sourceKind === 'brand') {
+      // One-address P1: the waiting change's own line, kept with it ("4 logo files and 2 fonts.").
+      const b = n.sourceId ? brand.get(n.sourceId) : undefined
+      if (b) src = { kind: 'brand', summary: b.summary }
     } else if (n.title) src = { kind: 'admin', title: n.title, body: n.body }
     out.set(n.id, src ? noticeWords(src, shopName) : noticeFallback(n))
   }
   return out
 }
 
+/** Each `brand` notice's change: its line and where it stands now (Needs you, Approved, Declined; replaced by a newer one). */
+async function brandChangesIn(tx: Tx, rows: NoticeRow[]): Promise<Map<string, { summary: string; state: BrandNoticeState }>> {
+  const ids = rows.filter((n) => n.sourceKind === 'brand' && n.sourceId).map((n) => n.sourceId!)
+  if (!ids.length) return new Map()
+  const got = await tx.select({ id: brandProposals.id, summary: brandProposals.summary, decision: brandProposals.decision }).from(brandProposals)
+    .where(and(eq(brandProposals.tenantId, rows[0]!.tenantId), inArray(brandProposals.id, ids)))
+  return new Map(got.map((p) => [p.id, { summary: p.summary, state: (p.decision ?? 'open') as BrandNoticeState }]))
+}
+export type BrandNoticeState = 'open' | 'approved' | 'declined' | 'replaced'
+
 const notSelf = (userId: string) => or(isNull(notices.by), ne(notices.by, userId))
 /** What this member may be shown: everything but their own changes, and a partner's ask only for owners and Managers
  *  (PP1; app_notice_members holds the same for email). */
-const shownTo = (userId: string, role: string) => (seesAsks(role) ? notSelf(userId) : and(notSelf(userId), ne(notices.sourceKind, 'ask_owner')))
+const shownTo = (userId: string, role: string) => (seesAsks(role) ? notSelf(userId) : and(notSelf(userId), notInArray(notices.sourceKind, ['ask_owner', 'brand'])))
 
 /** The latest notices for this member, newest first, with whether they read each. `role` is the member's (a support
  *  visit's is the owner's). */
@@ -88,12 +106,16 @@ export async function listNotices(tenantId: string, userId: string, role: string
     // A person isn't shown a notice about their own change (a partner's Content save names its saver in `by`).
     const rows = await tx.select().from(notices).where(and(eq(notices.tenantId, tenantId), shownTo(userId, role))).orderBy(desc(notices.createdAt)).limit(limit)
     if (!rows.length) return []
+    const brand = await brandChangesIn(tx, rows)
     const [reads, words] = await Promise.all([
       tx.select({ id: noticeReads.noticeId }).from(noticeReads).where(and(eq(noticeReads.tenantId, tenantId), eq(noticeReads.userId, userId), inArray(noticeReads.noticeId, rows.map((r) => r.id)))),
-      wordNotices(tx, rows, shopName),
+      wordNotices(tx, rows, shopName, brand),
     ])
     const read = new Set(reads.map((r) => r.id))
-    return rows.map((n) => ({ id: n.id, type: n.type as NoticeType, ...words.get(n.id)!, href: n.href, required: n.required, at: n.createdAt, read: read.has(n.id) }))
+    return rows.map((n) => {
+      const b = n.sourceKind === 'brand' && n.sourceId ? brand.get(n.sourceId) : undefined
+      return { id: n.id, type: n.type as NoticeType, ...words.get(n.id)!, href: n.href, required: n.required, at: n.createdAt, read: read.has(n.id), ...(b ? { brand: { id: n.sourceId!, state: b.state } } : {}) }
+    })
   })
 }
 

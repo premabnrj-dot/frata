@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { PATH_SHAPE, storeHost } from '@/domains/media/sizes'
+import { PATH_SHAPE, RENDITION_SHAPE, storeHost } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
@@ -8,6 +8,7 @@ import { fetchWithTimeout } from '@/lib/http/timeout'
 import { ICON_SIZES, iconContent, iconHash, type IconSize } from '@/lib/seo/icon'
 import { photoUri } from '@/lib/seo/render-card'
 import { shopTheme } from '@/lib/themes/page-look'
+import { shopBrand } from '@/lib/queries/brand'
 import { shopForRoute } from '../../_shop'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
@@ -36,7 +37,8 @@ export async function GET(req: Request, { params }: { params: Params }) {
   const shop = await shopForRoute(params)
   if (!shop) return new Response('Not found', { status: 404, headers: NO_STORE })
   const now = new Date() // clock-ok: a route handler, run per request on the server
-  const c = iconContent(shop, (await shopTheme(shop)))
+  const [theme, brand] = await Promise.all([shopTheme(shop), shopBrand(shop.id).catch((e: unknown) => { console.error('[shop brand]', e instanceof Error ? e.name : 'error'); return null })])
+  const c = iconContent(shop, theme, brand)
   const current = iconHash(c) === m[1]
   // A stale or made-up hash goes to the current icon before it can spend the shop's drawing budget (security review).
   if (!current) return new Response(null, { status: 302, headers: { location: `/icon/${size}/${iconHash(c)}.png`, 'cache-control': 'public, max-age=300' } })
@@ -48,8 +50,9 @@ export async function GET(req: Request, { params }: { params: Params }) {
   if (c.logo) {
     const host = storeHost(BLOB_STORE_ID)
     try {
-      const u = new URL(c.logo); const p = PATH_SHAPE.exec(u.pathname.slice(1))
-      if (host && u.protocol === 'https:' && u.host === host && !u.search && p && p[1] === shop.id && p[2] === 'brand') {
+      // A brand's PNG rendition of an SVG logo (one-address P1·5) is this shop's documents/<sha256>.png.
+      const u = new URL(c.logo); const p = PATH_SHAPE.exec(u.pathname.slice(1)), rd = RENDITION_SHAPE.exec(u.pathname.slice(1))
+      if (host && u.protocol === 'https:' && u.host === host && !u.search && ((p && p[1] === shop.id && p[2] === 'brand') || (rd && rd[1] === shop.id))) {
         const r = await fetchWithTimeout(c.logo, { redirect: 'error' }, 5000)
         const buf = r.ok ? Buffer.from(await r.arrayBuffer()) : null
         logo = buf && buf.length <= 1_000_000 ? await photoUri(buf, 0, 0, 'contain') : null

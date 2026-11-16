@@ -16,6 +16,8 @@ export function BuilderShell({ nav, email, rail, children }: { nav: BuilderNav; 
   const products: NavItem = { href: '/console/products', label: 'Products', icon: 'products' }
   const collections: NavItem = { href: '/console/collections', label: 'Collections', icon: 'collections' }
   const preview: NavItem = { href: '/console/preview', label: 'Preview store', icon: 'external' }
+  // One-address P1·8 (O9): Brand, preview only. The page itself says when the store has no brand record (a theme shop).
+  const brand: NavItem = { href: '/console/brand', label: 'Brand', icon: 'look' }
   const previewTab: NavItem = { ...preview, label: 'Preview' }
   const places: Place[] = [
     { href: '/partner', name: 'Partner workspace', role: '', current: false },
@@ -23,8 +25,8 @@ export function BuilderShell({ nav, email, rail, children }: { nav: BuilderNav; 
     ...builds.map((b) => ({ href: '/console', name: b.tenantName, role: BUILDER_LABEL, current: b.tenantId === store.tenantId, tenantId: b.tenantId })),
   ]
   return (
-    <AppShell title={store.tenantName} navLabel="Console" groups={[{ label: 'Catalogue', items: [products, collections] }]}
-      tabs={[products, collections, previewTab]} more={[]} foot={[preview, { href: '/partner', label: 'Partner workspace', icon: 'partners' }]}
+    <AppShell title={store.tenantName} navLabel="Console" groups={[{ label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [brand] }]}
+      tabs={[products, collections, previewTab]} more={[brand]} foot={[preview, { href: '/partner', label: 'Partner workspace', icon: 'partners' }]}
       email={email ? `${email} · ${BUILDER_LABEL}` : null} tenantId={store.tenantId} places={places} rail={rail}>
       <TenantCheck tenantId={store.tenantId} staff={places.length > 2} />
       {children}

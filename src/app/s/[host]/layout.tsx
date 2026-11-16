@@ -5,6 +5,7 @@ import { isDatabaseConfigured } from '@/lib/env'
 import { shopMovedTo } from '@/lib/queries/storefront'
 import { iconContent, iconPath } from '@/lib/seo/icon'
 import { shopTheme } from '@/lib/themes/page-look'
+import { shopBrand } from '@/lib/queries/brand'
 import { shopForRoute } from './_shop'
 
 // A shop is cached: festive traffic must hit the CDN, not Postgres. Every
@@ -24,7 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
   const base: Metadata = { title: { template: '%s', default: 'Shop' }, description: null, icons: { icon: 'data:,' } }
   const shop = await shopForRoute(params).catch(() => null)
   if (!shop) return base
-  const c = iconContent(shop, (await shopTheme(shop)))
+  const [theme, brand] = await Promise.all([shopTheme(shop), shopBrand(shop.id).catch((e: unknown) => { console.error('[shop brand]', e instanceof Error ? e.name : 'error'); return null })])
+  const c = iconContent(shop, theme, brand)
   return { ...base, icons: { icon: [{ url: iconPath(c, 32), sizes: '32x32', type: 'image/png' }, { url: iconPath(c, 192), sizes: '192x192', type: 'image/png' }], apple: [{ url: iconPath(c, 180), sizes: '180x180' }] } }
 }
 export async function generateViewport({ params }: { params: Promise<{ host: string }> }): Promise<Viewport> {

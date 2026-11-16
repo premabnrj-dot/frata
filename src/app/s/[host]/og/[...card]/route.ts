@@ -1,4 +1,5 @@
 import { PATH_SHAPE, storeHost } from '@/domains/media/sizes'
+import { shopBrand } from '@/lib/queries/brand'
 import { isListed } from '@/domains/storefront/listing'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
@@ -65,7 +66,8 @@ export async function GET(req: Request, { params }: { params: Params }) {
   else { const collection = cat.collections.find((c) => c.id === p.id); if (collection) src = { kind: 'collection', collection, cat } }
   if (!src) return NOT_FOUND()
 
-  const content = cardOf(shop, src, (await shopTheme(shop)), now)
+  const [theme, brand] = await Promise.all([shopTheme(shop), shopBrand(shop.id).catch((e: unknown) => { console.error('[shop brand]', e instanceof Error ? e.name : 'error'); return null })])
+  const content = cardOf(shop, src, theme, now, brand?.record ?? null)
   const hash = cardHash(content)
   const currentPath = p.kind === 'shop' ? `/og/shop/${hash}.jpg` : `/og/${p.kind}/${p.id}/${hash}.jpg`
 
