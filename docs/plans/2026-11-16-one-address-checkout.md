@@ -11,7 +11,7 @@ https://claude.ai/artifact/4dn3tMbA4H6JemWtAcQn4b; P6 the pilot's own, still to 
 **Review:** architecture-reviewer CHANGES NEEDED (2 blockers, 12 majors, the minors), all folded in, 2026-11-16
 **Review:** speed-reviewer OVER BUDGET as planned (3 high, 5 medium, 5 low), all folded in, 2026-11-16
 **Review:** unit-economics-reviewer NEUTRAL for merchants, HURTS Frrata unpriced (7 findings), all folded in, 2026-11-16
-**Review:** api-contract-reviewer pending (P1, P5, P6), 2026-11-16
+**Review:** api-contract-reviewer CHANGES NEEDED (1 blocker, 9 majors, 5 minors), all folded in below (§ API contract review), 2026-11-16
 **Review:** integration-researcher pending (Razorpay in a frame; COOP in in-app browsers; PSL process), 2026-11-16
 All five reviews above ran independently as separate agents on 2026-11-16; every finding is folded into the spec, this
 plan and ADR-0019. Nothing below is built before its phase's mockup is approved, the owner's decisions it names are made,
@@ -202,6 +202,24 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 |---|---|---|
 | P7·1 | The pane's Checkout tab (P2·5's preview); Apply calls `saveBrand` | `npm run e2e -- --only studio` |
 - **Reviews:** as Studio V3b.
+
+## API contract review, folded in (2026-11-16; these override the task text above)
+| Finding | Task | What is built |
+|---|---|---|
+| **B1** an open store's first production build can't read its store | P5·2, § 100 | The public key answers for **a code site at one address**: a `sites` row not ended and the store's host live and proved. It never depends on a deployment being live this minute or on the `secure.` certificate. `one_address` routing (the predicate) keeps its stricter test; the key's test is its own function beside it. Proof lines: an open store's first production build reads its shop; a failing `secure.` certificate, a kill and a deployment swap don't stop the key |
+| M1 test key on a one-address store in build mode | P5·2, § 81, § 100 | A test key answers while the store has never opened and the website is `frrata` or `one_address`; for `elsewhere` only with its domain live, as today |
+| M2 `checkoutOrigin` must not move | P5·3 | `checkoutOrigin` stays `https://<main host>` for every kind. Only `siteOrigin` derives from the predicate: `frrata` → null, `elsewhere` → `site_origin`, `one_address` → byte-identical to `checkoutOrigin`. One mapper test per kind. `StoreShop` gains `website: { kind, origin }` so `siteMove` can't redirect a host to itself; cache entry names bumped (`api-shop-v3`, `shop-v4`) |
+| M3 the meaning of `siteOrigin` | P5·3 | Redefined in writing before it ships: the field's `.describe()` ("Where the store's website answers shoppers. Null when Frrata's own pages are the website. Equal to `checkoutOrigin` when site and checkout share one address."), `openapi.ts`'s info line, `docs.ts:38` and `:45`, llms.txt, the frata-storefront-api skill |
+| M4 purges on a predicate change | P5·3, P5·4 | Every writer that moves the predicate calls `refreshShop(t, 'settings')` and `refreshKeys(t)` after commit; the drain's `app_shops_with_key_stop` and `app_shops_with_domain_gone` gain `site_deployments` start and stop times and the `secure.` state times (starts too: cached 404s). Verify adds `PERIOD=1 node scripts/verify/api-isr.mjs` |
+| M5 `shop.brand` and the API's hour; seasons | P1·3, P1·6 | An `apiBrand` loader at `API_HOUR` on the `settings` tag (never the 60 s `shopBrand` in the API); `app_shops_with_boundary` gains `brand_seasons` start and end, purged as `settings`; an answered season carries `until` (nullable). Verify adds `PERIOD=1 node scripts/verify/api-isr.mjs` |
+| M6 what the mapper receives | P1·3, P1·6 | The loaders select named columns only, never `previous`, `updated_by`, `updated_at` or a waiting proposal; `BrandIn` is a named pick of the live record without `checkout_design`; shoppers, emails, the API and the build-key tree read the live record only; a test pins `shop.brand`'s key set |
+| M7 `shop.logo` stays raster | P1·4, P1·6 | `shop.logo` is the PNG rendition when the primary is SVG; SVG only inside `shop.brand` (primary, mark, stacked, reversed), each through `fromOurStore`, described "render through `<img>` only" |
+| M8 `shop.bag` and `bag.js` are contracts | P6·1, P6·2 | `bag: z.strictObject({ script }).nullable().optional()`, non-null only on `one_address`, `settings` tag. `bag.js`'s `get`, `add`, `set`, `remove`, `subscribe`, `quote()` are a partner contract: `quote()` maps to its own strict schema for `v1` with a grow-only snapshot test; `/_frrata/v1/` frozen, a break is `/v2/` kept 12 months; documented in the docs and llms.txt |
+| m1 readers missed | P5·3 | `siteOriginFor` (test tree's CORS, `src/lib/queries/storefront-api.ts:19`) and `app_my_handover_keys`' `site_host` move to the predicate |
+| m2 shapes | P1·6 | Density an open `z.enum` (MAY_GROW); fonts an open enum or `{ family, url }` on Frrata media (a named allowance); radius `int().min(0).max(64)`; the eleven palette roles named hex fields, never a record; `brand` optional, always answered, null for theme shops |
+| m3 the released snapshot | P1·6, P6·2 | No task edits or regenerates `__tests__/released/2026-12.json`; freezing additions is its own reviewed `UPDATE_API=1` commit, additions only |
+| m4 docs per task | P1·6, P5, P6 | Field notes ("`logo` stays raster"); M3's lines and `cart`'s ("on one address a bag link from the site replaces the bag"); `shop.bag`'s; the kit's `lib/frrata.ts` types and `node scripts/kit-sync.mjs` in each |
+| m5 `shop.status` | P5 | No new status value for maintenance or We'll be back: checkout keeps taking orders; the kit keeps the bag link when `shop.bag` is null |
 
 ## Practices recorded in skills (once the owner approves; versions bumped in the same commit)
 | Skill | Practice |

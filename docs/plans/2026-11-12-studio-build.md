@@ -367,6 +367,17 @@ grows). G22 (Home placements) needs `site_deployments` and moves to V2a.
   `impact-reviewer` per task.
 - **Owner decisions:** 10, 11; a product's home collection = the first in the store's order (recommended); JSON-LD now.
 
+### G-a: API contract review, folded in (2026-11-16; overrides G·2 and G·4 above)
+- **G·2 (M9):** the header tree is its own route folder (`h/`), dynamic, `private, no-store`, `Vary: Frrata-Key`;
+  `check:api` refuses `revalidate` and `generateStaticParams` there; `apiRewrites` sends any request carrying `Frrata-Key`
+  to `h/` only and never matches a header-tree path to a cached route (a test holds it); a WAF path (`waf.test.ts`);
+  `openapi.ts` gains an apiKey `securitySchemes` in the header and the paths ("drafts included, never cached, from a server
+  only, no CORS"). After opening a build key reads drafts: V0·3's CLAUDE.md line, the owner's word.
+- **G·4 (M10):** `jsonLd` is a strict named schema, or a string with the kit check's one named exception
+  (`<script type="application/ld+json">`); its URLs come from the website predicate's origin; product and collection
+  resources that embed `settings` facts also read `apiShop`, so their copies carry `shop:<t>:settings`. A new `policies`
+  kind widens `FaqItem.policy` (shared `POLICY_KINDS`, MAY_GROW), said in the docs. No task edits the released snapshot.
+
 ## V2a · Sites on Frrata's account (lane A)
 - **After it:** a partner never deploys: New site makes the repository in `frrata-sites`, the Vercel project and the Frrata
   address; Preview, Publish and Hand over sit on the client's row; the brand accepts that deployment, opens on
