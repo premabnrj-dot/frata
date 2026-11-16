@@ -1,5 +1,5 @@
 # One address per store: the brand's site and Frrata's checkout at one host, one bag, one brand record
-Status: draft for the owner (revised after three independent reviews, 2026-11-16) · Date: 2026-11-16 · Mockup: none yet,
+Status: draft for the owner (revised after five independent reviews, 2026-11-16) · Date: 2026-11-16 · Mockup: none yet,
 one per phase (plan `docs/plans/2026-11-16-one-address-checkout.md`) · Approved: — · Decision record: ADR-0019 (proposed,
 `docs/decisions/0019-one-address.md`)
 Pairs with: ADR-0014 (rules 2 and 3, amendments 4, 6, 7, 8, 9), ADR-0015, ADR-0017 (rules 3, 4, 6), ADR-0018, ADR-0009,
@@ -43,7 +43,10 @@ The owner, 2026-11-16 (verbatim):
   No security property waits on that listing. One preview domain is kept, and Frrata's app serves nothing on it.
 - **One decision record,** ADR-0019 "One address" (proposed), replaces 23 scattered edits. Studio's runtime record
   becomes ADR-0020.
-- **The owner decides 22 things** (§ Owner decisions); 1–4, 7 and 22 unblock everything.
+- **What it costs Frrata.** Nothing new for a merchant. The router bills on the `frata` team: on Vercel's Flat Rate CDN
+  about ₹0.21 per 1,000 site page views (document only), on metered pricing ₹1.26–4.57; hosting is priced only on
+  measured numbers (§ Unit economics). One address brings Frrata to parity with Shopify, not ahead of it.
+- **The owner decides 25 things** (§ Owner decisions); 1–4, 7, 22 and 23 unblock everything.
 
 ## Goal
 Ranked problem (4), mobile checkout conversion, and (5), a premium storefront built as code, without giving up checkout's
@@ -122,7 +125,7 @@ display font enums, the contrast rule, `shopCached`'s tags (`shop:<t>:settings`)
 | Partner code next to checkout | Same origin in the browser; never in checkout's document or runtime | Same origin, plus partner server code in checkout's runtime | Same origin; checkout behind partner infrastructure | Same site, other origin | The partner's page surrounds checkout | Same origin |
 | Shopper data | Only in the frame (§ 2) | As A, plus a shared runtime | Tenant from a forwarded header (refused, ADR-0002) | Safe | Safe inside the frame | As A |
 | Latency | Site pages: one hop inside Vercel bom1 for the page document only (assets come from the site's own origin); budget ≤ 30 ms p75 TTFB. Checkout: one navigation fewer (no `/cart` stop) | None | One hop on checkout | A second origin, cold | A frame | Vercel's routing |
-| Cost | A Frrata edge request and the document's bytes again per site page view (H-2) | Builds and functions in the main team | As A, reversed | As today | Frames | $250 a project a month past two [secondary] |
+| Cost | A Frrata edge request and the document's bytes again per site page view, plus RSC navigations and prefetches (H-2; § Unit economics) | Builds and functions in the main team | As A, reversed | As today | Frames | $250 a project a month past two [secondary] |
 | Vercel feasibility | Routing rules or Routing Middleware + Edge Config (spike, with a switch point); external rewrites cached only once proven | Native | Rules owned by the fleet | Native | Native | One team, one default app a group |
 | Domain proof, TLS | As today, plus `secure.<host>`: its record proved and its certificate issued before one address switches on | As today | Domains move teams | One more record | As today | As today |
 | Cookies | None on the brand origin; `__Host-` first-party on the secure host | As A | As A | Split: identity lost | Third-party in Safari | As A |
@@ -180,13 +183,22 @@ built at send time** from this predicate (§ 1b), never a source.
   The fleet never writes them: it reports a deployment (`webhook_events`); the app records it in `site_deployments`.
 - **One fixed upstream a store:** the store's own fleet deployment, verified against its `site_deployments` row before a
   rule names it.
-- **What triggers a send:** an outbox `site.route` row (payload: ids only, no host or upstream) in the same transaction as
-  every writer whose change moves the predicate or the state: publish, rollback, kill, partner removed or suspended, store
-  opened, domain added, proved, moved, failing or removed, `secure.` proved, handover. The sender reads hosts and upstream
-  inside `withTenant(row.tenantId)`.
-- **One single-flight sender** (an advisory lock; one at a time across instances) rebuilds the **whole** rule set from the
-  predicate, publishes, then reads the live rules back and compares. Parallel drains can't lose a rule.
-- **Every five minutes** the sweep rebuilds the whole map from the database and deletes stray rules.
+- **What triggers a send:** every writer whose change moves the predicate or the state (publish, rollback, kill, partner
+  removed or suspended, store opened, domain added, proved, moved, failing or removed, `secure.` proved, handover) marks
+  the routing **dirty** in its own transaction (`app_site_routes_dirty()`, a definer setting one platform row's flag and
+  time; the row is the request, ADR-0006). No per-store outbox row: one change or five hundred make one send (speed H2).
+- **Its own lane, not the shared drain** (the drain sends 25 rows a batch, one at a time, `src/lib/outbox/drain.ts:72`, so
+  order emails and payment checks would wait behind it): `drainRoutes()` runs in the writer's `after()` and from its own
+  5-minute cron with its own deadline.
+- **One sender at a time without holding connections:** `pg_try_advisory_lock`, never a blocking lock (each waiter would
+  hold one of the pool's 10 connections). A sender that can't take the lock leaves the flag for the holder, which sends once
+  more at its end if the flag was set again meanwhile (one trailing send).
+- **One read for all stores:** the definer `app_site_routes(p_after uuid)` pages through every store's host, `secure.`
+  host, upstream and state (500 a page; hosts and ids only; `search_path ''`; revoked from public, anon, authenticated,
+  service_role). Each upstream is checked against that store's live `site_deployments` row inside the definer.
+- **Only differences are published:** the sender reads the live rules back, compares, writes only what differs, and reads
+  back again. The 5-minute sweep does the same and deletes strays (an unconditional write every 5 minutes would cost
+  ≈ ₹7,603 a month, § Unit economics).
 - **Failing closed:** a removal or a kill is never kept as "last good"; until a removal is read back as applied, the host
   can't be proved by another store (the domain flow waits on the read-back); a partner's removal also stops its deployment
   at the fleet (a second lock).
@@ -198,16 +210,25 @@ built at send time** from this predicate (§ 1b), never a source.
 - **Request filtering** (security H2): only GET and HEAD reach the upstream; `cookie` and `authorization` are deleted;
   only an allowlist of request headers is forwarded (`accept`, `accept-language`, `accept-encoding`, `user-agent`,
   `if-none-match`, `if-modified-since`, `range`, and Next's `rsc`, `next-router-state-tree`, `next-router-prefetch`,
-  `next-url`). `scripts/verify/one-address.mjs` asserts it against an echo upstream.
+  `next-router-segment-prefetch`, `next-url`, with the `_rsc` query kept). A proxied copy's cache key holds the host, the
+  path, those headers and `_rsc`, and matches the upstream's `Vary`; otherwise caching stays off.
+  `scripts/verify/one-address.mjs` asserts it against an echo upstream.
+- **RSC prefetch** (speed M1): every `<Link>` prefetch on a site page is a request through the router (up to 48 a view).
+  The kit's product and collection cards set `prefetch={false}` (decision 25); the spike counts RSC requests a view.
 - **Response filtering** (security M2, tenancy): an allowlist (`content-type`, `content-length`, `content-encoding`,
   `cache-control`, `etag`, `last-modified`, `vary`, `link` for same-origin preloads, `location` only when relative or the
-  same host). Every `Set-Cookie` is dropped (including static ones from build config), and `Clear-Site-Data`, `Refresh`,
-  CSP, COOP, COEP and `Service-Worker-Allowed` from the upstream; Frrata's own headers are set (§ 2 T9). Rules delete headers
-  by name; whether they can allowlist is a spike pass/fail item. If neither rules nor middleware can, a streaming proxy
-  function in bom1 does it (cost measured), or the owner accepts a deny-list plus source controls (decision 21).
+  same host; plus Frrata's own `Link` preconnects to `secure.<host>` and to the site's asset origin). Every `Set-Cookie` is
+  dropped (including static ones from build config), and `Clear-Site-Data`, `Refresh`, CSP, COOP, COEP and
+  `Service-Worker-Allowed` from the upstream; Frrata's own headers are set (§ 2 T9). Rules delete headers by name; whether
+  they can allowlist is a spike pass/fail item. If neither rules nor middleware can, the fallback **runs at the edge** (an
+  edge function streaming the response; never a bom1 function in front of every page and prefetch, whose cold start is
+  0.3–1 s), or the owner accepts a deny-list plus source controls (decision 21).
+- **The site's assets** come from its own origin (absolute `assetPrefix`), at the cost of a cold connection (≈ 240 ms)
+  before render-blocking CSS: the router sends a preconnect for it, and the spike measures LCP against proxying the assets
+  cached as immutable; the faster wins.
 - **Rollout:** headers go Report-Only in waves first, then enforce (kit spec § 4).
-- **Vercel limits:** the spike measures rules a project and Edge Config's size, and fixes the store count at which the
-  router moves from rules to middleware with Edge Config.
+- **Vercel limits:** the spike measures rules a project and Edge Config's size (≈ 110 kB at 750 hosts, an estimate), and
+  fixes the store count at which the router moves from rules to middleware with Edge Config (reads $3 a million).
 
 ### 2. Partner code next to checkout: the security model, threat by threat
 **The principle.** The brand origin holds no secret and no shopper data. Frrata's pages there show only what the store's
@@ -224,10 +245,24 @@ depends on telling Frrata's document from the partner's: on one origin nothing c
 | `/api/shop/quote` without a PIN code, `/pincode`, `/delivery`, `/e` | `/api/secure/*`: price for the address, place, view, pay, retry, switch to Pay on delivery, change, invoice, EkCode, email opt-in |
 | — | The order's summary priced for the address (lines, delivery, the server's total) and **Place order · ₹<amount>**, the only button that places an order |
 The frame prices the address itself and sends the page back only a delivery fee or zone name to show (never the PIN code
-or state). It is drawn by Frrata's code with the same brand tokens and font files, so it reads as one page.
+or state). It is drawn by Frrata's code with the same brand tokens, so it reads as one page.
+
+**How the frame is built** (speed H1: a Next page on `secure.<host>` would download ≈ 122 kB of JS and the 48 kB font again
+from a new origin, 0.6–1.0 s on a phone, 1.1–1.5 s with the ready, bag and price round trips):
+- a **server-rendered form plus one standalone script** (built like `fe.js`), held by a new gate `check:frame-script` at
+  ≤ 25 kB gzipped (decision 24; the alternative is a Next page budgeted honestly at ≈ 120 kB);
+- the `<iframe>` is in checkout's **server HTML**, not added by script;
+- the bag's ids and quantities ride in the frame's URL in the bag link's own grammar (`?l=<size id>:<qty>,…&code=`, read by
+  `parseCartLink`), so the frame prices on its first render; later changes arrive by message;
+- checkout's HTML preconnects to `secure.<host>`;
+- the font is one absolute Frrata media URL shared by page and frame (one download), with no preload in the frame.
+
+**The one-address checkout gets its own bundle** (checkout plus the bridge is ≈ 121 kB, over its 120 kB budget): the bridge
+only, no form code, held by `check:storefront-build`.
 
 **One form, not two** (architecture 9). Theme shops keep today's checkout until V5; one-address stores use the frame. Both
-render the same form component and call the same handlers (one implementation mounted under `/api/shop` and `/api/secure`;
+draw the same fields from one field list (`src/domains/checkout/fields.ts`: labels, order, rules, autocomplete) and call
+the same handlers (one implementation mounted under `/api/shop` and `/api/secure`;
 one EkCode cookie module taking the host kind). `hasFrame(store)` is the predicate's `one_address`.
 
 **Threats and controls:**
@@ -276,6 +311,9 @@ one EkCode cookie module taking the host kind). `hasFrame(store)` is the predica
   `/secure/*` is a 404 on every host (as `/s/*` is).
 - **Tenant:** from `hostFacts(stripped host)`, the same cached lookup as the store's, so a `host:<X>` purge covers both.
   The `[host]` route param is only a cache key, checked equal to the Host header.
+- **Reads:** the store, brand and module facts through cached loaders read outside any transaction (`shopModules` is only
+  React `cache()` today, `src/lib/queries/modules.ts:55`; its facts move into a `shopCached` loader); one `withTenant` for
+  the shopper's own reads (EkCode session, prefill). Ceiling: about 4 statements a frame render.
 - **Rendering:** per request, with a nonce and a strict CSP (`default-src 'none'`; `script-src 'nonce-…' 'strict-dynamic'`;
   `connect-src 'self'` and Razorpay's hosts when the spike puts Razorpay in the frame; `frame-src` Razorpay; `img-src
   'self'` and Frrata media; `font-src` Frrata media; `style-src 'self'`; `form-action 'self'`; `frame-ancestors` the store's
@@ -313,10 +351,13 @@ write; no new capability, ADR-0015 unchanged. Every save is an Activity row; the
 **Where it lives.** One bag per store, in the shopper's browser on the store's one address: today's `frata.bag.v1`
 (`bag-store.ts`), its limits (20 lines, 10 a line), its rules (checkout prices again; reconcile drops sold-out lines).
 
-**How the site uses it.** Frrata serves `/_frrata/v1/bag.js` (≤ 3 kB gzipped, the same bytes on every host, immutable per
-version, built from `bag-store.ts`'s core): `get`, `add`, `set`, `remove`, `subscribe`, and `quote()`, which calls the
+**How the site uses it.** Frrata serves `/_frrata/v1/bag.js` (≤ 3 kB gzipped, measured 1.4 kB; the same bytes on every
+host; `Cache-Control: max-age=300, stale-while-revalidate=86400`, or a hashed name, never "immutable" on a fixed URL;
+loaded with `defer`; built from `bag-store.ts`'s core): `get`, `add`, `set`, `remove`, `subscribe`, and `quote()`, which calls the
 same-origin `/api/shop/quote` (no PIN code) for subtotal, offers and sold-out lines (the pilot's gaps G1 and G25, no key
-in the browser). The site never computes a total. The kit's bag button and drawer use it. On load it captures attribution
+in the browser; measured 9 statements, 27 ms, 865 bytes a quote). The site never computes a total. The kit's bag button
+and drawer use it, and quote **only while the drawer is open**, one request in flight, never on `subscribe` or a `storage`
+event. `quoteIp` (300 per 10 minutes a network) is re-sized for many phones behind one Indian 4G address. On load it captures attribution
 (`captureAttribution`).
 
 **Analytics on one address** (architecture 13): with no hand-off, `via_site` is never set and same-host referrers are
@@ -459,7 +500,10 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
 | S37 | A store pause starts with no event | n/a | n/a | Site paths show the paused page within 5 minutes; checkout refuses orders at once | § 1b | e2e with a clock |
 | S38 | A domain is removed while `secure.` still points at Vercel | n/a | n/a | Kept parked until it doesn't | T21 | sweep test |
 | S39 | A partner's design change on an open store | n/a | n/a | Waits for the owner's yes | T20 | e2e |
-| S40 | The three-lines heading carries a UPI ID | n/a | n/a | Refused at the field | T20 | unit |
+| S40 | The heading line carries a UPI ID | n/a | n/a | Refused at the field | T20 | unit |
+| S41 | 500 stores change at once (a kit release) | n/a | n/a | One dirty flag, one send of the differences; order emails never wait | § 1b | unit on the sender; 500 marks in a test |
+| S42 | A shopper on 4G opens checkout cold | Checkout only | Same | The frame prices on its first render from its URL; one font download | § 2 | `95-speed` gains the one-address checkout |
+| S43 | A site page's links prefetch | n/a | n/a | Off on the kit's cards; RSC requests counted | § 1b | P5·0, P5·1 |
 
 ### 9. Phases (the plan has tasks, verify commands and lanes)
 | Phase | Gives | Needs first | Mockup |
@@ -470,7 +514,7 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
 | **P3 The secure frame** | Shopper data off the brand origin | P2; P3·1 spike | **new (states)** |
 | **P4a Cross-store hardening** | No `Domain` cookies, `__Host-` only, fetch metadata | — | none |
 | **P4b PSL listing** | Each store its own site in browsers that have it | P4a; decision 4 | none |
-| **P5 One address** | The site and checkout at one host | V2a·1, ·5, ·6; P2; **P3 for any store with real shoppers**; P4a; P5·1 spike | **new:** Settings › Website, we'll be back |
+| **P5 One address** | The site and checkout at one host | V2a·1, ·5, ·6; P2; **P3 for any store with real shoppers**; P4a; P5·0 (billing read and the pilot's HAR, an afternoon); P5·1 spike | **new:** Settings › Website, we'll be back |
 | **P6 One bag** | The site uses Frrata's bag | P5 | the pilot's own bag drawer |
 | **P7 Studio designs checkout** | Checkout design in Studio's pane | P2; Studio V3b | approved one screen + a Checkout tab |
 
@@ -491,9 +535,10 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
     closed set, the two lines with length CHECKs, `previous jsonb`, `updated_by`, `updated_at`): the same grants;
     `updated_by` never reaches the API.
   - `shop_settings`: `frata_builder` gains select on `(tenant_id, logo_url, doc_logo, accent, display_font)` only.
-  - Routing: no table; the map is built from the predicate. If a table is kept for read-back state, it is definer-only
-    (`app_site_routes(p_after uuid)` returning host and upstream, `search_path ''`, revoked from public, anon,
-    authenticated, service_role).
+  - Routing: one platform row `site_routes_state` (dirty flag, dirty time, last read-back) with no role grant, written only
+    by the definer `app_site_routes_dirty()`; the map read only through the paged definer `app_site_routes(p_after uuid)`
+    (hosts, `secure.` hosts, verified upstream, state; `search_path ''`; revoked from public, anon, authenticated,
+    service_role; granted to `frata_app`). No tenant data beyond hosts.
   - Where each tenant id comes from: console and Studio saves from `requireMember`/`requireCapability`; shop pages from the
     host; the secure host from `hostFacts(secureHostOf(host))`; the API from the key; the routing sender from its outbox
     row's tenant. Never from a frame message, a URL or a body.
@@ -507,7 +552,7 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
   Routing: `src/lib/sites/routing.ts` (the single-flight sender). The frame: `src/app/secure/[host]/`.
 - **SSOT / DRY.** One predicate for "site is code, served here" (§ 1a) with every reader listed; one logo writer; one cache
   tag; the PNG rendition outside `doc_logo`; one accent rule; one contrast rule; one bag served from its own source; one
-  reserved list; one design check; one form component and one handler set for page and frame; trust words derived from
+  reserved list; one design check; one field list and one handler set for page and frame; trust words derived from
   the store's facts; the routing map a copy built at send time.
 - **YAGNI.** No checkout extension slots; no server-side cart; no per-page checkout styles; no Builder writes; no frame for
   theme shops; no second router vendor.
@@ -518,12 +563,19 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
   set by the spike); proxied documents only (assets from the site's own origin); one-row-a-store tables behind a cached
   loader; the quote from the bag drawer debounced 400 ms; `secure.` certificates paced under 100 domain additions an hour a
   team and, before the listing, Let's Encrypt's 50 a week.
-- **Performance and speed.** (a) Checkout: `shopFor`, `shopBrand` (both `shop:<t>:settings`), `shopModules` in one
-  `Promise.all`; the frame: rendered per request (nonce, `no-store`), its reads in one `withTenant`. (b) New queries by
-  primary key; EXPLAIN in § 98–100. (c) Brand entry < 4 kB. (d) Checkout HTML + RSC grows < 5 kB. (e) A brand or design save
-  purges `shop:<t>:settings`; a shopper's action purges nothing. (f) Checkout + ≤ 3 kB for the frame bridge; the frame's JS
-  ≤ 25 kB gzipped; `bag.js` ≤ 3 kB. (g) One font preload. Router hop ≤ 30 ms p75 added TTFB on the document.
-  `speed-reviewer` pending on the plan; on P2, P3, P5, P6.
+- **Performance and speed** (speed review OVER BUDGET as first planned; folded in). Measured 2026-11-16: `bag.js` 1.4 kB
+  gzipped; a bag quote 9 statements, 27 ms, 865 bytes; checkout HTML 27 kB. (a) Checkout: `shopFor`, `shopBrand` (one
+  cached loader reading `brand_tokens` and `checkout_design` together, tag `shop:<t>:settings`) and `shopModules` in one
+  `Promise.all`. **Pre-existing:** checkout's cold render is 14 statements, already over its 12 budget; the brand loader
+  adds 1 cold, 0 warm. The frame: ≈ 4 statements a render (§ 2b). (b) New queries by primary key; EXPLAIN in § 98–100.
+  (c) The brand entry < 4 kB. (d) Checkout HTML grows < 5 kB (the iframe tag, the preconnect). (e) `saveBrand` purges
+  `shop:<t>:settings` only (today's logo save purges the whole `shop:<t>`); a predicate change purges `settings` only when
+  `app_website_of`'s answer changes; seasons switch by the loader's 60 s revalidate (a season starts within a minute); a
+  shopper's action purges nothing. (f) The one-address checkout's own bundle: the bridge only, under 120 kB first load; the
+  frame's script ≤ 25 kB (`check:frame-script`); `bag.js` ≤ 3 kB, `defer`. (g) One font at one absolute URL, preloaded by
+  the page only; preconnects to `secure.<host>` and the site's asset origin. Router hop ≤ 30 ms p75 on the document; the
+  spike also records p95 and a cold edge miss, and bfcache across COOP-different pages (S3 relies on `pageshow`).
+  `speed-reviewer` on P2, P3, P5, P6.
 - **Reliability.** Routing as § 1b (rows before requests, one sender, read-back, sweep, fail closed). Upstream 5xx → we'll be
   back on site paths. Frrata down → the store is down (accepted). The frame failing → Try again. Every outbound call through
   `fetchWithTimeout` (10 s).
@@ -536,15 +588,41 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
 - **Motion and visuals.** No new motion: the frame fades in on the toast's entrance (200 ms, `ease-entrance`; reduced
   motion a 120 ms fade); Remove uses the bag drawer's pattern. Console › Brand leads with the preview strip; trust blocks
   use the kit's icons.
-- **Unit economics** (`unit-economics-reviewer` pending). What a merchant pays: nothing new. What Frrata pays: the router's
-  request and the document's bytes again on each site page view; one more host and certificate a store; the preview domain
-  (≈ $12 a year). **H-2, corrected:** on ADR-0017's figures (5 requests and 0.3 MB a view; $2.20 a million requests, $0.20 a
-  GB, bom1), a page view costs ≈ $0.071 a thousand views (≈ ₹6.2 at ₹88): proxying everything would add about **₹6 per
-  1,000 views**. With assets on the site's own origin only the document passes the router (1 request, about 50 kB, an
-  estimate): ≈ ₹1–2 per 1,000 views. Test: the pilot's 30 days. **H-1:** one address and one bag raise checkout completion
-  on code sites by ≥ 2 points · this spec · 2026-11-16 · pilot and the next 3 sites, 4 weeks before and after. **H-3:** the
-  frame adds no EkCode codes (first-party cookie kept) · this spec · 2026-11-16 · codes per order before and after P3; one
-  extra sign-in per current shopper at the move.
+- **Unit economics** (review: NEUTRAL for merchants, HURTS Frrata unpriced; folded in). At ₹94 × 1.10 = ₹103.40 a dollar
+  (the Studio spec § 8's loaded rate). A merchant pays nothing new. Frrata pays, on the `frata` team's bill, per 1,000 site
+  page views:
+  | Pricing on `frata` | Document only (1 request, ≈ 50 kB) | With RSC navigations and prefetches (≈ 11 requests, 100 kB) |
+  |---|---|---|
+  | Metered bom1 ($2.20 a million requests, $0.20 a GB; ADR-0017) | ₹1.26 | ₹4.57 |
+  | Flat Rate CDN (≈ $2 a million requests past the tier; bytes inside it) | ₹0.21 | ₹2.27 |
+  | Fallback: Routing Middleware with Edge Config | ≈ ₹1.63 | ≈ ₹8.66 |
+  | Fallback: a streaming proxy | ≈ ₹2.71 | — |
+  (The review's ₹1.39, ₹7.37 and ₹2.31 were at ₹88 unloaded, about 17.5% low.) **Flat Rate CDN** (vercel.com/docs/pricing/
+  flat-rate-cdn, updated 2026-09-14): Pro includes 1M requests and 1 TB; then $20 a month for 10M requests and 50 TB, $100 for
+  50M, $300 for 150M; Fast Origin Transfer ($0.25 a GB), functions and ISR are not covered. On it Scale's ≈ 399 GB fits the
+  tier, which undoes the Studio spec § 8's "fails 3×" for bandwidth (decision 23).
+  **A month per store**, document only (ADR-0017's views: Launch 40k, Growth 400k, Scale 1.33M), and at rule 9a's 3× as an
+  included allowance against the proposed hosting lines (Launch ₹500, Growth ₹1,500, Scale ₹4,500):
+  | | Launch | Growth | Scale |
+  |---|---|---|---|
+  | Metered, cost | ₹50.46 | ₹504.60 | ₹1,677.80 |
+  | Metered, at 3× | ₹151.38 (30% of the line) | ₹1,513.80 (101%) | ₹5,033.40 (112%) |
+  | Flat Rate, cost | ₹8.28 | ₹82.80 | ₹275.31 |
+  | Flat Rate, at 3× | ₹24.84 | ₹248.40 | ₹825.93 |
+  With RSC traffic metered, the router alone crosses the kill line for Growth and Scale. So **the router counts in ADR-0017
+  rule 11's kill-line test** (today it shares out only site-host and build-runner invoices), prefetch is off on the kit's
+  cards, and hosting is priced only after P5·0 and the pilot's 30 days.
+  **Fixed costs** (not per store): `frrata.shop` renews at Hostinger for ₹3,879 a year ex GST (two more years ₹9,154.44 with
+  GST); `frrata-preview.site` is $1.49 then $27 a year (three years $101.47), against a `.com` at $12.03 a year (three years
+  $36.09), so the preview domain should be a low-renewal name (decision 6).
+  **Baseline** (rule 2): Frrata is dearer than Shopify Basic yearly at Launch by ₹353.25 and well under it at Growth and
+  Scale; one address is **parity** with Shopify (its checkout is on the shop's domain), not a gain.
+  **Hypotheses** (figure · source · date · test): **H-1**, the only route to "helps": one address and one bag raise checkout
+  completion on code sites by ≥ 2 points; to pay the router, delivered orders must rise 2.0%, 2.8% and 4.3% (Launch,
+  Growth, Scale) document only, or 7.0%, 10.1% and 15.5% with RSC metered · unit-economics review · 2026-11-16 · the pilot
+  and the next 3 sites, 4 weeks before and after. **H-2**, the router costs the table above · ADR-0017's prices and Flat Rate
+  (2026-09-14) · 2026-11-16 · P5·0's HAR and billing read, then the pilot's 30 days. **H-3**, the frame adds no EkCode codes
+  · this spec · 2026-11-16 · codes per order before and after P3. `unit-economics-reviewer` again on P5 with P5·0's numbers.
 - **Theme blocks.** n/a: no theme work; theme shops unchanged.
 - **Storefront API.** Additive on `2026-12`: `shop.brand`; optional `shop.bag` after P6. `siteOrigin` and `checkoutOrigin`
   keep their meaning, derived from the predicate. No cost, shopper, draft or `updated_by` field. `api-contract-reviewer` on
@@ -577,6 +655,10 @@ checkout preview (P2's, on the console host) in the pane; the preview domain nev
 | Medium | Before the listing, `secure.` certificates share Let's Encrypt's 50 a week | frata-integrations § Domains | paced |
 | Low | `fromSite()` restates `siteHostKey`'s www rule | `cart-link.tsx` | a test that both agree |
 | Low | Policy links leave the brand's address | `mokobara/lib/links.ts` | P5 |
+| High | The shared drain sends 25 rows a batch one at a time; per-store routing rows would queue order emails | `src/lib/outbox/drain.ts:72` | § 1b: a dirty flag, its own lane |
+| Medium | `shopModules` is only React `cache()`: every frame render would read module facts | `src/lib/queries/modules.ts:55` | a `shopCached` loader |
+| Medium | `quoteIp` allows 300 quotes per 10 minutes a network | `src/lib/db/rate-limit.ts:30` | re-sized for 4G; the drawer quotes only while open |
+| Info | Checkout's cold render is already 14 statements (budget 12) | speed review, 2026-11-16 | pre-existing; the brand loader adds 1 |
 | Info | Studio's `93-site-hosting` collides with `93-owner-only`; Studio's proof § 88–96 collide with 0151's § 88 | Studio plan | renumber |
 
 ## Out of scope
@@ -615,8 +697,8 @@ proposed runtime record becomes **ADR-0020** (the Studio spec's decision 27 and 
 4. **Submit `frrata.shop` to the PSL now, renewed to 3 years** · Yes · P4b.
 5. **Before the listing reaches browsers, outside partners' sites may open on `<store>.frrata.shop`** with P4a's
    controls (flooding and eviction accepted) · Yes · P5 for outside partners.
-6. ✱ **One separate preview domain; `frrata.store` dropped; Frrata's app serves nothing on the preview domain** · Yes · V2a
-   previews.
+6. ✱ **One separate preview domain with a low renewal price** (a `.com`-priced name, not `.site` at $27 a year);
+   `frrata.store` dropped; Frrata's app serves nothing on it · Yes · V2a previews.
 7. ✱ **No store with real shoppers moves to one address before the frame;** the pilot may test one address earlier only in
    build mode · Yes · P5.
 8. **The pilot's monogram uploaded as House of Ayuda's brand record now** (raster today; SVG once the cleaner ships) · Yes ·
@@ -630,17 +712,22 @@ proposed runtime record becomes **ADR-0020** (the Studio spec's decision 27 and 
 14. ✱ **Two short lines only** (heading, thank-you); delivery words derived from the store's facts · Yes · P2.
 15. ✱ **Razorpay in the frame or on the page, and COOP `same-origin` or `same-origin-allow-popups`: the spike decides** ·
     Yes · P3.
-16. ✱ **Measure the router's cost on the pilot for 30 days** (≈ ₹6 per 1,000 views if all proxied; ≈ ₹1–2 with assets
-    direct) and price hosting on it · Yes · P5, paid stores.
+16. ✱ **Price hosting only on measured numbers:** P5·0's HAR and billing read, then the pilot's 30 days, with the router
+    counted in ADR-0017 rule 11's kill line · Yes · P5, paid stores.
 17. ✱ **On an open store, a brand or checkout design change by anyone but the owner or a Manager waits for the owner's
     yes** · Yes · P1, P2.
 18. ✱ **ADR-0019 "One address" as one record; Studio's runtime record renumbered ADR-0020** · Yes · all.
 19. ✱ **Brand records for code-site stores only; theme shops keep their look until V5** · Yes · P1.
 20. ✱ **If in-app browsers don't hold COOP or the frame, no partner JavaScript in those browsers (C5)** · Yes, if the spike
     fails · P5.
-21. ✱ **If the router can't allowlist response headers, a streaming proxy in bom1** (its cost measured) rather than a
-    deny-list · Yes · P5.
+21. ✱ **If the router can't allowlist response headers, the fallback runs at the edge** (never a bom1 function in front
+    of every page), else a deny-list with source controls · Yes · P5.
 22. ✱ **P5 waits for V2a's sites, deployments and gate** (one verified upstream a store) · Yes · P5.
+23. ✱ **Read Vercel › Settings › Billing for `frata`** (Flat Rate CDN on or off, which tier) before hosting is priced, and
+    turn Flat Rate on if it is off · Yes · P5·0, hosting's price.
+24. ✱ **The frame is a server-rendered form plus one standalone script (≤ 25 kB)**, not a Next page (≈ 120 kB) · Yes · P3.
+25. ✱ **Link prefetch off on the kit's product and collection cards** (each prefetch is a billed request through the
+    router) · Yes · P5, P6.
 
 ## Facts used (checked 2026-11-16 unless dated)
 | Fact | Source · date |
@@ -672,3 +759,8 @@ proposed runtime record becomes **ADR-0020** (the Studio spec's decision 27 and 
 | Razorpay live payments only from registered websites | frata-integrations § Razorpay (2026-11-09) |
 | Vercel bom1 $0.20 a GB, $2.20 a million requests; 5 requests, 0.3 MB a view (a guess) | ADR-0017 § Options (sources 2026-09-14) |
 | No store slug `secure`, no domain starting `secure.` | live check by the coordinator, 2026-11-16 |
+| Flat Rate CDN tiers; Fast Origin Transfer $0.25 a GB; functions and ISR not covered | vercel.com/docs/pricing/flat-rate-cdn, updated 2026-09-14 (unit-economics review) |
+| `frrata.shop` renews ₹3,879 a year ex GST at Hostinger; `.site` $1.49 then $27 a year; `.com` $12.03 a year | unit-economics review, 2026-11-16 |
+| A Next page in the frame ≈ 122 kB JS + the 48 kB font; `bag.js` 1.4 kB gz; a quote 9 statements, 27 ms, 865 B; checkout HTML 27 kB; checkout cold 14 statements | speed review, measured 2026-11-16 |
+| The drain sends 25 rows a batch, one at a time | `src/lib/outbox/drain.ts:72` (read 2026-11-16) |
+| ₹94 a dollar | x-rates.com, 2026-11-16 [secondary], as in the Studio spec § 8 |
