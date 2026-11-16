@@ -4817,16 +4817,16 @@ begin
     delete from public.tenant_modules where tenant_id in (a, b) and module = 'ekcode';
     update public.tenants set first_opened_at = coalesce(first_opened_at, now()) where id in (a, b);
     -- The truth table, one case at a time (the TS rule: on = open || (defaultOn && !touched)).
-    if not public.app_module_on(a, 'ekcode', true) then raise exception 'FAIL: 101 no row with the default did not read on'; end if;
-    if public.app_module_on(a, 'ekcode', false) then raise exception 'FAIL: 101 no row without the default read on'; end if;
+    if not exists (select 1 from public.app_module_on_tenants('ekcode', true) o where o.tenant_id = a) then raise exception 'FAIL: 101 no row with the default did not read on'; end if;
+    if exists (select 1 from public.app_module_on_tenants('ekcode', false) o where o.tenant_id = a) then raise exception 'FAIL: 101 no row without the default read on'; end if;
     insert into public.tenant_modules (tenant_id, module, enabled_at, enabled_by, disabled_at, disabled_by) values (b, 'ekcode', now(), who, now(), who);
-    if public.app_module_on(b, 'ekcode', true) or public.app_module_on(b, 'ekcode', false) then raise exception 'FAIL: 101 a store that turned it off read on'; end if;
+    if exists (select 1 from public.app_module_on_tenants('ekcode', true) o where o.tenant_id = b) or exists (select 1 from public.app_module_on_tenants('ekcode', false) o where o.tenant_id = b) then raise exception 'FAIL: 101 a store that turned it off read on'; end if;
     -- Admin's list: the store that never chose is in it, the one that turned it off is not; without the default, neither.
     if not exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = a) then raise exception 'FAIL: 101 Admin left out a store on by default'; end if;
     if exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = b) then raise exception 'FAIL: 101 Admin listed a store that turned EkCode off'; end if;
     if exists (select 1 from public.app_admin_ekcode_shops(st, 7, false) x where x.tenant_id in (a, b)) then raise exception 'FAIL: 101 Admin listed a store with no open row and no default'; end if;
     select * into r from public.app_admin_ekcode_reach(st, true);
-    select count(*) into n from public.tenants t where t.first_opened_at is not null and public.app_module_on(t.id, 'ekcode', true);
+    select count(*) into n from public.tenants t where t.first_opened_at is not null and t.id in (select o.tenant_id from public.app_module_on_tenants('ekcode', true) o);
     if r.offering <> n or r.opened < r.offering then raise exception 'FAIL: 101 the reach count disagrees with the rule (% vs %)', r.offering, n; end if;
     -- The busiest hour is a rolling 60 minutes, as the limit counts it: four codes before :00 and one after read 5, not
     -- 4; under 5 it is not shown at all (tenancy S1).
@@ -4840,10 +4840,11 @@ begin
       insert into public.ekcode_codes select * from c101;
     end loop;
     select * into r from public.app_admin_ekcode_reach(st, true);
-    if r.busiest_hour is distinct from 5 or r.busiest_at is distinct from t0 + interval '5 minutes' then raise exception 'FAIL: 101 the busiest hour is not a rolling 60 minutes (% at %)', r.busiest_hour, r.busiest_at; end if;
+    -- Counted by the minute: the window ends with the minute of the last code (t0 + 5 min → t0 + 6 min).
+    if r.busiest_hour is distinct from 5 or r.busiest_at is distinct from t0 + interval '6 minutes' then raise exception 'FAIL: 101 the busiest hour is not a rolling 60 minutes (% at %)', r.busiest_hour, r.busiest_at; end if;
     -- On again after off: an open row beside the closed one reads on, default or not.
     insert into public.tenant_modules (tenant_id, module, enabled_by) values (b, 'ekcode', who);
-    if not public.app_module_on(b, 'ekcode', true) or not public.app_module_on(b, 'ekcode', false) then raise exception 'FAIL: 101 on again after off did not read on'; end if;
+    if not exists (select 1 from public.app_module_on_tenants('ekcode', true) o where o.tenant_id = b) or not exists (select 1 from public.app_module_on_tenants('ekcode', false) o where o.tenant_id = b) then raise exception 'FAIL: 101 on again after off did not read on'; end if;
     if not exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = b) then raise exception 'FAIL: 101 Admin left out a store turned on again'; end if;
     -- A store that has not opened is never listed, on or not.
     update public.tenants set first_opened_at = null where id = a;
@@ -4851,7 +4852,7 @@ begin
     -- As frata_admin itself (the definer runs the revoked helper as its owner): the whole chain works for the one role.
     set local role frata_admin;
     perform 1 from public.app_admin_ekcode_shops(st, 7, true); perform 1 from public.app_admin_ekcode_reach(st, true);
-    begin perform public.app_module_on(a, 'ekcode', true); raise exception 'FAIL: 101 frata_admin called app_module_on';
+    begin perform 1 from public.app_module_on_tenants('ekcode', true); raise exception 'FAIL: 101 frata_admin called app_module_on_tenants';
     exception when insufficient_privilege then null; end;
     reset role;
     -- Staff only.
@@ -4868,11 +4869,11 @@ begin
     if has_function_privilege('frata_app', 'public.' || fn, 'execute') or has_function_privilege('frata_builder', 'public.' || fn, 'execute')
        or has_function_privilege('anon', 'public.' || fn, 'execute') or has_function_privilege('authenticated', 'public.' || fn, 'execute')
        or has_function_privilege('service_role', 'public.' || fn, 'execute') then raise exception 'FAIL: 101 a role other than frata_admin can call %', fn; end if;
-    if (select p.proconfig from pg_proc p where p.oid = ('public.' || fn)::regprocedure) is distinct from array['search_path=""']
+    if not coalesce((select 'search_path=""' = any(p.proconfig) from pg_proc p where p.oid = ('public.' || fn)::regprocedure), false)
       then raise exception 'FAIL: 101 % lost its empty search_path', fn; end if;
   end loop;
   foreach fn in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
-    if has_function_privilege(fn, 'public.app_module_on(uuid, text, boolean)', 'execute') then raise exception 'FAIL: 101 % can call app_module_on', fn; end if;
+    if has_function_privilege(fn, 'public.app_module_on_tenants(text, boolean)', 'execute') then raise exception 'FAIL: 101 % can call app_module_on_tenants', fn; end if;
   end loop;
   if to_regprocedure('public.app_admin_ekcode_shops(uuid, int)') is not null then raise exception 'FAIL: 101 the old two-argument list is still there'; end if;
 end $$;

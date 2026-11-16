@@ -39,7 +39,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   (`src/lib/admin/modules.ts`) and still derives through `moduleAccess()`.
 - **Tables**: `tenant_modules` (the merchant's switch; app inserts and closes; turning off a `defaultOn` module with no row inserts
   one closed row, so the default never comes back on its own; Admin's EkCode definers take the default as `p_default`
-  and test it through `app_module_on`, drizzle/0152, proof § 101),
+  and test it through the set-based `app_module_on_tenants`, drizzle/0152, proof § 101),
   `tenant_addons` (app reads; admin inserts and may only set `ends_at`; the shop writes ONLY through the A3 definers
   `app_start_addon_trial` / `app_end_addon_trial` / `app_stop_addon` in `drizzle/0114_addon_trials_access.sql`:
   shop from `app_current_tenant()`, the caller an owner or admin, price the newest and the one shown, times from
