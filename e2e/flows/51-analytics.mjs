@@ -5,9 +5,10 @@
 // link with Copy, the order page's meta line ("from …"), and staff with counts but no ₹. Seeds its own creator offer, code-only,
 // and ends it after.
 // Guards: a source lost when capture moves, a creator link that stops crediting its creator, ₹ shown to staff.
+// Covers capture.tsx, capture-attribution.ts and landing.ts (the capture's own chunk: a step slows it and taps a tile).
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, SHOP, USERS, playwright, signedIn } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, laterChunks, playwright, signedIn, until, wait } from '../lib.mjs'
 
 const { devices } = playwright
 
@@ -64,6 +65,29 @@ export default {
         })
       } finally {
         await ctx.close()
+      }
+
+      // The capture loads in its own chunk after the page has run (capture.tsx): a tap that moves the page first must not
+      // lose the landing (impact and speed reviews 2026-11-16: a slow phone tapping a tile lost its tags and code).
+      const slow = await t.browser.newContext({ ...devices['Pixel 7'] })
+      try {
+        await t.step('a tile tapped before the capture\'s chunk is in: the landing\'s tags and code are still kept', async () => {
+          const q = await slow.newPage(); q.setDefaultTimeout(10_000); q.on('pageerror', (e) => t.errors.push(e.message))
+          const capture = laterChunks('frrata.attr.seen', '/s/[host]/(shop)/products/page')
+          let asked; const askedFor = new Promise((r) => { asked = r })
+          await q.route(capture, async (r) => { asked(); await wait(1500); await r.continue() })
+          await q.goto(SHOP + '/products?utm_source=instagram&utm_medium=story&utm_campaign=slow-chunk&code=RIYA51', { waitUntil: 'domcontentloaded' })
+          await askedFor // the page has run: its shell asked for the capture, which is still on its way
+          await q.evaluate(() => { window.__samePage = true })
+          await q.locator('a[href$="/products/chanderi-kurta-set"]').first().click()
+          await q.waitForURL(/\/products\/chanderi-kurta-set$/)
+          assert.equal(await q.evaluate(() => window.__samePage), true, 'a client navigation, not a new page')
+          const attr = await until(() => q.evaluate(() => JSON.parse(sessionStorage.getItem('frata.attr.v1') ?? 'null')), 8000)
+          assert.equal(attr.utm_source, 'instagram'); assert.equal(attr.utm_medium, 'story'); assert.equal(attr.utm_campaign, 'slow-chunk')
+          assert.deepEqual(await q.evaluate(() => [sessionStorage.getItem('frrata.code.v1'), sessionStorage.getItem('frrata.code-via.v1')]), ['RIYA51', 'link'], 'the code, from the link')
+        })
+      } finally {
+        await slow.close()
       }
 
       // A console preview never captures: tags and a creator code in its address are not stored (plan review 9).

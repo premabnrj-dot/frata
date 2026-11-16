@@ -3,7 +3,7 @@
 // FILE: scripts/affected-flows.mjs — which e2e flows a change touches (release-agent, e2e-runner). For each changed file
 // under src/app/(console|admin)/<area>/… it finds the flows that open "/<surface>/<area>"; a change in shared code
 // (src/components, src/domains, src/lib, globals.css, base.css) names the flows whose own source mentions the changed
-// module's name, plus `ux` for shared UI. Prints the npm command. Usage: node scripts/affected-flows.mjs [base=origin/main]
+// module's name or file name (a flow's header lists the files it covers), plus `ux` for shared UI. Prints the npm command. Usage: node scripts/affected-flows.mjs [base=origin/main]
 // =============================================================================
 import { execSync } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -28,8 +28,9 @@ for (const path of changed) {
   if (route) { for (const f of flows) if (f.src.includes(`/${route[2]}/${route[3]}`)) add(f, path); continue }
   if (path.startsWith('e2e/flows/')) { const f = flows.find((x) => x.file === basename(path)); if (f) add(f, path); continue }
   if (/^src\/(components|domains|lib)\//.test(path) || /src\/app\/(globals|base|shop|neel)\.css$/.test(path)) {
-    const mod = basename(path).replace(/\.(tsx?|css)$/, '')
-    for (const f of flows) if (mod.length > 3 && f.src.includes(mod)) add(f, path)
+    // By its name, or (a short one like bag.tsx) by its file name: a flow's header names the files it covers.
+    const file = basename(path), mod = file.replace(/\.(tsx?|css)$/, '')
+    for (const f of flows) if ((mod.length > 3 && f.src.includes(mod)) || f.src.includes(file)) add(f, path)
     // A primitive or a stylesheet: the UX sweep and the Neel gallery (its drawn values, keyboard and axe).
     if (/^src\/components\/|\.css$/.test(path)) for (const n of ['ux', 'neel']) { const f = flows.find((x) => x.name === n); if (f) add(f, path) }
   }

@@ -4,12 +4,13 @@
 // the browser: no double, fee kept); a dismissed payment switched to COD and a
 // late capture after it (paid wins, stock taken once, "Do not collect cash");
 // a price change between looking and placing.
+// Covers the bag and checkout islands: bag.tsx, bag-contents.tsx, bag-quote.tsx, bag-words.ts, chunk.ts, checkout.tsx,
+// checkout-offers.tsx (the drawer's lines load in their own chunk; a step cuts it).
 // =============================================================================
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
-import { readdirSync, readFileSync } from 'node:fs'
 import http from 'node:http'
-import { CONSOLE, FAKE_CHECKOUT, PORTS, RZP, RZP_KEYS, SHOP, playwright, signedIn, until, expectToast } from '../lib.mjs'
+import { CONSOLE, FAKE_CHECKOUT, PORTS, RZP, RZP_KEYS, SHOP, laterChunks, playwright, signedIn, until, expectToast } from '../lib.mjs'
 const { devices } = playwright
 
 export default {
@@ -92,11 +93,9 @@ export default {
     })
 
     await t.step('the drawer’s lines are not in the page’s first load: their chunk unreachable, the drawer says so; the next open shows them', async () => {
-      // Every built chunk holding the drawer's lines fails, as on a dropped connection; every other script loads.
-      const dir = new URL('../../.next/static/chunks/', import.meta.url)
-      const held = new Set(readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('.js') && readFileSync(new URL(f, dir), 'utf8').includes('Pricing your bag')))
-      assert.ok(held.size > 0, 'a chunk holds the drawer’s lines')
-      const lines = (u) => u.pathname.startsWith('/_next/static/chunks/') && held.has(decodeURIComponent(u.pathname.slice('/_next/static/chunks/'.length)))
+      // The chunk holding the drawer's lines (bag-contents.tsx: its line class) fails, as on a dropped connection; every
+      // other script loads. laterChunks also fails the step if that chunk is in the product page's first load.
+      const lines = laterChunks('store-bag-line', '/s/[host]/(shop)/products/[handle]/page')
       const cut = (r) => r.abort()
       await p.route(lines, cut)
       await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'load' })

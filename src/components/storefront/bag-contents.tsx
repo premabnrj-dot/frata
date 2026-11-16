@@ -5,6 +5,7 @@ import { pick, urlFor } from '@/domains/media/sizes'
 import { inr, type PublicQuote } from './shop-client'
 import { bag } from './bag-store'
 import { OfferProgress, OfferRows, useQuote } from './bag-quote'
+import { ADDED_TO_BAG, PRICING_BAG } from './bag-words'
 
 const kindLine = (l: PublicQuote['lines'][number]) => l.kind === 'preorder' && l.shipsBy ? `Pre-order · ships by ${new Date(`${l.shipsBy}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}`
   : l.kind === 'made_to_order' ? `Made to order · ${l.leadMinDays}–${l.leadMaxDays} days to make` : null
@@ -33,7 +34,7 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
   const buyable = q?.lines.filter((l) => l.qty > 0) ?? []
   return (
     <div className="space-y-3">
-      {added && items.some((i) => i.variantId === added) && <p role="status" className="store-added-note text-sm font-medium">Added to your bag</p>}
+      {added && items.some((i) => i.variantId === added) && <p role="status" className="store-added-note text-sm font-medium">{ADDED_TO_BAG}</p>}
       {notes.map((t) => <p key={t} role="status" className="border-l-2 border-store-accent bg-store-chip px-3 py-2 text-sm">{t}</p>)}
       {/* feedback-ok: rule 4 — the bag drawer is a modal dialog: its own load failure stays inside it (the bag page draws the same lines) */}
       {error && <p role="alert" className="text-sm text-store-bad">{error}</p>}
@@ -73,7 +74,7 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
           <button type="button" onClick={onKeepShopping} className="store-btn-2 h-12 w-full rounded-[var(--store-radius)] border border-store-ink">Keep shopping</button>
         </div>
       )}
-      {!q && !error && <p className="text-sm text-store-sub">Pricing your bag…</p>}
+      {!q && !error && <p className="text-sm text-store-sub">{PRICING_BAG}</p>}
     </div>
   )
 }
