@@ -116,7 +116,10 @@ export default {
         const dialog = p.getByRole('dialog', { name: 'Preview of Our weavers' })
         await dialog.getByText('The link works for 10 minutes.').waitFor()
         await p.screenshot({ path: t.out('preview-1280') })
-        const url = new URL(await dialog.locator('.font-mono').first().textContent())
+        // The dialog shows the short address (as drawn); the whole link is Open's href (and what Copy link copies).
+        assert.equal(await dialog.locator('.font-mono').first().textContent(), `${new URL(SITE).host}/frrata-preview?…`)
+        await dialog.getByRole('button', { name: 'Copy link' }).first().waitFor()
+        const url = new URL(await dialog.getByRole('link', { name: /^Open / }).getAttribute('href'))
         assert.equal(url.origin, SITE); assert.equal(url.searchParams.get('to'), '/pages/our-weavers')
         const token = url.searchParams.get('token')
         const ok = await get(`/2026-12/k/${key}/preview/pages/our-weavers`, { 'frrata-preview': token })
