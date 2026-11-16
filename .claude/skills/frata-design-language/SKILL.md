@@ -2,9 +2,9 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 8.1.0
+  version: 8.2.0
   owner: owner
-  verified: 2026-11-15
+  verified: 2026-11-16
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
@@ -1282,6 +1282,15 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
   wide fields and groups of a kind under a hairline; no intro paragraph under the title (Rule 0); a list of codes is
   chips (`ChipInput`), never a text box; the save bar at the foot with its count and Ctrl/⌘+S; a side card says what a
   shopper meets (Pay on delivery: "At checkout", from checkout's own rule and words).
+- **What only the owner or a Manager changes now** (PP1, owner-approved mockup 2026-11-16,
+  `docs/mockups/2026-11-16-pp1-owner-only.html`): locked values read as `Facts` (label in text 2, its (i) kept; a radio
+  card as its choice with the card's note under it, a switch On or Off), never disabled inputs. Content's chip "Only the
+  owner or a Manager can edit" sits beside the page's title (a page locked whole) or the block's title (a block), and
+  **Ask the owner** (secondary) is the header's one action or sits in that block's header; a page in part locked by
+  fields puts the chip beside each value. No save bar on a page locked whole, no editing links. After asking: an ok
+  toast "Asked the owner." and the button Off with Button's `reason` "Asked today" for the rest of the India day. A save
+  refused because the store was handed over meanwhile is an error toast in those words with "Nothing was changed." and
+  Reload. A support visit sees the same facts with no Ask the owner.
 - **Not yet**: ⌘K (N1b).
 
 ## Neel analytics (N1b, 2026-11-15; plan `docs/plans/2026-11-15-neel-n1b-analytics.md`, screen mockup

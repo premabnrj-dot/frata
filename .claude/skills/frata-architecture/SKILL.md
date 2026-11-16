@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.62.0
+  version: 2.63.0
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
@@ -180,6 +180,19 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   no owner; staff never; owner 2026-11-08), read through `costsVisibleIn(tx, …)` inside the page's transaction, which
   fails closed (no tenant context reads as "has an owner"). When it says no, the figure is not computed or sent, not
   hidden.
+- **Owner-only settings after handover** (partner publishing PP1, 2026-11-16; spec
+  `docs/specs/2026-11-16-partner-publishing.md`, drizzle/0150, proof § 87): what only the owner or a Manager changes once
+  a store has an owner is ONE pure list, `src/domains/settings/owner-only.ts` (`lockedFor(role, hasOwner, support)`):
+  Policies and every policy page's text, Business and GST whole, Contact's grievance officer, the invoice signatory and
+  series. A partner is locked only when `hasOwner && !holds(role, 'shop.manage')`; a support visit always; owners and
+  Managers never. `editors` stay CAN_BUILD (the pages open); `saveSection` and `savePolicyText` are the lock (Postgres
+  doesn't stop a missed writer: frata_app updates `shop_settings`), and they read it inside the `asMember` transaction
+  through `hasOwnerHeldIn` (the store's row FOR SHARE first; accepting a handover holds it FOR UPDATE), refuse a whole page
+  in words, DROP locked fields from what is written (an omitted key can't blank them) and refuse one sent changed
+  (compared after the save's own normalisation). Ask the owner is `app_ask_owner(uid, page)` (a live partner of this
+  store, a store with an owner, one line a page an India day under an advisory lock, worded on read from its fixed href);
+  `ask_owner` notices reach owners and Managers only (`seesAsks` in `listNotices`/`unreadNotices`,
+  `app_notice_members(notice)` for email). A new writer of these columns asks the same list.
 - **Adding a role: read every caller of the tuple it joins** before it joins
   (2026-11-07). A settings section declares its own `editors`
   (`src/domains/settings/sections.ts`), read by its page, its save and the brand
@@ -224,7 +237,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
   store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through
   `previewTenantOf`. `check:capabilities` and `check:tenant` § 7b hold all of it. Notices reach members through
-  allow-lists (`app_notice_members`, `app_member_email`), never a Builder.
+  allow-lists (`app_notice_members(notice)`, `app_member_email`), never a Builder; a partner's ask (`ask_owner`, PP1) only
+  owners and Managers.
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing
