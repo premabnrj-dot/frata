@@ -12,7 +12,7 @@ https://claude.ai/artifact/4dn3tMbA4H6JemWtAcQn4b; P6 the pilot's own, still to 
 **Review:** speed-reviewer OVER BUDGET as planned (3 high, 5 medium, 5 low), all folded in, 2026-11-16
 **Review:** unit-economics-reviewer NEUTRAL for merchants, HURTS Frrata unpriced (7 findings), all folded in, 2026-11-16
 **Review:** api-contract-reviewer CHANGES NEEDED (1 blocker, 9 majors, 5 minors), all folded in below (§ API contract review), 2026-11-16
-**Review:** integration-researcher pending (Razorpay in a frame; COOP in in-app browsers; PSL process), 2026-11-16
+**Review:** integration-researcher: 4 facts change the plan (COOP unsupported in Android WebView; WebKit's 7-day CNAME cap; header allowlists by `ninc`; Vercel adds the shopper's IP on external rewrites), all folded in below (§ Integration facts), 2026-11-16
 All five reviews above ran independently as separate agents on 2026-11-16; every finding is folded into the spec, this
 plan and ADR-0019. Nothing below is built before its phase's mockup is approved, the owner's decisions it names are made,
 and its own reviews (each phase's list) have run on its diff (ADR-0001).
@@ -46,7 +46,7 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 | # | Task | Verify |
 |---|---|---|
 | P0·1 | `src/domains/checkout/bag-fill.ts` (pure): `fillMode({ by, empty, fromSite })` → `replace` \| `join`; a test per row (link-made, shop-made, empty, stripped referrer, same-site referrer) | `npx vitest run src/domains/checkout` |
-| P0·2 | `bag-store.ts`: `frata.bag.by.v1` written inside `write()` from the caller's kind: `link` (the bag link), `shop` (theme product page, bag drawer), `keep` (checkout's reconcile, the gift button, and from P2 checkout's Remove and stepper); `shop` stays until `clear`, which empties it; page-only fallback as the bag's. `cart-link.tsx` calls `fillMode` | `npm test`; `npm run typecheck` |
+| P0·2 | `bag-store.ts`: `frrata.bag.by.v1` written inside `write()` from the caller's kind: `link` (the bag link), `shop` (theme product page, bag drawer), `keep` (checkout's reconcile, the gift button, and from P2 checkout's Remove and stepper); `shop` stays until `clear` empties it or a link from the store's own website replaces the bag; every writer names its kind (no default); page-only fallback as the bag's. `cart-link.tsx` calls `fillMode` | `npm test`; `npm run typecheck` |
 | P0·3 | e2e `92-storefront-sale` gains: hand off two lines, remove one and change the other on the site, hand off again → checkout shows the site's bag; the same with no referrer; a theme-page bag then a link → joined; the gift added at checkout then a new link → replaced | `npm run e2e -- --only storefront-sale,checkout,offers,ekcode` |
 | P0·4 | The pilot's `docs/design/deviations.md` notes "the site's bag stays full after an order until P6" | read the file |
 - **Reviews:** `security-reviewer` (L1 narrowed), `impact-reviewer`.
@@ -96,7 +96,7 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 | P2·1 | Migration: `checkout_design` (one row a store: header variant, back link, footer variant, trust blocks text array CHECKed to a closed set, two lines with length CHECKs, `previous jsonb`, `updated_by`, `updated_at`); grants as P1·2 (`frata_builder` named-column select); proof § 99 | `npm run verify:tenancy` |
 | P2·2 | `src/domains/brand/checkout.ts`: closed sets, trust words derived from the store's facts, the render-time fallback | `npx vitest run src/domains/brand` |
 | P2·3 | Checkout, bag-link, order and policy pages read `shopBrand` and the design (props, never the theme) for code-site stores | `npm run e2e -- --only checkout,order-page,storefront-sale,shop-look` |
-| P2·4 | Checkout lines: Remove with Undo and a stepper (the drawer's pattern; `by` kind `keep`), re-priced by the quote | `npm run e2e -- --only checkout,offers` |
+| P2·4 | Checkout lines: Remove with Undo and a stepper (the drawer's pattern; `by` kind `keep`), re-priced by the quote. `checkout.tsx` is 398 of `check:size`'s 400 lines: split its lines block into its own component first | `npm run e2e -- --only checkout,offers` |
 | P2·5 | The preview on sample data from pure fixtures, on the console host (the look preview's route pattern), every state; it is also where a site preview's Checkout lands | `npm run e2e -- --only brand` |
 | P2·6 | Console › Brand › Checkout as drawn; saves through P1·3 | `npm run e2e -- --only brand` (checkout tab steps); `mockup-parity-reviewer`; `npm run check:words` |
 - **Reviews:** `architecture-reviewer`, `tenancy-auditor`, `security-reviewer`, `speed-reviewer`, `design-system-reviewer`,
@@ -120,7 +120,7 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 | P3·6 | The frame page (`src/app/secure/[host]/`), decision 24: a server-rendered form plus one standalone script built like `fe.js` (`src/frame/`, built to `public/frame.js`), ≤ 25 kB gzipped; the fields from one list shared with the page checkout (`src/domains/checkout/fields.ts`); rendered per request with a nonce and `default-src 'none'` (Razorpay's hosts if P3·1(a) passes), `frame-ancestors` the store's host from the Host string, `private, no-store`; the bag from its URL in the bag link's grammar (`parseCartLink`) so it prices on first render; the font from one absolute Frrata media URL, no preload; reads through cached loaders outside the transaction (module facts in a `shopCached` loader) and one `withTenant` for the shopper's own reads, ≈ 4 statements a render; its own tab storage | `npm run check:frame-script` (new gate: size ceiling, stale build, no cost field, no `'*'` target); `npm run e2e -- --only checkout,ekcode` |
 | P3·6b | The one-address checkout page: the `<iframe>` in its server HTML with the bag in the frame's URL, a preconnect to `secure.<host>`, its own bundle with the bridge only (no form code) under 120 kB first load | `npm run build` (`check:storefront-build` gains the one-address checkout's budget); `npm run e2e -- --only speed` |
 | P3·7 | EkCode's cookies move to the secure host (`__Host-`, `SameSite=Lax`, HttpOnly); the `shop_in` hint goes; one cookie module taking the host kind | `npx vitest run src/lib/ekcode`; `npm run e2e -- --only ekcode` |
-| P3·8 | `check:storage` (new gate): brand-origin checkout code writes only `frata.bag.v1`, `frata.bag.by.v1`, the code and attribution keys; run against its own documentation file too | `npm test` |
+| P3·8 | `check:storage` (new gate): brand-origin checkout code writes only `frata.bag.v1`, `frrata.bag.by.v1`, the code and attribution keys; run against its own documentation file too | `npm test` |
 | P3·9 | e2e (new flow `secure-frame`): a brand-origin page opens and frames `/checkout` and `/orders`, fetches the secure host, reads tab storage after an order, frames the secure host after `pushState('/checkout')`, posts every non-schema message from itself and from a child frame: each reads nothing | `npm run e2e -- --only secure-frame` |
 - **Reviews:** `security-reviewer` (and a person's review), `tenancy-auditor`, `architecture-reviewer`, `speed-reviewer`
   (the frame's bytes and statements, the checkout bundle), `unit-economics-reviewer` (H-3), `design-system-reviewer`,
@@ -220,6 +220,18 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 | m3 the released snapshot | P1·6, P6·2 | No task edits or regenerates `__tests__/released/2026-12.json`; freezing additions is its own reviewed `UPDATE_API=1` commit, additions only |
 | m4 docs per task | P1·6, P5, P6 | Field notes ("`logo` stays raster"); M3's lines and `cart`'s ("on one address a bag link from the site replaces the bag"); `shop.bag`'s; the kit's `lib/frrata.ts` types and `node scripts/kit-sync.mjs` in each |
 | m5 `shop.status` | P5 | No new status value for maintenance or We'll be back: checkout keeps taking orders; the kit keeps the bag link when `shop.bag` is null |
+
+## Integration facts, folded in (2026-11-16; integration-researcher; facts in frata-integrations; these override the task text above)
+| Fact | Task | What changes |
+|---|---|---|
+| Razorpay documents nothing about Checkout in a frame; checkout.js builds its own frame with `allow="payment; otp-credentials; clipboard-write; publickey-credentials-get …"` | P3·1(a), P3·6 | The checkout page's `<iframe>` carries `allow="payment; otp-credentials; clipboard-write; web-share"` and the frame's own Permissions-Policy allows them (today `security-headers.ts:45` sends `publickey-credentials-get=()` everywhere: keeping passkeys off in the frame is decided in the spike, with `security-reviewer`). The frame's CSP ships Report-Only first with the hosts seen in checkout.js. **Ask Razorpay in writing** whether a frame is supported and whether a live key works from `secure.<host>` with only `<host>` registered |
+| Instagram/Facebook in-app (Standard Checkout): UPI Intent and cards show; netbanking (a pop-up page) never does, framed or not | P3·1(a) | The spike's pass line in Instagram is UPI intent and cards; netbanking is out there for everyone |
+| Android WebView turns `window.open` into a same-view navigation unless the host app allows windows; Razorpay says its pop-up doesn't appear in Instagram | P3·1(b), P3·7 | EkCode's popup gets a fallback planned now: the same tab to ekcode.in and back to `/checkout` (today's path), chosen when no popup handle comes back |
+| COOP is not supported in Android WebView | P3·1(e), decision 20 | Likely the Android in-app browsers fail T1; decision 20 (approved: C5, no partner JavaScript there) is planned as the expected outcome on Android in-app browsers, the spike confirms by testing the real apps |
+| WebKit caps cookies at 7 days when a subresource's CNAME differs from the top host's | P3·1(c), P5·7 | The `secure.` record matches the host's own (A for an apex; the same project CNAME for `www`); Connect my domain gives it that way; the spike tests a brand domain at day 8 |
+| One domain and one certificate per `secure.` host; Let's Encrypt 50 a registered domain a week until the PSL listing | P3·1(d), P5·7 | Before the listing, new `secure.<store>.frrata.shop` hosts are issued at most 40 a week (a queue, oldest first) |
+| vercel.json transforms allowlist headers by `ninc`; external rewrites add `x-real-ip` and `x-forwarded-for` | P5·1(a), (b), (k) | The spike tests `ninc` in project rules first, and whether the shopper's IP can be removed before it reaches a partner's deployment; if not, a DPDP note and decision 21's fallback. The `frata-gotchas` practice line "a rule deletes headers by name only" waits for the spike |
+| PSL template asks for distinct users in thousands (2,000–3,000) | P4b·2 | The PR may be declined while Frrata is small; P4a's hardening is the control until then |
 
 ## Practices recorded in skills (once the owner approves; versions bumped in the same commit)
 | Skill | Practice |

@@ -42,9 +42,9 @@ its migrations to production (`docs/plans/2026-11-15-parallel-lanes.md` § Relea
 | 2 | **P4b PSL listing** | A | P4a | O4: renew `frrata.shop` to 3 years |
 | 2 | **P5·0** (the pilot's request count and the Vercel billing tier) | A | — | O23: Vercel billing tier |
 | 3 | **P3 The secure frame** | E | P2; P3·1 passed | — |
-| 3 | **V2a Sites on Frrata's account** (one address) | A | G·2; V0·6 | S8 GitHub org, S22 Vercel teams, O6 preview domain |
-| 3 | **V3a·1 agent spike** | D | V0·5 | S3 Claude Console org |
-| 3 | **C1 Studio credits** | C | billing R2 (Frrata's seller), Frrata's own Razorpay account | S19 the CA on GST; Frrata's Razorpay |
+| 3 | **V2a Sites on Frrata's account** (one address) | A | G·2; V0·6 | S8 done (org `frrata`; Team before V2a·5), S22 Vercel teams, O6 preview domain |
+| 3 | **V3a·1 agent spike** | D | V0·5 | S3 done 2026-11-16; the `studio-eval` key through the secure form |
+| 3 | **C1 Studio credits** | C | billing R2 (Frrata's seller), Frrata's own Razorpay account | S19 done (input credit claimed); Frrata's Razorpay done in test mode 2026-11-16 (`RAZORPAY_BILLING_*` in Vercel; live keys when Razorpay approves) |
 | 4 | **P5 One address** | A | V2a·1, ·5, ·6; P3; P4a; P5·1 spike | — |
 | 4 | **V2b Publishing after handover** | A, after P5 | V2a | — |
 | 4 | **A1a Admin credits** | C | C1 | — |
@@ -56,8 +56,8 @@ its migrations to production (`docs/plans/2026-11-15-parallel-lanes.md` § Relea
 | 7 | **V3c Intake link**, then **V3d Routines** | D | V3b; V2b | — |
 | later | G-b, A1b payouts | B, C | as their plans | — |
 
-**The critical path is the owner's accounts.** Waves 0–2 need none of them. V2a, V3a and C1 cannot start until S8, S22,
-O6, S3, S19 and Frrata's Razorpay exist; Studio (V3b) needs all three. The sooner they are done, the sooner Wave 3 starts.
+**The critical path is the owner's accounts.** Waves 0–2 need none of them. Done 2026-11-16: S3, S8, S19, O23. Frrata's Razorpay in test mode. Left: S22
+and O6 (V2a), O4 (P4b), Razorpay's live approval (before C1 takes real money). Studio (V3b) needs V2a, V3a and C1. The sooner they are done, the sooner Wave 3 starts.
 
 ## Wave 0 · records and reviews (this session, documents only)
 | # | Task | Verify |

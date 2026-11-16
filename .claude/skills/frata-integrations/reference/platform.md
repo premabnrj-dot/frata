@@ -35,9 +35,18 @@ Part of `frata-integrations` (SKILL.md holds the dating rule and the rules for e
   fair-use-guidelines 2026-09-14]. **The first live payment on any shop needs Pro.**
 - Let's Encrypt, HTTP-01, "wait 5 to 10 minutes"; CAA must allow letsencrypt.org; proxies break issuance [V].
 - The middleware sees the custom host unchanged [V 2025-12-13].
-- Public Suffix List: Vercel advises it for tenant domains (myshopify.com, vercel.app, github.io are on it); a `_psl`
-  TXT, > 2 years left on the registration, no review-time guarantee; Let's Encrypt limits 50 certs per registered
-  domain per 7 days by the PSL [V Vercel 2026-09-16, LE 2026-08-05; U PSL wiki 2025-05-23].
+- `secure.<host>` (checked 2026-11-16): one domain and one HTTP-01 certificate each (a wildcard covers one level) [V
+  working-with-ssl 2026-09-16]; explicit `POST` certs 30/h, automatic issuance's share of it U [V limits 2026-09-16]. Its DNS
+  record must match the host's own (A for an apex, the same project CNAME for www) or WebKit may cap its cookies at 7 days
+  (CNAME cloaking) [V rule webkit.org/tracking-prevention undated; U applied to frames].
+- Public Suffix List (checked 2026-11-16): Vercel advises it for tenant domains (myshopify.com, vercel.app, github.io are on
+  it). PRs "MUST use the automated template" (README notice 2026-05-06; a template-check workflow since 2026-07-22):
+  organisation, reason, distinct users in thousands ("a minimum of 2000 - 3000"), `_psl` TXT with the PR URL kept for good,
+  ≥ 2 years on the registration kept, abuse contact, role email answered ≤ 30 days [V template, last commit 2026-07-22]. No
+  SLA, rate-limit-only reasons declined [U, wiki 2025-05-23]. Pickup: Firefox in-tree every few days (latest 2026-11-15) then
+  the trains [V commits; U weeks]; Chromium refreshes irregularly (2025-11-07, 2026-03-16, 2026-09-18) [V commits; U to
+  stable]; Safari: no current source [U]. Let's Encrypt: 50 a registered domain per 7 days (refill 1 per 202 min) by the PSL,
+  renewals exempt [V LE 2026-08-05].
 - Domain Connect live at GoDaddy, Cloudflare, IONOS; not Hostinger, BigRock, Namecheap [V-undated].
 - Shopify: A 23.227.38.65 + www CNAME shops.myshopify.com; two myshopify names in all, the old one redirects
   [V-undated]. Squarespace unlinks after 15 days without its verify record [V 2026-10-28].
@@ -195,3 +204,18 @@ Part of `frata-integrations` (SKILL.md holds the dating rule and the rules for e
 - **isbot** 5.2.3 (2026-11-09), Unlicense (not MIT), no dependencies, ≈ 2.6 kB gzip [V registry; S bundlephobia].
 - **useReportWebVitals** (Next 15): TTFB, FCP, LCP, FID, CLS, INP; a client component; bundles next/dist/compiled/web-vitals
   (upstream "~3K brotli'd"); a shopper-browser script, so a DPDP note like Mux Data [V 2025-06-16 + source].
+
+- **Project-level routing rules** (checked 2026-11-16; docs 2026-08-11; REST add-a-routing-rule 2026-11-16):
+  host/header/cookie/query conditions (equals, contains, regex, exists, negation); one primary action (rewrite incl. external,
+  redirect, status) plus modify actions set/append/delete on request and response headers; live "immediately across all
+  regions"; before the deployment's routes. The rule body is the @vercel/routing-utils route; vercel.json transforms take key
+  objects incl. `ninc` (delete all but a list: an allowlist) [V vercel-json 2026-08-14; U in project rules]. Deleting an
+  external upstream's `Set-Cookie` U. External rewrites add x-real-ip, x-forwarded-for, -host, -proto [V rewrites
+  2026-08-11]; removable U. No rule-count limit published (forum "100" U); Routes API mutations 60/min, version updates
+  20/min [V limits 2026-09-16].
+- **Browsers on one address** (checked 2026-11-16): COOP Chrome 83, Safari 15.2 (iOS and iOS WebView mirror), Android
+  WebView NOT supported [V MDN BCD]; `same-origin-allow-popups` keeps a window.open reference to an `unsafe-none` popup (OAuth,
+  payments) [V MDN 2026-07-12]. Android WebView `window.open` becomes a same-view navigation unless the app enables multiple
+  windows [V developer.android.com, undated]. Instagram's in-app engine undocumented by Meta [U]; WhatsApp iOS in-app browser
+  in development [S MacRumors 2026-10-20]. WebKit: same-site frames are first-party; 7-day deletion only for JS-made cookies
+  and storage; CNAME-cloaked cookies capped at 7 days (top-navigation over-cap fixed in Safari 27.2, 2026-10-26) [V].
