@@ -31,7 +31,7 @@ export default async function BrandPage() {
     brandSample(tenantId, now).catch(() => null),
     shopSettingsFor(tenantId),
   ]).catch((err: unknown) => { console.error('[brand page]', err instanceof Error ? err.name : err); return [null, null, null] as const })
-  if (!page || !shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!page || !shop) return <Panel title="We couldn’t load this screen" action={<Link href="/console/brand" className={button({ variant: 'secondary' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel>
   if (!page.brand) return <Panel title="Your store’s look is in Look" action={<Link href="/console/look" className={button({ variant: 'secondary' })}>Open Look</Link>} />
   const saver = brandSaver(role, supportSessionId, page.open)
   const mode = saver === 'live' ? 'edit' : saver === 'waits' ? 'waits' : 'preview'

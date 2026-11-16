@@ -38,7 +38,7 @@ export function LogoCard({ b, edit, errors, shopName, slots, onPick, onRemove }:
             <label className={cn(button({ variant, size: 'sm' }), variant === 'ghost' && 'px-1.5', 'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring', st.uploading && 'pointer-events-none')} aria-busy={st.uploading || undefined}>
               {st.uploading ? <><Spinner />Uploading…</> : label}
               <input type="file" accept="image/svg+xml,image/png,image/webp,.svg" className="sr-only" disabled={st.uploading}
-                aria-label={`${label === 'Upload logo' ? 'Upload' : label} ${LOGO_NAMES[slot]}`}
+                aria-label={label === 'Upload logo' ? label : `${label} ${LOGO_NAMES[slot]}`}
                 {...(slot === 'main' && !st.error ? fieldProps('main', errors.main) : { 'aria-describedby': st.error ? `${id}-error` : undefined, 'aria-invalid': st.error ? true : undefined })}
                 onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPick(slot, f) }} />
             </label>
@@ -125,10 +125,10 @@ export function ShapeCard({ b, edit, errors, onRadius, onDensity }: Edit & { b: 
   return (
     <Section title="Shape">
       <div className="flex flex-col gap-1.5"><span className="text-label font-medium">Corners</span>
-        <Segmented label="Corners" value={String(b.radius)} options={RADII.map((r) => [String(r), `${r} px`] as const)} onPick={(v) => onRadius(Number(v) as Radius)} className="self-start" />
+        <Segmented label="Corners" value={String(b.radius)} options={RADII.map((r) => [String(r), `${r} px`] as const)} onPick={(v) => onRadius(Number(v) as Radius)} invalid={fieldProps('radius', errors.radius)} className="self-start" />
         <FieldError name="radius" message={errors.radius} /></div>
       <div className="flex flex-col gap-1.5"><span className="text-label font-medium">Spacing</span>
-        <Segmented label="Spacing" value={b.density} options={DENSITIES.map((d) => [d, DENSITY_NAMES[d]] as const)} onPick={onDensity} className="self-start" />
+        <Segmented label="Spacing" value={b.density} options={DENSITIES.map((d) => [d, DENSITY_NAMES[d]] as const)} onPick={onDensity} invalid={fieldProps('density', errors.density)} className="self-start" />
         <FieldError name="density" message={errors.density} /></div>
     </Section>
   )
