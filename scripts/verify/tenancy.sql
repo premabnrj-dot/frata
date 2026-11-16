@@ -4740,36 +4740,64 @@ delete from tenants where id = 'c8700000-0000-0000-0000-000000000005';
 \else
 do $$ begin raise exception 'FAIL: dblink is not installed, so § 87''s race proof cannot run'; end $$;
 \endif
--- § 88 · The passkeys-off switch (drizzle/0151, owner 2026-11-16). Off by default; on, it counts the passkey check as
--- made only for people who already qualify (staff; a live partner person), never for anyone else; it ends by itself at
--- `until`; and no role can read the switch or call its reader.
+-- § 88 · The passkeys-off switch (drizzle/0151, owner 2026-11-16; security review H1, M1, M2). Off by default; on, getting
+-- in counts as checked only for people who already qualify (staff; a live partner person, Builders included), never
+-- for anyone else; managing passkeys still needs a real check; at most 7 days; every change audited; it ends by itself;
+-- and no role can read the switch or call its readers.
 reset role;
-do $$ declare staff uuid := 'aaaaaaaa-0000-0000-0000-000000000001'; outsider uuid := gen_random_uuid(); p uuid; s uuid := gen_random_uuid(); a jsonb;
+do $$ declare staff uuid := 'aaaaaaaa-0000-0000-0000-000000000001'; outsider uuid := gen_random_uuid(); p uuid; s uuid := gen_random_uuid(); a jsonb; n int; fn text;
 begin
   delete from public.platform_switches;
   select pm.user_id into p from public.partner_members pm where pm.user_id is not null and exists (select 1 from public.app_pm_live(pm.user_id)) limit 1;
   if p is null then raise exception 'FAIL: 88 needs a live partner person'; end if;
-  if public.app_staff_live_stepup(staff, s, 'none') is not null then raise exception 'FAIL: 88 a staff check passed with the switch off'; end if;
-  if public.app_partner_live_stepup(p, s, 'none') is not null then raise exception 'FAIL: 88 a partner check passed with the switch off'; end if;
-  if (public.app_access_for(p, s, null, null)->>'partnerConfirmedAt') is not null then raise exception 'FAIL: 88 partner access confirmed with the switch off'; end if;
+  -- Off: nothing changes.
+  if (public.app_access_for(staff, s, null, null)->>'staffConfirmedAt') is not null then raise exception 'FAIL: 88 staff confirmed with the switch off'; end if;
+  if (public.app_access_for(p, s, null, null)->>'partnerConfirmedAt') is not null then raise exception 'FAIL: 88 partner confirmed with the switch off'; end if;
+  begin perform public.app_partner_need(p, s, '', false); raise exception 'FAIL: 88 the workspace let a partner in with the switch off';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  -- On: getting in counts as checked for staff and live partner people only.
+  select count(*) into n from public.audit_events where action = 'platform.passkeys_off';
   insert into public.platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 hour', 'proof', 'proof');
-  if public.app_staff_live_stepup(staff, s, 'none') is null then raise exception 'FAIL: 88 the switch did not cover a staff member'; end if;
-  if (public.app_access_for(staff, s, null, null)->>'staffConfirmedAt') is null then raise exception 'FAIL: 88 staff access not confirmed with the switch on'; end if;
-  if public.app_partner_live_stepup(p, s, 'none') is null then raise exception 'FAIL: 88 the switch did not cover a live partner person'; end if;
+  if (select count(*) from public.audit_events where action = 'platform.passkeys_off') <> n + 1 then raise exception 'FAIL: 88 turning the switch on left no audit row'; end if;
+  if (public.app_access_for(staff, s, null, null)->>'staffConfirmedAt') is null then raise exception 'FAIL: 88 staff not confirmed with the switch on'; end if;
   a := public.app_access_for(p, s, null, null);
-  if (a->>'partnerConfirmedAt') is null then raise exception 'FAIL: 88 partner access not confirmed with the switch on'; end if;
+  if (a->>'partnerConfirmedAt') is null then raise exception 'FAIL: 88 partner not confirmed with the switch on'; end if;
   if jsonb_array_length(a->'partnerHeld') <> 0 then raise exception 'FAIL: 88 a partner store still held with the switch on'; end if;
-  if public.app_staff_live_stepup(outsider, s, 'none') is not null or public.app_partner_live_stepup(outsider, s, 'none') is not null
+  perform public.app_partner_need(p, s, '', true);
+  a := public.app_access_for(outsider, s, null, null);
+  if (a->>'staffConfirmedAt') is not null or (a->>'partnerConfirmedAt') is not null or (a->>'staffRole') is not null
     then raise exception 'FAIL: 88 the switch covered someone who is neither staff nor a partner'; end if;
-  if (public.app_access_for(outsider, s, null, null)->>'staffRole') is not null then raise exception 'FAIL: 88 the switch made someone staff'; end if;
+  begin perform public.app_partner_need(outsider, s, '', false); raise exception 'FAIL: 88 the switch let an outsider through app_partner_need';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  -- On: managing passkeys still needs a real check (H1): the real helpers ignore the switch, and every passkey definer
+  -- calls the real partner check.
+  if public.app_staff_live_stepup(staff, s, '') is not null or public.app_partner_live_stepup(p, s, '') is not null
+    then raise exception 'FAIL: 88 the switch reached the real passkey check'; end if;
+  begin perform public.app_partner_need_real(p, s, '', false); raise exception 'FAIL: 88 the real partner check passed on the switch';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all'] loop
+    if (select prosrc from pg_proc where proname = fn) !~ 'app_partner_need_real\(' or (select prosrc from pg_proc where proname = fn) ~ 'app_partner_need\('
+      then raise exception 'FAIL: 88 % no longer asks for a real passkey', fn; end if;
+  end loop;
+  foreach fn in array array['app_staff_challenge', 'app_staff_add_passkey', 'app_staff_approve', 'app_staff_remove_passkey', 'app_staff_list',
+                            'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
+    if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
+  end loop;
+  -- At most 7 days, and it ends by itself.
+  begin update public.platform_switches set until = created_at + interval '8 days'; raise exception 'FAIL: 88 a switch was set for more than 7 days';
+  exception when check_violation then null; end;
   update public.platform_switches set until = now() - interval '1 second';
-  if public.app_staff_live_stepup(staff, s, 'none') is not null or public.app_partner_live_stepup(p, s, 'none') is not null
+  if (public.app_access_for(staff, s, null, null)->>'staffConfirmedAt') is not null or (public.app_access_for(p, s, null, null)->>'partnerConfirmedAt') is not null
     then raise exception 'FAIL: 88 the switch outlived its until'; end if;
+  select count(*) into n from public.audit_events where action = 'platform.passkeys_on';
   delete from public.platform_switches;
+  if (select count(*) from public.audit_events where action = 'platform.passkeys_on') <> n + 1 then raise exception 'FAIL: 88 taking the switch off left no audit row'; end if;
   if has_table_privilege('frata_app', 'public.platform_switches', 'select') or has_table_privilege('frata_admin', 'public.platform_switches', 'select')
      or has_table_privilege('frata_builder', 'public.platform_switches', 'select') or has_table_privilege('frata_app', 'public.platform_switches', 'insert')
     then raise exception 'FAIL: 88 a role can read or write the switch'; end if;
-  if has_function_privilege('frata_app', 'public.app_passkeys_off()', 'execute') or has_function_privilege('anon', 'public.app_passkeys_off()', 'execute')
-    then raise exception 'FAIL: 88 a role can call the switch''s reader'; end if;
+  foreach fn in array array['app_passkeys_off()', 'app_partner_need_real(uuid, uuid, text, boolean)', 'app_platform_switch_audit()'] loop
+    if has_function_privilege('frata_app', 'public.' || fn, 'execute') or has_function_privilege('anon', 'public.' || fn, 'execute')
+      then raise exception 'FAIL: 88 a role can call %', fn; end if;
+  end loop;
 end $$;
 \echo 'tenancy proof — all 88 checks passed'

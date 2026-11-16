@@ -108,9 +108,10 @@ export const staffNotices = pgTable('staff_notices', {
 /**
  * Platform switches (owner, 2026-11-16: "offer me option to turn off pass key … we should be able to turn it on when we
  * want"). One row per switch, live while `until` is in the future, so a switch left on ends by itself. `passkeys_off`:
- * staff and partner passkey checks count as made (app_staff_live_stepup, app_partner_live_stepup; drizzle/0151) for
- * people who are already staff or live partner people; signing in still needs the email. Definers only: no role reads
- * or writes this table; it is set by Frrata's operator on the owner's word, with an audit row.
+ * the passkey check counts as made for getting in (app_access_for, app_partner_need; drizzle/0151) for people who are
+ * already staff or live partner people (Builders included); signing in still needs the email, and adding, approving or
+ * removing a passkey still needs a real one. At most 7 days a time. Definers only: no role reads or writes this table;
+ * Frrata's operator sets it on the owner's word, and a trigger writes the audit row.
  */
 export const platformSwitches = pgTable('platform_switches', {
   key: text('key').primaryKey(),
@@ -121,4 +122,6 @@ export const platformSwitches = pgTable('platform_switches', {
 }, (t) => [
   check('platform_switches_key', sql`${t.key} in ('passkeys_off')`),
   check('platform_switches_reason', sql`length(${t.reason}) between 1 and 200`),
+  // At most 7 days a time: a switch can't be set to last for ever (security review 2026-11-16 M2).
+  check('platform_switches_until', sql`${t.until} <= ${t.setAt} + interval '7 days'`),
 ])

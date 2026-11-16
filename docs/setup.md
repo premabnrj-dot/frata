@@ -129,8 +129,9 @@ On the owner's word, Frrata's operator runs one of these in the Supabase SQL edi
 insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '7 days', 'operator', 'Owner: testing without passkeys')
   on conflict (key) do update set until = excluded.until, set_by = excluded.set_by, reason = excluded.reason, created_at = now();
 ```
-On again at once: `delete from platform_switches where key = 'passkeys_off';`. Either way, add an audit row
-(`audit_events`, action `platform.passkeys_off` or `platform.passkeys_on`). The switch also ends by itself at `until`.
+On again at once: `delete from platform_switches where key = 'passkeys_off';`. A trigger writes the audit row
+(`platform.passkeys_off` / `platform.passkeys_on`); at most 7 days a time, and it ends by itself at `until`. Adding or
+removing a passkey still needs a real one. Afterwards, check `audit_events` for `*.passkey.add` nobody expected.
 
 ### Rename day: Frrata (brand spec 2026-11-07)
 

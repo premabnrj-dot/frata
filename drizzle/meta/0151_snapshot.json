@@ -1,5 +1,5 @@
 {
-  "id": "50b62458-a2d5-4396-968e-73c86356102a",
+  "id": "0ce9451b-a7e3-4644-a47f-98b6a27f8ef4",
   "prevId": "b8870828-e876-4cb8-a6d1-d07da875a77b",
   "version": "7",
   "dialect": "postgresql",
@@ -17262,6 +17262,10 @@
         "platform_switches_reason": {
           "name": "platform_switches_reason",
           "value": "length(\"platform_switches\".\"reason\") between 1 and 200"
+        },
+        "platform_switches_until": {
+          "name": "platform_switches_until",
+          "value": "\"platform_switches\".\"until\" <= \"platform_switches\".\"created_at\" + interval '7 days'"
         }
       },
       "isRLSEnabled": false

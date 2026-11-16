@@ -52,8 +52,11 @@ Order: GitHub and the package registry before the first kit release; Admin befor
 ## Amendment (owner, 2026-11-16): a switch that turns passkeys off for testing
 The owner: "offer me option to turn off pass key, currently I feel they are frictions … we should be able to turn it
 on when we want … I want to be able to test the system without any frictions." While a `passkeys_off` row in
-`platform_switches` is live (`until` in the future), the staff and partner passkey checks count as made for people who
-already qualify: staff, and live partner people. Everything else holds: signing in still needs the email, roles and
-store access don't change, and the row ends by itself. No role can read or write the switch; Frrata's operator sets it
-in the Supabase SQL editor on the owner's word, with an audit row (`docs/setup.md` § Passkeys off). Proof:
-`scripts/verify/tenancy.sql` § 88. Before real merchants trust the platform with their stores, the switch stays off.
+`platform_switches` is live (`until` in the future, at most 7 days from when it was set), getting in counts as
+checked for people who already qualify: staff, and live partner people (owners, leads and Builders). What still needs a
+real passkey: adding, approving, listing and removing passkeys, for staff and partners and from Admin (security review
+2026-11-16 H1: otherwise a passkey enrolled with an inbox alone would outlive the switch). Signing in still needs the
+email; roles and store access don't change; the row ends by itself; a trigger writes an audit row for every change. No
+role can read or write the switch: Frrata's operator sets it in the Supabase SQL editor on the owner's word
+(`docs/setup.md` § Passkeys off). While it is on, a staff inbox alone opens Admin and support visits (S5 reopened for
+the window), so it stays off once real merchants trust the platform. Proof: `scripts/verify/tenancy.sql` § 88.
