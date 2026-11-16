@@ -48,3 +48,12 @@ only). Spec: `docs/specs/2026-11-12-staff-passkeys.md`.
 Order: GitHub and the package registry before the first kit release; Admin before Frrata hosts shop websites (V2).
 `requireStaff` then requires a live passkey step-up, with no branch-protection bypass for staff accounts. Source:
 `docs/specs/2026-11-12-kit-and-fleet.md` § 7 (security review H3).
+
+## Amendment (owner, 2026-11-16): a switch that turns passkeys off for testing
+The owner: "offer me option to turn off pass key, currently I feel they are frictions … we should be able to turn it
+on when we want … I want to be able to test the system without any frictions." While a `passkeys_off` row in
+`platform_switches` is live (`until` in the future), the staff and partner passkey checks count as made for people who
+already qualify: staff, and live partner people. Everything else holds: signing in still needs the email, roles and
+store access don't change, and the row ends by itself. No role can read or write the switch; Frrata's operator sets it
+in the Supabase SQL editor on the owner's word, with an audit row (`docs/setup.md` § Passkeys off). Proof:
+`scripts/verify/tenancy.sql` § 88. Before real merchants trust the platform with their stores, the switch stays off.

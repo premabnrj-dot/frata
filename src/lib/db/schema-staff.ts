@@ -104,3 +104,21 @@ export const staffNotices = pgTable('staff_notices', {
   // T1b: the same pipe sends partner security emails (to the person and the partner's owner; drizzle/0129).
   check('staff_notices_kind', sql`${t.kind} in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed')`),
 ])
+
+/**
+ * Platform switches (owner, 2026-11-16: "offer me option to turn off pass key … we should be able to turn it on when we
+ * want"). One row per switch, live while `until` is in the future, so a switch left on ends by itself. `passkeys_off`:
+ * staff and partner passkey checks count as made (app_staff_live_stepup, app_partner_live_stepup; drizzle/0151) for
+ * people who are already staff or live partner people; signing in still needs the email. Definers only: no role reads
+ * or writes this table; it is set by Frrata's operator on the owner's word, with an audit row.
+ */
+export const platformSwitches = pgTable('platform_switches', {
+  key: text('key').primaryKey(),
+  until: at('until').notNull(),
+  setAt: createdAt(),
+  setBy: text('set_by').notNull(),
+  reason: text('reason').notNull(),
+}, (t) => [
+  check('platform_switches_key', sql`${t.key} in ('passkeys_off')`),
+  check('platform_switches_reason', sql`length(${t.reason}) between 1 and 200`),
+])

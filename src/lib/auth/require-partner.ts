@@ -46,9 +46,13 @@ export const requirePartner = cache(async (): Promise<PartnerResult> => {
   // Frrata paused this partner (Admin): the workspace says so; access to every store already ended in the database.
   if (partner.suspendedAt) return { ok: false, reason: 'suspended', message: 'Frrata has paused this partner account' }
   const [access, proof] = await Promise.all([accessOf(user.userId), partnerProof(user.userId)])
-  if (!access.partnerConfirmedAt || !proof) {
+  // With the passkeys-off switch on (drizzle/0151, owner 2026-11-16) the database counts the check as made without a
+  // step-up cookie: the session comes from sign-in and the hash is empty, and every app_partner_* definer re-reads the
+  // same switch. Without the switch a missing cookie never yields partnerConfirmedAt, so this path stays closed.
+  const sessionId = proof?.sessionId ?? (access.partnerConfirmedAt ? await sessionIdOf(user.userId) : null)
+  if (!access.partnerConfirmedAt || !sessionId) {
     return { ok: false, reason: 'needs_passkey', message: 'Confirm it’s you',
       identity: { kind: 'partner-identity', userId: user.userId, email: user.email, partner, sessionId: await sessionIdOf(user.userId) } }
   }
-  return { ok: true, userId: user.userId, email: user.email, partner, sessionId: proof.sessionId, stepup: proof.hash, confirmedAt: new Date(access.partnerConfirmedAt) }
+  return { ok: true, userId: user.userId, email: user.email, partner, sessionId, stepup: proof?.hash ?? '', confirmedAt: new Date(access.partnerConfirmedAt) }
 })

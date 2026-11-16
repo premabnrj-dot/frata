@@ -123,6 +123,15 @@ has a passkey on the first day, so the owner lets themself in once (about two mi
 Passkeys belong to the console's host (`NEXT_PUBLIC_CONSOLE_HOST`). When the console moves to `app.frrata.com`, everyone
 adds passkeys again through steps 1–5.
 
+### Passkeys off, for testing (owner, 2026-11-16; ADR-0007 amendment)
+On the owner's word, Frrata's operator runs one of these in the Supabase SQL editor (project `frata`). Off for 7 days:
+```sql
+insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '7 days', 'operator', 'Owner: testing without passkeys')
+  on conflict (key) do update set until = excluded.until, set_by = excluded.set_by, reason = excluded.reason, created_at = now();
+```
+On again at once: `delete from platform_switches where key = 'passkeys_off';`. Either way, add an audit row
+(`audit_events`, action `platform.passkeys_off` or `platform.passkeys_on`). The switch also ends by itself at `until`.
+
 ### Rename day: Frrata (brand spec 2026-11-07)
 
 **Domains (owner, 2026-11-16: "frrata.com will be the public domain. .shop will remain the subdomain, frratamail will

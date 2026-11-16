@@ -4740,4 +4740,36 @@ delete from tenants where id = 'c8700000-0000-0000-0000-000000000005';
 \else
 do $$ begin raise exception 'FAIL: dblink is not installed, so § 87''s race proof cannot run'; end $$;
 \endif
-\echo 'tenancy proof — all 87 checks passed'
+-- § 88 · The passkeys-off switch (drizzle/0151, owner 2026-11-16). Off by default; on, it counts the passkey check as
+-- made only for people who already qualify (staff; a live partner person), never for anyone else; it ends by itself at
+-- `until`; and no role can read the switch or call its reader.
+reset role;
+do $$ declare staff uuid := 'aaaaaaaa-0000-0000-0000-000000000001'; outsider uuid := gen_random_uuid(); p uuid; s uuid := gen_random_uuid(); a jsonb;
+begin
+  delete from public.platform_switches;
+  select pm.user_id into p from public.partner_members pm where pm.user_id is not null and exists (select 1 from public.app_pm_live(pm.user_id)) limit 1;
+  if p is null then raise exception 'FAIL: 88 needs a live partner person'; end if;
+  if public.app_staff_live_stepup(staff, s, 'none') is not null then raise exception 'FAIL: 88 a staff check passed with the switch off'; end if;
+  if public.app_partner_live_stepup(p, s, 'none') is not null then raise exception 'FAIL: 88 a partner check passed with the switch off'; end if;
+  if (public.app_access_for(p, s, null, null)->>'partnerConfirmedAt') is not null then raise exception 'FAIL: 88 partner access confirmed with the switch off'; end if;
+  insert into public.platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 hour', 'proof', 'proof');
+  if public.app_staff_live_stepup(staff, s, 'none') is null then raise exception 'FAIL: 88 the switch did not cover a staff member'; end if;
+  if (public.app_access_for(staff, s, null, null)->>'staffConfirmedAt') is null then raise exception 'FAIL: 88 staff access not confirmed with the switch on'; end if;
+  if public.app_partner_live_stepup(p, s, 'none') is null then raise exception 'FAIL: 88 the switch did not cover a live partner person'; end if;
+  a := public.app_access_for(p, s, null, null);
+  if (a->>'partnerConfirmedAt') is null then raise exception 'FAIL: 88 partner access not confirmed with the switch on'; end if;
+  if jsonb_array_length(a->'partnerHeld') <> 0 then raise exception 'FAIL: 88 a partner store still held with the switch on'; end if;
+  if public.app_staff_live_stepup(outsider, s, 'none') is not null or public.app_partner_live_stepup(outsider, s, 'none') is not null
+    then raise exception 'FAIL: 88 the switch covered someone who is neither staff nor a partner'; end if;
+  if (public.app_access_for(outsider, s, null, null)->>'staffRole') is not null then raise exception 'FAIL: 88 the switch made someone staff'; end if;
+  update public.platform_switches set until = now() - interval '1 second';
+  if public.app_staff_live_stepup(staff, s, 'none') is not null or public.app_partner_live_stepup(p, s, 'none') is not null
+    then raise exception 'FAIL: 88 the switch outlived its until'; end if;
+  delete from public.platform_switches;
+  if has_table_privilege('frata_app', 'public.platform_switches', 'select') or has_table_privilege('frata_admin', 'public.platform_switches', 'select')
+     or has_table_privilege('frata_builder', 'public.platform_switches', 'select') or has_table_privilege('frata_app', 'public.platform_switches', 'insert')
+    then raise exception 'FAIL: 88 a role can read or write the switch'; end if;
+  if has_function_privilege('frata_app', 'public.app_passkeys_off()', 'execute') or has_function_privilege('anon', 'public.app_passkeys_off()', 'execute')
+    then raise exception 'FAIL: 88 a role can call the switch''s reader'; end if;
+end $$;
+\echo 'tenancy proof — all 88 checks passed'
