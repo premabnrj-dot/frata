@@ -56,7 +56,7 @@ export function Bars({ bars, offer, canSave, lock, targets }: { bars: BarRow[]; 
   }
   const mark = async (b: BarRow, how: 'end' | 'delete') => {
     const r = await (how === 'end' ? endBarAction : deleteBarAction)({ id: b.id, version: b.version })
-    if (!r.ok) { refused(toast, router.refresh, r.error, () => void mark(b, how)); return }
+    if (!r.ok) { refused(toast, () => settle(router), r.error, () => void mark(b, how)); return }
     settle(router)
     toast({ text: how === 'end' ? 'Bar ended' : 'Bar deleted', undo: () => reread(undoContentAction({ id: b.id, version: r.version })) })
   }
