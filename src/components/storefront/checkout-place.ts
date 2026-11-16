@@ -1,6 +1,7 @@
 import { cleanMobile } from '@/domains/checkout/mobile'
 import { cleanEmail } from '@/domains/email/shape'
 import { inr, type PublicQuote } from './shop-client'
+export { cleanGstin } from '@/domains/tax/gstin-clean'
 
 // Checkout's code for a tap on Place order and its refusals, loaded then, never on first paint (checkout's budget).
 

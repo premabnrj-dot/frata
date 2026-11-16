@@ -25,6 +25,9 @@ const BUDGET_KB = 120
 // Checkout 121.3 (PI·2 release, 2026-11-12): 248fa64 measured 120.73 kB here and passed on Vercel, whose build adds about
 // 0.2 kB to the shared chunk; webpack's runtime lists every route's chunks, so each new console page costs every shop page
 // a few bytes, and PI·2's pages tipped it to 121.0x there. Splitting the checkout form is the fix, not another raise.
+// Split 2026-11-16 (no raise): the bag drawer's lines (bag-contents.tsx) load when the page settles or the bag opens, the
+// attribution capture after the page runs (capture-attribution.ts), checkout's offers and code line on its mount
+// (checkout-offers.tsx). Measured here: checkout 121.08 → 119.70, About/FAQ 112.84 → 108.45, product 120.54 → 118.02 kB.
 const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121.3, '/s/[host]/(shop)/pages/[handle]/page': 113 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
