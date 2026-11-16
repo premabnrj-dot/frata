@@ -22,6 +22,10 @@ Load the partner skill first: `.claude/skills/frrata-site/SKILL.md`. Docs: https
    by them.
 6. **The bag goes to checkout only through the bag link**: `cartLink()` in `lib/cart-link.ts` (generated, don't edit).
    Never build a checkout, take a payment or hand-make a `/cart?l=` link.
+7. **The brand is the store's.** Logo files, colours and fonts come from `shop.brand` (the brand sets them in Console ›
+   Brand): `<BrandStyle>` once in the layout, `<Logo>` for every logo (`components/frrata/`). Never add a logo, brand or
+   monogram file, draw a logo in SVG, or write a colour or font family in CSS or code. To change the brand, ask the
+   brand to change it in Console › Brand.
 
 ## Commands
 
@@ -29,6 +33,6 @@ Load the partner skill first: `.claude/skills/frrata-site/SKILL.md`. Docs: https
   drafts too, never cached, works from localhost until the store opens.
 - `npm run build` — runs `check`, builds, then fails if a key reached the browser bundle.
 - `npm run check` — the rules above: no key in source, the legal block, no price arithmetic, no HTML, the paths, the
-  bag link.
+  bag link, the brand from the store.
 
 Work on a branch; the host builds a preview of it; merge to publish.
