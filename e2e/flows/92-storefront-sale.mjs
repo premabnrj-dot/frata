@@ -220,6 +220,7 @@ export default {
         if (await p.getByRole('radio', { name: /Runs on Frrata/ }).getAttribute('aria-checked') !== 'true') {
           await p.getByRole('radio', { name: /Runs on Frrata/ }).click()
           await p.getByLabel('Unsaved changes').getByRole('button', { name: /^Save/ }).click()
+          await p.getByRole('dialog', { name: 'Run your website on Frrata?' }).getByRole('button', { name: 'Run on Frrata' }).click()
           await expectToast(p, 'Saved', 'ok')
         }
       } catch (e) { console.error('     storefront-sale › putting the Website back through the app failed:', e.message) }
