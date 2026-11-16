@@ -33,9 +33,12 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
     </div>
   )
   return (
-    <div role="status" className="grid justify-items-center gap-3">
-      <span aria-hidden="true" className="size-6 rounded-full border-2 border-store-line border-t-store-button motion-safe:animate-spin" />
-      <p className="text-store-sub">{words.opening}</p></div>
+    // The spinner is SVG's own animation (no CSS added to the shop's sheet, budget 15.9 kB); a reduced-motion browser
+    // still sees the words, and the page lasts under a second.
+    <div role="status" className="grid place-items-center gap-3 text-store-sub">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" opacity=".25" />
+        <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite" /></path></svg>
+      <p>{words.opening}</p></div>
   )
 }
 

@@ -30,7 +30,7 @@ export function Table({ head, rows, mono = true }: { head: string[]; rows: strin
   return (
     <div className="overflow-x-auto"><table className="w-full border-collapse text-sm">
       <thead><tr>{head.map((h) => <th key={h} scope="col" className="bg-sunk px-2.5 py-2 text-left text-small font-medium text-muted-foreground">{h}</th>)}</tr></thead>
-      <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-line-soft">{r.map((c, j) => <td key={j} className={`px-2.5 py-2 align-top ${j === 0 && mono ? 'font-mono text-small md:whitespace-nowrap max-md:[overflow-wrap:anywhere]' : ''}`}>{j === 0 && mono ? c : rich(c)}</td>)}</tr>)}</tbody>
+      <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-line-soft">{r.map((c, j) => <td key={j} className={`px-2.5 py-2 align-top ${j === 0 && mono ? 'font-mono text-small whitespace-nowrap' : ''}`}>{j === 0 && mono ? c : rich(c)}</td>)}</tr>)}</tbody>
     </table></div>
   )
 }
