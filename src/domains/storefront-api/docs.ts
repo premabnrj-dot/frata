@@ -42,6 +42,8 @@ export const GUIDES: Guide[] = [
     { rows: [['l', 'Up to 20 lines. Each line is a size `id` and a quantity, 1–10. A quantity over 10 is lowered to 10.'], ['code', 'An offer code. Optional.'], ['utm_*', 'Your campaign tags, passed through unchanged. Optional.']], head: ['Part', 'Rule'] },
     { code: 'https://checkout.kesarstudio.in/cart?l=8f2c…e1:1,41ab…09:2&utm_source=instagram' },
     { p: 'The store’s checkout prices the bag again. Checkout removes sizes that sold out.' },
+    { p: 'A link opened from your site replaces the checkout bag. Your site is the Website address in Settings › Website.' },
+    { p: 'From other sites, a link replaces a bag filled only by bag links. It adds to a bag the shopper built on the store’s pages.' },
     { p: 'The checkout address is the `checkoutOrigin` field in `shop`. `shop.cart` gives the link and its limits.' },
     { p: 'The link never changes meaning. Anything new comes as a new part.' },
   ] },
