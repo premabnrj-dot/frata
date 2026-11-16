@@ -22,7 +22,7 @@ export const GUIDES: Guide[] = [
   { slug: 'start', title: 'Start', lead: 'Build a brand’s website on its Frrata store. Frrata keeps the catalogue, checkout, payments and orders.', body: [
     { h: 'Your first read' },
     { code: `curl ${BASE}/k/${KEY}/products/page/1` },
-    { code: '{\n  "page": 1, "pages": 5, "total": 212, "truncated": false,\n  "products": [{ "handle": "ilkal-saree-maroon", "title": "Ilkal saree, maroon",\n    "price": { "min": 349000, "max": 349000, "priorPrice": null }, "availability": { "kind": "in_stock" } }]\n}' },
+    { code: '{\n  "page": 1, "pages": 5, "total": 212, "truncated": false,\n  "products": [{\n    "handle": "ilkal-saree-maroon", "title": "Ilkal saree, maroon",\n    "price": { "min": 349000, "max": 349000, "priorPrice": null },\n    "availability": { "kind": "in_stock" }\n  }]\n}' },
     { p: 'Prices are in paise. Text has no HTML.' },
     { h: 'Build the first site with Claude Code' },
     { p: 'The starter is a working site. Its `CLAUDE.md` gives Claude Code the rules, and `npm run check` enforces them.' },

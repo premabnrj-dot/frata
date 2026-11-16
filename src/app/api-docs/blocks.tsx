@@ -22,7 +22,8 @@ export function Blocks({ body }: { body: Block[] }) {
     : 'p' in b ? <p key={i} className="max-w-[68ch]">{rich(b.p)}</p>
     : 'get' in b ? <Get key={i} path={b.get} />
     // A phone wraps a long line rather than scrolling sideways (mockup § Docs phone).
-    : 'code' in b ? <pre key={i} className="overflow-x-auto rounded-lg bg-bar px-4 py-3.5 font-mono text-[12.5px] leading-[19px] whitespace-pre text-bar-foreground max-md:whitespace-pre-wrap max-md:[overflow-wrap:anywhere]">{b.code}</pre>
+    // One-line commands break after a slash, the next line indented (as drawn).
+    : 'code' in b ? <pre key={i} className={`overflow-x-auto rounded-lg bg-bar px-4 py-3.5 font-mono text-[12.5px] leading-[19px] whitespace-pre text-bar-foreground max-md:whitespace-pre-wrap ${b.code.includes('\n') ? '' : 'max-md:pl-8 max-md:-indent-4'}`}>{b.code.includes('\n') ? b.code : b.code.split('/').map((s, j) => <Fragment key={j}>{j ? <>/<wbr /></> : null}{s}</Fragment>)}</pre>
     : <Table key={i} head={b.head} rows={b.rows} />)}</>
 }
 

@@ -69,15 +69,15 @@ export default async function StorefrontApiPage({ searchParams }: { searchParams
   return (
     <>
       {/* On a phone a chosen store is its own page: the list hides, a way back shows (mockup § Admin phone). */}
-      {/* display: contents, so the header and tabs keep the page's own spacing (as on Versions). */}
-      <div className={chosen ? 'contents max-lg:hidden' : 'contents'}>{header}{tabs}</div>
+      {/* A real box with the shell's own rhythm, so the header and tabs sit as on Versions. */}
+      <div className={chosen ? 'space-y-6 max-lg:hidden' : 'space-y-6'}>{header}{tabs}</div>
       {chosen ? <div className="lg:hidden"><Link href="/admin/storefront-api" className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground"><Icon name="back" className="size-4" />Storefront API</Link>
         <h1 className="font-display text-title font-semibold [overflow-wrap:anywhere]">{chosen.name}</h1></div> : null}
       {waiting ? <div className={chosen ? 'max-lg:hidden' : ''}><NeedsBand className="mb-4" title={`${waiting === 1 ? '1 website' : `${formatCount(waiting)} websites`} with no reads for 2 days`} /></div> : null}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className={chosen ? 'max-lg:hidden' : ''}>
           <Section flush ariaLabel="Stores"><ul data-list className="divide-y divide-border">
-            {shown.map((r) => <li key={r.tenantId}><StoreRow r={r} today={today} on={open?.tenantId === r.tenantId} href={href(r.tenantId)} /></li>)}
+            {shown.map((r) => <li key={r.tenantId}><StoreRow r={r} today={today} on={chosen ? chosen.tenantId === r.tenantId : open?.tenantId === r.tenantId} wide={!chosen} href={href(r.tenantId)} /></li>)}
           </ul></Section>
           {pages > 1 ? <nav aria-label="Pages" className="mt-3 flex items-center justify-end gap-3 text-sm">
             {page > 1 ? <Link href={`/admin/storefront-api?page=${page - 1}`} className="underline">Previous</Link> : null}
@@ -107,10 +107,11 @@ const lastReadWord = (r: ApiShopRow, today: string) => r.lastRead === null ? 'Ne
 /** The phone list's shorter words (as drawn): "13 Nov", "Never". */
 const lastReadShort = (r: ApiShopRow, today: string) => lastReadWord(r, today).replace(/^Last read /, '').replace(/^Never read$/, 'Never')
 
-function StoreRow({ r, today, on, href }: { r: ApiShopRow; today: string; on: boolean; href: string }) {
+/** `wide`: the open row is only the computer's (on a phone nothing is chosen until a store is tapped). */
+function StoreRow({ r, today, on, wide, href }: { r: ApiShopRow; today: string; on: boolean; wide: boolean; href: string }) {
   const chip = <StateChip r={r} today={today} />
   return (
-    <Link href={href} aria-current={on || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 text-sm hover:bg-accent ${on ? 'bg-select' : ''}`}>
+    <Link href={href} aria-current={on || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 text-sm hover:bg-accent ${on ? (wide ? 'lg:bg-select' : 'bg-select') : ''}`}>
       <span className="truncate font-medium">{r.name}</span>
       <span className="text-right text-muted-foreground">{apiShopState(r, today) === 'reading' ? <span className="font-num">{keysWord(r.liveKeys + r.testKeys)}</span> : chip}</span>
       <span className="truncate font-mono text-small text-muted-foreground">{r.siteHost ?? '—'}</span>

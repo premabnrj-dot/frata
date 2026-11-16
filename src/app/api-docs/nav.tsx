@@ -10,7 +10,7 @@ type Group = { label: string; items: { href: string; label: string; code: boolea
 /** The docs' guides and reference: a side list on a computer, a menu on a phone (mockup § Docs phone). */
 export function DocsNav({ groups, phone = false }: { groups: Group[]; phone?: boolean }) {
   const path = usePathname()?.replace(/^\/api-docs/, '/docs') ?? ''
-  if (phone) return <span className="md:hidden"><Menu label="Docs pages" size="sm" variant="ghost" chevron={false} icon={<MoreHorizontal aria-hidden="true" className="size-4" />}
+  if (phone) return <span className="md:hidden"><Menu label="Docs pages" size="sm" variant="ghost" framed chevron={false} icon={<MoreHorizontal aria-hidden="true" className="size-4" />}
     items={groups.flatMap((g) => g.items.map((i) => ({ label: i.label, href: i.href })))} /></span>
   return (
     <nav aria-label="Docs" className="grid gap-0.5 text-sm">

@@ -112,7 +112,7 @@ export function Pages({ pages, canSave, lock, ctx, templates, preview = null }: 
         {pv && preview ? <fieldset className="grid gap-2"><legend className="mb-2 text-label font-medium">Key your website uses</legend>
           {preview.keys.map((k) => (
             <label key={k.id} className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 rounded-md border border-field px-3 py-2.5 has-[:checked]:border-2 has-[:checked]:border-primary has-[:checked]:bg-select">
-              <input type="radio" name="preview-key" checked={pv.keyId === k.id} onChange={() => setPv({ ...pv, keyId: k.id })} className="mt-0.5 size-4 shrink-0 appearance-none rounded-full border border-field bg-card checked:border-[5px] checked:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" />
+              <input type="radio" name="preview-key" checked={pv.keyId === k.id} onChange={() => setPv({ ...pv, keyId: k.id })} className="mt-0.5 size-4 shrink-0 appearance-none rounded-full border-[1.5px] border-field bg-card checked:border-primary checked:bg-primary checked:shadow-[inset_0_0_0_3px_var(--card)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" />
               <span className="font-medium">{k.name}</span>
               <span className="col-start-2 text-small text-muted-foreground"><span className="font-mono">{k.prefix}…</span>{k.used ? ` · ${k.used}` : ''}</span>
             </label>))}
