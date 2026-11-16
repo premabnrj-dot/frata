@@ -33,6 +33,9 @@ can start now (every store is test data, owner 2026-11-15); **a store with real 
    Apps (one line; the terms version bumps with it).
 3. **Stores without a paid plan: "Yes."** They get the default, under the Launch cap (100 codes a day).
 Preconditions (b) and (c) stand: each store's privacy page says it offers EkCode before real shoppers reach it.
+**(d) is open** (orchestrator, 2026-11-16): Frrata has no merchant terms yet (signup shows none, records no acceptance,
+has no version). When counsel writes them (`docs/setup.md` § EkCode A4(b)), they include "EkCode is on by default; turn
+it off in Apps", and signup records acceptance with a version. No signup line until then.
 
 ## Design
 - **The default is data in one place:** the registry gains `defaultOn: true` for `ekcode` (`src/domains/modules/registry.ts`).
