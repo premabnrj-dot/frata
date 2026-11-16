@@ -1,6 +1,6 @@
 # ADR-0017: Shop websites run on Cloudflare Workers for Platforms, in an account apart from the console
 
-Status: **proposed, revised** (2026-11-15). The owner: "why not stick to vercel only for now? do not wish to have
+Status: **accepted as revised: Vercel only** (owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT), decision S1; rules 3, 4 and 6 superseded by ADR-0019). Earlier: **proposed, revised** (2026-11-15). The owner: "why not stick to vercel only for now? do not wish to have
 complexity". **Revised recommendation: Vercel only for now** (§ Revised recommendation below); the Cloudflare design
 stays drawn as the second adapter. Owner, 2026-11-15: "we can go ahead for the test then. If this is too much of work,
 we can plan testing later": **the test is planned as V2's first step** (§ The test, when) · amends ADR-0005 · Pairs with: ADR-0014

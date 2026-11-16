@@ -1,5 +1,5 @@
 # One address, one bag, one brand record: the build
-Status: draft for the owner · Spec: `docs/specs/2026-11-16-one-address-checkout.md` (draft) · Record: ADR-0019 (proposed)
+Status: active (approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT)) · Spec: `docs/specs/2026-11-16-one-address-checkout.md` (draft) · Record: ADR-0019 (accepted)
 · Date: 2026-11-16
 **Mockup:** none yet — each phase names its own below (P1, P2, P3, P5 new; P6 the pilot's own; P0 and P4 none, no screen)
 **Approved:** —

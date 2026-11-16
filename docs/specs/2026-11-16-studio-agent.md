@@ -1,5 +1,5 @@
 # Studio's agent: every step in chat, on Frrata's own Claude account
-Status: draft for the owner · Date: 2026-11-16 · Mockup: the approved flow is
+Status: active (approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT); S9, S14, S26 replaced by the one-address plan, S27 renumbered ADR-0020) · Date: 2026-11-16 · Mockup: the approved flow is
 https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ (`docs/mockups/2026-11-15-studio-one-screen.html`), with three
 deviations to redraw (§ 14); the states this spec adds are drawn per phase (plan `docs/plans/2026-11-12-studio-build.md`)
 · Approved: — · Revises: the agent, runtime, environment, developer and credits parts of

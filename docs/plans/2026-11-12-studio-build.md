@@ -1,5 +1,5 @@
 # Studio and partners: the build
-Status: active (owner, 2026-11-12: "build now") for T1a–P2, built; **the remaining phases are a draft for the owner**
+Status: active (owner, 2026-11-12: "build now") for T1a–P2, built; **the remaining phases approved** (owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT))
 (revised 2026-11-16) · Specs: `docs/specs/2026-11-16-studio-agent.md` (the agent, hosting, credits; draft),
 `docs/specs/2026-11-16-partner-publishing.md`, `docs/specs/2026-11-15-studio-one-screen.md`,
 `docs/specs/2026-11-12-studio-intake-and-team.md`, `docs/specs/2026-11-12-studio-shell-clients-billing.md`,

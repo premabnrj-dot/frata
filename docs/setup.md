@@ -515,3 +515,20 @@ After SA1b's migration is applied and the release is live:
    4. Work on a branch and push it: Vercel builds a preview of the branch. `npm run check` and the build must pass.
    5. Merge to `main` to publish. In the site's Vercel project, set `FRRATA_KEY` to the **live** key (Production,
       Sensitive) once the store opens.
+
+## Owner steps from the Studio and one-address decisions (owner, 2026-11-16: "approve all")
+Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unblocks the phase named.
+1. **O23 · Vercel billing** — Vercel › Settings › Billing for team premabnrj-dots-projects: say whether Flat Rate CDN
+   is on and which tier; turn it on if it is off. Unblocks: pricing hosting (P5·0, S18).
+2. **S19 · GST on Anthropic's invoices** — ask the CA whether the GST input credit on Anthropic's bills can be claimed.
+   Unblocks: selling credits (C1). Building C1 does not wait.
+3. **S3 · Claude Console** — create an organisation in the company's name with workspaces `studio` and `studio-eval`;
+   set a monthly spend limit. Never share the key in chat: the session asks for it through the secure form. Unblocks:
+   the agent spike (V3a·1).
+4. **S8 · GitHub** — create the organisation `frrata-sites` on GitHub Team, require passkeys, turn Actions off.
+   Unblocks: sites on Frrata's account (V2a).
+5. **S22 · Vercel teams** — create the site-hosting team, the build-service team and a staging team (about $40 a
+   month). Unblocks: V2a.
+6. **O4 · frrata.shop** — renew it to 3 years at Hostinger (about ₹9,150 with GST). Then the Public Suffix List
+   submission (P4b) is opened from your GitHub account.
+7. **O6 · Preview domain** — buy one `.com`-priced domain for previews (about ₹3,200 for 3 years); tell me the name.

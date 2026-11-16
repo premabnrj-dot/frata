@@ -1,6 +1,6 @@
 # ADR-0019: One address per store: Frrata at the door, the site behind it, shopper data in a frame
 
-Status: **proposed** (2026-11-16; five independent reviews folded in the same day) · Source: `docs/specs/2026-11-16-one-address-checkout.md` · Plan:
+Status: **accepted** (owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT); five independent reviews folded in the same day) · Source: `docs/specs/2026-11-16-one-address-checkout.md` · Plan:
 `docs/plans/2026-11-16-one-address-checkout.md` · Supersedes: ADR-0014 amendments 4 and 7, ADR-0017 rules 3, 4 and 6, the
 kit spec's § 1 (`docs/specs/2026-11-12-kit-and-fleet.md`) · Amends: ADR-0014 rules 2 and 3, ADR-0018 § 4, § 10 and its
 test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-0020.
