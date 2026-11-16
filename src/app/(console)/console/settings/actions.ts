@@ -177,7 +177,7 @@ export async function askOwnerAction(page: unknown): Promise<{ ok: true } | { ok
   const me = await requireMember(CAN_BUILD)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A support visit can’t ask the owner.' }
-  if (!(await withinLimit(LIMITS.askOwner, `${me.membership.tenantId}:${me.userId}`, new Date(), true))) return { ok: false, error: 'Too many asks in the last hour. Try again later.' }
+  if (!(await withinLimit(LIMITS.askOwner, `${me.membership.tenantId}:${me.userId}`, new Date(), true))) return { ok: false, error: 'Too many asks this hour. Try again in an hour.' }
   try {
     const r = await asMember(CAN_BUILD, { action: 'settings.ask_owner', target: parsed.data }, async (tx, auth) => {
       const [row] = await tx.execute<{ asked: boolean }>(sql`select app_ask_owner(${auth.userId}::uuid, ${parsed.data}) as asked`)
