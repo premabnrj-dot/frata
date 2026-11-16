@@ -1,0 +1,11 @@
+{
+  "agent": "unit-economics-reviewer",
+  "query": "Review this proposed change for what it does to merchant profit, Frrata revenue and the money rules. Return findings with rupee figures where you can.",
+  "input": "+++ src/lib/billing/fee.ts\n+// Frrata's per-order fee: 2% of the order, charged on every order placed.\n+export function orderFee(order: { totalRupees: number }) {\n+  return Math.round(order.totalRupees * 0.02 * 100) / 100\n+}\n+++ drizzle/0151_fee.sql\n+ALTER TABLE \"orders\" ADD COLUMN \"frata_fee_rupees\" numeric(10,2);",
+  "expected_behavior": [
+    "Flags that money must be integer paise end to end (bigint columns, src/domains/money/paise.ts), not rupees or numeric/float",
+    "Flags that the fee is charged on orders placed rather than delivered orders, which charges merchants for RTO and cancelled orders",
+    "Flags that storing the fee as a column duplicates a fact that should be derived once",
+    "Gives at least one rupee figure, e.g. what the fee costs a merchant on RTO orders"
+  ]
+}

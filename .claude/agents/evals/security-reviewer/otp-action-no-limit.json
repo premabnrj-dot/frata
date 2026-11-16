@@ -1,0 +1,11 @@
+{
+  "agent": "security-reviewer",
+  "query": "Review this proposed server action for security. Return ranked findings with the fix.",
+  "input": "+++ src/app/s/[host]/account/actions.ts\n+'use server'\n+import { sendOtp } from '@/lib/ekcode/otp'\n+\n+export async function requestCode(form: FormData) {\n+  const phone = String(form.get('phone'))\n+  const res = await sendOtp(phone)\n+  return { ok: true, debug: res }\n+}",
+  "expected_behavior": [
+    "Flags that there is no rate limit, by phone and by IP (IPv6 per /64), failing closed",
+    "Flags that the input has no Zod schema with a length cap",
+    "Flags that the reply returns the raw provider result instead of named fields only",
+    "Flags that the OTP send is a request a person waits on, which must be an attempt row committed before the request (ADR-0008)"
+  ]
+}

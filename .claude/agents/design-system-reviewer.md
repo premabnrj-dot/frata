@@ -3,7 +3,7 @@ name: design-system-reviewer
 description: Reviews a Frrata UI diff or screen for design-system discipline and accessibility - colours only through tokens, only the design language's primitives (no hand-rolled buttons, chips, tables, cards), type scale and weights, radius and shadow by role, numbers tabular (mono only for codes), states drawn (empty, loading, error, disabled, phone), focus visible, 24 px targets, labels tied to fields, live regions, keyboard paths, reduced motion, contrast. Run it on any diff under src/app/(console), src/app/(admin), src/components or a partner page. It reads, runs the gates and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -29,3 +29,6 @@ For the diff (`git diff <range> -- src`):
 7. **Motion:** only the motion tokens; lists never animate; nothing moves without a reason.
 
 Report: PASS/FAIL, then findings `file:line · what · use instead`, worst first. Under 500 words.
+
+**Before you report**, read `docs/decisions/accepted-findings.md`. A finding that matches a row there is not raised
+again: list it in one line under "Accepted" with the row number. A row whose condition no longer holds is a finding.

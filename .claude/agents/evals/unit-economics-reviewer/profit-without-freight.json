@@ -1,0 +1,11 @@
+{
+  "agent": "unit-economics-reviewer",
+  "query": "Review this proposed change for what it does to profit per order and the business model. Return findings with rupee figures where you can.",
+  "input": "+++ src/app/(console)/console/orders/_components/order-profit.tsx\n+// Profit shown on each order row.\n+export function OrderProfit({ order }: { order: { pricePaise: bigint; cogsPaise: bigint; feePaise: bigint } }) {\n+  const profit = order.pricePaise - order.cogsPaise - order.feePaise\n+  return <span>{(Number(profit) / 100).toFixed(2)}</span>\n+}",
+  "expected_behavior": [
+    "Flags that profit per order is computed here instead of read from src/domains/orders/profit.ts (a second copy)",
+    "Flags that freight, payment fees and RTO cost are missing, so profit is overstated on COD orders",
+    "Flags that money is formatted by hand instead of <Money> / src/lib/format.ts",
+    "Gives a rupee example of the overstatement on an order"
+  ]
+}

@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.10.0
+  version: 1.11.0
   owner: owner
   verified: 2026-11-11
   covers: ["scripts/verify/**", "e2e/run.mjs", "e2e/stack.mjs", "scripts/check-mockup.mjs"]
@@ -23,6 +23,10 @@ npm run build       # postbuild: check:client-bundle, check:storefront-build (sh
 A gate you added: plant a violation and watch it fail before trusting it. Before every `git commit` the pre-bash hook
 (`scripts/hooks/pre-bash.mjs`) runs `npm run gates` and stops the commit on a failure; `Gates: skipped — <why>` in
 the message is for a `main` that is already red, not for this commit's own failure.
+
+A skill's or review agent's behaviour changing in meaning (a major version)? Run its evals first and commit the
+result: `npm run eval -- <skill-or-agent> --judge --record` (scenarios in the skill's `evals/` or
+`.claude/agents/evals/<agent>/`; results in `docs/evals/`). Read-only, two model calls a scenario.
 
 - **A definer gets a parity test against the app-side count** (offers O·4): whatever a SECURITY DEFINER function
   restates (`app_admin_offer_totals` restates the offer-use rule), an int test runs it and the app's own function

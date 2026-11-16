@@ -3,7 +3,7 @@ name: speed-reviewer
 description: Measures a Frata diff, branch, plan or page for speed at festive volume - statements per page and repeats, sequential awaits, a cached loader or second withTenant inside a transaction, EXPLAIN of new queries at a 10x seed, cached entry bytes against Next's 2 MB limit, shop HTML and RSC bytes, first-load JS per surface, preloaded fonts and priority images, cache tags a write invalidates, outbox batch x schedule against peak. Give it a branch, file list, spec or page. It measures and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -36,3 +36,6 @@ Then, for your scope (`git diff main...HEAD --stat` for a branch):
 Rank HIGH / MED / LOW. Each finding: file:line, the number that proves it, the fix.
 Report in ≤ 700 words: a verdict (WITHIN BUDGET / OVER BUDGET), a table of
 budget → measured, then the findings.
+
+**Before you report**, read `docs/decisions/accepted-findings.md`. A finding that matches a row there is not raised
+again: list it in one line under "Accepted" with the row number. A row whose condition no longer holds is a finding.

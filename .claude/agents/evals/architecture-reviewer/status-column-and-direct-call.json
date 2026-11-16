@@ -1,0 +1,11 @@
+{
+  "agent": "architecture-reviewer",
+  "query": "Run the design review on this proposed change. Return ranked findings with the fix each needs.",
+  "input": "+++ drizzle/0152_order_status.sql\n+ALTER TABLE \"orders\" ADD COLUMN \"status\" text NOT NULL DEFAULT 'placed';\n+++ src/app/(console)/console/orders/[number]/actions.ts\n+export async function markShipped(form: FormData) {\n+  const { tenantId } = await requireMember()\n+  const id = String(form.get('orderId'))\n+  await withTenant(tenantId, (tx) => tx.update(orders).set({ status: 'shipped' }).where(eq(orders.id, id)))\n+  await fetch('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc', { method: 'POST', body: JSON.stringify({ id }) })\n+}",
+  "expected_behavior": [
+    "Flags the status column: the order state is derived from timestamps in src/domains/orders/order-state.ts, there is no status column",
+    "Flags the direct outbound call: it must be enqueued into the outbox in the same transaction (ADR-0006)",
+    "Flags the bare fetch with no deadline (fetchWithTimeout)",
+    "Ranks findings and gives the fix for each"
+  ]
+}

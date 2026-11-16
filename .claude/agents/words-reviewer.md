@@ -3,7 +3,7 @@ name: words-reviewer
 description: Reviews every word a person reads in a Frrata diff, file list or mockup - console, Admin, partner workspace, emails, toasts, errors, dialogs, PDFs - against the Words rulebook (frata-design-language § Words, Neel mockup § Words) and the glossary, and returns each line that breaks a rule with its rewrite and file:line. Run it on any diff that touches UI strings, on every mockup before it is published, and for a copy sweep. It reads and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -38,3 +38,6 @@ Check each against:
 
 Report: a table `file:line · now · rewrite · rule #`, worst first (errors and confirms first, then buttons, then the
 rest); then a count by rule. Under 600 words; group repeats. Never rewrite legal text the law fixes (say so instead).
+
+**Before you report**, read `docs/decisions/accepted-findings.md`. A finding that matches a row there is not raised
+again: list it in one line under "Accepted" with the row number. A row whose condition no longer holds is a finding.

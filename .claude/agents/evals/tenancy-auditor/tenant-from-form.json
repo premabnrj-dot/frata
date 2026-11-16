@@ -1,0 +1,11 @@
+{
+  "agent": "tenancy-auditor",
+  "query": "Audit this proposed diff (it is not in the repo; read the repo only to compare with its rules). Return ranked findings with the fix.",
+  "input": "+++ src/app/(console)/console/orders/[number]/actions.ts\n+'use server'\n+import { requireMember } from '@/lib/auth/member'\n+import { withTenant } from '@/lib/db/tenant'\n+import { orders } from '@/lib/db/schema'\n+import { eq } from 'drizzle-orm'\n+\n+export async function cancelOrder(form: FormData) {\n+  await requireMember()\n+  const tenantId = String(form.get('tenantId'))\n+  const id = String(form.get('orderId'))\n+  await withTenant(tenantId, (tx) => tx.update(orders).set({ cancelledAt: new Date() }).where(eq(orders.id, id)))\n+}",
+  "expected_behavior": [
+    "Flags that the tenant id comes from the form, which a merchant can change to another shop's id",
+    "Says the tenant id must come from requireMember() (its returned tenant), never from a form, URL or body",
+    "Notes that requireMember is called but its result is ignored",
+    "Ranks it at the highest severity (critical or blocker)"
+  ]
+}

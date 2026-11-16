@@ -3,7 +3,7 @@ name: security-reviewer
 description: Reviews a Frata diff, branch, plan or the whole codebase for security beyond tenancy - who may call each action or route and whether its role tuple means that, IDOR on the row, Zod caps, replies, rate limits and fail-closed, webhook size caps and payload trimming, cookies and CSP and headers, XSS through merchant content, SSRF, open redirects, upload checks, secrets and key rotation, PII in rows and logs, preview environments, npm audit. Pair it with tenancy-auditor for data isolation. It reads, runs gates and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -51,3 +51,6 @@ confirm "unconfirmed".
 Rank CRITICAL / HIGH / MED / LOW, each with file:line, the exploit in two
 sentences, and the fix. Report in ≤ 700 words: a verdict (SAFE / FIX BEFORE MERGE),
 the gate output, then the findings.
+
+**Before you report**, read `docs/decisions/accepted-findings.md`. A finding that matches a row there is not raised
+again: list it in one line under "Accepted" with the row number. A row whose condition no longer holds is a finding.

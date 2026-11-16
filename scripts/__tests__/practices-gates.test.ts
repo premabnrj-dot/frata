@@ -55,6 +55,7 @@ describe('check:skills', async () => {
     expect(bumpProblem('x', before, skill('rule two\n', '  version: 1.1.0\n  owner: owner\n  verified: 2026-11-16'))).toBeNull()
     expect(bumpProblem('x', before, skill('rule one\n', '  version: 1.0.0\n  owner: someone\n  verified: 2026-11-17'))).toBeNull()
     expect(bumpProblem('x', null, before)).toBeNull()
+    expect(bumpProblem('x', before, before, 'ref: rule a', 'ref: rule b')).toMatch(/still 1\.0\.0/)
   })
   it('an agent needs its name, a description and metadata', () => {
     const root = mkdtempSync(join(tmpdir(), 'agents-'))
@@ -144,5 +145,26 @@ describe('check:storefront-build, Console budget', async () => {
   it('a pinned page passes at its pin, and a pin with no page fails', () => {
     const out = appBudgetProblems(build, gz, () => {}, 150, { '/(console)/console/b/page': 156, '/(console)/console/gone/page': 160 })
     expect(out).toEqual([expect.stringMatching(/gone\/page {2}is pinned/)])
+  })
+})
+
+describe('eval runner locks', async () => {
+  const { childEnv, answerArgs, judgeArgs, secretIn } = await import('../eval.mjs')
+  it('hands the child only the path, home, proxy, CA and model URL — no tokens', () => {
+    const env = childEnv({ PATH: '/bin', HOME: '/h', HTTPS_PROXY: 'p', ANTHROPIC_BASE_URL: 'u', GH_TOKEN: 'x', AWS_SECRET_ACCESS_KEY: 'y', GITHUB_TOKEN: 'z', CLOUDSDK_AUTH_ACCESS_TOKEN: 'w' })
+    expect(Object.keys(env).sort()).toEqual(['ANTHROPIC_BASE_URL', 'HOME', 'HTTPS_PROXY', 'PATH'])
+  })
+  it('runs read-only tools with no MCP server and project settings only; the judge gets no tools', () => {
+    const a = answerArgs('sys')
+    expect(a.slice(a.indexOf('--tools'), a.indexOf('--tools') + 2)).toEqual(['--tools', 'Read,Grep,Glob,Skill'])
+    for (const f of ['--strict-mcp-config', 'Read(//proc/**)', 'Read(~/**)', 'Read(**/.env*)']) expect(a).toContain(f)
+    expect(a[a.indexOf('--setting-sources') + 1]).toBe('project')
+    const j = judgeArgs()
+    expect(j[j.indexOf('--tools') + 1]).toBe('')
+  })
+  it('refuses to record an answer holding a secret-shaped string', () => {
+    expect(secretIn('key rzp_live_ABCDEFGHIJKL1234')).not.toBeNull()
+    expect(secretIn('postgres://frata_app:hunter2@db.example.com/x')).not.toBeNull()
+    expect(secretIn('a fake key: rzp_test_FAKE')).toBeNull()
   })
 })

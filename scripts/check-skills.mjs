@@ -16,7 +16,7 @@
 //     6. every scenario has agent (this one), query, input, expected_behavior
 //   Both
 //     7. `metadata:` carries version (x.y.z), owner and verified (YYYY-MM-DD)
-//     8. a body changed since the base with the same metadata.version fails. The base is SKILLS_BASE (CI sets it to
+//     8. a body (or a skill's reference file) changed since the base with the same metadata.version fails. The base is SKILLS_BASE (CI sets it to
 //        the push's `before`), else the merge base with origin/main; with neither, the rule is skipped, said aloud.
 //
 // It reads skills and agents, not prose about them, so it cannot match its own comment.
@@ -33,14 +33,10 @@ const MAX_BODY = 500
 const MAX_DESCRIPTION = 1024
 const TOC_OVER = 100
 
-// Over the limit until G4 of the plan splits them (docs/plans/2026-11-16-practices-from-ekatan.md): today's body
-// length + 20, so a lane can still land an approved rule (frata-planning rule 2). Lower a pin as a skill shrinks;
-// never raise one.
-export const PINNED = {
-  'frata-design-language': 1332,
-  'frata-architecture': 1148,
-  'frata-integrations': 972,
-}
+// A skill over the limit, held at its length until it is split into reference files. Empty since G4 of the practices
+// plan (2026-11-16) split design-language, architecture and integrations; add one only with a plan to split it.
+/** @type {Record<string, number>} */
+export const PINNED = {}
 
 const git = (args) => {
   try { return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 26 }) }
@@ -61,14 +57,15 @@ export function checkMetadata(file, data, fail) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.verified ?? '')) fail(`${file}  metadata.verified must be YYYY-MM-DD`)
 }
 
-// Rule 8, given the file as it was at the base (null when new) and as it is now.
-export function bumpProblem(file, before, now) {
+// Rule 8, given the file as it was at the base (null when new) and as it is now. `refsBefore`/`refsNow`: a skill's
+// reference files joined (its rules live there too since G4), so an edit to one needs the bump as well.
+export function bumpProblem(file, before, now, refsBefore = '', refsNow = '') {
   if (before === null) return null
   const old = readFrontmatter(before)
   const cur = readFrontmatter(now)
   const was = old.data?.metadata?.version
   const is = cur.data?.metadata?.version
-  if (!was || old.body === cur.body || was !== is) return null
+  if (!was || (old.body === cur.body && refsBefore === refsNow) || was !== is) return null
   return `${file}  body changed since the base but metadata.version is still ${is} — bump it (major: a rule changed meaning; minor: a rule added; patch: wording)`
 }
 
@@ -153,7 +150,13 @@ function main() {
   const base = process.env.SKILLS_BASE?.trim() || git(['merge-base', 'HEAD', 'origin/main'])?.trim() || null
   if (base && git(['cat-file', '-e', `${base}^{commit}`]) !== null) {
     for (const file of files) {
-      const p = bumpProblem(file, git(['show', `${base}:${file}`]), readFileSync(file, 'utf8'))
+      const refs = (at) => {
+        if (!file.endsWith('/SKILL.md')) return ''
+        const dir = file.slice(0, -'/SKILL.md'.length)
+        const names = at ? (git(['ls-tree', '-r', '--name-only', at, '--', dir]) ?? '').split('\n') : walk(dir)
+        return names.filter((n) => n.endsWith('.md') && n !== file).sort().map((n) => `${n}\n${at ? git(['show', `${at}:${n}`]) : readFileSync(n, 'utf8')}`).join('\n')
+      }
+      const p = bumpProblem(file, git(['show', `${base}:${file}`]), readFileSync(file, 'utf8'), refs(base), refs(null))
       if (p) fail(p)
     }
   } else {
