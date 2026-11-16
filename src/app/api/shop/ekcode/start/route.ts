@@ -17,7 +17,8 @@ const headers = { 'cache-control': 'private, no-store', 'referrer-policy': 'no-r
 
 export async function GET(request: Request) {
   const shop = await requireShop(request)
-  if (!shop.ok) return new NextResponse(null, { status: shop.status, headers })
+  // A refused start (another site's request, P4a·2) goes back to checkout: a sign-in not begun, never a blank page.
+  if (!shop.ok) return shop.status === 403 ? new NextResponse(null, { status: 303, headers: { ...headers, location: '/checkout' } }) : new NextResponse(null, { status: shop.status, headers })
   const back = NextResponse.redirect(`${scheme()}://${shop.host}/checkout`, { status: 303, headers })
   const t = await tenantForHost(shop.host)
   if (!t || t.movedTo || !(await ekcodeOnAt(shop.tenantId))) return back
