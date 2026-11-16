@@ -3738,7 +3738,7 @@ do $$ declare n int; begin
   begin perform hsn from products; raise exception 'FAIL: a Builder read HSN'; exception when insufficient_privilege then null; end;
   begin perform 1 from orders; raise exception 'FAIL: a Builder read orders'; exception when insufficient_privilege then null; end;
   begin perform 1 from order_lines; raise exception 'FAIL: a Builder read order lines'; exception when insufficient_privilege then null; end;
-  -- P1·2 (0152): the store's logo (shop_settings.logo_url) for the brand preview (§ 98); everything else stays shut.
+  -- P1·2 (0153): the store's logo (shop_settings.logo_url) for the brand preview (§ 98); everything else stays shut.
   begin perform legal_name, gstin, support_phone from shop_settings; raise exception 'FAIL: a Builder read settings'; exception when insufficient_privilege then null; end;
   begin perform 1 from members; raise exception 'FAIL: a Builder read members'; exception when insufficient_privilege then null; end;
   begin perform 1 from discounts; raise exception 'FAIL: a Builder read offers'; exception when insufficient_privilege then null; end;
@@ -4786,8 +4786,9 @@ begin
                             'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
     if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
   end loop;
-  -- At most 7 days, counted from the database's own now (a hand-set start can't stretch it), and it ends by itself.
-  begin update public.platform_switches set until = now() + interval '8 days'; raise exception 'FAIL: 88 a switch was set for more than 7 days';
+  -- At most 30 days (owner 2026-11-16; was 7), counted from the database's own now (a hand-set start can't stretch it),
+  -- and it ends by itself.
+  begin update public.platform_switches set until = now() + interval '31 days'; raise exception 'FAIL: 88 a switch was set for more than 30 days';
   exception when check_violation then null; end;
   begin update public.platform_switches set created_at = now() + interval '55 days', until = now() + interval '60 days';
     raise exception 'FAIL: 88 a hand-set start stretched the switch';
@@ -4806,7 +4807,7 @@ begin
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
 end $$;
--- § 98 · One brand record (one-address plan P1·2, drizzle/0152; spec § 5). Each store reads and writes only its own
+-- § 98 · One brand record (one-address plan P1·2, drizzle/0153; spec § 5). Each store reads and writes only its own
 -- brand_tokens, brand_seasons and brand_proposals; a logo file outside the store's own brand folder is refused, in
 -- brand_tokens and in shop_settings.logo_url; a Builder reads the live record's named columns only (never `previous`, a
 -- proposal or a season) and shop_settings' five; one open proposal a store, decided once; the owner's line is written
@@ -4855,7 +4856,7 @@ begin
     raise exception 'FAIL: 98 the store''s own path on another host'; exception when check_violation then null; end;
   begin update brand_tokens set logo_mark_url = 'https://evil.example/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
     raise exception 'FAIL: 98 a mark on another host'; exception when check_violation then null; end;
-  -- 0152 (orders.invoice_logo): an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
+  -- 0153 (orders.invoice_logo): an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
   insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
     values (a, 98001, 'cod', now(), replace(own, '/brand/', '/documents/') || repeat('b', 64) || '.png');
   begin insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)

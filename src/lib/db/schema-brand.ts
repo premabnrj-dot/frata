@@ -5,7 +5,7 @@
 // keeps the record before the last save (Undo, once). `brand_proposals`: a partner's change on an open store, waiting for
 // the owner's yes or no (O17), one open a store, its outcome kept for the Notices row. `brand_seasons`: an accent for a
 // stretch of days. Written only by saveBrand
-// (src/lib/content/save.ts, P1·3). Access: drizzle/0152_brand_record.sql (frata_app; frata_builder named columns; no frata_admin).
+// (src/lib/content/save.ts, P1·3). Access: drizzle/0153_brand_record.sql (frata_app; frata_builder named columns; no frata_admin).
 // =============================================================================
 
 import { sql } from 'drizzle-orm'

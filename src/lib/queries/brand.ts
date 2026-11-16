@@ -23,7 +23,7 @@ import { urlFor } from '@/domains/media/sizes'
 // snapshot of its own. A theme shop (no code site) has no brand: null (O19).
 // =============================================================================
 
-/** The live columns a reader may see (the Builder's grant is the same list, drizzle/0152). */
+/** The live columns a reader may see (the Builder's grant is the same list, drizzle/0153). */
 const live = {
   logoMark: brandTokens.logoMarkUrl, logoStacked: brandTokens.logoStackedUrl, logoReversed: brandTokens.logoReversedUrl,
   bg: brandTokens.colorBg, panel: brandTokens.colorPanel, text: brandTokens.colorText, muted: brandTokens.colorMuted, accent: brandTokens.colorAccent,
@@ -132,7 +132,7 @@ export async function brandSample(t: string, now: Date): Promise<{ title: string
   return { title: p.title, price: v.price, mrp: v.mrp, photo: p.images[0] ? urlFor(p.images[0].base, 400) : null }
 }
 
-/** What a Builder reads of the record (as frata_builder: the live columns and logo_url only, drizzle/0152). */
+/** What a Builder reads of the record (as frata_builder: the live columns and logo_url only, drizzle/0153). */
 export async function builderBrandWith(tx: Tx, t: string): Promise<BrandRecord> {
   const [[s], [row]] = await Promise.all([
     tx.select({ logoUrl: shopSettings.logoUrl }).from(shopSettings).where(eq(shopSettings.tenantId, t)),
