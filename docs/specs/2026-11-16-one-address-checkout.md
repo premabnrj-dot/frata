@@ -1,6 +1,6 @@
 # One address per store: the brand's site and Frrata's checkout at one host, one bag, one brand record
-Status: active (revised after five independent reviews, 2026-11-16; approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT)) · Date: 2026-11-16 · Mockup: none yet,
-one per phase (plan `docs/plans/2026-11-16-one-address-checkout.md`) · Approved: owner, 2026-11-16 (decisions O1–O25 as recommended) · Decision record: ADR-0019 (accepted,
+Status: active (revised after five independent reviews, 2026-11-16; approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT)) · Date: 2026-11-16 · Mockup: approved per phase
+(owner, 2026-11-16: "all mockups approved"; links in `docs/plans/2026-11-16-one-address-checkout.md` and `docs/plans/2026-11-16-execution.md`) · Approved: owner, 2026-11-16 (decisions O1–O25 as recommended) · Decision record: ADR-0019 (accepted,
 `docs/decisions/0019-one-address.md`)
 Pairs with: ADR-0014 (rules 2 and 3, amendments 4, 6, 7, 8, 9), ADR-0015, ADR-0017 (rules 3, 4, 6), ADR-0018, ADR-0009,
 `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1, § 4, § 7), `docs/specs/2026-11-16-studio-agent.md` (§ 12, § 13),

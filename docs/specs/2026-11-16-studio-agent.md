@@ -1,7 +1,7 @@
 # Studio's agent: every step in chat, on Frrata's own Claude account
 Status: active (approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT); S9, S14, S26 replaced by the one-address plan, S27 renumbered ADR-0020) · Date: 2026-11-16 · Mockup: the approved flow is
 https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ (`docs/mockups/2026-11-15-studio-one-screen.html`), with three
-deviations to redraw (§ 14); the states this spec adds are drawn per phase (plan `docs/plans/2026-11-12-studio-build.md`)
+deviations, redrawn and approved (owner, 2026-11-16: "all mockups approved": https://claude.ai/artifact/LizEVx3Ms4NdpS1kScxU8o); the states this spec adds are drawn per phase (plan `docs/plans/2026-11-12-studio-build.md`)
 · Approved: — · Revises: the agent, runtime, environment, developer and credits parts of
 `docs/specs/2026-11-11-frrata-studio.md` · Pairs with: ADR-0014 (amendments 1, 4, 6, 8, 9), ADR-0015, ADR-0016, ADR-0017
 (proposed, revised), ADR-0018, `docs/specs/2026-11-12-kit-and-fleet.md`, `docs/specs/2026-11-14-site-content-layer.md`,

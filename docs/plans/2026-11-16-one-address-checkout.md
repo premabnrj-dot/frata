@@ -1,8 +1,11 @@
 # One address, one bag, one brand record: the build
-Status: active (approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT)) · Spec: `docs/specs/2026-11-16-one-address-checkout.md` (draft) · Record: ADR-0019 (accepted)
+Status: active (approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT)) · Spec: `docs/specs/2026-11-16-one-address-checkout.md` (active) · Record: ADR-0019 (accepted)
 · Date: 2026-11-16
-**Mockup:** none yet — each phase names its own below (P1, P2, P3, P5 new; P6 the pilot's own; P0 and P4 none, no screen)
-**Approved:** —
+**Mockup:** approved (owner, 2026-11-16: "all mockups approved"): P1 https://claude.ai/artifact/BtzqpF9M1dgpPubunSHyEw,
+P2 https://claude.ai/artifact/TWvK4wN8s7eUAS1fDJyBzp, P3 https://claude.ai/artifact/VAND3HpPwsd5MvkjBuWnFA, P5 (with V2a)
+https://claude.ai/artifact/4dn3tMbA4H6JemWtAcQn4b; P6 the pilot's own, still to draw; P0 and P4 none, no screen. Files in
+`docs/mockups/2026-11-16-*.html`. The calls and the four reconciliations: `docs/plans/2026-11-16-execution.md`
+**Approved:** owner, 2026-11-16 ("approve all"; mockups "all mockups approved"). Order of work: `docs/plans/2026-11-16-execution.md`
 **Review:** security-reviewer FIX BEFORE MERGE (4 high, 7 medium, 7 low, 2 notes), all folded in, 2026-11-16
 **Review:** tenancy-auditor FIX BEFORE MERGE (6 high, 3 medium, 4 low, grants), all folded in, 2026-11-16
 **Review:** architecture-reviewer CHANGES NEEDED (2 blockers, 12 majors, the minors), all folded in, 2026-11-16

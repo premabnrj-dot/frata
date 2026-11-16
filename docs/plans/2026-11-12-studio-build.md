@@ -1,12 +1,15 @@
 # Studio and partners: the build
 Status: active (owner, 2026-11-12: "build now") for T1a–P2, built; **the remaining phases approved** (owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT))
-(revised 2026-11-16) · Specs: `docs/specs/2026-11-16-studio-agent.md` (the agent, hosting, credits; draft),
+(revised 2026-11-16) · Specs: `docs/specs/2026-11-16-studio-agent.md` (the agent, hosting, credits; active),
 `docs/specs/2026-11-16-partner-publishing.md`, `docs/specs/2026-11-15-studio-one-screen.md`,
 `docs/specs/2026-11-12-studio-intake-and-team.md`, `docs/specs/2026-11-12-studio-shell-clients-billing.md`,
 `docs/specs/2026-11-12-admin-partners.md`, `docs/specs/2026-11-11-frrata-studio.md`, `docs/specs/2026-11-12-kit-and-fleet.md`,
 ADR-0014 to ADR-0018 · Mockups: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du (Studio v2.4),
 https://claude.ai/artifact/PaRX2MLsw11JDH6dFdbMCv (Admin), https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ (the one
-screen), https://claude.ai/artifact/NfBB7SwJk8chukgJZVhDFr (kit and fleet); new ones per phase below
+screen), https://claude.ai/artifact/NfBB7SwJk8chukgJZVhDFr (kit and fleet); approved 2026-11-16 ("all mockups approved"):
+https://claude.ai/artifact/4dn3tMbA4H6JemWtAcQn4b (V2a, Settings › Website on one address), https://claude.ai/artifact/LEfVE6EXD4yFw9YrFjox3u
+(V2b), https://claude.ai/artifact/LizEVx3Ms4NdpS1kScxU8o (V3b redraw); BT's is P1's (one-address plan). Order of work:
+`docs/plans/2026-11-16-execution.md`
 **Review (remaining phases):** all five run independently as separate agents on 2026-11-16, findings folded into the
 spec and this plan · architecture-reviewer CHANGES NEEDED, 2 blockers and 9 majors fixed · security-reviewer FIX BEFORE
 MERGE, 2 high and 7 medium fixed · unit-economics-reviewer HURTS AS DRAFTED, 6 findings fixed or put to the owner ·
@@ -63,10 +66,10 @@ Studio (V3b) cannot open before V2a and C1: a site would have nowhere to run and
 ### Deviations (BUILT AS DRAWN; for the owner before V3b ships)
 | Mockup element | What will be built | Reason | Owner seen |
 |---|---|---|---|
-| One screen: pages priced 2–10 credits (`docs/mockups/2026-11-15-studio-one-screen.html:317`) | ≈ 19 credits a page | measured token profile, 3× (spec § 8) | no |
-| One screen: no Publish step | A Publish card before Hand over; Apply on each content card | ADR-0014 rule 4, amendment 8.1 | no |
-| One screen: the site changes instantly | Data instantly; a code change after a build (≈ 1–2 min) | Managed Agents has no open port (spec § 2) | no |
-| Studio v2.4: pack ₹1,900 for 100; 10 free credits | ₹1,999 for 100; 20 free | 3× after payment fees; the first preview needs 11–16 (spec § 8) | no |
+| One screen: pages priced 2–10 credits (`docs/mockups/2026-11-15-studio-one-screen.html:317`) | ≈ 19 credits a page | measured token profile, 3× (spec § 8) | yes, 2026-11-16 (redraw approved) |
+| One screen: no Publish step | A Publish card before Hand over; Apply on each content card | ADR-0014 rule 4, amendment 8.1 | yes, 2026-11-16 (redraw approved) |
+| One screen: the site changes instantly | Data instantly; a code change after a build (≈ 1–2 min) | Managed Agents has no open port (spec § 2) | yes, 2026-11-16 (redraw approved) |
+| Studio v2.4: pack ₹1,900 for 100; 10 free credits | ₹1,999 for 100; 20 free | 3× after payment fees; the first preview needs 11–16 (spec § 8) | yes, 2026-11-16 (redraw approved) |
 
 ## T1a · Teams: Owner and Leads
 As built: migrations 0123 (tables) and 0124 (access), proof §77, e2e `80-partner-team`. Review changes folded in before
