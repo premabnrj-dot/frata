@@ -1,274 +1,207 @@
 <title>Frrata Brand Directions</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Hind:wght@400;600&family=Unbounded:wght@500;700;800&family=Manrope:wght@400;600;700&family=Mukta:wght@500;700&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600&family=Tiro+Devanagari+Hindi&family=Syne:wght@600;700;800&family=Archivo:wght@400;600&family=Baloo+2:wght@600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Devanagari:wght@400;600&family=IBM+Plex+Mono:wght@500&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Noto+Sans+Devanagari:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Hind:wght@400;600&family=Inter:wght@400;500;600&display=swap">
 <style>
-/* Layout: a choice board. Neutral frame, four full-bleed direction panels that each carry their own world. */
+/* Layout: a calm choice board. Neutral frame; three direction panels, each a mini homepage hero + its system. */
 :root{
-  --bg:#F5F5F3; --fg:#141414; --muted:#5F5F5A; --line:#DADAD5; --card:#FFFFFF;
-  --ui:'Inter Tight',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --bg:#F6F7F8; --fg:#14171A; --muted:#5B636B; --line:#E1E4E8; --card:#FFFFFF;
+  --ui:'Inter',system-ui,sans-serif; --mono:ui-monospace,'SFMono-Regular',monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121212;--fg:#EDEDEA;--muted:#A3A39C;--line:#2C2C2A;--card:#1B1B1A;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#121212;--fg:#EDEDEA;--muted:#A3A39C;--line:#2C2C2A;--card:#1B1B1A;color-scheme:dark}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111315;--fg:#ECEEF0;--muted:#9AA2AA;--line:#262A2E;--card:#181B1E;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111315;--fg:#ECEEF0;--muted:#9AA2AA;--line:#262A2E;--card:#181B1E;color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.5}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.55}
 .pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.inner{max-width:1180px;margin:0 auto}
-header.top{padding-block:48px 28px}
-header.top h1{font-family:var(--ui);font-weight:600;font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;margin:0 0 8px;text-wrap:balance}
-header.top p{margin:0;color:var(--muted);max-width:62ch}
-.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
-.jump a{font-size:13px;font-weight:500;text-decoration:none;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.inner{max-width:1120px;margin:0 auto}
+header.top{padding-block:48px 24px}
+header.top h1{font-weight:600;font-size:clamp(26px,3.6vw,34px);letter-spacing:-.02em;margin:0 0 8px;text-wrap:balance}
+header.top p{margin:0;color:var(--muted);max-width:60ch}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.jump a{font-size:13px;font-weight:500;text-decoration:none;color:var(--fg);border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px}
 .jump a:hover,.jump a:focus-visible{border-color:var(--fg);outline:none}
 
-.dir{padding-block:56px}
-.dir .inner{display:grid;gap:32px}
-.dir-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px}
-.tag{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
-.dir h2{margin:6px 0 0;font-size:clamp(30px,5vw,52px);line-height:1;text-wrap:balance}
-.mood{max-width:52ch;margin:10px 0 0;font-size:16px;opacity:.85}
+.dir{padding-block:20px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:baseline;padding:20px 24px;border-bottom:1px solid var(--line)}
+.panel-head h2{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.panel-head .tag{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.panel-head p{margin:4px 0 0;color:var(--muted);max-width:62ch;font-size:14px}
 
-.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:start}
-.grid > *{min-width:0}
-.hero-sample{border-radius:var(--r);padding:clamp(24px,4vw,44px);display:grid;gap:18px;position:relative;overflow:hidden}
-.hero-sample .eyebrow{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
-.hero-sample .h{margin:0;text-wrap:balance}
-.hero-sample .hi{margin:0}
-.hero-sample .sub{margin:0;max-width:40ch;font-size:16px}
-.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
-.btn{display:inline-flex;align-items:center;font-weight:600;font-size:15px;padding:12px 20px;text-decoration:none}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px}
-.money{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700}
+/* the sample: a mini homepage hero, drawn in the direction's own colours (single look, set explicitly) */
+.sample{padding:clamp(24px,4vw,48px);display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}
+.sample > *{min-width:0}
+.nav{grid-column:1/-1;display:flex;align-items:center;gap:20px;font-size:13.5px;padding-bottom:20px;border-bottom:1px solid var(--s-line)}
+.nav .logo{font-weight:700;font-size:17px;letter-spacing:-.02em}
+.nav .sp{flex:1}
+.nav .lk{color:var(--s-muted)}
+.copy{display:grid;gap:16px}
+.eyebrow{font-size:12.5px;font-weight:600;color:var(--s-accent);letter-spacing:.02em}
+.h{margin:0;font-size:clamp(30px,4.2vw,46px);line-height:1.08;letter-spacing:-.025em;font-weight:600;text-wrap:balance}
+.sub{margin:0;font-size:16.5px;color:var(--s-muted);max-width:42ch}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;font-size:14.5px;font-weight:600;padding:11px 18px;border-radius:var(--s-r);text-decoration:none}
+.btn.p{background:var(--s-primary);color:var(--s-on-primary)}
+.btn.s{border:1px solid var(--s-line);color:var(--s-fg);background:var(--s-surface)}
+.trust{display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:var(--s-muted);padding-top:6px}
+.trust b{color:var(--s-fg);font-weight:600}
 
-.spec{display:grid;gap:18px}
-.swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.sw{display:grid;gap:6px}
-.sw i{display:block;aspect-ratio:1/1.1;max-width:100%;border-radius:8px;border:1px solid rgba(0,0,0,.08)}
-.sw b{font-size:12px;font-weight:600}
-.sw code{font-family:var(--mono);font-size:11px;opacity:.75}
-.typebox{border-radius:12px;padding:18px;display:grid;gap:10px}
-.typebox .l{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
-.typebox .d{font-size:34px;line-height:1.05;margin:0}
-.typebox .b{margin:0;font-size:15px}
-.typebox .dv{margin:0;font-size:22px}
-.verdict{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.verdict div{border-radius:12px;padding:14px 16px;font-size:14px}
-.verdict b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.order{background:var(--s-surface);border:1px solid var(--s-line);border-radius:calc(var(--s-r) + 6px);padding:18px;display:grid;gap:2px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 32px -12px rgba(16,24,40,.12)}
+.order .top{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;font-size:13px}
+.order .id{font-family:var(--s-mono);color:var(--s-muted)}
+.badge{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--s-ok-bg);color:var(--s-ok)}
+.line{display:flex;justify-content:space-between;font-size:14px;padding:9px 0;border-top:1px solid var(--s-line)}
+.line span:first-child{color:var(--s-muted)}
+.num{font-family:var(--s-mono);font-variant-numeric:tabular-nums}
+.line.total{font-weight:600}
+.line.total span:first-child{color:var(--s-fg)}
+.line.total .num{color:var(--s-ok)}
 
-/* ---------- A · Truck Art ---------- */
-#truck{--r:4px;background:#0A0A0A;color:#FFF4D6}
-#truck h2,#truck .h{font-family:'Anton',Impact,sans-serif;font-weight:400;letter-spacing:.01em;text-transform:uppercase}
-#truck .hero-sample{background:#0B3D91;color:#FFF4D6;border:3px solid #FFB000;box-shadow:8px 8px 0 #FF3E8A}
-#truck .hero-sample::after{content:"";position:absolute;inset:auto 0 0 0;height:14px;background:repeating-linear-gradient(90deg,#FFB000 0 14px,#FF3E8A 14px 28px,#2BB673 28px 42px)}
-#truck .eyebrow{color:#FFB000}
-#truck .h{font-size:clamp(40px,6.5vw,76px);line-height:.95}
-#truck .h em{font-style:normal;color:#FFB000}
-#truck .hi{font-family:'Hind',sans-serif;font-weight:600;font-size:22px;color:#2BB673}
-#truck .sub{font-family:'Hind',sans-serif}
-#truck .btn{background:#FFB000;color:#0A0A0A;border-radius:4px;font-family:'Hind',sans-serif}
-#truck .chip{background:#2BB673;color:#0A0A0A;border-radius:2px}
-#truck .typebox{background:#161616}
-#truck .typebox .d{font-family:'Anton',Impact,sans-serif;text-transform:uppercase}
-#truck .typebox .b{font-family:'Hind',sans-serif}
-#truck .typebox .dv{font-family:'Hind',sans-serif;font-weight:600}
-#truck .verdict div{background:#161616}
+/* the system strip under the sample */
+.system{display:grid;grid-template-columns:1.2fr 1fr;border-top:1px solid var(--line)}
+.system > div{padding:20px 24px;min-width:0}
+.system > div + div{border-left:1px solid var(--line)}
+.lbl{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.sws{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.sw{display:grid;gap:4px;font-size:12px}
+.sw i{display:block;height:44px;border-radius:8px;border:1px solid rgba(0,0,0,.08)}
+.sw b{font-weight:600}
+.sw code{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.type{display:grid;gap:6px}
+.type .d{margin:0;font-size:26px;line-height:1.15;letter-spacing:-.02em}
+.type .b{margin:0;font-size:14px;color:var(--muted)}
+.type .dv{margin:0;font-size:17px}
+.type .f{font-size:12px;color:var(--muted)}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--line)}
+.notes div{padding:14px 24px;font-size:13.5px}
+.notes div + div{border-left:1px solid var(--line)}
+.notes b{font-weight:600;margin-right:6px}
 
-/* ---------- B · Crore Club ---------- */
-#crore{--r:28px;background:#0E0B2A;color:#F2F0FF}
-#crore h2,#crore .h{font-family:'Unbounded',system-ui,sans-serif;font-weight:800;letter-spacing:-.02em}
-#crore .hero-sample{background:radial-gradient(120% 120% at 100% 0%,#4A35FF 0%,#1A1450 55%,#0E0B2A 100%);color:#F2F0FF;border:1px solid rgba(255,255,255,.12)}
-#crore .eyebrow{color:#00E09A}
-#crore .h{font-size:clamp(34px,5.4vw,62px);line-height:1}
-#crore .h em{font-style:normal;color:#00E09A}
-#crore .hi{font-family:'Mukta',sans-serif;font-weight:700;font-size:22px;color:#B9B0FF}
-#crore .sub{font-family:'Manrope',sans-serif;color:#C9C4F2}
-#crore .btn{background:#00E09A;color:#0E0B2A;border-radius:999px;font-family:'Manrope',sans-serif;font-weight:700}
-#crore .chip{background:rgba(0,224,154,.15);color:#00E09A;border-radius:999px}
-#crore .typebox{background:#17123D}
-#crore .typebox .d{font-family:'Unbounded',sans-serif;font-weight:800;font-size:30px}
-#crore .typebox .b{font-family:'Manrope',sans-serif}
-#crore .typebox .dv{font-family:'Mukta',sans-serif;font-weight:700}
-#crore .verdict div{background:#17123D}
+/* A · Ledger */
+#ledger .sample{--s-bg:#FFFFFF;--s-fg:#0B1220;--s-muted:#5A6474;--s-line:#E6E9EE;--s-surface:#FFFFFF;--s-primary:#0B1220;--s-on-primary:#FFFFFF;--s-accent:#0E7C5A;--s-ok:#0E7C5A;--s-ok-bg:#E3F4EC;--s-r:8px;--s-mono:'Geist Mono',monospace;background:var(--s-bg);color:var(--s-fg);font-family:'Geist',system-ui,sans-serif}
+#ledger .type .d{font-family:'Geist',sans-serif;font-weight:600}
+#ledger .type .dv{font-family:'Noto Sans Devanagari',sans-serif;font-weight:600}
 
-/* ---------- C · Indigo Vat ---------- */
-#indigo{--r:0px;background:#16205C;color:#F4F1EA}
-#indigo h2,#indigo .h{font-family:'Instrument Serif',Georgia,serif;font-weight:400}
-#indigo .hero-sample{background:#F4F1EA;color:#16205C;border-left:10px solid #B3261E}
-#indigo .eyebrow{color:#B3261E}
-#indigo .h{font-size:clamp(44px,7vw,84px);line-height:.95;letter-spacing:-.01em}
-#indigo .h em{color:#B3261E}
-#indigo .hi{font-family:'Tiro Devanagari Hindi',serif;font-size:24px;color:#16205C}
-#indigo .sub{font-family:'Inter Tight',sans-serif;color:#3A4270}
-#indigo .btn{background:#16205C;color:#F4F1EA;border-radius:0;letter-spacing:.02em}
-#indigo .chip{border:1px solid #16205C;color:#16205C;border-radius:0}
-#indigo .typebox{background:#1E2A6E}
-#indigo .typebox .d{font-family:'Instrument Serif',serif;font-size:40px}
-#indigo .typebox .b{font-family:'Inter Tight',sans-serif}
-#indigo .typebox .dv{font-family:'Tiro Devanagari Hindi',serif}
-#indigo .verdict div{background:#1E2A6E}
+/* B · Plex Indigo */
+#plex .sample{--s-bg:#F7F8FC;--s-fg:#141B3A;--s-muted:#555E80;--s-line:#E2E5F0;--s-surface:#FFFFFF;--s-primary:#2E3A8C;--s-on-primary:#FFFFFF;--s-accent:#2E3A8C;--s-ok:#16794C;--s-ok-bg:#E2F3EA;--s-r:6px;--s-mono:'IBM Plex Mono',monospace;background:var(--s-bg);color:var(--s-fg);font-family:'IBM Plex Sans',system-ui,sans-serif}
+#plex .h{font-weight:600;letter-spacing:-.02em}
+#plex .type .d{font-family:'IBM Plex Sans',sans-serif;font-weight:600}
+#plex .type .dv{font-family:'IBM Plex Sans Devanagari',sans-serif;font-weight:600}
 
-/* ---------- D · Haldi Loud ---------- */
-#haldi{--r:20px;background:#FFC72C;color:#141414}
-#haldi h2,#haldi .h{font-family:'Syne',system-ui,sans-serif;font-weight:800;letter-spacing:-.03em}
-#haldi .hero-sample{background:#141414;color:#FFF8E6}
-#haldi .eyebrow{color:#FFC72C}
-#haldi .h{font-size:clamp(38px,6vw,70px);line-height:.98}
-#haldi .h em{font-style:normal;color:#FF4A1C}
-#haldi .hi{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:24px;color:#FFC72C}
-#haldi .sub{font-family:'Archivo',sans-serif;color:#E8E1CF}
-#haldi .btn{background:#FF4A1C;color:#FFF8E6;border-radius:14px;font-family:'Archivo',sans-serif}
-#haldi .chip{background:#FFC72C;color:#141414;border-radius:8px}
-#haldi .typebox{background:#FFD866}
-#haldi .typebox .d{font-family:'Syne',sans-serif;font-weight:800}
-#haldi .typebox .b{font-family:'Archivo',sans-serif}
-#haldi .typebox .dv{font-family:'Baloo 2',sans-serif;font-weight:800}
-#haldi .verdict div{background:#FFD866}
-#haldi .sw i{border-color:rgba(0,0,0,.18)}
+/* C · Saffron Line */
+#saffron .sample{--s-bg:#FFFFFF;--s-fg:#1A1D21;--s-muted:#5E6670;--s-line:#E8E8E6;--s-surface:#FBFBFA;--s-primary:#1A1D21;--s-on-primary:#FFFFFF;--s-accent:#D9731A;--s-ok:#1F7A55;--s-ok-bg:#E4F2EB;--s-r:10px;--s-mono:ui-monospace,monospace;background:var(--s-bg);color:var(--s-fg);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+#saffron .h{font-weight:700;letter-spacing:-.03em}
+#saffron .h em{font-style:normal;color:#D9731A}
+#saffron .type .d{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700}
+#saffron .type .dv{font-family:'Hind',sans-serif;font-weight:600}
 
-.pick{padding-block:56px 72px}
-.pick .inner{display:grid;gap:16px;max-width:760px}
-.pick h2{margin:0;font-size:28px;letter-spacing:-.01em}
-.pick ol{margin:0;padding-left:20px;display:grid;gap:10px}
+.pick{padding-block:28px 64px}
+.pick .inner{max-width:760px;display:grid;gap:12px}
+.pick h2{margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em}
 .pick p{margin:0;color:var(--muted)}
+.pick ul{margin:0;padding-left:18px;display:grid;gap:6px}
 
 @media (max-width:860px){
-  .grid{grid-template-columns:1fr}
-  .swatches{grid-template-columns:repeat(5,minmax(0,1fr))}
-  .verdict{grid-template-columns:1fr}
-}
-@media (prefers-reduced-motion:no-preference){
-  .btn{transition:transform .15s ease}
-  .btn:hover{transform:translateY(-2px)}
+  .sample{grid-template-columns:1fr}
+  .nav .lk{display:none}
+  .system,.notes{grid-template-columns:1fr}
+  .system > div + div,.notes div + div{border-left:0;border-top:1px solid var(--line)}
 }
 a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 </style>
 
 <header class="top pad">
   <div class="inner">
-    <h1>Pick a direction for Frrata</h1>
-    <p>Four bold looks for the website. Same headline in each, so you compare the feel, not the words. Pick one (or mix two), and I'll design the homepage in it.</p>
-    <nav class="jump" aria-label="Directions">
-      <a href="#truck">A · Truck Art</a><a href="#crore">B · Crore Club</a><a href="#indigo">C · Indigo Vat</a><a href="#haldi">D · Haldi Loud</a>
-    </nav>
+    <h1>Three clean directions for Frrata</h1>
+    <p>Calmer and more professional. Each shows the same homepage hero and a real order, so you judge the feel side by side.</p>
+    <nav class="jump" aria-label="Directions"><a href="#ledger">A · Ledger</a><a href="#plex">B · Plex Indigo</a><a href="#saffron">C · Saffron Line</a></nav>
   </div>
 </header>
 
-<!-- A -->
-<section class="dir pad" id="truck">
-  <div class="inner">
-    <div class="dir-head"><div><span class="tag">Direction A</span><h2>Truck Art</h2><p class="mood">Painted lorries, shop signboards, festival lights. Loud, proud, unmistakably Indian. Speaks to the founder who started in a bazaar and wants the whole country to know.</p></div></div>
-    <div class="grid">
-      <div class="hero-sample">
-        <span class="eyebrow">For India's D2C founders</span>
-        <p class="h">Apna brand. Apne rules. <em>Poora profit.</em></p>
-        <p class="hi">हर ऑर्डर का असली मुनाफ़ा</p>
-        <p class="sub">Your store, COD and the profit on every order. In one place.</p>
-        <div class="row"><a class="btn" href="#truck">Start free</a><span class="chip">Profit this order <span class="money">₹980</span></span></div>
-      </div>
-      <div class="spec">
-        <div class="swatches">
-          <div class="sw"><i style="background:#0B3D91"></i><b>Peacock</b><code>#0B3D91</code></div>
-          <div class="sw"><i style="background:#FFB000"></i><b>Marigold</b><code>#FFB000</code></div>
-          <div class="sw"><i style="background:#FF3E8A"></i><b>Rani</b><code>#FF3E8A</code></div>
-          <div class="sw"><i style="background:#2BB673"></i><b>Parrot</b><code>#2BB673</code></div>
-          <div class="sw"><i style="background:#0A0A0A"></i><b>Tar</b><code>#0A0A0A</code></div>
-        </div>
-        <div class="typebox"><span class="l">Display · Anton &nbsp;/&nbsp; Body + Hindi · Hind</span><p class="d">Sold out by Diwali</p><p class="b">Condensed caps that shout, body that stays easy on a ₹8,000 phone.</p><p class="dv">आज ऑर्डर, कल डिलीवरी</p></div>
-        <div class="verdict"><div><b>Wins</b>Instant recall. Feels like Bharat, not Bengaluru.</div><div><b>Risk</b>Can read cheap if overused. Needs strict rules.</div></div>
-      </div>
+<section class="dir pad" id="ledger"><div class="inner panel">
+  <div class="panel-head"><div><span class="tag">Direction A</span><h2>Ledger</h2><p>White page, ink text, one green for profit. Quiet like Stripe or Linear. The numbers do the talking.</p></div></div>
+  <div class="sample">
+    <div class="nav"><span class="logo">frrata</span><span class="sp"></span><span class="lk">Product</span><span class="lk">Pricing</span><span class="lk">Partners</span><a class="btn p" href="#ledger">Start free</a></div>
+    <div class="copy">
+      <span class="eyebrow">For Indian D2C brands</span>
+      <p class="h">Know the profit on every order you ship.</p>
+      <p class="sub">Your store, cash on delivery and payments in one console. Built for India.</p>
+      <div class="row"><a class="btn p" href="#ledger">Start your store free</a><a class="btn s" href="#ledger">Book a demo</a></div>
+      <div class="trust"><span><b>₹0</b> fee on returned parcels</span><span><b>1 day</b> to go live</span></div>
     </div>
+    <div class="order"><div class="top"><span class="id">#KS-5012 · Example</span><span class="badge">Delivered</span></div>
+      <div class="line"><span>Order value</span><span class="num">₹2,490</span></div><div class="line"><span>Shipping and packing</span><span class="num">−₹210</span></div><div class="line"><span>Frrata fee</span><span class="num">−₹112</span></div><div class="line total"><span>Profit</span><span class="num">₹980</span></div></div>
   </div>
-</section>
+  <div class="system">
+    <div><p class="lbl">Colour</p><div class="sws">
+      <div class="sw"><i style="background:#0B1220"></i><b>Ink</b><code>#0B1220</code></div>
+      <div class="sw"><i style="background:#0E7C5A"></i><b>Profit</b><code>#0E7C5A</code></div>
+      <div class="sw"><i style="background:#5A6474"></i><b>Slate</b><code>#5A6474</code></div>
+      <div class="sw"><i style="background:#E6E9EE"></i><b>Line</b><code>#E6E9EE</code></div>
+      <div class="sw"><i style="background:#FFFFFF"></i><b>Paper</b><code>#FFFFFF</code></div></div></div>
+    <div class="type"><p class="lbl">Type</p><p class="d">Geist</p><p class="b">One modern family for headlines and text. Geist Mono for ₹ and order numbers.</p><p class="dv">हर ऑर्डर का असली मुनाफ़ा</p><span class="f">Hindi · Noto Sans Devanagari</span></div>
+  </div>
+  <div class="notes"><div><b>Good</b>Most neutral. Ages well. Lets the product screens shine.</div><div><b>Watch</b>Can feel generic SaaS without strong product visuals.</div></div>
+</div></section>
 
-<!-- B -->
-<section class="dir pad" id="crore">
-  <div class="inner">
-    <div class="dir-head"><div><span class="tag">Direction B</span><h2>Crore Club</h2><p class="mood">Night-sky indigo, electric mint, rounded and confident. The look of India's new fintech. Speaks to the founder chasing their first crore.</p></div></div>
-    <div class="grid">
-      <div class="hero-sample">
-        <span class="eyebrow">For India's D2C founders</span>
-        <p class="h">Apna brand. Apne rules. <em>Poora profit.</em></p>
-        <p class="hi">हर ऑर्डर का असली मुनाफ़ा</p>
-        <p class="sub">Your store, COD and the profit on every order. In one place.</p>
-        <div class="row"><a class="btn" href="#crore">Start free</a><span class="chip">Profit this order <span class="money">₹980</span></span></div>
-      </div>
-      <div class="spec">
-        <div class="swatches">
-          <div class="sw"><i style="background:#4A35FF"></i><b>Volt</b><code>#4A35FF</code></div>
-          <div class="sw"><i style="background:#00E09A"></i><b>Mint</b><code>#00E09A</code></div>
-          <div class="sw"><i style="background:#B9B0FF"></i><b>Lilac</b><code>#B9B0FF</code></div>
-          <div class="sw"><i style="background:#0E0B2A"></i><b>Night</b><code>#0E0B2A</code></div>
-          <div class="sw"><i style="background:#F2F0FF"></i><b>Haze</b><code>#F2F0FF</code></div>
-        </div>
-        <div class="typebox"><span class="l">Display · Unbounded &nbsp;/&nbsp; Body · Manrope &nbsp;/&nbsp; Hindi · Mukta</span><p class="d">₹1 crore. Then ₹10.</p><p class="b">Wide, rounded display. Feels like money moving.</p><p class="dv">आज ऑर्डर, कल डिलीवरी</p></div>
-        <div class="verdict"><div><b>Wins</b>Reads ambitious and trustworthy with money.</div><div><b>Risk</b>Close to CRED, Jar, Fi. Less ownable.</div></div>
-      </div>
+<section class="dir pad" id="plex"><div class="inner panel">
+  <div class="panel-head"><div><span class="tag">Direction B</span><h2>Plex Indigo</h2><p>Deep indigo, cool grey, sharp corners. Feels like a bank or an ERP you trust with money. One type family covers English, Hindi and numbers.</p></div></div>
+  <div class="sample">
+    <div class="nav"><span class="logo">frrata</span><span class="sp"></span><span class="lk">Product</span><span class="lk">Pricing</span><span class="lk">Partners</span><a class="btn p" href="#plex">Start free</a></div>
+    <div class="copy">
+      <span class="eyebrow">For Indian D2C brands</span>
+      <p class="h">Know the profit on every order you ship.</p>
+      <p class="sub">Your store, cash on delivery and payments in one console. Built for India.</p>
+      <div class="row"><a class="btn p" href="#plex">Start your store free</a><a class="btn s" href="#plex">Book a demo</a></div>
+      <div class="trust"><span><b>₹0</b> fee on returned parcels</span><span><b>1 day</b> to go live</span></div>
     </div>
+    <div class="order"><div class="top"><span class="id">#KS-5012 · Example</span><span class="badge">Delivered</span></div>
+      <div class="line"><span>Order value</span><span class="num">₹2,490</span></div><div class="line"><span>Shipping and packing</span><span class="num">−₹210</span></div><div class="line"><span>Frrata fee</span><span class="num">−₹112</span></div><div class="line total"><span>Profit</span><span class="num">₹980</span></div></div>
   </div>
-</section>
+  <div class="system">
+    <div><p class="lbl">Colour</p><div class="sws">
+      <div class="sw"><i style="background:#2E3A8C"></i><b>Indigo</b><code>#2E3A8C</code></div>
+      <div class="sw"><i style="background:#141B3A"></i><b>Night</b><code>#141B3A</code></div>
+      <div class="sw"><i style="background:#16794C"></i><b>Profit</b><code>#16794C</code></div>
+      <div class="sw"><i style="background:#E2E5F0"></i><b>Mist</b><code>#E2E5F0</code></div>
+      <div class="sw"><i style="background:#F7F8FC"></i><b>Paper</b><code>#F7F8FC</code></div></div></div>
+    <div class="type"><p class="lbl">Type</p><p class="d" style="font-family:'IBM Plex Sans',sans-serif">IBM Plex Sans</p><p class="b">Built-in Devanagari and a matching mono. Headlines, Hindi and ₹ all from one family.</p><p class="dv" style="font-family:'IBM Plex Sans Devanagari',sans-serif;font-weight:600">हर ऑर्डर का असली मुनाफ़ा</p><span class="f">Hindi · IBM Plex Sans Devanagari</span></div>
+  </div>
+  <div class="notes"><div><b>Good</b>Most trustworthy with money. Hindi looks native, not bolted on.</div><div><b>Watch</b>Corporate if pushed too far. Needs warm photos of real brands.</div></div>
+</div></section>
 
-<!-- C -->
-<section class="dir pad" id="indigo">
-  <div class="inner">
-    <div class="dir-head"><div><span class="tag">Direction C</span><h2>Indigo Vat</h2><p class="mood">Hand-dyed indigo, madder red, unbleached cotton. The fashion label's own world. Speaks to the founder building a premium brand, not a discount shop.</p></div></div>
-    <div class="grid">
-      <div class="hero-sample">
-        <span class="eyebrow">For India's D2C founders</span>
-        <p class="h">Apna brand. Apne rules. <em>Poora profit.</em></p>
-        <p class="hi">हर ऑर्डर का असली मुनाफ़ा</p>
-        <p class="sub">Your store, COD and the profit on every order. In one place.</p>
-        <div class="row"><a class="btn" href="#indigo">Start free</a><span class="chip">Profit this order <span class="money">₹980</span></span></div>
-      </div>
-      <div class="spec">
-        <div class="swatches">
-          <div class="sw"><i style="background:#16205C"></i><b>Indigo</b><code>#16205C</code></div>
-          <div class="sw"><i style="background:#B3261E"></i><b>Madder</b><code>#B3261E</code></div>
-          <div class="sw"><i style="background:#F4F1EA"></i><b>Cotton</b><code>#F4F1EA</code></div>
-          <div class="sw"><i style="background:#C9A227"></i><b>Zari</b><code>#C9A227</code></div>
-          <div class="sw"><i style="background:#3A4270"></i><b>Slate</b><code>#3A4270</code></div>
-        </div>
-        <div class="typebox"><span class="l">Display · Instrument Serif &nbsp;/&nbsp; Body · Inter Tight &nbsp;/&nbsp; Hindi · Tiro Devanagari</span><p class="d">The festive edit, sold out.</p><p class="b">Editorial serif like a lookbook, crisp sans for the numbers.</p><p class="dv">आज ऑर्डर, कल डिलीवरी</p></div>
-        <div class="verdict"><div><b>Wins</b>Premium. Matches the fashion brands you sell to.</div><div><b>Risk</b>Quieter. Less punch for a small-town reseller.</div></div>
-      </div>
+<section class="dir pad" id="saffron"><div class="inner panel">
+  <div class="panel-head"><div><span class="tag">Direction C</span><h2>Saffron Line</h2><p>White and charcoal, with one thin line of saffron for warmth. Friendly rounded type. Professional, and still feels Indian.</p></div></div>
+  <div class="sample">
+    <div class="nav"><span class="logo">frrata</span><span class="sp"></span><span class="lk">Product</span><span class="lk">Pricing</span><span class="lk">Partners</span><a class="btn p" href="#saffron">Start free</a></div>
+    <div class="copy">
+      <span class="eyebrow">For Indian D2C brands</span>
+      <p class="h">Know the <em>profit</em> on every order you ship.</p>
+      <p class="sub">Your store, cash on delivery and payments in one console. Built for India.</p>
+      <div class="row"><a class="btn p" href="#saffron">Start your store free</a><a class="btn s" href="#saffron">Book a demo</a></div>
+      <div class="trust"><span><b>₹0</b> fee on returned parcels</span><span><b>1 day</b> to go live</span></div>
     </div>
+    <div class="order"><div class="top"><span class="id">#KS-5012 · Example</span><span class="badge">Delivered</span></div>
+      <div class="line"><span>Order value</span><span class="num">₹2,490</span></div><div class="line"><span>Shipping and packing</span><span class="num">−₹210</span></div><div class="line"><span>Frrata fee</span><span class="num">−₹112</span></div><div class="line total"><span>Profit</span><span class="num">₹980</span></div></div>
   </div>
-</section>
+  <div class="system">
+    <div><p class="lbl">Colour</p><div class="sws">
+      <div class="sw"><i style="background:#1A1D21"></i><b>Charcoal</b><code>#1A1D21</code></div>
+      <div class="sw"><i style="background:#D9731A"></i><b>Saffron</b><code>#D9731A</code></div>
+      <div class="sw"><i style="background:#1F7A55"></i><b>Profit</b><code>#1F7A55</code></div>
+      <div class="sw"><i style="background:#E8E8E6"></i><b>Line</b><code>#E8E8E6</code></div>
+      <div class="sw"><i style="background:#FFFFFF"></i><b>Paper</b><code>#FFFFFF</code></div></div></div>
+    <div class="type"><p class="lbl">Type</p><p class="d" style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700">Plus Jakarta Sans</p><p class="b">Rounded, friendly, still sharp. Saffron used only for one word or one line per screen.</p><p class="dv" style="font-family:'Hind',sans-serif;font-weight:600">हर ऑर्डर का असली मुनाफ़ा</p><span class="f">Hindi · Hind</span></div>
+  </div>
+  <div class="notes"><div><b>Good</b>Warmest of the three. Approachable for first-time founders.</div><div><b>Watch</b>Saffron must stay rare, or it turns loud again.</div></div>
+</div></section>
 
-<!-- D -->
-<section class="dir pad" id="haldi">
-  <div class="inner">
-    <div class="dir-head"><div><span class="tag">Direction D</span><h2>Haldi Loud</h2><p class="mood">A full yellow page, black type, chilli-red action. Warm like haldi, loud like a sale banner. Speaks to the hustler who wants results this month.</p></div></div>
-    <div class="grid">
-      <div class="hero-sample">
-        <span class="eyebrow">For India's D2C founders</span>
-        <p class="h">Apna brand. Apne rules. <em>Poora profit.</em></p>
-        <p class="hi">हर ऑर्डर का असली मुनाफ़ा</p>
-        <p class="sub">Your store, COD and the profit on every order. In one place.</p>
-        <div class="row"><a class="btn" href="#haldi">Start free</a><span class="chip">Profit this order <span class="money">₹980</span></span></div>
-      </div>
-      <div class="spec">
-        <div class="swatches">
-          <div class="sw"><i style="background:#FFC72C"></i><b>Haldi</b><code>#FFC72C</code></div>
-          <div class="sw"><i style="background:#FF4A1C"></i><b>Chilli</b><code>#FF4A1C</code></div>
-          <div class="sw"><i style="background:#141414"></i><b>Kohl</b><code>#141414</code></div>
-          <div class="sw"><i style="background:#FFF8E6"></i><b>Milk</b><code>#FFF8E6</code></div>
-          <div class="sw"><i style="background:#1F8A5B"></i><b>Neem</b><code>#1F8A5B</code></div>
-        </div>
-        <div class="typebox"><span class="l">Display · Syne &nbsp;/&nbsp; Body · Archivo &nbsp;/&nbsp; Hindi · Baloo 2</span><p class="d">Sale on. Margin safe.</p><p class="b">Wide, quirky display with a no-nonsense body face.</p><p class="dv">आज ऑर्डर, कल डिलीवरी</p></div>
-        <div class="verdict"><div><b>Wins</b>Unmissable in a feed. Warm and Indian without clichés.</div><div><b>Risk</b>Yellow is tiring on long pages. Use in bands.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="pick pad">
-  <div class="inner">
-    <h2>My pick: A, with C's restraint</h2>
-    <ol>
-      <li><b>Truck Art as the voice.</b> Anton headlines, marigold actions, peacock bands. No other commerce platform in India looks like this.</li>
-      <li><b>Indigo Vat's discipline.</b> Lots of calm space between the loud moments, so it reads premium, not cheap.</li>
-      <li><b>Hindi as a second line, not a translation.</b> One short Devanagari line per section, where it hits harder than English.</li>
-    </ol>
-    <p>Reply with a letter (or "A + C" style mix). Next I draw the full homepage, section by section, in that direction.</p>
-  </div>
-</section>
+<section class="pick pad"><div class="inner">
+  <h2>My pick: B · Plex Indigo</h2>
+  <ul>
+    <li>Frrata handles money. Indigo and sharp corners read as safe and serious.</li>
+    <li>IBM Plex has its own Hindi and number fonts, so English, Hindi and ₹ match perfectly.</li>
+    <li>Green appears only on profit, so the eye goes straight to the number that matters.</li>
+  </ul>
+  <p>Reply with A, B or C (or "B with C's saffron"), and I'll design the full homepage in it.</p>
+</div></section>
