@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -46,6 +46,9 @@ describe('the partner kit (SA1b D·9)', () => {
       cpSync(join(dir, 'app'), join(dir, 'public'), { recursive: true })
       writeFileSync(join(dir, 'public/monogram.svg'), '<svg/>')
       writeFileSync(join(dir, 'public/logos-main.png'), '')
+      writeFileSync(join(dir, 'public/house-wordmark.svg'), '<svg/>')
+      mkdirSync(join(dir, 'public/brand'), { recursive: true })
+      writeFileSync(join(dir, 'public/brand/house-stacked.svg'), '<svg/>')
       writeFileSync(join(dir, 'components/hero.tsx'), "export const H = () => <p style={{ color: '#8C1D2C', fontFamily: 'Mukta' }}>x</p>")
       writeFileSync(join(dir, 'components/frrata/mine.tsx'), "export const M = () => <p style={{ color: '#000000' }}>x</p>")
       const layout = readFileSync(join(dir, 'app/layout.tsx'), 'utf8')
@@ -53,6 +56,8 @@ describe('the partner kit (SA1b D·9)', () => {
       const out = check(dir)
       expect(out).toContain('public/monogram.svg: a logo file')
       expect(out).toContain('public/logos-main.png: a logo file')
+      expect(out).toContain('public/house-wordmark.svg: a logo file')
+      expect(out).toContain('public/brand/house-stacked.svg: a logo file')
       expect(out).toContain('the header must draw the store\'s logo with <Logo>')
       expect(out).toContain('an inline <svg> beside the header')
       expect(out).toContain('render <BrandStyle')
@@ -74,6 +79,18 @@ describe('the partner kit (SA1b D·9)', () => {
       const layout = readFileSync(join(dir, 'app/layout.tsx'), 'utf8')
       writeFileSync(join(dir, 'app/layout.tsx'), layout.replace('<nav>', '<nav><svg viewBox="0 0 24 24" aria-hidden="true"/>'))
       expect(check(dir)).toBe('')
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+  it('the check lets a header component through when the layout hands it <Logo>', () => {
+    const dir = copy()
+    try {
+      const layout = readFileSync(join(dir, 'app/layout.tsx'), 'utf8')
+      const header = /<header\b[\s\S]*?<\/header>/.exec(layout)![0]
+      writeFileSync(join(dir, 'components/site-header.tsx'), "export const SiteHeader = ({ logo }: { logo: React.ReactNode }) => <header className=\"top\">{logo}</header>")
+      writeFileSync(join(dir, 'app/layout.tsx'), layout.replace(header, '<SiteHeader logo={' + /<Logo [^>]*\/>/.exec(header)![0] + '} />'))
+      expect(check(dir)).toBe('')
+      writeFileSync(join(dir, 'app/layout.tsx'), layout.replace(header, '<SiteHeader logo={null} />'))
+      expect(check(dir)).toContain('the header must draw the store\'s logo with <Logo>')
     } finally { rmSync(dir, { recursive: true, force: true }) }
   })
   it('the starter’s Brand type names every field shop.brand answers', () => {
