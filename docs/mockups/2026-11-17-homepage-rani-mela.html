@@ -1,0 +1,559 @@
+<title>Frrata Homepage · Rani Mela</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Mukta:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a single-look light website. White paper, rani leads every action, neel carries trust bands and the footer,
+   marigold and peacock are small bright accents. Homepage first (#home), the system sheet after it (#system). */
+:root{
+  color-scheme:light;
+  --rani:#D61F69; --rani-600:#B3134F; --rani-700:#8E0F3F; --rani-50:#FFF0F6; --rani-100:#FFD9E8;
+  --neel:#23307A; --neel-700:#172057; --neel-900:#0E1440; --neel-50:#EEF0FB; --neel-100:#D9DDF5;
+  --marigold:#FFB21C; --marigold-50:#FFF5DC;
+  --peacock:#0B8A72; --peacock-700:#0A6E5B; --peacock-50:#DDF4EE;
+  --ink:#1E1420; --ink-2:#4F4552; --muted:#6E6472; --line:#EEE6EE; --paper:#FFFFFF; --paper-2:#FBF8FB;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'DM Sans',system-ui,sans-serif;
+  --hindi:'Mukta','Noto Sans Devanagari',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:8px; --r:12px; --r-lg:18px; --r-xl:24px;
+  --fast:120ms; --base:200ms; --slow:320ms; --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.g{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.w{max-width:1160px;margin:0 auto}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);letter-spacing:-.03em;text-wrap:balance;margin:0}
+p{margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--rani);outline-offset:3px;border-radius:6px}
+
+/* mockup bar (not part of the website) */
+.mock{background:#F1EEF2;border-bottom:1px solid var(--line);font-size:13px}
+.mock .w{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-block:10px}
+.mock b{font-weight:700}
+.mock nav{display:flex;gap:6px;margin-left:auto}
+.mock nav a{text-decoration:none;padding:4px 12px;border-radius:999px;border:1px solid #D9D2DB;background:#fff}
+
+/* ---------- components ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--body);font-weight:700;font-size:15px;line-height:1;padding:14px 22px;border-radius:var(--r);text-decoration:none;border:0;cursor:pointer;transition:transform var(--fast) var(--ease),background var(--base) var(--ease),box-shadow var(--base) var(--ease)}
+.btn:active{transform:translateY(1px) scale(.98)}
+.btn-rani{background:var(--rani);color:#fff;box-shadow:0 6px 16px -6px rgba(214,31,105,.55)}
+.btn-rani:hover{background:var(--rani-600);transform:translateY(-2px)}
+.btn-neel{background:var(--neel);color:#fff}
+.btn-neel:hover{background:var(--neel-700);transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px #E2D8E3}
+.btn-ghost:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.btn-white{background:#fff;color:var(--rani-700)}
+.btn-white:hover{transform:translateY(-2px)}
+.btn-sm{padding:10px 16px;font-size:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;line-height:1.2}
+.chip-rani{background:var(--rani-50);color:var(--rani-700)}
+.chip-neel{background:var(--neel-50);color:var(--neel)}
+.chip-peacock{background:var(--peacock-50);color:var(--peacock-700)}
+.chip-marigold{background:var(--marigold);color:var(--ink)}
+.chip i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.ic{width:28px;height:28px;flex:none}
+.ic .f{fill:currentColor;opacity:.18}
+.ic .s{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- header ---------- */
+.site-h{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:#fff}
+.site-h .w{display:flex;align-items:center;gap:26px;padding-block:14px}
+.logo{font-family:var(--display);font-weight:800;font-size:23px;letter-spacing:-.04em;text-decoration:none}
+.logo i{font-style:normal;color:var(--rani)}
+.site-h nav{display:flex;gap:24px;margin-left:auto;font-size:14.5px;font-weight:500;color:var(--ink-2)}
+.site-h nav a{text-decoration:none}
+.site-h nav a:hover{color:var(--rani)}
+
+/* ---------- 1 hero ---------- */
+.hero{position:relative;overflow:hidden}
+.hero .hw{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center;padding-block:64px 40px;position:relative}
+.hero .hw > *{min-width:0}
+.hero-copy{display:grid;gap:20px;justify-items:start}
+.hero h1{font-size:clamp(2.6rem,6vw,4.4rem);line-height:1;font-weight:800}
+.hero h1 em{font-style:normal;color:var(--rani)}
+.hero .hi{font-family:var(--hindi);font-weight:700;font-size:21px;color:var(--neel)}
+.hero .sub{font-size:18.5px;color:var(--ink-2);max-width:40ch}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.wa{font-size:14px;color:var(--muted)}
+.wa b{font-family:var(--mono);color:var(--ink)}
+/* the mark's quarter circle and circle, grown into shapes behind the product */
+.shapes{position:absolute;inset:0;pointer-events:none}
+.shapes span{position:absolute;display:block}
+.sh-q{right:-60px;top:40px;width:340px;height:340px;background:var(--neel);border-radius:0 0 0 100%;opacity:.95}
+.sh-c{right:250px;top:20px;width:92px;height:92px;border-radius:50%;background:var(--marigold)}
+.sh-d{right:40px;bottom:30px;width:150px;height:150px;border-radius:50%;background:var(--rani-100)}
+.stage{position:relative;padding:28px 10px}
+.order{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;box-shadow:0 24px 60px -24px rgba(35,48,122,.45)}
+.order-top{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px}
+.order-top .id{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.ol{display:flex;justify-content:space-between;align-items:center;font-size:15px;padding:11px 0;border-top:1px solid var(--line)}
+.ol span:first-child{color:var(--muted)}
+.ol.total{font-weight:700}
+.ol.total span:first-child{color:var(--ink)}
+.ol.total .num{color:var(--peacock-700);font-size:18px}
+.sticker{position:absolute;top:-16px;right:-8px;transform:rotate(7deg);background:var(--marigold);color:var(--ink);font-family:var(--display);font-weight:800;font-size:15px;padding:8px 14px;border-radius:999px;box-shadow:0 6px 14px -6px rgba(0,0,0,.3)}
+.toast{display:flex;align-items:center;gap:12px;background:var(--neel-900);color:#fff;border-radius:var(--r);padding:12px 14px;font-size:14px;box-shadow:0 18px 36px -14px rgba(14,20,64,.55);max-width:340px}
+.toast .mk{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none}
+.toast .mk svg{width:14px;height:14px}
+.toast small{display:block;color:rgba(255,255,255,.7);font-size:12.5px}
+.toast.ok .mk{background:var(--peacock)}
+.toast.err .mk{background:var(--rani)}
+.toast.info .mk{background:var(--marigold);color:var(--ink)}
+.toast .x{margin-left:auto;background:none;border:0;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1;padding:4px}
+.stage .toast{position:relative;margin:-14px 0 0 -18px}
+.terms{display:flex;flex-wrap:wrap;gap:10px 28px;padding-block:0 52px}
+.terms div{display:flex;align-items:baseline;gap:8px;font-size:14.5px;color:var(--ink-2)}
+.terms b{font-family:var(--mono);font-size:20px;color:var(--ink)}
+.terms .dot{width:8px;height:8px;border-radius:50%;align-self:center}
+
+/* page-load sequence: the hero only, once, from the CSS (no script) */
+@media (prefers-reduced-motion:no-preference){
+  .in{animation:rise var(--slow) var(--ease) both}
+  .in.d1{animation-delay:60ms}.in.d2{animation-delay:120ms}.in.d3{animation-delay:180ms}.in.d4{animation-delay:260ms}.in.d5{animation-delay:380ms}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .sticker{animation:pop 420ms 520ms cubic-bezier(.3,1.6,.5,1) both}
+  @keyframes pop{from{transform:rotate(7deg) scale(.4);opacity:0}to{transform:rotate(7deg) scale(1);opacity:1}}
+}
+
+/* ---------- shared section ---------- */
+.sec{padding-block:88px}
+.sec-head{display:grid;gap:12px;max-width:640px;margin-bottom:44px}
+.sec-head .eb{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.sec-head h2{font-size:clamp(2rem,4.2vw,3rem);line-height:1.04;font-weight:800}
+.sec-head p{font-size:17.5px;color:var(--ink-2)}
+.sec-head .hi{font-family:var(--hindi);font-weight:700;font-size:18px}
+
+/* ---------- 2 pain ---------- */
+.pain{background:var(--rani-50)}
+.pain .eb{color:var(--rani-700)}
+.pain .hi{color:var(--rani-700)}
+.leaks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.leak{background:#fff;border-radius:var(--r-lg);padding:24px;display:grid;gap:12px;align-content:start;border:1px solid var(--rani-100)}
+.leak .ic{color:var(--rani);width:36px;height:36px}
+.leak h3{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.leak p{font-size:15px;color:var(--ink-2)}
+
+/* ---------- 3 relief: tiles ---------- */
+.relief .eb{color:var(--neel)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.tile{border-radius:var(--r-xl);padding:26px 22px;display:grid;gap:12px;align-content:start;min-height:220px;transition:transform var(--base) var(--ease),box-shadow var(--base) var(--ease)}
+.tile:hover{transform:translateY(-4px);box-shadow:0 18px 30px -18px rgba(30,20,32,.35)}
+.tile .ic{width:44px;height:44px}
+.tile h3{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.tile p{font-size:15px;opacity:.85}
+.t-rani{background:var(--rani-50);color:var(--rani-700)}
+.t-mari{background:var(--marigold-50);color:#6B4300}
+.t-pea{background:var(--peacock-50);color:var(--peacock-700)}
+.t-neel{background:var(--neel);color:#fff}
+.t-neel p{opacity:.8}
+
+/* ---------- 4 neel band ---------- */
+.band{background:var(--neel);color:#fff;position:relative;overflow:hidden}
+.band::before{content:"";position:absolute;left:-80px;bottom:-80px;width:240px;height:240px;border-radius:0 100% 0 0;background:var(--neel-700)}
+.band::after{content:"";position:absolute;right:8%;top:28px;width:56px;height:56px;border-radius:50%;background:var(--marigold)}
+.band .w{position:relative;padding-block:64px;display:grid;gap:36px}
+.band h2{font-size:clamp(1.8rem,3.4vw,2.5rem);font-weight:800;max-width:24ch}
+.band dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin:0}
+.band dl div{display:flex;flex-direction:column-reverse;gap:6px;border-top:2px solid rgba(255,255,255,.18);padding-top:16px}
+.band dd{margin:0;font-family:var(--mono);font-weight:700;font-size:clamp(2rem,4vw,3rem);line-height:1}
+.band dt{font-size:14.5px;color:rgba(255,255,255,.78)}
+.band dd .u{color:var(--marigold)}
+
+/* ---------- 5 how ---------- */
+.how{background:var(--paper-2)}
+.how .eb{color:var(--peacock-700)}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;list-style:none;margin:0;padding:0;counter-reset:s}
+.step{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;display:grid;gap:10px;align-content:start;position:relative}
+.step .n{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:18px;color:#fff}
+.step:nth-child(1) .n{background:var(--rani)}.step:nth-child(2) .n{background:var(--marigold);color:var(--ink)}.step:nth-child(3) .n{background:var(--peacock)}.step:nth-child(4) .n{background:var(--neel)}
+.step h3{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.step p{font-size:14.5px;color:var(--ink-2)}
+.step .when{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+/* ---------- 6 pricing ---------- */
+.pricing .eb{color:var(--rani-700)}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+.plan{border:1.5px solid var(--line);border-radius:var(--r-xl);padding:28px;display:grid;gap:16px;background:#fff}
+.plan.pop{border-color:var(--rani);box-shadow:0 22px 44px -24px rgba(214,31,105,.5);position:relative}
+.plan.pop .chip{position:absolute;top:-13px;left:24px}
+.plan h3{font-size:24px;font-weight:800}
+.plan .price{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.plan .price b{font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:-.02em}
+.plan .price span{font-size:13.5px;color:var(--muted)}
+.plan .fee{border-radius:var(--r);padding:12px 14px;font-size:14.5px;background:var(--neel-50);color:var(--neel)}
+.plan .fee b{font-family:var(--mono)}
+.plan ul{list-style:none;margin:0;padding:0;display:grid;gap:9px;font-size:14.5px;color:var(--ink-2)}
+.plan li{display:flex;gap:9px;align-items:flex-start}
+.plan li svg{width:18px;height:18px;flex:none;margin-top:2px;color:var(--peacock)}
+.plan .btn{width:100%}
+.example{margin-top:16px;font-size:12.5px;color:var(--muted)}
+
+/* ---------- 7 faq ---------- */
+.faq .w{display:grid;grid-template-columns:.8fr 1.2fr;gap:40px;align-items:start}
+.faq .w > *{min-width:0}
+.ask{background:var(--neel-50);border-radius:var(--r-xl);padding:28px;display:grid;gap:14px;justify-items:start}
+.ask h2{font-size:clamp(1.9rem,3.6vw,2.6rem);font-weight:800;color:var(--neel)}
+.ask p{color:var(--ink-2)}
+.ask .hi{font-family:var(--hindi);font-weight:700;color:var(--neel);font-size:18px}
+.qa{border-bottom:1px solid var(--line)}
+.qa summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 0;font-weight:700;font-size:17px}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary .pm{width:28px;height:28px;border-radius:50%;background:var(--rani-50);color:var(--rani);display:grid;place-items:center;flex:none;transition:transform var(--base) var(--ease)}
+.qa[open] summary .pm{transform:rotate(45deg)}
+.qa p{padding:0 0 20px;color:var(--ink-2);max-width:56ch}
+
+/* ---------- 8 final ---------- */
+.final{background:var(--rani);color:#fff;position:relative;overflow:hidden}
+.final::before{content:"";position:absolute;right:-70px;top:-70px;width:260px;height:260px;border-radius:0 0 0 100%;background:var(--neel)}
+.final::after{content:"";position:absolute;left:6%;bottom:-36px;width:120px;height:120px;border-radius:50%;background:var(--marigold)}
+.final .w{position:relative;z-index:1;padding-block:88px;display:grid;gap:22px;justify-items:start}
+.final h2{font-size:clamp(2.4rem,5.4vw,4rem);line-height:1;font-weight:800;max-width:16ch}
+.final .hi{font-family:var(--hindi);font-weight:700;font-size:20px;color:var(--rani-100)}
+.final .wa{color:rgba(255,255,255,.85)}
+.final .wa b{color:#fff}
+
+/* ---------- footer ---------- */
+.foot{background:var(--neel-900);color:rgba(255,255,255,.75);font-size:14px}
+.foot .w{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;padding-block:28px}
+.foot .logo{color:#fff;font-size:19px}
+.foot .logo i{color:var(--rani-100)}
+.foot a{text-decoration:none}
+.foot a:hover{color:#fff}
+.foot b{font-family:var(--mono);color:#fff;font-weight:500}
+
+/* ---------- system sheet ---------- */
+.sys{background:#F6F3F7;border-top:1px solid var(--line)}
+.sys .w{padding-block:72px;display:grid;grid-template-columns:minmax(0,1fr);gap:56px}
+.sys h2{font-size:clamp(1.9rem,3.6vw,2.6rem);font-weight:800}
+.sys h3{font-size:20px;font-weight:700;letter-spacing:-.01em;margin-bottom:16px}
+.sys-intro{display:grid;gap:10px;max-width:66ch}
+.sys-intro p{color:var(--ink-2)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.two > *{min-width:0}
+.roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.role{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#fff}
+.role .sw{height:72px;display:flex;align-items:flex-end;padding:10px 12px;font-family:var(--mono);font-size:12px}
+.role .tx{padding:12px;display:grid;gap:4px;font-size:13.5px}
+.role .tx b{font-size:14.5px}
+.role .tx span{color:var(--ink-2)}
+.ramp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-top:10px}
+.ramp div{height:36px;border-radius:6px;font-family:var(--mono);font-size:10.5px;display:flex;align-items:flex-end;padding:3px 5px}
+.ramp-l{font-size:12.5px;font-weight:700;margin-top:14px}
+.tscale{display:grid;gap:14px}
+.trow{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:baseline;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0;padding-bottom:0}
+.trow code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.trow > *{min-width:0}
+.comp{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.comp + .comp{margin-top:14px}
+.icons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.icons div{display:grid;justify-items:center;gap:8px;padding:16px 8px;border-radius:var(--r);background:var(--paper-2);font-size:12.5px;color:var(--ink-2)}
+.icons .ic{width:32px;height:32px}
+.toasts{display:grid;gap:10px}
+.motion{width:100%;border-collapse:collapse;font-size:14px}
+.motion th,.motion td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.motion th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.motion td code{font-family:var(--mono);font-size:12.5px}
+.tbl{overflow-x:auto}
+.psy{width:100%;border-collapse:collapse;font-size:14.5px;min-width:620px}
+.psy th,.psy td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.psy th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.psy td:first-child{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+.psy b{font-weight:700}
+.devs{display:grid;gap:10px;margin:0;padding-left:20px}
+.devs li{color:var(--ink-2)}
+.devs b{color:var(--ink)}
+.demo-zone{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;width:min(360px,calc(100% - 32px))}
+.demo-zone .toast{max-width:none}
+@media (prefers-reduced-motion:no-preference){
+  .demo-zone .toast{animation:tin var(--base) var(--ease)}
+  @keyframes tin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+}
+
+/* ---------- phone ---------- */
+@media (max-width:900px){
+  .site-h nav{display:none}
+  .site-h .btn{margin-left:auto}
+  .hero .hw{grid-template-columns:1fr;padding-block:40px 28px;gap:28px}
+  .sh-q{width:220px;height:220px;top:auto;bottom:120px;right:-70px}
+  .sh-c{right:150px;top:auto;bottom:330px;width:60px;height:60px}
+  .sh-d{display:none}
+  .leaks,.plans{grid-template-columns:1fr}
+  .tiles,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .band dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .faq .w,.two{grid-template-columns:1fr}
+  .roles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .trow{grid-template-columns:1fr;gap:4px}
+  .sec{padding-block:64px}
+}
+@media (max-width:520px){
+  .tiles,.steps{grid-template-columns:1fr}
+  .tile{min-height:0}
+  .icons{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stage .toast{margin:-10px 0 0}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cod" viewBox="0 0 32 32"><rect class="f" x="4" y="9" width="24" height="14" rx="3"/><rect class="s" x="4" y="9" width="24" height="14" rx="3"/><circle class="s" cx="16" cy="16" r="3.5"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 32 32"><path class="f" d="M5 25l7-7 5 4 9-10v13z"/><path class="s" d="M5 24l7-7 5 4 9-10"/><path class="s" d="M21 11h5v5"/></symbol>
+  <symbol id="i-ship" viewBox="0 0 32 32"><rect class="f" x="4" y="10" width="14" height="11" rx="1.5"/><path class="s" d="M4 10h14v11H4zM18 14h5l4 4v3h-9z"/><circle class="s" cx="9" cy="23.5" r="2"/><circle class="s" cx="23" cy="23.5" r="2"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 32 32"><path class="f" d="M6 7h20v13H13l-6 5v-5H6z"/><path class="s" d="M6 7h20v13H13l-6 5v-5H6z"/><path class="s" d="M11 13.5l3 3 6-6"/></symbol>
+  <symbol id="i-return" viewBox="0 0 32 32"><path class="f" d="M9 13h12v12H9z"/><path class="s" d="M9 13h12v12H9z"/><path class="s" d="M13 8h7a6 6 0 0 1 0 12M15 5l-3 3 3 3"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 32 32"><rect class="f" x="5" y="5" width="9" height="9" rx="2"/><rect class="s" x="5" y="5" width="9" height="9" rx="2"/><rect class="s" x="18" y="5" width="9" height="9" rx="2"/><rect class="s" x="5" y="18" width="9" height="9" rx="2"/><rect class="s" x="18" y="18" width="9" height="9" rx="2"/></symbol>
+  <symbol id="i-guess" viewBox="0 0 32 32"><circle class="f" cx="16" cy="16" r="11"/><circle class="s" cx="16" cy="16" r="11"/><path class="s" d="M12.5 13a3.5 3.5 0 1 1 5 3.2c-1 .5-1.5 1.2-1.5 2.3M16 22.5v.1"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 32 32"><path class="f" d="M16 28s-8-7-8-14a8 8 0 0 1 16 0c0 7-8 14-8 14z"/><path class="s" d="M16 28s-8-7-8-14a8 8 0 0 1 16 0c0 7-8 14-8 14z"/><circle class="s" cx="16" cy="14" r="3"/></symbol>
+  <symbol id="i-tick" viewBox="0 0 20 20"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 20 20"><path d="M10 5v6M10 14.5v.1" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="mock g"><div class="w"><span><b>Mockup</b> · Homepage in Rani Mela, neel as the supporting colour</span><nav aria-label="Mockup views"><a href="#home">Homepage</a><a href="#system">Design system</a></nav></div></div>
+
+<div id="home">
+<header class="site-h g"><div class="w">
+  <a class="logo" href="#home">fr<i>r</i>ata</a>
+  <nav aria-label="Main"><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">Questions</a><a href="#home">Partners</a><a href="#home">Sign in</a></nav>
+  <a class="btn btn-rani btn-sm" href="#home">Start free</a>
+</div></header>
+
+<main>
+<!-- 1 · Aspiration: who this is for, and the one number that matters -->
+<section class="hero">
+  <div class="shapes" aria-hidden="true"><span class="sh-q"></span><span class="sh-c"></span><span class="sh-d"></span></div>
+  <div class="w hw g">
+    <div class="hero-copy">
+      <span class="chip chip-neel in"><i></i>For Indian D2C brands</span>
+      <h1 class="in d1">Sell more. Keep more. <em>Know your profit.</em></h1>
+      <p class="hi in d2">हर ऑर्डर का असली मुनाफ़ा</p>
+      <p class="sub in d3">Your store, COD and payments in one place. See what every order really earned.</p>
+      <div class="ctas in d4"><a class="btn btn-rani" href="#home">Start your store free</a><a class="btn btn-ghost" href="#how">See how it works</a></div>
+      <p class="wa in d4">or WhatsApp <b>+91 95603 66601</b></p>
+    </div>
+    <div class="stage in d3">
+      <div class="order" aria-label="Example order">
+        <span class="sticker" aria-hidden="true">₹980 kept</span>
+        <div class="order-top"><span class="id">#KS-5012 · Example</span><span class="chip chip-peacock"><i></i>Delivered</span></div>
+        <div class="ol"><span>Order value</span><span class="num">₹2,490</span></div>
+        <div class="ol"><span>Product cost</span><span class="num">−₹1,188</span></div>
+        <div class="ol"><span>Shipping and packing</span><span class="num">−₹210</span></div>
+        <div class="ol"><span>Frrata fee</span><span class="num">−₹112</span></div>
+        <div class="ol total"><span>Profit, this order</span><span class="num">₹980</span></div>
+      </div>
+      <div class="toast ok in d5" role="presentation"><span class="mk"><svg><use href="#i-tick"/></svg></span><div>Confirmed on WhatsApp<small>KS-5013 · Jaipur · COD</small></div></div>
+    </div>
+  </div>
+  <div class="w g"><div class="terms">
+    <div><span class="dot" style="background:var(--rani)"></span><b>₹0</b> fee on a parcel that comes back</div>
+    <div><span class="dot" style="background:var(--marigold)"></span><b>1</b> afternoon to open</div>
+    <div><span class="dot" style="background:var(--peacock)"></span><b>0</b> apps to install</div>
+  </div></div>
+</section>
+
+<!-- 2 · Loss: name what they lose today -->
+<section class="sec pain"><div class="w g">
+  <div class="sec-head"><span class="eb">Sound familiar?</span><h2>Big sales. Small bank balance.</h2><p class="hi">बिक्री बहुत, मुनाफ़ा कम?</p></div>
+  <div class="leaks">
+    <div class="leak"><svg class="ic"><use href="#i-return"/></svg><h3>COD parcels come back</h3><p>You pay shipping both ways. You find out weeks later.</p></div>
+    <div class="leak"><svg class="ic"><use href="#i-apps"/></svg><h3>Ten apps, ten bills</h3><p>Each fixes one thing. None of them talk to each other.</p></div>
+    <div class="leak"><svg class="ic"><use href="#i-guess"/></svg><h3>Revenue, not profit</h3><p>You see what you sold. Not what you kept.</p></div>
+  </div>
+</div></section>
+
+<!-- 3 · Relief: one place fixes all three -->
+<section class="sec relief"><div class="w g">
+  <div class="sec-head"><span class="eb">One console</span><h2>Every rupee, counted.</h2><p>Store, checkout, COD, shipping and profit. Built together, so nothing slips.</p></div>
+  <div class="tiles">
+    <div class="tile t-rani"><svg class="ic"><use href="#i-cod"/></svg><h3>Safe COD</h3><p>Risky orders flagged before you ship.</p></div>
+    <div class="tile t-mari"><svg class="ic"><use href="#i-profit"/></svg><h3>Real profit</h3><p>Every order, after every cost.</p></div>
+    <div class="tile t-pea"><svg class="ic"><use href="#i-ship"/></svg><h3>Fast shipping</h3><p>PIN code checked. Slip printed.</p></div>
+    <div class="tile t-neel"><svg class="ic"><use href="#i-chat"/></svg><h3>WhatsApp confirm</h3><p>Fewer fake orders. Fewer returns.</p></div>
+  </div>
+</div></section>
+
+<!-- 4 · Trust: the terms, in numbers, on neel -->
+<section class="band" aria-label="The terms"><div class="w g">
+  <h2>Fair terms. Written in numbers.</h2>
+  <dl>
+    <div><dt>fee on a parcel that comes back</dt><dd>₹0</dd></div>
+    <div><dt>at most, on delivered orders</dt><dd>2<span class="u">%</span></dd></div>
+    <div><dt>afternoon to open your store</dt><dd>1</dd></div>
+    <div><dt>apps to install</dt><dd>0</dd></div>
+  </dl>
+</div></section>
+
+<!-- 5 · Ease: four steps, nothing to learn -->
+<section class="sec how" id="how"><div class="w g">
+  <div class="sec-head"><span class="eb">How it works</span><h2>Your first order, start to finish.</h2></div>
+  <ol class="steps">
+    <li class="step"><span class="n">1</span><h3>Open your store</h3><p>Add products, sizes and prices.</p><span class="when">Day 1</span></li>
+    <li class="step"><span class="n">2</span><h3>An order lands</h3><p>COD risk read in a second.</p><span class="when">10:06 pm</span></li>
+    <li class="step"><span class="n">3</span><h3>Confirmed on WhatsApp</h3><p>Packed, slip printed, picked up.</p><span class="when">Next morning</span></li>
+    <li class="step"><span class="n">4</span><h3>Delivered</h3><p>Your real profit, right on the order.</p><span class="when">Day 4</span></li>
+  </ol>
+</div></section>
+
+<!-- 6 · Decide: clear prices, one obvious pick -->
+<section class="sec pricing" id="pricing"><div class="w g">
+  <div class="sec-head"><span class="eb">Pricing</span><h2>Pricing, in rupees.</h2><p>No setup fee. No fee on returned parcels.</p></div>
+  <div class="plans">
+    <div class="plan"><h3>Launch</h3><div class="price"><b>₹1,499</b><span>/ month + 18% GST</span></div><div class="fee"><b>2%</b> of each delivered order</div><ul><li><svg><use href="#i-tick"/></svg>Up to 150 orders a month</li><li><svg><use href="#i-tick"/></svg>COD rules and risk flags</li><li><svg><use href="#i-tick"/></svg>Profit on every order</li></ul><a class="btn btn-ghost" href="#home">Start free</a></div>
+    <div class="plan pop"><span class="chip chip-marigold">Most brands pick this</span><h3>Growth</h3><div class="price"><b>₹4,999</b><span>/ month + 18% GST</span></div><div class="fee"><b>1%</b> of each delivered order</div><ul><li><svg><use href="#i-tick"/></svg>Up to 1,500 orders a month</li><li><svg><use href="#i-tick"/></svg>RTO shield and size fit</li><li><svg><use href="#i-tick"/></svg>Cart reminders</li></ul><a class="btn btn-rani" href="#home">Start free</a></div>
+    <div class="plan"><h3>Scale</h3><div class="price"><b>₹14,999</b><span>/ month + 18% GST</span></div><div class="fee"><b>0.5%</b> of each delivered order</div><ul><li><svg><use href="#i-tick"/></svg>Up to 5,000 orders a month</li><li><svg><use href="#i-tick"/></svg>Everything in Growth</li><li><svg><use href="#i-tick"/></svg>Lowest fee per order</li></ul><a class="btn btn-ghost" href="#home">Start free</a></div>
+  </div>
+  <p class="example">Example prices from the seed plans. The live page reads them from your plans.</p>
+</div></section>
+
+<!-- 7 · Doubt: answer the last four questions -->
+<section class="sec faq" id="faq"><div class="w g">
+  <div class="ask"><h2>Questions?</h2><p class="hi">पूछिए, हम बताएँगे</p><p>A real person answers on WhatsApp.</p><a class="btn btn-neel btn-sm" href="#faq">WhatsApp us</a></div>
+  <div>
+    <details class="qa" open><summary>Do I need a developer?<span class="pm"><svg width="16" height="16"><use href="#i-plus"/></svg></span></summary><p>No. Everything is set in the console.</p></details>
+    <details class="qa"><summary>A COD parcel comes back?<span class="pm"><svg width="16" height="16"><use href="#i-plus"/></svg></span></summary><p>No Frrata fee on it.</p></details>
+    <details class="qa"><summary>Do I need Razorpay to start?<span class="pm"><svg width="16" height="16"><use href="#i-plus"/></svg></span></summary><p>No. Take pay-on-delivery orders from day one.</p></details>
+    <details class="qa"><summary>Moving from Shopify?<span class="pm"><svg width="16" height="16"><use href="#i-plus"/></svg></span></summary><p>Product import is next. Your old store runs until you switch.</p></details>
+  </div>
+</div></section>
+
+<!-- 8 · Commit: one action, said like a plan -->
+<section class="final"><div class="w g">
+  <h2>Open your store this week.</h2>
+  <p class="hi">इसी हफ़्ते, अपना स्टोर</p>
+  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center"><a class="btn btn-white" href="#home">Start your store free</a><span class="wa">or WhatsApp <b>+91 95603 66601</b></span></div>
+</div></section>
+</main>
+
+<footer class="foot g"><div class="w">
+  <span class="logo">fr<i>r</i>ata</span>
+  <a href="#home">For partners</a><a href="#home">Build that converts</a><a href="#home">Privacy</a><a href="#home">Sign in</a>
+  <span>WhatsApp · <b>+91 95603 66601</b></span><span>Made in India</span>
+</div></footer>
+</div>
+
+<!-- ================= DESIGN SYSTEM ================= -->
+<section class="sys g" id="system"><div class="w">
+  <div class="sys-intro"><h2>Rani Mela · the system</h2><p>Public pages only: the homepage first, then /partners, /build-that-converts, /start and /login. The console keeps Neel.</p></div>
+
+  <div>
+    <h3>Colour roles</h3>
+    <div class="roles">
+      <div class="role"><div class="sw" style="background:var(--rani);color:#fff">#D61F69</div><div class="tx"><b>Rani</b><span>Every action. Logo, buttons, the one highlight word.</span></div></div>
+      <div class="role"><div class="sw" style="background:var(--neel);color:#fff">#23307A</div><div class="tx"><b>Neel</b><span>Trust. Number bands, help, Hindi lines, footer.</span></div></div>
+      <div class="role"><div class="sw" style="background:var(--marigold);color:var(--ink)">#FFB21C</div><div class="tx"><b>Marigold</b><span>Celebration. Stickers, "most picked". Never text.</span></div></div>
+      <div class="role"><div class="sw" style="background:var(--peacock);color:#fff">#0B8A72</div><div class="tx"><b>Peacock</b><span>Good news. Delivered, profit, ticks.</span></div></div>
+      <div class="role"><div class="sw" style="background:var(--ink);color:#fff">#1E1420</div><div class="tx"><b>Ink</b><span>Text. Warm, never pure black.</span></div></div>
+      <div class="role"><div class="sw" style="background:#fff;color:var(--muted);box-shadow:inset 0 -1px 0 var(--line)">#FFFFFF</div><div class="tx"><b>Paper</b><span>The page. Tints of each colour for sections.</span></div></div>
+    </div>
+    <div class="two" style="margin-top:16px">
+      <div class="card"><p class="ramp-l" style="margin:0">Rani scale</p><div class="ramp"><div style="background:#FFF0F6;color:#8E0F3F">50</div><div style="background:#FFD9E8;color:#8E0F3F">100</div><div style="background:#D61F69;color:#fff">500</div><div style="background:#B3134F;color:#fff">600</div><div style="background:#8E0F3F;color:#fff">700</div></div><p class="ramp-l">Neel scale</p><div class="ramp"><div style="background:#EEF0FB;color:#23307A">50</div><div style="background:#D9DDF5;color:#23307A">100</div><div style="background:#23307A;color:#fff">500</div><div style="background:#172057;color:#fff">700</div><div style="background:#0E1440;color:#fff">900</div></div></div>
+      <div class="card" style="display:grid;gap:10px;align-content:start"><b>Rules</b><span style="color:var(--ink-2);font-size:14.5px">One rani highlight per screen. Marigold only as a filled shape. Peacock only for good news. Text on a tint uses that colour's 700. Every pair meets 4.5:1.</span></div>
+    </div>
+  </div>
+
+  <div>
+    <h3>Type</h3>
+    <div class="card tscale">
+      <div class="trow"><code>Display · 64/64 · 800</code><span style="font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,64px);line-height:1;letter-spacing:-.03em">Know your profit.</span></div>
+      <div class="trow"><code>Heading · 44/46 · 800</code><span style="font-family:var(--display);font-weight:800;font-size:clamp(28px,4vw,44px);line-height:1.04;letter-spacing:-.03em">Every rupee, counted.</span></div>
+      <div class="trow"><code>Title · 21/26 · 800</code><span style="font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.02em">Safe COD</span></div>
+      <div class="trow"><code>Lead · 18.5/28 · DM Sans</code><span style="font-size:18.5px;color:var(--ink-2)">Your store, COD and payments in one place.</span></div>
+      <div class="trow"><code>Body · 16/25 · DM Sans</code><span>Risky orders flagged before you ship.</span></div>
+      <div class="trow"><code>Hindi · 21 · Mukta 700</code><span style="font-family:var(--hindi);font-weight:700;font-size:21px;color:var(--neel)">हर ऑर्डर का असली मुनाफ़ा</span></div>
+      <div class="trow"><code>Money · JetBrains Mono</code><span class="num" style="font-size:24px;font-weight:700">₹2,490 · −₹210 · <span style="color:var(--peacock-700)">₹980</span></span></div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card"><h3>Buttons and chips</h3>
+      <div class="comp"><a class="btn btn-rani" href="#system">Start your store free</a><a class="btn btn-neel" href="#system">WhatsApp us</a><a class="btn btn-ghost" href="#system">See how it works</a></div>
+      <div class="comp" style="background:var(--rani);padding:14px;border-radius:var(--r)"><a class="btn btn-white" href="#system">Start your store free</a></div>
+      <div class="comp"><span class="chip chip-peacock"><i></i>Delivered</span><span class="chip chip-rani"><i></i>Came back</span><span class="chip chip-neel"><i></i>For Indian D2C brands</span><span class="chip chip-marigold">Most brands pick this</span></div>
+    </div>
+    <div class="card"><h3>Icons</h3>
+      <div class="icons">
+        <div style="color:var(--rani)"><svg class="ic"><use href="#i-cod"/></svg>COD</div>
+        <div style="color:#6B4300"><svg class="ic"><use href="#i-profit"/></svg>Profit</div>
+        <div style="color:var(--peacock-700)"><svg class="ic"><use href="#i-ship"/></svg>Shipping</div>
+        <div style="color:var(--neel)"><svg class="ic"><use href="#i-chat"/></svg>Confirm</div>
+        <div style="color:var(--rani)"><svg class="ic"><use href="#i-return"/></svg>Returns</div>
+        <div style="color:var(--neel)"><svg class="ic"><use href="#i-apps"/></svg>Apps</div>
+        <div style="color:var(--rani)"><svg class="ic"><use href="#i-guess"/></svg>Guessing</div>
+        <div style="color:var(--peacock-700)"><svg class="ic"><use href="#i-pin"/></svg>PIN code</div>
+      </div>
+      <p style="margin-top:12px;font-size:13.5px;color:var(--ink-2)">32 grid, 2 px round line, one tinted fill at 18%. Coloured by the tile they sit on.</p>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card"><h3>Notifications</h3>
+      <div class="toasts">
+        <div class="toast ok"><span class="mk"><svg><use href="#i-tick"/></svg></span><div>Confirmed on WhatsApp<small>KS-5013 · Jaipur · COD</small></div></div>
+        <div class="toast err"><span class="mk"><svg><use href="#i-alert"/></svg></span><div>We couldn't save that<small>Nothing was changed.</small></div><button class="x" type="button" aria-label="Close">×</button></div>
+        <div class="toast info"><span class="mk"><svg><use href="#i-alert"/></svg></span><div>Your store opens at 6 pm</div></div>
+      </div>
+      <div class="comp" style="margin-top:14px"><button id="show-toast" class="btn btn-ghost btn-sm" type="button">Show a toast</button></div>
+      <p style="margin-top:12px;font-size:13.5px;color:var(--ink-2)">Neel-900 body, coloured mark. Success leaves after 5 s. An error stays until closed.</p>
+    </div>
+    <div class="card"><h3>Motion</h3>
+      <div class="tbl"><table class="motion">
+        <thead><tr><th>Moment</th><th>Move</th><th>Time</th></tr></thead>
+        <tbody>
+          <tr><td>Hero, on load</td><td>Rise 14 px, staggered 60 ms. Sticker pops once.</td><td><code>320 ms</code></td></tr>
+          <tr><td>Button press</td><td>Down 1 px, scale .98</td><td><code>120 ms</code></td></tr>
+          <tr><td>Button, tile hover</td><td>Up 2–4 px, shadow grows</td><td><code>200 ms</code></td></tr>
+          <tr><td>Toast</td><td>Up 12 px in, fade out</td><td><code>200 ms</code></td></tr>
+          <tr><td>FAQ open</td><td>Plus turns to ×</td><td><code>200 ms</code></td></tr>
+          <tr><td>Reduced motion</td><td>Nothing moves. Fades only.</td><td><code>—</code></td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin-top:12px;font-size:13.5px;color:var(--ink-2)">All CSS. No scroll effects, no new script on the page.</p>
+    </div>
+  </div>
+
+  <div>
+    <h3>What each scroll does</h3>
+    <div class="card tbl"><table class="psy">
+      <thead><tr><th>Scroll</th><th>The founder feels</th><th>Section</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Hero</td><td><b>"This is for me."</b></td><td>Promise + real order card</td><td>Names who it's for, shows the one number that matters.</td></tr>
+        <tr><td>2 · Pain</td><td><b>"That's my problem."</b></td><td>Three leaks, rani tint</td><td>Loss hurts more than gain pleases. Name the loss first.</td></tr>
+        <tr><td>3 · Relief</td><td><b>"There's a fix."</b></td><td>Four colour tiles</td><td>One tile answers each leak. Easy to scan.</td></tr>
+        <tr><td>4 · Trust</td><td><b>"The terms are fair."</b></td><td>Neel number band</td><td>Numbers, not adjectives. ₹0 on returns lands hardest.</td></tr>
+        <tr><td>5 · Ease</td><td><b>"I can do this."</b></td><td>Four steps</td><td>Few steps, real times. Removes fear of setup.</td></tr>
+        <tr><td>6 · Decide</td><td><b>"I know which one."</b></td><td>Three plans, one picked</td><td>A clear default ends the comparing.</td></tr>
+        <tr><td>7 · Doubt</td><td><b>"My last worry's gone."</b></td><td>FAQ + a real person</td><td>Answers the four questions sales calls get.</td></tr>
+        <tr><td>8 · Commit</td><td><b>"Let's start this week."</b></td><td>Rani band, one button</td><td>A plan with a date, not a pitch.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div>
+    <h3>Changes to today's rules</h3>
+    <ol class="devs card">
+      <li><b>Rani fills buttons</b> on public pages. Today rani is never a button fill.</li>
+      <li><b>Marigold replaces haldi</b> and peacock joins as the good-news colour.</li>
+      <li><b>DM Sans replaces Inter</b> for public-page text. Bricolage stays for headlines, at 800.</li>
+      <li><b>Hindi lines</b> in Mukta, one per section at most.</li>
+      <li><b>The ink stage, selvedge and pictograms</b> give way to white pages, colour tiles and the mark's shapes.</li>
+      <li><b>Prices and the order card</b> keep reading from the plans and the profit engine. Nothing typed.</li>
+    </ol>
+  </div>
+</div></section>
+
+<div class="demo-zone" id="toast-zone" aria-live="polite"></div>
+<script>
+  (function(){
+    var zone = document.getElementById('toast-zone'), btn = document.getElementById('show-toast'), t
+    btn.addEventListener('click', function(){
+      clearTimeout(t)
+      zone.innerHTML = '<div class="toast ok"><span class="mk"><svg><use href="#i-tick"/></svg></span><div>Saved<small>Your COD limit is now ₹5,000.</small></div></div>'
+      t = setTimeout(function(){ zone.innerHTML = '' }, 5000)
+    })
+  })()
+</script>
