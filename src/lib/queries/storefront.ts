@@ -90,7 +90,7 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   /** The brand's own website (Settings › Website), or null when the store runs on Frrata: its pages move there (SA1b). */
   siteOrigin: string | null
   /** GST at checkout (public facts; tax/gstin.ts checkoutGst). */
-  gst: { deliversWithin: string | null; b2b: boolean; invoice?: boolean }
+  gst: { deliversWithin: string | null; b2b: boolean; invoice: boolean }
   /** Delivery Zones, while the app is usable: the zones in order (public prices); null on the floor. */
   zones: PublicZone[] | null
 }

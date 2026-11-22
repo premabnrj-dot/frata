@@ -9,7 +9,7 @@
 // that is both too long and carries a UPI ID names the UPI ID.
 // =============================================================================
 
-import { PLAIN_WORDS, refusedChar } from '@/domains/content/plain-text'
+import { PLAIN_WORDS, refusedChar } from '@/domains/content/plain-rule'
 
 const UPI = /[\p{L}\p{N}._-]{2,}@[\p{L}]{2,}/u
 /** A scheme, a www., or any word.word ending in two or more letters (a closed list of endings missed .online, .site). */

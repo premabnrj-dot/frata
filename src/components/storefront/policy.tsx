@@ -6,7 +6,8 @@ import { paise } from '@/domains/money/paise'
 // rendering (storefront review 2026-11-07). In shopper mode a missing fact is
 // left out; in the preview it is marked for the merchant to fill.
 
-export const POLICY_TITLE: Record<PolicyPage, string> = { returns: 'Returns and exchanges', shipping: 'Shipping', privacy: 'Privacy', terms: 'Terms of sale', contact: 'Contact us' }
+import { POLICY_TITLE } from './policy-titles'
+export { POLICY_TITLE }
 const inr = (p: number) => formatInr(paise(p))
 
 export function Pieces({ paragraphs, shopper = false }: { paragraphs: Piece[][]; shopper?: boolean }) {

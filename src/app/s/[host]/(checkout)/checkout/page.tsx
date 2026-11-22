@@ -10,13 +10,13 @@ import { TrustBlocks } from '@/components/storefront/trust-blocks'
 export const revalidate = 60
 export const metadata: Metadata = { title: 'Checkout', robots: { index: false, follow: false } }
 
-/** The one-page checkout: a static shell; the form prices the bag on the server. */
 /** A code-site store's heading and trust blocks (one-address P2·3), the blocks drawn here so checkout's script doesn't grow. */
 function brandWords(shop: Parameters<typeof checkoutWords>[0], design: Parameters<typeof checkoutWords>[1]) {
   const w = checkoutWords(shop, design)
   return { heading: w.heading, trust: w.trust.length ? <TrustBlocks blocks={w.trust} /> : null }
 }
 
+/** The one-page checkout: a static shell; the form prices the bag on the server. */
 export default async function CheckoutPage({ params }: { params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
   // The WhatsApp opt-in shows only when the shop can message (Communication usable): no consent for messages that

@@ -3,7 +3,7 @@ import { FIELD_HEIGHT, type BrandRecord } from '@/domains/brand/record'
 import type { CheckoutDesign } from '@/domains/brand/checkout'
 import type { PolicyFacts } from '@/domains/policies/render'
 import { formatPhone } from '@/lib/format'
-import { POLICY_TITLE } from './policy'
+import { POLICY_TITLE } from './policy-titles'
 
 // =============================================================================
 // FILE: src/components/storefront/brand-parts.tsx — THE BRAND FRAME'S PARTS, PURE (one-address plan P2·3, P2·5): the

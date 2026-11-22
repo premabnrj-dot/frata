@@ -94,10 +94,22 @@ export type TrustFacts = {
 export type TrustBlock = { key: TrustKey; words: string }
 
 /** A store's settings as the trust blocks read them (the storefront's StoreShop, or the Builder's granted columns). */
-export const trustFactsOf = (s: Omit<TrustFacts, 'gstInvoice'> & { gst?: { invoice?: boolean } }): TrustFacts => ({
+export const trustFactsOf = (s: Omit<TrustFacts, 'gstInvoice'> & { gst: { invoice: boolean } }): TrustFacts => ({
   dispatchDays: s.dispatchDays, metroDays: s.metroDays, restDays: s.restDays, returnKind: s.returnKind, returnDays: s.returnDays,
-  codOn: s.codOn, codMax: s.codMax, gstInvoice: !!s.gst?.invoice,
+  codOn: s.codOn, codMax: s.codMax, gstInvoice: s.gst.invoice,
 })
+
+/**
+ * The store's returns window in checkout's two places, from one table (the words are the P2 mockup's, both drawn on one
+ * page): the summary row ("7-day returns and exchanges") and the trust block ("7-day exchange or returns").
+ */
+const RETURNS: Record<TrustFacts['returnKind'], [line: string, block: string] | null> = {
+  exchange_or_refund: ['returns and exchanges', 'exchange or returns'], exchange_only: ['exchanges', 'exchanges'], refund_only: ['returns', 'returns'], none: null,
+}
+export function returnsWords(kind: string, days: number, form: 'line' | 'block'): string | null {
+  const w = RETURNS[kind as TrustFacts['returnKind']]
+  return w && days ? `${days}-day ${w[form === 'line' ? 0 : 1]}` : null
+}
 
 /** A block's words from the store's facts, or null when the fact isn't there (the block is then not drawn). */
 export function trustWords(k: TrustKey, f: TrustFacts): string | null {
@@ -108,8 +120,7 @@ export function trustWords(k: TrustKey, f: TrustFacts): string | null {
       return lo === hi ? `Delivered in ${hi} days` : `Delivered in ${lo}–${hi} days`
     }
     case 'returns':
-      if (f.returnKind === 'none' || !f.returnDays) return null
-      return f.returnKind === 'exchange_or_refund' ? `${f.returnDays}-day exchange or returns` : f.returnKind === 'exchange_only' ? `${f.returnDays}-day exchanges` : `${f.returnDays}-day returns`
+      return returnsWords(f.returnKind, f.returnDays, 'block')
     case 'cod':
       if (!f.codOn) return null
       return f.codMax > 0 ? `Pay on delivery up to ${rupeesWords(f.codMax)}` : 'Pay on delivery'

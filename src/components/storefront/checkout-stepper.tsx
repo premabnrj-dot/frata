@@ -3,6 +3,7 @@
 import { pick, urlFor } from '@/domains/media/sizes'
 import { bag } from './bag-store'
 import { inr, type PublicQuoteLine } from './shop-client'
+import { goneOf, lineRows, type GoneLine } from '@/domains/checkout/line-rows'
 
 // =============================================================================
 // FILE: src/components/storefront/checkout-stepper.tsx — A CODE-SITE STORE'S CHECKOUT LINES, EDITABLE (one-address
@@ -15,7 +16,7 @@ import { inr, type PublicQuoteLine } from './shop-client'
 // it is in, checkout draws its plain lines. Its rules are the brand frame's (brand-css.ts), never the shop's sheet.
 // =============================================================================
 
-export type Gone = { variantId: string; qty: number; title: string; at: number }
+export type Gone = GoneLine
 const MAX_QTY = 10
 
 function Alert() {
@@ -24,14 +25,12 @@ function Alert() {
 
 export default function CheckoutStepper({ lines, gone, setGone }: { lines: readonly PublicQuoteLine[]; gone: readonly Gone[]; setGone: (f: (g: Gone[]) => Gone[]) => void }) {
   const remove = (l: PublicQuoteLine, at: number, undo: boolean) => {
-    if (undo) setGone((g) => [...g.filter((x) => x.variantId !== l.variantId), { variantId: l.variantId, qty: Math.max(1, l.qty || l.requested), title: l.title, at }])
+    if (undo) setGone((g) => [...g.filter((x) => x.variantId !== l.variantId), goneOf(l, at)])
     bag.remove(l.variantId, 'keep')
   }
   const back = (x: Gone) => { setGone((g) => g.filter((y) => y.variantId !== x.variantId)); bag.add(x.variantId, x.qty, 'keep') }
-  const shown = lines.filter((l) => !gone.some((x) => x.variantId === l.variantId))
-  // Each removed line keeps its place: rows are the quote's lines with the removed ones put back where they were.
-  const rows: ({ line: PublicQuoteLine } | { gone: Gone })[] = shown.map((line) => ({ line }))
-  for (const x of [...gone].sort((a, b) => a.at - b.at)) rows.splice(Math.min(x.at, rows.length), 0, { gone: x })
+  // Each removed line keeps its place (src/domains/checkout/line-rows.ts).
+  const rows = lineRows(lines, gone)
   return (
     <ul className="ck-lines">
       {rows.map((r, i) => {
