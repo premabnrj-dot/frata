@@ -36,6 +36,12 @@ const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.5 }
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
 const BLOCK_CSS_KB = 1.0
+// One-address P2·3: a code-site store's checkout, bag-link, order and policy pages draw the brand record's faces
+// (Mukta, Tiro Devanagari Hindi: src/components/shop-preview/brand-fonts.ts), so those routes carry their @font-face
+// rules (0.35 kB gzipped, measured 2026-11-22; the faces themselves download only where a record uses them). They have
+// their own ceiling here, outside the sheet's: the shop's shared sheet keeps its 15.9 kB for every theme shop.
+const BRAND_FONTS_CSS_KB = 0.45
+const isBrandFonts = (f) => readFileSync(join('.next', f), 'utf8').includes('--font-store-mukta')
 // The visit beacon (A·2, public/fe.js): a static async script the shell adds to every live shop page. It isn't a build
 // chunk, so it isn't in a page's first-load figure (it runs in its own task, after parsing: 0 TBT; speed review
 // 2026-11-11), but its bytes are shown beside each page's and held by scripts/build-beacon.mjs (≤ 1.7 kB gzip).
@@ -74,7 +80,9 @@ for (const [k, files] of Object.entries(build)) {
   const parts = k.split('/').slice(0, -1)
   const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
   const all = [...new Set([...above.flatMap((l) => build[l] ?? []), ...files])]
-  const css = all.filter((f) => f.endsWith('.css')).reduce((a, f) => a + gz(f), 0) / 1024
+  const fonts = all.filter((f) => f.endsWith('.css') && isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
+  if (fonts > BRAND_FONTS_CSS_KB) failures.push(`${k}  loads ${fonts.toFixed(2)} kB of the brand faces' rules gzipped (budget ${BRAND_FONTS_CSS_KB} kB)`)
+  const css = all.filter((f) => f.endsWith('.css') && !isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
   // Signal S2-0: a shop page loads the shop's own sheet (src/app/shop.css), never the app's (globals.css: console classes).
   for (const f of all) if (f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')) failures.push(`${k}  loads the app's stylesheet (${f}); a shop page loads src/app/shop.css only`)
   if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)

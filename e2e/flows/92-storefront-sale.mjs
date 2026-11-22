@@ -35,6 +35,9 @@ export default {
       await db`delete from shop_pages where id = ${page}`
     }
     await reset()
+    // Its orders use 10-checkout's phone: the per-phone order limit is cleared first (as 67-ekcode does), so this flow
+    // passes whichever flows ran before it (the keys are hashed: cleared whole).
+    await db`delete from rate_limits where key is not null`
     // This flow's orders need stock whatever earlier flows sold (10-checkout sells M/Rust out): it tops up the set's
     // stocked sizes for itself and puts the counts back at the end.
     const stockBefore = await db`select v.id, v.stock from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.when_out = 'stop'`
@@ -97,6 +100,69 @@ export default {
         assert.equal(o.a.utm_source, 'instagram'); assert.equal(o.a.via_site, '1')
         await p.goto(`${CONSOLE}/console/orders/${o.number}`)
         await p.getByText('Instagram bio').first().waitFor()
+      })
+
+      await t.step('a code-site store’s order, checkout, policy and bag-link pages wear its brand, not the theme (one-address P2·3)', async () => {
+        // The order page the last step left open: the brand frame, its header and legal block.
+        await s.getByText('Order placed').waitFor()
+        assert.equal(await s.locator('[data-brand]').count(), 1, 'the order page is in the brand frame')
+        assert.equal(await s.locator('[data-brand] footer').getByText('Sold by').count(), 1)
+        // Checkout: the default design (no design saved): "Checkout", Back to the store's website, trust blocks, PIN code.
+        await s.goto(`${SHOP}/bag`); await s.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+        await s.goto(`${SHOP}/cart?l=${variant.id}:1`, { referer: `${SITE}/bag` }); await s.waitForURL(/\/checkout$/)
+        await s.getByRole('heading', { level: 1, name: 'Checkout' }).waitFor()
+        assert.equal(await s.locator('[data-brand]').count(), 1, 'checkout is in the brand frame')
+        assert.equal(await s.getByRole('link', { name: 'Back to Kesar Studio' }).getAttribute('href'), SITE)
+        await s.getByLabel('PIN code').waitFor()
+        assert.ok(await s.locator('[data-trust] li').count() >= 1, 'trust blocks from the store’s settings')
+        assert.equal(await s.getByRole('navigation', { name: 'Policies' }).getByRole('link').count(), 5)
+        assert.ok(await s.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scroll')
+        await s.screenshot({ path: t.out('brand-checkout-390'), fullPage: true })
+        // A policy page: the same header and legal block.
+        await s.goto(`${SHOP}/policies/returns`)
+        await s.getByRole('heading', { level: 1, name: 'Returns and exchanges' }).waitFor()
+        assert.equal(await s.locator('[data-brand] footer').count(), 1)
+        // The bag-link page: the logo alone, no footer, no link.
+        await s.goto(`${SHOP}/cart?l=nonsense`); await s.getByText('This bag link doesn’t work').waitFor()
+        assert.equal(await s.locator('[data-brand]').count(), 1); assert.equal(await s.locator('[data-brand] footer').count(), 0)
+        assert.equal(await s.getByRole('link', { name: 'Back to Kesar Studio' }).count(), 0)
+      })
+
+      await t.step('a code-site store’s checkout lines: + and −, Remove with Undo, − at 1 removes, a sold-out line shows with Remove (one-address P2·4)', async () => {
+        const pick = await db`select v.id, v.stock from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.archived_at is null and v.stock >= 3 order by v.id limit 2`
+        assert.equal(pick.length, 2, 'two sizes of the kurta set with stock')
+        const [A, B] = [pick[0].id, pick[1].id]
+        const bagNow = () => s.evaluate(() => ({ lines: JSON.parse(localStorage.getItem('frata.bag.v1') ?? '[]'), by: localStorage.getItem('frrata.bag.by.v1') }))
+        await s.goto(`${SHOP}/bag`); await s.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+        await s.goto(`${SHOP}/cart?l=${A}:1,${B}:1`); await s.waitForURL(/\/checkout$/)
+        // + re-prices through the quote; checkout's edits are `keep`: the bag stays the link's.
+        await s.getByRole('button', { name: 'Remove' }).nth(1).waitFor()
+        await s.getByRole('button', { name: /^One more / }).first().click()
+        await until(async () => (await bagNow()).lines.find((l) => l.variantId === A)?.qty === 2)
+        assert.equal((await bagNow()).by, 'link', 'checkout’s own edits keep who made the bag')
+        // Remove: "Removed <product>." with Undo in its place; Undo puts it back.
+        await s.getByRole('button', { name: 'Remove' }).nth(1).click()
+        await s.getByText(/^Removed Chanderi kurta set\./).waitFor()
+        await until(async () => (await bagNow()).lines.length === 1)
+        await s.screenshot({ path: t.out('brand-lines-removed-390'), fullPage: true })
+        await s.getByRole('button', { name: 'Undo' }).click()
+        await until(async () => (await bagNow()).lines.some((l) => l.variantId === B))
+        // − at 1 removes the line, with Undo in its place (owner call 3).
+        await s.getByRole('button', { name: 'Remove' }).nth(1).waitFor()
+        await s.getByRole('button', { name: /^One fewer / }).nth(1).click()
+        await s.getByRole('button', { name: 'Undo' }).waitFor()
+        await until(async () => !(await bagNow()).lines.some((l) => l.variantId === B))
+        await s.getByRole('button', { name: 'Undo' }).click()
+        await until(async () => (await bagNow()).lines.some((l) => l.variantId === B))
+        // A line sold out since it was added: shown, with Remove, never hidden until Place order is refused.
+        await db`update variants set stock = 0 where id = ${B}`
+        try {
+          await s.reload(); await s.getByText('Sold out since you added it.').waitFor()
+          await s.screenshot({ path: t.out('brand-lines-sold-out-390'), fullPage: true })
+          await s.getByText('Sold out since you added it.').locator('xpath=..').getByRole('button', { name: 'Remove' }).click()
+          await until(async () => !(await bagNow()).lines.some((l) => l.variantId === B))
+          assert.equal(await s.getByRole('button', { name: 'Undo' }).count(), 0, 'a sold-out line goes without Undo')
+        } finally { await db`update variants set stock = ${pick[1].stock} where id = ${B}` }
       })
 
       await t.step('a bag link that doesn’t read shows one state and changes nothing', async () => {

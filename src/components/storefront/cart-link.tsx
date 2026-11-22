@@ -31,9 +31,9 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
   }, [site])
   if (broken) return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold" style={{ fontFamily: 'var(--store-display)' }}>{words.broken}</h1>
+      <h1 className="ck-h1-sm text-xl font-semibold" style={{ fontFamily: 'var(--store-display)' }}>{words.broken}</h1>
       <p className="text-store-sub">{words.again}</p>
-      <p><a href={site ?? '/'} className="store-btn inline-flex min-h-11 items-center gap-2 rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button">{words.goTo}</a></p>
+      <p><a href={site ?? '/'} className="ck-go store-btn inline-flex min-h-11 items-center gap-2 rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button">{words.goTo}</a></p>
     </div>
   )
   return (

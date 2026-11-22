@@ -21,6 +21,8 @@ export type PolicyRows = (typeof POLICY_ROWS)[number]
 export const TRUST_KEYS = ['delivery', 'returns', 'cod', 'secure', 'gst'] as const
 export type TrustKey = (typeof TRUST_KEYS)[number]
 export const MAX_TRUST = 4
+/** A block's name where the store's settings give it no words (its fact is off): the console lists it, a page never draws it. */
+export const TRUST_NAMES: Record<TrustKey, string> = { delivery: 'Delivery days', returns: 'Returns window', cod: 'Pay on delivery limit', secure: 'Secure payment by Razorpay', gst: 'GST invoice on every order' }
 export const HEADING_MAX = 24
 export const THANKS_MAX = 120
 
@@ -90,6 +92,12 @@ export type TrustFacts = {
   gstInvoice: boolean
 }
 export type TrustBlock = { key: TrustKey; words: string }
+
+/** A store's settings as the trust blocks read them (the storefront's StoreShop, or the Builder's granted columns). */
+export const trustFactsOf = (s: Omit<TrustFacts, 'gstInvoice'> & { gst?: { invoice?: boolean } }): TrustFacts => ({
+  dispatchDays: s.dispatchDays, metroDays: s.metroDays, restDays: s.restDays, returnKind: s.returnKind, returnDays: s.returnDays,
+  codOn: s.codOn, codMax: s.codMax, gstInvoice: !!s.gst?.invoice,
+})
 
 /** A block's words from the store's facts, or null when the fact isn't there (the block is then not drawn). */
 export function trustWords(k: TrustKey, f: TrustFacts): string | null {
