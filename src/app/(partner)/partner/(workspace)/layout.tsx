@@ -73,7 +73,9 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const can = (what: Parameters<typeof partnerCan>[1]) => partnerCan(auth.partner.memberRole, what)
   // Everyone's own passkeys (T1b; mockup screen 18).
   const passkeys: NavItem = { href: '/partner/passkeys', label: 'Passkeys', icon: 'key' }
-  const items = [clients, ...(can('manageTeam') ? [team] : []), passkeys, ...(can('seeDetails') ? [details] : [])]
+  // Everyone's own computers (G·3; four screens § 2): a Builder's page says who may sign one in.
+  const developer: NavItem = { href: '/partner/developer', label: 'Developer', icon: 'code' }
+  const items = [clients, ...(can('manageTeam') ? [team] : []), passkeys, developer, ...(can('seeDetails') ? [details] : [])]
   const name = auth.partner.businessName || auth.partner.name
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}

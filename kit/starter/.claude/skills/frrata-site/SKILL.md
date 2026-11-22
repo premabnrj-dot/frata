@@ -2,7 +2,7 @@
 name: frrata-site
 description: Use when building or changing an Indian D2C brand's website on its Frrata store with this starter - reading the store through the Frrata Storefront API (keys, products, collections, pages, filters), sending the shopper's bag to checkout with the bag link, caching, previews, the legal block, and Indian shopper conventions.
 metadata:
-  version: 2026.12.3
+  version: 2026.12.4
   api: '2026-12'
   verified: 2026-11-22
 ---
@@ -42,6 +42,11 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    never in the address. It reads drafts and hidden pages. Frrata never caches it and it answers no browser (no CORS);
    `lib/frrata.ts` keeps it as a Test key's (never on your computer, 15 s deployed, the header in the cache key). Read it
    on the server only. It ends after 24 hours, a preview's with the preview.
+   Signing in your computer: `npx frrata dev <store>` prints "Open frata.vercel.app/partner/developer" and "Code
+   XXXX-XXXX ends in 10 minutes". You (a Partner owner, or a Lead on that store) type the code yourself in Partner
+   workspace › Developer and give the key with your passkey; then "Signed in. This computer has a key for 24 hours."
+   Frrata never asks you for a code: never type one someone sent you. Delete the key there, or the store's owner does in
+   Settings › Website.
 9. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps
    the token in an HttpOnly cookie for 10 minutes and `previewOr()` sends it as the `Frrata-Preview` header. Accept
    only `/pages/<handle>` in `to`.
