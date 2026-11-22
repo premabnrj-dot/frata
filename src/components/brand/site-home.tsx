@@ -64,7 +64,7 @@ export function ExampleOrderCard({ order }: { order: ExampleOrder }) {
     ['Product cost', c.cogs], ['Shipping, packing, COD fee', c.forwardShipping + c.packaging + c.codFee], ['Ads', c.adCost], ['GST', order.gst], ['Frrata fee', order.fee],
   ]
   return (
-    <figure className="s-order" inert>
+    <figure className="s-order">
       <span className="s-sticker" aria-hidden="true">{formatInr(order.ifDelivered)} kept</span>
       <div className="s-order-top"><span className="s-num">KS-5012 · Example</span><span className="s-chip s-chip-peacock"><i />Delivered</span></div>
       <dl>

@@ -16,6 +16,12 @@
 [data-site] h1, [data-site] h2, [data-site] h3 { font-family: var(--site-display); letter-spacing: -0.03em; text-wrap: balance; margin: 0; }
 [data-site] p { margin: 0; }
 [data-site] :focus-visible { outline: 3px solid var(--site-rani); outline-offset: 3px; border-radius: 6px; }
+[data-site] .s-final :focus-visible, [data-site] .s-foot :focus-visible { outline-color: var(--site-on-strong); }
+[data-site] main:focus-visible { outline: none; }
+html:has([data-site]) { scroll-padding-top: 5rem; }
+/* The wordmark's thread in the website's own colours, the same in both modes. */
+[data-site] .s-head .stroke-brand { stroke: var(--site-rani); }
+[data-site] .s-foot .stroke-brand-on-ink { stroke: var(--site-rani-tint); }
 [data-site] .s-w { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 [data-site] .s-num { font-family: var(--site-mono); font-variant-numeric: tabular-nums; }
 [data-site] .s-hi { font-family: var(--site-hindi); font-weight: 700; }
@@ -23,16 +29,14 @@
 /* buttons and chips */
 [data-site] .s-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--site-body); font-weight: 700; font-size: 15px; line-height: 1;
   padding: 14px 22px; border-radius: 12px; text-decoration: none; border: 0; cursor: pointer; min-height: 44px;
-  transition: transform 120ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out; }
-[data-site] .s-btn:active { transform: translateY(1px) scale(0.98); }
+  transition: transform var(--transition-duration-fast) var(--ease-standard), background-color var(--transition-duration-base) var(--ease-standard), box-shadow var(--transition-duration-base) var(--ease-standard); }
 [data-site] .s-btn-rani { background: var(--site-rani); color: var(--site-on-strong); box-shadow: var(--site-sh-rani); }
-[data-site] .s-btn-rani:hover { background: var(--site-rani-press); transform: translateY(-2px); }
+[data-site] .s-btn-rani:hover { background: var(--site-rani-press); }
 [data-site] .s-btn-neel { background: var(--site-neel); color: var(--site-on-strong); }
-[data-site] .s-btn-neel:hover { background: var(--site-neel-deep); transform: translateY(-2px); }
+[data-site] .s-btn-neel:hover { background: var(--site-neel-deep); }
 [data-site] .s-btn-ghost { background: transparent; color: var(--site-ink); box-shadow: inset 0 0 0 1.5px var(--site-edge); }
 [data-site] .s-btn-ghost:hover { box-shadow: inset 0 0 0 1.5px var(--site-ink); }
 [data-site] .s-btn-white { background: var(--site-on-strong); color: var(--site-rani-deep); }
-[data-site] .s-btn-white:hover { transform: translateY(-2px); }
 [data-site] .s-btn-sm { padding: 10px 16px; font-size: 14px; min-height: 40px; }
 [data-site] .s-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; line-height: 1.2; }
 [data-site] .s-chip > i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -42,7 +46,7 @@
 [data-site] .s-ic { width: 28px; height: 28px; flex: none; }
 [data-site] .s-ic .f { fill: currentColor; opacity: 0.18; }
 [data-site] .s-ic .s { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-[data-site] .s-wa { font-size: 14px; color: var(--site-muted); }
+[data-site] .s-wa { display: inline-flex; align-items: center; min-height: 24px; font-size: 14px; color: var(--site-muted); }
 [data-site] .s-wa b { font-family: var(--site-mono); color: var(--site-ink); }
 [data-site] .s-wa a { text-decoration: none; }
 
@@ -53,7 +57,7 @@
 [data-site] .s-skip:focus { left: 12px; top: 12px; z-index: 60; background: var(--site-ink); color: var(--site-on-strong); padding: 8px 12px; border-radius: 8px; }
 [data-site] .s-logo { display: inline-flex; align-items: center; min-height: 24px; }
 [data-site] .s-nav { display: flex; gap: 24px; margin-left: auto; font-size: 14.5px; font-weight: 500; color: var(--site-ink-2); }
-[data-site] .s-nav a { text-decoration: none; }
+[data-site] .s-nav a { text-decoration: none; display: inline-flex; align-items: center; min-height: 24px; }
 [data-site] .s-nav a:hover { color: var(--site-rani); }
 
 /* 1 · hero */
@@ -94,12 +98,17 @@
 [data-site] .s-terms li { display: flex; align-items: baseline; gap: 8px; font-size: 14.5px; color: var(--site-ink-2); }
 [data-site] .s-terms b { font-family: var(--site-mono); font-size: 20px; color: var(--site-ink); }
 [data-site] .s-terms .s-dot { width: 8px; height: 8px; border-radius: 50%; align-self: center; }
+[data-site] .s-dot-rani { background: var(--site-rani); } [data-site] .s-dot-mari { background: var(--site-marigold); } [data-site] .s-dot-pea { background: var(--site-peacock); }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-site] .s-in { animation: s-rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  [data-site] .s-in { animation: s-rise var(--transition-duration-slow) var(--ease-entrance) both; }
+  [data-site] .s-btn:active { transform: translateY(1px) scale(0.98); }
+  [data-site] .s-btn-rani:hover, [data-site] .s-btn-neel:hover, [data-site] .s-btn-white:hover { transform: translateY(-2px); }
+  [data-site] .s-tile:hover { transform: translateY(-4px); }
+  [data-site] .s-qa[open] .s-pm { transform: rotate(45deg); }
   [data-site] .s-d1 { animation-delay: 60ms; } [data-site] .s-d2 { animation-delay: 120ms; } [data-site] .s-d3 { animation-delay: 180ms; }
   [data-site] .s-d4 { animation-delay: 260ms; } [data-site] .s-d5 { animation-delay: 380ms; }
-  [data-site] .s-sticker { animation: s-pop 400ms 500ms cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+  [data-site] .s-sticker { animation: s-pop var(--transition-duration-slow) var(--ease-snap) both; animation-delay: 400ms; }
 }
 @keyframes s-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes s-pop { from { opacity: 0; transform: rotate(7deg) scale(0.4); } to { opacity: 1; transform: rotate(7deg) scale(1); } }
@@ -124,8 +133,8 @@
 /* 3 · relief */
 [data-site] .s-relief .s-eb { color: var(--site-neel); }
 [data-site] .s-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
-[data-site] .s-tile { border-radius: 24px; padding: 26px 22px; display: grid; gap: 12px; align-content: start; min-height: 220px; transition: transform 200ms ease-out, box-shadow 200ms ease-out; }
-[data-site] .s-tile:hover { transform: translateY(-4px); box-shadow: var(--site-sh-lift); }
+[data-site] .s-tile { border-radius: 24px; padding: 26px 22px; display: grid; gap: 12px; align-content: start; min-height: 220px; transition: transform var(--transition-duration-base) var(--ease-standard), box-shadow var(--transition-duration-base) var(--ease-standard); }
+[data-site] .s-tile:hover { box-shadow: var(--site-sh-lift); }
 [data-site] .s-tile .s-ic { width: 44px; height: 44px; }
 [data-site] .s-tile h3 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
 [data-site] .s-tile p { font-size: 15px; }
@@ -188,8 +197,7 @@
 [data-site] .s-qa { border-bottom: 1px solid var(--site-line); }
 [data-site] .s-qa summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; font-weight: 700; font-size: 17px; }
 [data-site] .s-qa summary::-webkit-details-marker { display: none; }
-[data-site] .s-qa .s-pm { width: 28px; height: 28px; border-radius: 50%; background: var(--site-rani-soft); color: var(--site-rani); display: grid; place-items: center; flex: none; transition: transform 200ms ease-out; }
-[data-site] .s-qa[open] .s-pm { transform: rotate(45deg); }
+[data-site] .s-qa .s-pm { width: 28px; height: 28px; border-radius: 50%; background: var(--site-rani-soft); color: var(--site-rani); display: grid; place-items: center; flex: none; transition: transform var(--transition-duration-base) var(--ease-standard); }
 [data-site] .s-qa p { padding: 0 0 20px; color: var(--site-ink-2); max-width: 56ch; }
 
 /* 8 · commit */
@@ -226,4 +234,5 @@
   [data-site] .s-tiles, [data-site] .s-steps { grid-template-columns: 1fr; }
   [data-site] .s-tile { min-height: 0; }
   [data-site] .s-toast { margin: -10px 0 0; }
+  [data-site] .s-band::after { top: 8px; right: -24px; width: 44px; height: 44px; }
 }

@@ -81,17 +81,17 @@ export default async function Home() {
               </div>
             )}
           </div>
-          <ul className="s-w s-terms" aria-label="Our terms">
-            <li><span className="s-dot" style={{ background: 'var(--site-rani)' }} /><b>₹0</b> fee on a parcel that comes back</li>
-            <li><span className="s-dot" style={{ background: 'var(--site-marigold)' }} /><b>1</b> afternoon to open</li>
-            <li><span className="s-dot" style={{ background: 'var(--site-peacock)' }} /><b>0</b> apps to install</li>
+          <ul role="list" className="s-w s-terms" aria-label="Our terms">
+            <li><span className="s-dot s-dot-rani" /><b>₹0</b> fee on a parcel that comes back</li>
+            <li><span className="s-dot s-dot-mari" /><b>1</b> afternoon to open</li>
+            <li><span className="s-dot s-dot-pea" /><b>0</b> apps to install</li>
           </ul>
         </section>
 
         {/* 2 · That's my problem */}
         <section className="s-sec s-pain"><div className="s-w">
           <SectionHead eyebrow="Sound familiar?" title="Big sales. Small bank balance." hindi="बिक्री बहुत, मुनाफ़ा कम?" />
-          <ul className="s-leaks">
+          <ul role="list" className="s-leaks">
             {LEAKS.map(([icon, t, d]) => <li key={t} className="s-leak"><SiteIcon name={icon} /><h3>{t}</h3><p>{d}</p></li>)}
           </ul>
         </div></section>
@@ -99,14 +99,14 @@ export default async function Home() {
         {/* 3 · There's a fix */}
         <section className="s-sec s-relief"><div className="s-w">
           <SectionHead eyebrow="One console" title="Every rupee, counted." line="Store, checkout, COD, shipping and profit. Built together, so nothing slips." />
-          <ul className="s-tiles">
+          <ul role="list" className="s-tiles">
             {TILES.map(([icon, tone, t, d, next]) => <li key={t} className={`s-tile ${tone}`}><SiteIcon name={icon} /><h3>{t}</h3><p>{d}</p>{next && <span><NextTag /></span>}</li>)}
           </ul>
         </div></section>
 
         {/* 4 · The terms are fair */}
-        <section className="s-band" aria-label="The terms"><div className="s-w">
-          <h2>Fair terms. Written in numbers.</h2>
+        <section className="s-band" aria-labelledby="terms-h"><div className="s-w">
+          <h2 id="terms-h">Fair terms. Written in numbers.</h2>
           <dl>
             <div><dt>fee on a parcel that comes back</dt><dd>₹0</dd></div>
             {maxFee !== null && <div><dt>at most, on delivered orders</dt><dd>{maxFee.toLocaleString('en-IN')}%</dd></div>}
@@ -118,7 +118,7 @@ export default async function Home() {
         {/* 5 · I can do this */}
         <section id="how" className="s-sec s-how"><div className="s-w">
           <SectionHead eyebrow="How it works" title="Your first order, start to finish." />
-          <ol className="s-steps">
+          <ol role="list" className="s-steps">
             {STEPS.map(([t, d, when, next], i) => (
               <li key={t} className="s-step"><span className="s-n" aria-hidden="true">{i + 1}</span><h3>{t}</h3><p>{d}</p><span className="s-when">{when}</span>{next && <span><NextTag /></span>}</li>
             ))}
@@ -138,7 +138,7 @@ export default async function Home() {
                     <h3>{p.name}</h3>
                     <p className="s-price"><b>{formatInr(paise(p.monthlyPrice))}</b><span>/ month + 18% GST</span></p>
                     <p className="s-fee"><b>{(p.feeBps / 100).toLocaleString('en-IN')}%</b> of each delivered order</p>
-                    <ul>
+                    <ul role="list">
                       <li><SiteIcon name="tick" className="" />Up to {p.includedOrders.toLocaleString('en-IN')} orders a month</li>
                       {p.features.map((f) => <li key={f}><SiteIcon name="tick" className="" /><span>{FEATURE_NAMES[f as Feature] ?? f} {MODULES[f as Feature]?.status === 'next' && <NextTag />}</span></li>)}
                     </ul>
