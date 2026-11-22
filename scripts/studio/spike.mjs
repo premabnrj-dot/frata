@@ -65,6 +65,7 @@ const PROBES = {
   'network-ip': { item: '`limited` by address: raw IPs, a refused name pinned to its address, direct DNS, port 22', needs: [], est: 0.25, run: probeNetworkIp },
   vault: { item: 'A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL', needs: [], est: 0.5, run: probeVault },
   'custom-tools': { item: 'Does each custom tool call idle the session (so raise `session.status_idled`)?', needs: [], est: 0.5, run: probeCustomTools },
+  'custom-tools-batched': { item: 'As custom-tools, answering every pending call in one send at each idle (as a webhook-driven server would)', needs: [], est: 0.5, run: probeCustomToolsBatched },
   cache: { item: 'Cache shares: does a second session of one agent version read the first one\'s cache?', needs: [], est: 1, run: probeCache },
   concurrency: { item: 'Concurrency and rate limits: 10 sessions created at once (no model call)', needs: [], est: 0.1, run: probeConcurrency },
   'mount-sha': { item: 'Mount by commit SHA', needs: ['SPIKE_REPO_URL', 'SPIKE_REPO_SHA'], est: 0.5, run: probeMountSha },
@@ -144,7 +145,7 @@ async function spikeEnv(r, key, networking) {
  * One turn: open the stream first, send the message, answer custom tools with `onTool`, stop at an idle that is not
  * requires_action. Returns the events, the tool outputs and timings.
  */
-async function turn(sessionId, text, { onTool } = {}) {
+async function turn(sessionId, text, { onTool, batch = false } = {}) {
   const c = await anthropic()
   const t0 = Date.now()
   const events = []
@@ -152,13 +153,20 @@ async function turn(sessionId, text, { onTool } = {}) {
   await c.beta.sessions.events.send(sessionId, { events: [{ type: 'user.message', content: [{ type: 'text', text }] }] })
   const deadline = setTimeout(() => stream.controller?.abort?.(), PROBE_TIMEOUT_MS)
   let firstEventMs = null
+  const pending = []
   try {
     for await (const ev of stream) {
       if (firstEventMs === null) firstEventMs = Date.now() - t0
       events.push({ ...ev, at_ms: Date.now() - t0 })
       if (ev.type === 'agent.custom_tool_use') {
         const out = onTool ? await onTool(ev) : 'no tool'
-        await c.beta.sessions.events.send(sessionId, { events: [{ type: 'user.custom_tool_result', custom_tool_use_id: ev.id, content: [{ type: 'text', text: out }] }] })
+        const result = { type: 'user.custom_tool_result', custom_tool_use_id: ev.id, content: [{ type: 'text', text: out }] }
+        // batch: hold results until the session idles, then answer every pending call in one send (as a server would
+        // after a webhook); otherwise answer each call as it streams in.
+        if (batch) pending.push(result)
+        else await c.beta.sessions.events.send(sessionId, { events: [result] })
+      } else if (batch && ev.type === 'session.status_idle' && ev.stop_reason?.type === 'requires_action' && pending.length) {
+        await c.beta.sessions.events.send(sessionId, { events: pending.splice(0) })
       } else if ((ev.type === 'agent.tool_use' || ev.type === 'agent.mcp_tool_use') && ev.evaluated_permission === 'ask') {
         await c.beta.sessions.events.send(sessionId, { events: [{ type: 'user.tool_confirmation', tool_use_id: ev.id, result: 'deny' }] })
       } else if (ev.type === 'session.status_idle' && ev.stop_reason?.type !== 'requires_action') break
@@ -322,19 +330,21 @@ async function probeVault(r, run, { keep }) {
   } finally { if (!keep) await c.beta.vaults.delete(vault.id).catch(() => {}) }
 }
 
-async function probeCustomTools(r, run) {
+async function probeCustomTools(r, run) { return customTools(r, run, false, 'custom-tools') }
+async function probeCustomToolsBatched(r, run) { return customTools(r, run, true, 'custom-tools-batched') }
+async function customTools(r, run, batch, name) {
   const agent = await spikeAgent(r, 'agent-tools', {
     system: 'You are a test harness. Call the tools exactly as the message asks, then reply DONE.',
     tools: [toolset(false), { type: 'custom', name: 'ping', description: 'Returns pong with the given n.', input_schema: { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'] } }],
   })
   const env = await spikeEnv(r, 'env-closed', { type: 'limited', allowed_hosts: [], allow_package_managers: false, allow_mcp_servers: false })
-  const s = await newSession(r, run, { agent, env, cap: PROBES['custom-tools'].est, title: 'custom-tools' })
-  const t = await turn(s.id, 'Call ping with n=1. After its result, call ping with n=2. After that, call ping with n=3 and n=4 in the same response (in parallel). Then reply DONE.', { onTool: async (ev) => `pong ${ev.input?.n}` })
+  const s = await newSession(r, run, { agent, env, cap: PROBES[name].est, title: name })
+  const t = await turn(s.id, 'Call ping with n=1. After its result, call ping with n=2. After that, call ping with n=3 and n=4 in the same response (in parallel). Then reply DONE.', { onTool: async (ev) => `pong ${ev.input?.n}`, batch })
   const calls = t.events.filter((e) => e.type === 'agent.custom_tool_use').length
   const idles = t.events.filter((e) => e.type === 'session.status_idle' && e.stop_reason?.type === 'requires_action').length
   return {
     status: calls ? 'answered' : 'failed',
-    answer: `${calls} custom tool calls idled the session ${idles} times (requires_action). Each idle raises one session.status_idled webhook (docs), so parallel calls share one`,
+    answer: `${calls} custom tool calls idled the session ${idles} times (requires_action), results sent ${batch ? 'together per idle' : 'one by one as each call arrived'}. Each idle raises one session.status_idled webhook (docs)`,
     evidence: { calls, requiresActionIdles: idles, timeline: t.events.map((e) => `${e.at_ms}ms ${e.type}${e.stop_reason ? ':' + e.stop_reason.type : ''}`).slice(0, 80) },
   }
 }

@@ -28,6 +28,11 @@
         "allow_package_managers": false,
         "allow_mcp_servers": false
       }
+    },
+    "agent-tools": {
+      "id": "agent_01MdoNXasV4LRsWFo7CYm5jE",
+      "version": 1,
+      "model": "claude-opus-5-5"
     }
   },
   "runs": [
@@ -346,6 +351,143 @@
           },
           "active_seconds": 8.618,
           "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "custom-tools",
+      "item": "Does each custom tool call idle the session (so raise `session.status_idled`)?",
+      "ran_at": "2026-11-22T19:37:17.432Z",
+      "session_ids": [
+        "sesn_012cqcFGTqdZETr8Rn5uwkZE"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "4 custom tool calls idled the session 4 times (requires_action). Each idle raises one session.status_idled webhook (docs), so parallel calls share one",
+      "evidence": {
+        "calls": 4,
+        "requiresActionIdles": 4,
+        "timeline": [
+          "585ms session.status_running",
+          "587ms session.thread_status_running",
+          "647ms user.message",
+          "649ms span.model_request_start",
+          "2813ms span.model_request_end",
+          "2966ms agent.custom_tool_use",
+          "3223ms session.thread_status_idle:requires_action",
+          "3223ms session.usage",
+          "3223ms session.status_idle:requires_action",
+          "3253ms user.custom_tool_result",
+          "3284ms session.status_running",
+          "3293ms session.thread_status_running",
+          "3431ms agent.custom_tool_use",
+          "3707ms session.thread_status_idle:requires_action",
+          "3707ms session.usage",
+          "3707ms session.status_idle:requires_action",
+          "3730ms user.custom_tool_result",
+          "3772ms session.status_running",
+          "3776ms session.thread_status_running",
+          "3921ms agent.custom_tool_use",
+          "4161ms agent.custom_tool_use",
+          "4393ms session.thread_status_idle:requires_action",
+          "4393ms session.usage",
+          "4393ms session.status_idle:requires_action",
+          "4394ms user.custom_tool_result",
+          "4394ms session.thread_status_idle:requires_action",
+          "4394ms session.usage",
+          "4394ms session.status_idle:requires_action",
+          "4430ms user.custom_tool_result",
+          "4463ms session.status_running",
+          "4467ms session.thread_status_running",
+          "4549ms span.model_request_start",
+          "5723ms agent.message",
+          "5728ms span.model_request_end",
+          "5811ms session.thread_status_idle:end_turn",
+          "5817ms session.usage",
+          "5817ms session.status_idle:end_turn"
+        ]
+      },
+      "active_seconds": 4.836,
+      "usage": [
+        {
+          "session": "sesn_012cqcFGTqdZETr8Rn5uwkZE",
+          "input": 6,
+          "output": 200,
+          "cache_read": 3278,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 3442
+          },
+          "active_seconds": 4.836,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "custom-tools-batched",
+      "item": "As custom-tools, answering every pending call in one send at each idle (as a webhook-driven server would)",
+      "ran_at": "2026-11-22T19:37:44.927Z",
+      "session_ids": [
+        "sesn_01GhKL4kXbvsfuuxfYjckNfg"
+      ],
+      "list_cost_usd": 0.01,
+      "status": "answered",
+      "answer": "4 custom tool calls idled the session 3 times (requires_action), results sent together per idle. Each idle raises one session.status_idled webhook (docs)",
+      "evidence": {
+        "calls": 4,
+        "requiresActionIdles": 3,
+        "timeline": [
+          "609ms session.status_running",
+          "609ms session.thread_status_running",
+          "672ms user.message",
+          "674ms span.model_request_start",
+          "2560ms span.model_request_end",
+          "2733ms agent.custom_tool_use",
+          "2733ms session.thread_status_idle:requires_action",
+          "2733ms session.usage",
+          "2733ms session.status_idle:requires_action",
+          "3045ms user.custom_tool_result",
+          "3092ms session.status_running",
+          "3094ms session.thread_status_running",
+          "3240ms agent.custom_tool_use",
+          "3240ms session.thread_status_idle:requires_action",
+          "3240ms session.usage",
+          "3240ms session.status_idle:requires_action",
+          "3546ms user.custom_tool_result",
+          "3591ms session.status_running",
+          "3594ms session.thread_status_running",
+          "3730ms agent.custom_tool_use",
+          "3730ms agent.custom_tool_use",
+          "3730ms session.thread_status_idle:requires_action",
+          "3731ms session.usage",
+          "3731ms session.status_idle:requires_action",
+          "4049ms user.custom_tool_result",
+          "4145ms user.custom_tool_result",
+          "4199ms session.status_running",
+          "4201ms session.thread_status_running",
+          "4271ms span.model_request_start",
+          "5573ms agent.message",
+          "5573ms span.model_request_end",
+          "5646ms session.thread_status_idle:end_turn",
+          "5655ms session.usage",
+          "5655ms session.status_idle:end_turn"
+        ]
+      },
+      "active_seconds": 4.582,
+      "usage": [
+        {
+          "session": "sesn_01GhKL4kXbvsfuuxfYjckNfg",
+          "input": 6,
+          "output": 202,
+          "cache_read": 6556,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 164
+          },
+          "active_seconds": 4.582,
+          "list_cost_usd": 0.01
         }
       ],
       "deleted": true
