@@ -27,7 +27,12 @@ import { holds } from '@/domains/tenancy/roles'
 export type BuildMaker = { tenantId: string; userId: string; email: string; role: string; support: boolean }
 export type Minted = { ok: true; id: string; key: string; expiresAt: string } | { ok: false; why: 'not_allowed' | 'busy' | 'full' | 'name' }
 
-export async function mintBuildKey(tx: Tx, maker: BuildMaker, input: { purpose: BuildPurpose; name: string; hours?: number }): Promise<Minted> {
+/** The store's hourly mint limit, counted BEFORE the caller opens its transaction (speed review LOW-4: never a second
+ *  pool connection while the transaction holds the settings row). mintBuildKey asks for the answer as `limited`. */
+export const buildKeyLimitOk = (tenantId: string) => withinLimit(LIMITS.apiBuildKeyShop, tenantId, new Date(), true)
+
+export async function mintBuildKey(tx: Tx, maker: BuildMaker, input: { purpose: BuildPurpose; name: string; hours?: number; limited: boolean }): Promise<Minted> {
+  if (!input.limited) return { ok: false, why: 'busy' }
   if (maker.support || !holds(maker.role, 'api.manage')) return { ok: false, why: 'not_allowed' }
   const name = input.name.trim()
   if (!name || name.length > KEY_NAME_MAX) return { ok: false, why: 'name' }
@@ -45,7 +50,6 @@ export async function mintBuildKey(tx: Tx, maker: BuildMaker, input: { purpose: 
   const [n] = await tx.select({ n: count() }).from(storefrontKeys)
     .where(and(eq(storefrontKeys.tenantId, t), eq(storefrontKeys.kind, 'build'), isNull(storefrontKeys.revokedAt), gt(storefrontKeys.expiresAt, sql`now()`)))
   if ((n?.n ?? 0) >= MAX_LIVE_BUILD_KEYS) return { ok: false, why: 'full' }
-  if (!(await withinLimit(LIMITS.apiBuildKeyShop, t, new Date(), true))) return { ok: false, why: 'busy' }
   const hours = Math.max(1, Math.min(Math.floor(input.hours ?? BUILD_KEY_HOURS[input.purpose]), BUILD_KEY_HOURS[input.purpose]))
   const key = newKey('build', (k) => new Uint8Array(randomBytes(k)))
   const [row] = await tx.insert(storefrontKeys).values({

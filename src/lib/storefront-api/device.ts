@@ -4,7 +4,7 @@ import { deviceCodeApprove, deviceCodeClaim, deviceCodePeek, deviceCodeStart, de
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
 import { CONSOLE_HOST } from '@/lib/public-env'
-import { mintBuildKey } from './build-keys'
+import { buildKeyLimitOk, mintBuildKey } from './build-keys'
 import { holds } from '@/domains/tenancy/roles'
 import { DEVICE_CONFIRM_FRESH_MS, DEVICE_POLL_SECONDS, deviceCodeOf, deviceKeyName, newDeviceCode, newDeviceSecret } from '@/domains/storefront-api/device'
 import { errName } from '@/lib/log'
@@ -74,8 +74,9 @@ export async function pollDeviceSignIn(device: string, ip: string): Promise<Poll
   if (claim.state === 'pending') return { status: 'pending' }
   let minted: Awaited<ReturnType<typeof mintBuildKey>> | null = null
   try {
+    const limited = await buildKeyLimitOk(claim.tenantId)
     minted = await withTenant(claim.tenantId, (tx) => mintBuildKey(tx, { tenantId: claim.tenantId, userId: claim.userId, email: claim.email, role: claim.role, support: false },
-      { purpose: 'developer', name: deviceKeyName(claim.email) }))
+      { purpose: 'developer', name: deviceKeyName(claim.email), limited }))
   } catch (err) {
     console.error('[device] mint', errName(err))
   }

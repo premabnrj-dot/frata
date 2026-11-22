@@ -57,6 +57,17 @@ describe('G·4: new fields on 2026-12', () => {
     const page = productJsonLd(productLdInput(p, shop, { url: 'https://kesarstudio.in/products/kurta-8', photo: (i) => urlFor(i.base, pick(i.widths, 1200)), now }))
     expect(JSON.parse(productLd(M, p, shop, 'https://kesarstudio.in', now))).toEqual(JSON.parse(JSON.stringify(page)))
   })
+  it('G11: every cover at once is each collection’s own cover, in every order (speed review)', async () => {
+    const { collectionCover, collectionCovers } = await import('../../storefront/sources')
+    const ps = [card(1, { since: '2026-11-03T00:00:00Z', title: 'Beta', tags: ['cotton'] }), card(2, { since: '2026-11-05T00:00:00Z', title: 'Alpha', tags: ['cotton'] }),
+      card(3, { status: 'draft', tags: ['cotton'] }), card(4, { since: '2026-11-04T00:00:00Z', title: 'Gamma', tags: ['silk'], variants: [{ ...v('4'), price: 99000 }] })]
+    const cs: CollectionIn[] = ['manual', 'newest', 'price_low', 'price_high', 'title'].flatMap((sort) => [
+      { ...coll(`m-${sort}`, [ps[3]!.id, ps[0]!.id, ps[2]!.id, ps[1]!.id]), sort },
+      { id: `a-${sort}`, handle: `a-${sort}`, title: 'Cotton', description: '', kind: 'auto' as const, matchAll: true, rules: [{ field: 'tag', op: 'equals', value: 'cotton' }], sort, productIds: [] },
+    ])
+    const all = collectionCovers(cs, ps, now)
+    for (const c of cs) expect(all.get(c)?.handle ?? null, c.handle).toBe(collectionCover(c, ps, now)?.handle ?? null)
+  })
   it('G15: a product at its 300 sizes still fits the schema', () => {
     const many = product(9, { variants: Array.from({ length: 300 }, (_, i) => ({ ...v(String(1000 + i)), values: [`S${i}`], sku: `KS-KUR-${i}-XXL`, gtin: '89012345678' + String(i % 10) })) })
     const text = productLd(M, many, shop, 'https://kesarstudio.in', now)

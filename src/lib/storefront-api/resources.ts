@@ -3,7 +3,7 @@ import { apiBrand, previewBrand } from '@/lib/queries/brand'
 import { rasterLogoMade } from '@/lib/media/brand-files'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
 import { collectionOut, collectionPageOut, fromOurStore, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
-import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, draftCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
+import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, draftCatalogue, previewProduct, shopAnnouncement, shopSettingsFor, type Lookup } from '@/lib/queries/storefront'
 import { BadParam, type ApiCtx } from './request'
 import { facetsOut, filterPageOut, parseFilter, type FilterQuery } from '@/domains/storefront-api/2026-12/filter'
 import { visibility, type Status } from '@/domains/catalogue/availability'
@@ -12,7 +12,8 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { contentOut, faqOut, storePageOut } from '@/domains/storefront-api/2026-12/content-map'
 import { collectionLd, homeCollection, productLd, shopLd, type LdShop } from '@/domains/storefront-api/2026-12/structured'
 import { websiteOrigin } from '@/domains/storefront-api/origin'
-import { collectionCover } from '@/domains/storefront/sources'
+import { collectionCovers } from '@/domains/storefront/sources'
+import { apiCollections } from '@/lib/queries/storefront-collections'
 import { resolvePage } from '@/domains/pages/page'
 import { HANDLE as PAGE_HANDLE } from '@/domains/pages/templates'
 import { apiContent, previewContent } from '@/lib/queries/content'
@@ -36,7 +37,8 @@ import { paise } from '@/domains/money/paise'
 // its 300 reads a minute must not each be a 200–370 ms uncached catalogue read.
 const loaders = (ctx: ApiCtx) => ctx.keyKind === 'public'
   ? { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent, brand: apiBrand }
-  : { shop: previewShop, catalogue: draftCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
+  // The shop's settings have no drafts: the 60 s entry every settings save purges (speed review MED-3), not ~16 statements.
+  : { shop: shopSettingsFor, catalogue: draftCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
 /** The store's pages for this key: a build key's include drafts and hidden ones (the build-key amendment, point 4). */
 const pagesFor = (ctx: ApiCtx) => (ctx.keyKind === 'build' ? previewPages(ctx.tenantId) : shopPages(ctx.tenantId))
 
@@ -113,15 +115,19 @@ export const RESOURCES = {
     if (ctx.keyKind === 'public' && !visibility(got.status as Status, got.publishAt ? new Date(got.publishAt) : null, ctx.now).reachable) return null
     // G6 and G15 (contract review M10), only for a product that answers: the home collection reads the catalogue's
     // collections, the JSON-LD the shop's settings, so this copy carries their tags too (a Website move re-addresses it).
-    const [shop, cat] = await Promise.all([loaders(ctx).shop(ctx.tenantId), loaders(ctx).catalogue(ctx.tenantId)])
+    // Live copies read the collections alone (speed review MED-2); test and build keys the shared draft entry.
+    const [shop, colls] = await Promise.all([loaders(ctx).shop(ctx.tenantId),
+      ctx.keyKind === 'public' ? apiCollections(ctx.tenantId) : loaders(ctx).catalogue(ctx.tenantId).then((c) => c.collections)])
     const m = mapCtx(ctx)
-    return { ...productOut(m, got, ctx.now), collection: homeCollection(got, cat.collections, ctx.now),
+    return { ...productOut(m, got, ctx.now), collection: homeCollection(got, colls, ctx.now),
       ...(shop ? { jsonLd: productLd(m, got, ldShop(shop, shop.logoUrl && fromOurStore(m, shop.logoUrl) ? shop.logoUrl : null), originOf(shop), ctx.now) } : {}) }
   } },
   collections: { schema: S.Collections, run: async (ctx: ApiCtx) => {
     const cat = await loaders(ctx).catalogue(ctx.tenantId)
     const m = mapCtx(ctx)
-    return { collections: cat.collections.slice(0, 500).map((c) => collectionOut(c, { m, first: collectionCover(c, cat.products, ctx.now) })) }
+    const list = cat.collections.slice(0, 500)
+    const covers = collectionCovers(list, cat.products, ctx.now)
+    return { collections: list.map((c) => collectionOut(c, { m, first: covers.get(c) ?? null })) }
   } },
   collection: { schema: S.CollectionPage, run: async (ctx: ApiCtx, p: { handle: string; page: number }) => {
     const [cat, shop] = await Promise.all([loaders(ctx).catalogue(ctx.tenantId), loaders(ctx).shop(ctx.tenantId)])

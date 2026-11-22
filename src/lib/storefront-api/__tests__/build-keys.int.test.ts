@@ -11,7 +11,7 @@ const pass = process.env.INT_DB_PASSWORD ?? 'x'
 describe.skipIf(!host)('mintBuildKey', () => {
   it('mints for api.manage only, follows the partner, ends by purpose, stops at the ceiling, and is audited', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
-    const { mintBuildKey } = await import('../build-keys')
+    const { buildKeyLimitOk, mintBuildKey } = await import('../build-keys')
     const { withTenant } = await import('@/lib/db/tenant')
     const { storefrontKeyRow } = await import('@/lib/db/platform')
     const postgres = (await import('postgres')).default
@@ -29,8 +29,10 @@ describe.skipIf(!host)('mintBuildKey', () => {
       await su`insert into partner_assignments (partner_member_id, tenant_id) values (${pm}, ${t})`
       await su`insert into members (tenant_id, user_id, role) values (${t}, ${owner}, 'owner'), (${t}, ${staff}, 'staff')`
       await su`insert into members (tenant_id, user_id, role, partner_member_id) values (${t}, ${lead}, 'partner', ${pm})`
-      const mint = (who: { userId: string; role: string; support?: boolean }, purpose: 'session' | 'preview' | 'developer', hours?: number) =>
-        withTenant(t, (tx) => mintBuildKey(tx, { tenantId: t, userId: who.userId, email: 'x@mint.test', role: who.role, support: !!who.support }, { purpose, name: 'Kabir’s computer', hours }))
+      const mint = async (who: { userId: string; role: string; support?: boolean }, purpose: 'session' | 'preview' | 'developer', hours?: number) => {
+        const limited = await buildKeyLimitOk(t)
+        return withTenant(t, (tx) => mintBuildKey(tx, { tenantId: t, userId: who.userId, email: 'x@mint.test', role: who.role, support: !!who.support }, { purpose, name: 'Kabir’s computer', hours, limited }))
+      }
 
       expect(await mint({ userId: owner, role: 'owner', support: true }, 'session')).toEqual({ ok: false, why: 'not_allowed' })
       expect(await mint({ userId: staff, role: 'staff' }, 'session')).toEqual({ ok: false, why: 'not_allowed' })
