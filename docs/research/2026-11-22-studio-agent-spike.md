@@ -1,6 +1,5 @@
 # Studio agent spike (V3a·1): what Managed Agents does, measured or read, item by item
-Status: **in progress** (2026-11-22). Documentation answers are in; probes are running on the `studio-eval` key
-is not in this environment. Lane D, branch `claude/lane-d-agent-spike`. Plan: `docs/plans/2026-11-12-studio-build.md`
+Status: **in progress** (2026-11-22). Documentation answers are in; probes are running on the `studio-eval` key; lane D, branch `claude/lane-d-agent-spike`. Plan: `docs/plans/2026-11-12-studio-build.md`
 § V3a (V3a·1) · Spec: `docs/specs/2026-11-16-studio-agent.md` § 9 · Decision: ADR-0020 · Script:
 `scripts/studio/spike.mjs` (results: `docs/research/2026-11-22-studio-agent-spike.results.json`).
 
