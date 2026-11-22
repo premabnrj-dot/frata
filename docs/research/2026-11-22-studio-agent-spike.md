@@ -49,12 +49,13 @@ Rules the script keeps:
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.00** of the $25 cap (list cost, 2 runs).
+Measured spend so far: **$0.04** of the $25 cap (list cost, 3 runs).
 
 | Probe | Ran | Status | Answer | List cost |
 |---|---|---|---|---|
 | `models` | 2026-11-22 19:32 UTC | answered | claude-opus-5-5 answers on this key (context 1000000, output 128000) | $0.00 |
 | `geo` | 2026-11-22 19:32 UTC | answered | default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only "global" and "us" (no India) | $0.00 |
+| `session` | 2026-11-22 19:33 UTC | answered | a session ran a command; create 890 ms, first event 550 ms, turn 5198 ms | $0.04 |
 
 <!-- spike:results:end -->
 
@@ -66,6 +67,7 @@ Each probe's measured answer, set against what the documentation said. "Same" me
 |---|---|---|---|
 | `models` (the key) | — | The `studio-eval` key answers; `claude-opus-5-5` reports a 1,000,000-token context and 128,000 output. $0.00 | **passed** |
 | `geo` (12) | `inference_geo` is `us` or `global`; the workspace's default decides when the agent doesn't pin one | One Haiku 5.5 call with no geo was served in **`global`**: the workspace default is `global`, not `us`. An agent pinned to `us` was accepted. $0.0000035 | **passed**; same, and it settles that the agent file must pin `us` (otherwise inference may run anywhere) |
+| `session` (1, 9 in part) | Ubuntu 24.04, x86_64, up to 8 GB memory and 10 GB disk, Node 22 default; CPU count not stated | A session on a closed `limited` environment ran one bash command. Create 890 ms, first stream event 550 ms after the message, whole turn 5.2 s, 4.9 s active. Ubuntu 24.04.5, x86_64, Node v22.23.5, **4 CPUs** (`nproc`), `free` shows **16 GB**, `df` shows 30 GB free on `/`. 6 input + 297 output tokens, 7,017 read from cache and 7,347 written on the session's **first** turn (the harness's own prompt). **$0.04** list cost (the API's own `list_cost`) | **passed**. Differs: memory and disk read higher than the documented limits, but `free` and `df` may show the host, not the sandbox's cap, so plan on 8 GB and 10 GB until `build` measures a real peak |
 
 ## Item by item
 Sources are tagged [V] when they are vendor documentation or SDK types read on the date shown, and [U] when no current

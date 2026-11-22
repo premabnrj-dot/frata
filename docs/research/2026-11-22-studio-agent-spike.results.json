@@ -3,6 +3,20 @@
     "agent-geo-us": {
       "id": "agent_01EMEi6UiiQ1t5GSJT2bJUut",
       "version": 1
+    },
+    "agent": {
+      "id": "agent_01LmfZhNLsm4pekXYMAsnFyx",
+      "version": 1,
+      "model": "claude-opus-5-5"
+    },
+    "env-closed": {
+      "id": "env_01RgMGeGEKVL92SHVEdvd6F9",
+      "networking": {
+        "type": "limited",
+        "allowed_hosts": [],
+        "allow_package_managers": false,
+        "allow_mcp_servers": false
+      }
     }
   },
   "runs": [
@@ -29,6 +43,39 @@
       "evidence": {
         "inference_geo": "global"
       }
+    },
+    {
+      "probe": "session",
+      "item": "A Managed Agents session starts; the container (Node, CPUs, memory, disk); time to first event",
+      "ran_at": "2026-11-22T19:33:08.807Z",
+      "session_ids": [
+        "sesn_015xDSJrwMjbhUmK9faq5FNG"
+      ],
+      "list_cost_usd": 0.04,
+      "status": "answered",
+      "answer": "a session ran a command; create 890 ms, first event 550 ms, turn 5198 ms",
+      "evidence": {
+        "createMs": 890,
+        "firstEventMs": 550,
+        "turnMs": 5198,
+        "output": "v22.23.5\n4\n               total        used        free      shared  buff/cache   available\nMem:           16087         215       15952          12          76       15872\nFilesystem      Size  Used Avail Use% Mounted on\n/dev/vda        252G   11G   30G  26% /\n/dev/vda        252G   11G   30G  26% /\nx86_64\nPRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\n"
+      },
+      "active_seconds": 4.86,
+      "usage": [
+        {
+          "session": "sesn_015xDSJrwMjbhUmK9faq5FNG",
+          "input": 6,
+          "output": 297,
+          "cache_read": 7017,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 7347
+          },
+          "active_seconds": 4.86,
+          "list_cost_usd": 0.04
+        }
+      ],
+      "deleted": true
     }
   ]
 }
