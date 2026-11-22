@@ -35,6 +35,7 @@ Rules as `docs/plans/2026-11-15-parallel-lanes.md` § The rules every worker fol
 |---|---|---|---|
 | E | P2 checkout and order pages in the brand's design (one-address plan § P2), with P3·1's spike report prepared for the owner's phones | `claude/lane-e-p2-checkout` | approved 2026-11-16 |
 | B | G·1–G·4 (Studio plan § G-a), then D0 (below) | `claude/lane-b-ga-d0` | G·2's key list: approved (website-one-address § 4); D0: screen 2, approved 2026-11-22 |
+| D | Studio workbench shell on fixtures: WB·1, WB·2, WB·3 (shell only, a test-only route), WB·7. No data, agent, hosting or credits (owner, 2026-11-22: "when will you take up studio work"; brought forward because the layout is approved whatever the agent's proof says) | `claude/lane-d-workbench-shell` | workbench screen 1 (approved 2026-11-22) and the redraw's chat (approved 2026-11-16) |
 | — | W0 and T1's spec: the orchestrator | this branch | — |
 
 ## W0 · Stale text (documents only) — done 2026-11-22
