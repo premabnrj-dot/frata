@@ -1,6 +1,7 @@
 'use client'
 
 import { optionKind } from '@/domains/catalogue/option-kind'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useState } from 'react'
 import { MAX_OPTIONS, type Option } from '@/domains/catalogue/variants'
 import { Icon } from '@/components/icons/icon'
@@ -113,7 +114,7 @@ function OptionRow({ i, o, error, onName, onRemoveOption, onMove, onRemoveValue,
       <div className="flex items-start justify-between gap-2 sm:flex-col sm:justify-start">
         <input id={`opt-${i}`} aria-label="Option name" value={o.name} maxLength={30} placeholder="Size" onChange={(e) => onName(e.target.value)}
           {...fieldProps('options', error)} className="h-11 w-full rounded-md border border-transparent bg-transparent px-1.5 text-sm font-medium hover:border-input focus:border-input aria-invalid:border-danger-text md:h-8" />
-        <button type="button" className="inline-flex min-h-11 items-center px-1.5 text-small text-muted-foreground underline md:min-h-6" onClick={onRemoveOption}>Remove</button>
+        <RemoveButton label="Remove option" onClick={onRemoveOption} />
       </div>
       <div className="min-w-0 space-y-2">
         <div data-sortable="" className="flex flex-wrap items-center gap-1.5">

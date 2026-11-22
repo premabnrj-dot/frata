@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { removeShopPartner } from './actions'
 
 /** Remove the partner: it ends their access, so a dialog (design-language § Work queues 4). Buttons name both outcomes. */
@@ -20,7 +21,7 @@ export function RemovePartner({ name, shop }: { name: string; shop: string }) {
   })
   return (
     <>
-      <Button variant="secondary" onClick={() => { setError(null); setOpen(true) }}>Remove partner</Button>
+      <RemoveButton label={`Remove ${name}`} onClick={() => { setError(null); setOpen(true) }} />
       <Dialog open={open} onClose={() => setOpen(false)} error={error} title={`Remove ${name} from ${shop}?`}
         description={<ul className="list-disc space-y-1 pl-5"><li>Their access ends now.</li><li>Your products, orders and settings stay.</li><li>Your price stays the same.</li></ul>}
         actions={<>

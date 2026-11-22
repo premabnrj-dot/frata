@@ -2,6 +2,7 @@
 
 import { ChevronDown } from 'lucide-react'
 import { useId, useRef } from 'react'
+import { Icon } from '@/components/icons/icon'
 import { cn } from '@/lib/utils'
 import { placeUnder } from './anchor'
 import { button } from './button'
@@ -16,7 +17,7 @@ import { button } from './button'
 // apply is left out, not greyed: a disabled item explains nothing.
 // =============================================================================
 
-export type MenuItem = { label: string; onSelect: () => void; danger?: boolean } | { label: string; href: string; danger?: boolean; download?: boolean }
+export type MenuItem = { label: string; onSelect: () => void; danger?: boolean; /** The current choice of a picker: drawn with a tick. */ checked?: boolean } | { label: string; href: string; danger?: boolean; download?: boolean }
 
 /** `variant`: the trigger's look (secondary by default; ghost for a quiet "More", Neel). `icon`: the trigger shows only
  * this, `label` becoming its accessible name (a saved view's ⋯); `framed` draws that icon button with the field edge
@@ -69,7 +70,8 @@ export function Menu({ label = 'More', items, align = 'end', size, variant = 'se
           ? <a key={it.label} role="menuitem" href={it.href} download={it.download || undefined} tabIndex={-1} className={itemClass(it.danger)} onClick={() => close(false)}>{it.label}</a>
           : <button key={it.label} type="button" role="menuitem" tabIndex={-1} className={itemClass(it.danger)} // Focus to More FIRST (the menu is still open, so this cannot race a dialog the item opens): a dialog
             // opened next returns focus to More when it closes.
-            onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}>{it.label}</button>])}
+            onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}
+            aria-current={it.checked ? 'true' : undefined}><span className="flex-1">{it.label}</span>{it.checked ? <Icon name="tick" className="size-4 text-muted-foreground" /> : null}</button>])}
       </div>
     </>
   )

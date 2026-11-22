@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
@@ -94,7 +95,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
                 <li key={h.day} className="flex items-center gap-3 py-2 text-sm">
                   <span className="min-w-0 flex-1">{h.name}</span>
                   <span className="font-num text-muted-foreground">{day(h.day)}</span>
-                  {canEdit && <Button variant="ghost" disabled={busy === h.day} onClick={() => act(h.day, () => removeHolidayAction(h.day), 'Holiday removed')}>Remove</Button>}
+                  {canEdit && <RemoveButton label="Remove holiday" disabled={busy === h.day} onClick={() => act(h.day, () => removeHolidayAction(h.day), 'Holiday removed')} />}
                 </li>
               ))}
             </ul>

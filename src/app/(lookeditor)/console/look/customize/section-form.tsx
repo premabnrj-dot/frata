@@ -1,6 +1,7 @@
 'use client'
 
 import { MAX_LOOPS, MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useState } from 'react'
 import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
@@ -138,7 +139,7 @@ function Prices({ s, set }: { s: SectionOf<'price_tiles'>; set: Set<SectionOf<'p
       <div key={i} className="flex flex-wrap items-end gap-2 text-sm">
         <Field label={`Tile ${i + 1}: from ₹`}>{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(b.minPaise)} onBlur={(e) => put(i, { ...b, minPaise: rupeesToPaise(e.target.value) })} placeholder="any" className="h-10 w-24 rounded-md border border-input bg-card px-2 font-num" />}</Field>
         <Field label="to ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(b.maxPaise)} onBlur={(e) => put(i, { ...b, maxPaise: rupeesToPaise(e.target.value) })} placeholder="any" className="h-10 w-24 rounded-md border border-input bg-card px-2 font-num" />}</Field>
-        {s.bands.length > 1 && <button type="button" onClick={() => set({ ...s, bands: s.bands.filter((_, j) => j !== i) })} className="min-h-10 px-2 underline underline-offset-4">Remove</button>}
+        {s.bands.length > 1 && <RemoveButton label="Remove this block" onClick={() => set({ ...s, bands: s.bands.filter((_, j) => j !== i) })} />}
       </div>
     ))}
     {s.bands.length < 4 && <button type="button" onClick={() => set({ ...s, bands: [...s.bands, { minPaise: null, maxPaise: 299900 }] })} className="min-h-9 text-sm underline underline-offset-4">Add a tile</button>}
