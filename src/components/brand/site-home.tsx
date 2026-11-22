@@ -72,7 +72,7 @@ export function ExampleOrderCard({ order }: { order: ExampleOrder }) {
         {lines.map(([k, v]) => <div key={k} className="s-ol"><dt>{k}</dt><dd className="s-num">{formatInr(paise(-v))}</dd></div>)}
         <div className="s-ol s-total"><dt>You keep</dt><dd className="s-num">{formatInr(order.ifDelivered)}</dd></div>
       </dl>
-      <figcaption>Example kurta set, pay on delivery. Profit on every order is <NextTag /></figcaption>
+      <figcaption>Example kurta set, pay on delivery.</figcaption>
     </figure>
   )
 }

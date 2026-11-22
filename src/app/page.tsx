@@ -8,6 +8,7 @@ import { paise } from '@/domains/money/paise'
 import { exampleOrder } from '@/domains/orders/example'
 import type { Feature } from '@/domains/plans/entitlements'
 import { FEATURE_NAMES } from '@/domains/plans/labels'
+import { MODULES } from '@/domains/modules/registry'
 import { publicPlansForPage } from '@/lib/db/platform'
 import { formatInr } from '@/lib/format'
 
@@ -29,15 +30,15 @@ const LEAKS: [SiteIconName, string, string][] = [
 ]
 const TILES: [SiteIconName, string, string, string, boolean][] = [
   ['cod', 's-t-rani', 'Safe COD', 'Risky orders flagged before you ship.', false],
-  ['profit', 's-t-mari', 'Real profit', 'Every order, after every cost.', true],
-  ['ship', 's-t-pea', 'Fast shipping', 'PIN code checked. Slip printed.', false],
+  ['profit', 's-t-mari', 'Real profit', 'Every order, after every cost.', false],
+  ['ship', 's-t-pea', 'Shipping', 'PIN code checked. Slip printed.', false],
   ['chat', 's-t-neel', 'WhatsApp confirm', 'Fewer fake orders. Fewer returns.', true],
 ]
 const STEPS: [string, string, string, boolean][] = [
   ['Open your store', 'Add products, sizes and prices.', 'Day 1', false],
   ['An order lands', 'COD risk read in a second.', '10:06 pm', false],
   ['Confirmed on WhatsApp', 'Packed, slip printed, picked up.', 'Next morning', true],
-  ['Delivered', 'Your real profit, right on the order.', 'Day 4', true],
+  ['Delivered', 'Your real profit, right on the order.', 'Day 4', false],
 ]
 const FAQ = [
   ['Do I need a developer?', 'No. Everything is set in the console.'],
@@ -75,12 +76,12 @@ export default async function Home() {
                 <ExampleOrderCard order={order} />
                 <div className="s-toast s-in s-d5" aria-hidden="true">
                   <span className="s-mk"><SiteIcon name="tick" className="" /></span>
-                  <div>Confirmed on WhatsApp<small>KS-5013 · Jaipur · COD · Next</small></div>
+                  <div>Confirmed on WhatsApp <NextTag /><small>KS-5013 · Jaipur · COD</small></div>
                 </div>
               </div>
             )}
           </div>
-          <ul className="s-w s-terms" aria-label="The terms">
+          <ul className="s-w s-terms" aria-label="Our terms">
             <li><span className="s-dot" style={{ background: 'var(--site-rani)' }} /><b>₹0</b> fee on a parcel that comes back</li>
             <li><span className="s-dot" style={{ background: 'var(--site-marigold)' }} /><b>1</b> afternoon to open</li>
             <li><span className="s-dot" style={{ background: 'var(--site-peacock)' }} /><b>0</b> apps to install</li>
@@ -126,7 +127,7 @@ export default async function Home() {
 
         {/* 6 · I know which plan */}
         <section id="pricing" className="s-sec s-pricing"><div className="s-w">
-          <SectionHead eyebrow="Pricing" title="Pricing, in rupees." line="No setup fee. No fee on returned parcels." />
+          <SectionHead eyebrow="Pricing" title="Pricing, in rupees." line="No setup fee. No fee on parcels that come back." />
           {plans.length ? (
             <div className="s-plans">
               {plans.map((p) => {
@@ -139,7 +140,7 @@ export default async function Home() {
                     <p className="s-fee"><b>{(p.feeBps / 100).toLocaleString('en-IN')}%</b> of each delivered order</p>
                     <ul>
                       <li><SiteIcon name="tick" className="" />Up to {p.includedOrders.toLocaleString('en-IN')} orders a month</li>
-                      {p.features.map((f) => <li key={f}><SiteIcon name="tick" className="" />{FEATURE_NAMES[f as Feature] ?? f}</li>)}
+                      {p.features.map((f) => <li key={f}><SiteIcon name="tick" className="" /><span>{FEATURE_NAMES[f as Feature] ?? f} {MODULES[f as Feature]?.status === 'next' && <NextTag />}</span></li>)}
                     </ul>
                     <Link href="/start" className={`s-btn ${pop ? 's-btn-rani' : 's-btn-ghost'}`}>Start free</Link>
                   </div>
