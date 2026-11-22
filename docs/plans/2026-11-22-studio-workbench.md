@@ -277,3 +277,12 @@ Check code 10 and Give key 5 a minute a person, failing closed. Any live support
 | Delete key · confirm: "Delete key" as the primary button | The destructive button (red), "Keep key" secondary with focus | A delete is the destructive variant everywhere in the console and workspace (design language § Neel primitives: Button) | no |
 | Your computers: the row's "Delete key" as a plain secondary button | The danger button (red text), as Passkeys' Delete | A row action that loses something is the danger variant in the workspace (design language § Neel primitives: Button; design-system review) | no |
 | Undrawn: where Give key's reason sits when it is off | Beside the button, wrapping under it in a narrow dialog (Button's `reason`) | The primitive ties the reason to the button for a screen reader; no drawing for the off state | no |
+
+Proposed for `docs/decisions/accepted-findings.md` (the owner's words go in its Ruling column; not added until then):
+| Finding | Ruling and the condition it rests on | Source |
+|---|---|---|
+| A device code's network is kept as an unkeyed sha256 of its /64 or /24, so a reader of the row recovers the /24 (security review LOW-2, G·3 page) | Accepted while `build_key_device_codes` has no reader but its definers (no role's grant, proof § 81) and a row is gone at the first daily run after its 10 minutes; a keyed hash (a server secret) if the row ever lives longer than a day or gains a reader (orchestrator, 2026-11-22, for the owner) | security-reviewer, 2026-11-22 |
+
+Waiting on the owner (not built): security review MED-1, a "This is my computer" checkbox in the dialog when the code
+started on another or an unknown network (unknown read as another), Give key off until it is ticked; the orchestrator
+recommends it.
