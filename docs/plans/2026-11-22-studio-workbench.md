@@ -192,6 +192,7 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |
 | G·4 `jsonLd` URLs | `site_origin` when set, else the store's frrata.shop host: one pure function P5·2 moves behind the predicate |
 | G·1 the per-key limit | 300 a minute a key for Test and Build, failing closed; judged by `speed-reviewer` and `security-reviewer` on the diff |
+| G·3 a partner's Builder and a developer key | None: `mintBuildKey` keeps `api.manage` as its check, which Builders don't hold. Owner, 2026-11-22: "let be things as it is for now. no need to offer access to builders for now." |
 
 ## Lane D's mockup check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, composer and build status follow the redraw
