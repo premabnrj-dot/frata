@@ -1,9 +1,10 @@
 'use client'
 
 import { Section } from '@/components/layout/section'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { Facts } from '@/components/data/facts'
 import { Badge, Tag } from '@/components/ui/badge'
-import { Button, Spinner, button } from '@/components/ui/button'
+import { Spinner, button } from '@/components/ui/button'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { InfoTip } from '@/components/ui/info-tip'
@@ -56,7 +57,7 @@ export function LogoCard({ b, edit, errors, shopName, slots, onPick, onRemove }:
                 {n > 0 && !url && <span className="text-muted-foreground">(optional)</span>}
                 {url && <Tag>{KIND(url)}</Tag>}
                 <span className="flex-1" />
-                {edit && (url && !st.uploading ? <span className="flex">{pick('Replace', 'ghost')}<Button variant="ghost" size="sm" className="px-1.5" aria-label={`Remove ${LOGO_NAMES[slot]}`} onClick={() => onRemove(slot)}>Remove</Button></span>
+                {edit && (url && !st.uploading ? <span className="flex">{pick('Replace', 'ghost')}<RemoveButton label={`Remove ${LOGO_NAMES[slot]}`} onClick={() => onRemove(slot)} /></span>
                   : pick(n === 0 ? 'Upload logo' : 'Upload', 'secondary'))}
               </div>
               {st.error && <FieldError id={`${id}-error`} message={st.error} className="px-3 pb-2.5" />}

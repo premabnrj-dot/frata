@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ActionForm, FieldMessage, type ActionResult } from '@/components/ui/action-form'
@@ -50,7 +51,7 @@ export function RemovePasskey({ id, name, owner, left }: { id: string; name: str
   const toast = useToast()
   const [ask, setAsk] = useState(false)
   const [busy, setBusy] = useState(false)
-  if (!ask) return <Button variant="ghost" onClick={() => setAsk(true)}>Remove {name}</Button>
+  if (!ask) return <RemoveButton label={`Remove ${name}`} onClick={() => setAsk(true)} />
   return (
     <div role="group" aria-label={`Remove ${name}`} className="grid gap-2 rounded-md border border-destructive/30 p-3">
       <p className="text-sm font-medium">Remove {name}?</p>
