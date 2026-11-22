@@ -147,6 +147,208 @@
         }
       ],
       "deleted": true
+    },
+    {
+      "probe": "vault",
+      "item": "A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL",
+      "ran_at": "2026-11-22T19:35:05.951Z",
+      "session_ids": [
+        "sesn_01QUXbYWEn9XpU3k7Mito49G"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "value in the sandbox's variable: false; header substituted at egress: false; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the value back into the sandbox: false",
+      "evidence": {
+        "headerSubstituted": false,
+        "urlSubstituted": false,
+        "placeholderLen": 61,
+        "realLen": 38,
+        "sandboxSawValue": false,
+        "output": "in sandbox: 61 chars, sha256 160ceb27adc9fcde4bf1f5c2dd0347aa1947a1e2249dcfa2aa2ae8d3481653c7\n"
+      },
+      "active_seconds": 9.977,
+      "usage": [
+        {
+          "session": "sesn_01QUXbYWEn9XpU3k7Mito49G",
+          "input": 6,
+          "output": 592,
+          "cache_read": 13101,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 2020
+          },
+          "active_seconds": 9.977,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "vault",
+      "item": "A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL",
+      "ran_at": "2026-11-22T19:35:39.543Z",
+      "session_ids": [
+        "sesn_01W9z3aNLGTHZRfL3emWApmu"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "value in the sandbox's variable: false; header substituted at egress: false; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the value back into the sandbox: false",
+      "evidence": {
+        "headerSubstituted": false,
+        "urlSubstituted": false,
+        "placeholderLen": 61,
+        "realLen": 38,
+        "sandboxSawValue": false,
+        "output": "in sandbox: 61 chars, sha256 26bf749679b465b82cdb7f469a7d76e0dde52bf65393e1ff70bb0c820096d5e8\n",
+        "toolInputs": [
+          "{\"command\":\"echo \\\"in sandbox: ${#SPIKE_ECHO_SECRET} chars, sha256 $(printf %s \\\"$SPIKE_ECHO_SECRET\\\" | sha256sum | cut -c1-64)\\\"\"}"
+        ],
+        "reply": "I ran only the first part of the command, the local length and hash check. I didn't run the two `curl` requests: they send `SPIKE_ECHO_SECRET` to postman-echo.com, a public service that sends back whatever it receives. Because the real secret is filled in once a request leaves the sandbox, the response would show the real credential in plain text in the output. That isn't what the credential is for, and it would leak it.\nOutput of the part I ran:\n\n```\nin sandbox: 61 chars, sha256 26bf749679b465b82cdb7f469a7d76e0dde52bf65393e1ff70bb0c820096d5e8\n```\n\nTo confirm the secret gets filled in without ",
+        "timeline": [
+          "545ms session.status_running",
+          "549ms session.thread_status_running",
+          "608ms user.message",
+          "612ms span.model_request_start",
+          "3580ms agent.thinking",
+          "5871ms agent.message",
+          "5881ms span.model_request_end",
+          "5965ms agent.tool_use",
+          "6461ms agent.tool_result",
+          "6550ms span.model_request_start",
+          "9071ms agent.message",
+          "9074ms span.model_request_end",
+          "9193ms session.thread_status_idle:end_turn",
+          "9199ms session.usage",
+          "9199ms session.status_idle:end_turn"
+        ]
+      },
+      "active_seconds": 8.875,
+      "usage": [
+        {
+          "session": "sesn_01W9z3aNLGTHZRfL3emWApmu",
+          "input": 6,
+          "output": 618,
+          "cache_read": 14309,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 892
+          },
+          "active_seconds": 8.875,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "vault",
+      "item": "A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL",
+      "ran_at": "2026-11-22T19:36:02.691Z",
+      "session_ids": [
+        "sesn_01MGKAk4nzdW75Y12smLkWyJ"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "value in the sandbox's variable: false; header substituted at egress: false; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the value back into the sandbox: false",
+      "evidence": {
+        "headerSubstituted": false,
+        "urlSubstituted": false,
+        "placeholderLen": 61,
+        "realLen": 38,
+        "sandboxSawValue": false,
+        "output": "in sandbox: 61 chars, sha256 254d29c8df6a2e150988666be97ba9f80acde855cd34b8510c8ebb217e49f447\n",
+        "toolInputs": [
+          "{\"command\":\"echo \\\"in sandbox: ${#SPIKE_ECHO_SECRET} chars, sha256 $(printf %s \\\"$SPIKE_ECHO_SECRET\\\" | sha256sum | cut -c1-64)\\\"\"}"
+        ],
+        "reply": "I ran the local check, but I didn't run the two curl commands.\n\nThis session's setup says to treat credential variables as real secrets and use them only for their intended purpose. The gateway swaps in the real value when a request leaves the sandbox. postman-echo.com is a third-party service, and it would send that real value back in the response, where it would show up in this output and in its logs. I can't confirm from in here that the value is really a throwaway, so I'm treating it as sensitive.\n\nHere is the local part:\n```\nin sandbox: 61 chars, sha256 254d29c8df6a2e150988666be97ba9f80ac",
+        "timeline": [
+          "576ms session.status_running",
+          "582ms session.thread_status_running",
+          "652ms user.message",
+          "654ms span.model_request_start",
+          "5825ms agent.thinking",
+          "8362ms agent.message",
+          "8367ms span.model_request_end",
+          "8470ms agent.tool_use",
+          "9023ms agent.tool_result",
+          "9131ms span.model_request_start",
+          "11218ms agent.message",
+          "11226ms span.model_request_end",
+          "11300ms session.thread_status_idle:end_turn",
+          "11303ms session.usage",
+          "11303ms session.status_idle:end_turn"
+        ]
+      },
+      "active_seconds": 10.971,
+      "usage": [
+        {
+          "session": "sesn_01MGKAk4nzdW75Y12smLkWyJ",
+          "input": 6,
+          "output": 746,
+          "cache_read": 14408,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 1149
+          },
+          "active_seconds": 10.971,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "vault",
+      "item": "A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL",
+      "ran_at": "2026-11-22T19:36:45.073Z",
+      "session_ids": [
+        "sesn_01X27rQa1xBBo6fPiSr7R3Gd"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "value in the sandbox's variable: false; header substituted at egress: true; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the real value back into the sandbox: true",
+      "evidence": {
+        "headerSubstituted": true,
+        "urlSubstituted": false,
+        "placeholderLen": 61,
+        "realLen": 38,
+        "sandboxSawValue": false,
+        "output": "in sandbox: 61 chars, sha256 f19faf418d196b0935383aedfe16a63690b9a16427aae1264666b3f1007a04d3\nheader seen by host: 38 b30a8a3c1c7289558b83b2f82b49b400ce2ef7da035be14af6fc1a41440d3ddf\nquery seen by host: 61 f19faf418d196b0935383aedfe16a63690b9a16427aae1264666b3f1007a04d3\n",
+        "toolInputs": [
+          "{\"command\":\"echo \\\"in sandbox: ${#SPIKE_ECHO_SECRET} chars, sha256 $(printf %s \\\"$SPIKE_ECHO_SECRET\\\" | sha256sum | cut -c1-64)\\\"; curl -sS https://postman-echo.com/headers -H \\\"Frrata-Key: $SPIKE_ECHO_SECRET\\\" | python3 -c \\\"import sys,json,hashlib;d=json.load(sys.stdin);v=d['headers'].get('frrata-key','');print('header seen by host:',len(v),hashlib.sha256(v.encode()).hexdigest())\\\"; curl -sS \\\"https://postman-echo.com/get?k=$SPIKE_ECHO_SECRET\\\" | python3 -c \\\"import sys,json,hashlib;d=json.load(sys.stdin);v=d['args'].get('k','');print('query seen by host:',len(v),hashlib.sha256(v.encode()).hexdigest())\\\"\"}"
+        ],
+        "reply": "```\nin sandbox: 61 chars, sha256 f19faf418d196b0935383aedfe16a63690b9a16427aae1264666b3f1007a04d3\nheader seen by host: 38 b30a8a3c1c7289558b83b2f82b49b400ce2ef7da035be14af6fc1a41440d3ddf\nquery seen by host: 61 f19faf418d196b0935383aedfe16a63690b9a16427aae1264666b3f1007a04d3\n```",
+        "timeline": [
+          "555ms session.status_running",
+          "557ms session.thread_status_running",
+          "636ms user.message",
+          "638ms span.model_request_start",
+          "3047ms agent.thinking",
+          "5426ms span.model_request_end",
+          "5537ms agent.tool_use",
+          "6752ms agent.tool_result",
+          "6874ms span.model_request_start",
+          "8823ms agent.message",
+          "8826ms span.model_request_end",
+          "8929ms session.thread_status_idle:end_turn",
+          "8932ms session.usage",
+          "8932ms session.status_idle:end_turn"
+        ]
+      },
+      "active_seconds": 8.618,
+      "usage": [
+        {
+          "session": "sesn_01X27rQa1xBBo6fPiSr7R3Gd",
+          "input": 6,
+          "output": 684,
+          "cache_read": 14544,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 1284
+          },
+          "active_seconds": 8.618,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
     }
   ]
 }
