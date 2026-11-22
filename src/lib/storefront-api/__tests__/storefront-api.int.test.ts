@@ -138,6 +138,15 @@ describe.skipIf(!host)('the Storefront API door', () => {
       const moved = await read(live('product')(r(), at(keys[0]!, { handle: 'old-live-0' })))
       expect(moved.status).toBe(200)
       expect(JSON.parse(moved.body).handle).toBe('live-0')
+      // G·4 through the real resources: the home collection, the JSON-LD on the Website's address (ruling C6), the
+      // collection page's JSON-LD and the media origin's shape.
+      const g4 = JSON.parse(moved.body) as { collection: { handle: string } | null; jsonLd: string }
+      expect(g4.collection).toEqual({ handle: 'sarees-0', title: 'Sarees 0' })
+      expect(JSON.parse(g4.jsonLd).url).toBe(`https://cat${tag}-0.in/products/live-0`)
+      expect(g4.jsonLd).not.toContain('<')
+      expect(JSON.parse(col.jsonLd)[0].itemListElement[1].item).toBe(`https://cat${tag}-0.in/collections/sarees-0`)
+      expect(JSON.parse(shop.body).jsonLd).toContain(`https://cat${tag}-0.in`)
+      expect('mediaOrigin' in JSON.parse(shop.body)).toBe(true)
       expect((await read(live('product')(r(), at(keys[0]!, { handle: 'old-live-1' })))).status).toBe(404)
       for (const body of [page.body, shop.body, (await read(live('product')(r(), at(keys[0]!, { handle: 'live-0' })))).body]) {
         expect(body).not.toContain('987654')

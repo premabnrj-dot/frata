@@ -2,9 +2,9 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.1.0
+  version: 2.6.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
 ---
 
@@ -17,7 +17,8 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
 ## The rules
 
 1. **One door.** Every route is `export const GET = apiRequest({ version, tree, mode, resource, schema, params?, limit?,
-   run })` (`src/lib/storefront-api/request.ts`). The shop comes ONLY from the key in the path, through
+   run })` (`src/lib/storefront-api/request.ts`). The shop comes ONLY from the key (in the path; a build key in the
+   `Frrata-Key` header, rule 2), through
    `storefrontKeyFor` (`src/lib/queries/storefront-keys.ts`) → `storefrontKeyRow` (`src/lib/db/platform.ts`) → the
    definer `app_storefront_key`. `run` gets `ctx` (shop, key, kind, version, now) and its parsed path params, never the
    Request; params naming a shop are refused. `check:tenant` § 9 and `check:actions` hold it. `openapi.json` and the docs
@@ -25,15 +26,25 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `/docs`) are the keyless entry points.
 2. **Two trees, never mixed.** next.config's `apiRewrites` (never the middleware: a middleware rewrite uncaches a route,
    and the matcher skips versioned paths so a CDN hit costs no middleware run) send `frs_test_` keys to `t/` (dynamic:
-   drafts through the preview loaders, `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
+   drafts through the preview loaders (the shop through its purged 60 s settings entry), the catalogue from the shared 15 s draft entry (`draftCatalogue`), `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
    and `frs_pub_` keys to `k/` (cached copies, `revalidate = 3600`, `generateStaticParams = () => []`). **A cached route
    never reads the request** (a header read is a runtime error, and anything per caller would be served to everyone):
    CORS there is a static `*`. Search is the one dynamic live route (varies by `q`; `public, s-maxage=60`). `check:api`
-   holds it; `scripts/verify/api-isr.mjs` proves it under `next start`.
+   holds it; `scripts/verify/api-isr.mjs` proves it under `next start`. **The third tree, `h/`** (G·2; ADR-0018's
+   build-key amendment): a `frs_build_` key in the `Frrata-Key` header, never a path. The first versioned rewrite sends
+   ANY request carrying the header to `h/` (keyless paths, `/<v>/<resource>`), and every other versioned rewrite has
+   `missing: [header]`, so it never reaches a cached route (`host.test.ts`). `tree: 'header'`, dynamic, `private,
+   no-store`, `Vary: Frrata-Key`, **no CORS header at all** (read from a server only), the key looked up uncached
+   (`storefrontKeyNow`), limited per key (`apiTestKey`), drafts included (`resources.ts`: the one raw draft catalogue per
+   store, `draftCatalogue`, 15 s, catalogue tags; pages and FAQ as they stand, hidden ones too). Minted ONLY by
+   `mintBuildKey` (`src/lib/storefront-api/build-keys.ts`, inside the store's tenant transaction, `api.manage`, audited,
+   `apiBuildKeyShop` checked first by `buildKeyLimitOk`, outside the transaction, at most 50 live a store), deleted daily once ended (`app_delete_ended_build_keys`, the daily cron).
+   The starter sends the header only with `FRRATA_KEY_MODE=header`.
 3. **Every refusal is one 404 body** (one exception: a filter's grammar error, `400 {"error":"bad_filter","param"}`,
    after the key checks out, through `BadParam`) (`{"error":"not_found"}`): bad shape, unknown, deleted, expired, wrong tree, a
-   product of another shop, a draft under a live key. Limits fail closed (`apiMissIp`, `apiTestIp`, `apiSearchIp`,
-   `apiKeyCreateShop`), with the WAF path rule and rate rule in front (`ops/firewall.json`, held by `waf.test.ts`).
+   product of another shop, a draft under a live key. Limits fail closed (`apiMissIp` and `apiMissKey`: misses per
+   network and per key hash; `apiTestKey`: test and build keys per key only, never per network, G·1; `apiSearchIp`: a
+   live key's search; `apiKeyCreateShop`), with the WAF path rule and rate rule in front (`ops/firewall.json`, held by `waf.test.ts`).
 4. **Answers are closed.** Output schemas in `src/domains/storefront-api/<version>/schemas.ts` use `z.strictObject` and
    named fields only (no `object`, `record`, `unknown`, `any`, `passthrough`, `catchall`, `loose`: `check:api`). Pure
    mappers (`map.ts`) build each field from the shop's cached reads; nothing is spread from a row. The answer is
@@ -67,7 +78,12 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    through `shopPages` (a day, tag `pages`: a longer period doesn't shorten the hour).
 8. **Every stop is the definer's**, never a stored flag: deleted (`revoked_at`), expired, a test key once the store ever
    opened (`tenants.first_opened_at`), a key a partner made once its link is gone or it is suspended, a Website whose
-   `site_domain_id` row is not live. Proof: `scripts/verify/tenancy.sql` § 81.
+   `site_domain_id` row is not live; a build key after opening unless a partner's, and a partner person's build key once
+   that person leaves the partner, loses the store's members row or (a Lead or a Builder) its assignment
+   (`app_build_key_maker_live`, called only inside the definers; Settings › Website reads the same answer through
+   `app_build_key_makers`). Open my store refuses while a store never opened has a Test or Build key that still answers and no Website
+   (D0·3: `app_store_building_keys`, the same rules, in `openShop`'s first select; `websiteBlocksOpening` beside
+   `setupSteps`). Proof: `scripts/verify/tenancy.sql` § 81.
 9. **Keys are never stored, shown twice or logged by us.** Stored is the sha256 hex; the key is in the create action's
    reply once; our logs carry the key id. (Vercel's request logs hold the path: a live key is public by design.)
 
@@ -95,6 +111,25 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    or a waiting change; a test pins its keys. Logo files only from the shop's folder, described "through `<img>` only";
    `shop.logo` stays raster (an SVG main logo answers its PNG rendition). A season still to come is never answered; a
    live one is applied to `colours` and carries `until`; its start and end purge `settings` through the boundary sweep.
+
+15. **G·4 (2026-11-22), additive on `2026-12`:** `shop.mediaOrigin` (Frrata's media store); `collection.image` (the
+   store tiles' own cover rule, `collectionCover` in `src/domains/storefront/sources.ts`; the list's covers in one pass,
+   `collectionCovers`); `product.collection` (the
+   first collection, in the store's order, holding it); `jsonLd` on shop, product and a collection page: the store
+   pages' own builders (`src/domains/seo/defaults.ts`) on `websiteOrigin(site, checkout)`
+   (`src/domains/storefront-api/origin.ts`, the one rule P5·2 moves behind `app_website_of`), serialised with every `<`
+   escaped (`structured.ts`). The product and collection routes read `apiShop` too, so their copies carry `settings`.
+   G14 (a compliance certificate as a policy kind) waits: Frrata holds no such record.
+
+16. **G·3 (2026-11-22), a developer's device sign-in, server parts only** (the confirm page waits for its mockup): the
+   CLI POSTs `/api/dev/device/start` (a store slug; no shop read, the same answer for any slug, `deviceStartIp`) and
+   gets a device secret and an 8-character code; only their sha256s are stored in `build_key_device_codes` (no grant to
+   any role; the `app_device_code_*` definers, `src/lib/db/device-codes.ts`), for 10 minutes. `confirmDeviceCode`
+   (`src/lib/storefront-api/device.ts`, for the future page; `deviceCodeFor` shows the store's name first) needs a
+   passkey check in the last 5 minutes and `api.manage` on the store the CLI named, never one the page sends; the
+   approval and its audit row are one definer. `/api/dev/device/poll` (per network, then per device) claims a confirmed
+   code ONCE and mints through `mintBuildKey` as that person (developer, 24 hours); a mint that fails for a passing
+   reason (a limit, the ceiling) gives it back, a refusal keeps it spent.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run

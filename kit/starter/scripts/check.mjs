@@ -16,7 +16,7 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.vercel', 'out'])
 const walk = (d) => readdirSync(d).flatMap((n) => { if (SKIP.has(n) || /^\.env(\..+)?\.local$/.test(n)) return []; const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
 const code = walk('.').filter((f) => /\.(tsx?|jsx?|mjs|json|md|css|env\.example)$/.test(f) || f.endsWith('.env.example'))
 const problems = []
-const KEY = /frs_(pub|test)_[0-9A-Za-z]{6,}/
+const KEY = /frs_(pub|test|build)_[0-9A-Za-z]{6,}/
 for (const f of walk('.').filter((x) => !x.endsWith('.png'))) if (KEY.test(readFileSync(f, 'latin1'))) problems.push(`${f}: a Frrata key in source. Put it in .env.local (FRRATA_KEY), never in a file.`)
 // Comments don't count: the fields must be rendered (JSX), not mentioned.
 const layout = (existsSync('app/layout.tsx') ? readFileSync('app/layout.tsx', 'utf8') : '').replace(/\/\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}|^\s*\/\/.*$/gm, '')
@@ -26,7 +26,10 @@ const PRICE = /(\b(price|mrp|priorPrice)|\.(min|max))\s*[-+*/%]=?\s*[\w(.]|[\w)]
 for (const f of code.filter((x) => /\.tsx?$/.test(x) && !x.endsWith('lib/money.ts') && !x.endsWith('lib/cart-link.ts'))) {
   const src = readFileSync(f, 'utf8')
   src.split('\n').forEach((l, i) => { if (!/^\s*\/\//.test(l) && PRICE.test(l)) problems.push(`${f}:${i + 1}: arithmetic on a price. Show it as the API gives it (rupees()).`) })
-  if (/dangerouslySetInnerHTML/.test(src)) problems.push(`${f}: dangerouslySetInnerHTML. API text is text, never HTML.`)
+  // The one named exception (G·4, contract review M10): the API's own `jsonLd`, already escaped, as the only content of a
+  // <script type="application/ld+json">. Anything else set as HTML fails.
+  const LD = /<script type="application\/ld\+json" dangerouslySetInnerHTML=\{\{ __html: [\w.?]+\.jsonLd \}\} \/>/g
+  if (/dangerouslySetInnerHTML/.test(src.replace(LD, ''))) problems.push(`${f}: dangerouslySetInnerHTML. API text is text, never HTML (the one exception: an API jsonLd in its own <script type="application/ld+json">).`)
   if (/\/cart\?l=/.test(src)) problems.push(`${f}: a hand-made bag link. Use cartLink() (lib/cart-link.ts).`)
 }
 // 6. The brand record (one-address P1·7). The two files the kit ships (components/frrata/) set the variables and draw the

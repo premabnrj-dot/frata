@@ -1093,6 +1093,41 @@
       "when": 1794854785886,
       "tag": "0155_brand_record",
       "breakpoints": true
+    },
+    {
+      "idx": 156,
+      "version": "7",
+      "when": 1795345601260,
+      "tag": "0156_build_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 157,
+      "version": "7",
+      "when": 1795345613847,
+      "tag": "0157_build_keys_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1795357430745,
+      "tag": "0158_d0_opening_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "7",
+      "when": 1795358809524,
+      "tag": "0159_build_key_device_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 160,
+      "version": "7",
+      "when": 1795358816035,
+      "tag": "0160_device_codes_access",
+      "breakpoints": true
     }
   ]
 }

@@ -23,7 +23,16 @@ describe('the API host’s path rule', () => {
     const k = newKey('public', rnd), t = newKey('test', rnd)
     const fill = (route: string, key: string) => '/' + route.replace(/^src\/app\/api\/storefront\//, '').replace(/\/route\.ts$/, '')
       .replace(/^(\d{4}-\d{2})\/[kt]\//, '$1/k/').replace('[key]', key).replace('[handle]', 'linen-kurta-set').replace('[n]', '13')
-    for (const r of walk('src/app/api/storefront')) for (const key of [k, t]) expect(re.test(fill(r, key)), fill(r, key)).toBe(true)
+    const header = (route: string) => '/' + route.replace(/^src\/app\/api\/storefront\//, '').replace(/\/route\.ts$/, '')
+      .replace(/^(\d{4}-\d{2})\/h\//, '$1/').replace('[handle]', 'linen-kurta-set').replace('[n]', '13')
+    for (const r of walk('src/app/api/storefront')) {
+      if (/\/h\//.test(r)) { expect(re.test(header(r)), header(r)).toBe(true); continue } // G·2: the key in the header
+      for (const key of [k, t]) expect(re.test(fill(r, key)), fill(r, key)).toBe(true)
+    }
+  })
+  it('lets the header tree through with no key in the path, and nothing else beside the resources (G·2)', () => {
+    for (const p of ['/2026-12/shop', '/2026-12/products/page/2', '/2026-12/pages/about', '/2026-12/filter/page/1']) expect(re.test(p), p).toBe(true)
+    for (const p of ['/2026-12/orders', '/2026-12/preview/faq', '/2026-12/h/shop', '/2026-12/shop/x', '/2026-12/products/page/14']) expect(re.test(p), p).toBe(false)
   })
   it('lets the docs through (SA1b D·9)', () => {
     for (const p of ['/', '/docs', '/docs/bag-link', '/docs/reference/products-handle', '/llms.txt', '/_next/static/chunks/app-1a2b.js', '/_next/static/css/x.css']) expect(re.test(p), p).toBe(true)

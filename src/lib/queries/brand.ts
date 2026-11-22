@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, isNull, ne, or, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings } from '@/lib/db/schema'
@@ -44,10 +44,11 @@ export function recordOf(r: LiveRow | undefined, logoUrl: string | null): BrandR
 /** What every reader gets: the record (Frrata's defaults until one is saved) and its seasons, or null for a theme shop. */
 export type ShopBrand = { record: BrandRecord; saved: boolean; seasons: Season[] }
 
-/** Keys that are not deleted and not expired at `now` (code-site.ts: a site being built). */
+/** Live and Test keys that are not deleted and not expired at `now` (code-site.ts: a site being built). Never a build
+ *  key (G·2): Studio's session or a developer's 24 hours on a theme store make no code site. */
 const liveKeysWith = async (tx: Tx, t: string, now: Date) => {
   const [r] = await tx.select({ n: sql<number>`count(*)::int` }).from(storefrontKeys)
-    .where(and(eq(storefrontKeys.tenantId, t), isNull(storefrontKeys.revokedAt), or(isNull(storefrontKeys.expiresAt), gt(storefrontKeys.expiresAt, now))))
+    .where(and(eq(storefrontKeys.tenantId, t), ne(storefrontKeys.kind, 'build'), isNull(storefrontKeys.revokedAt), or(isNull(storefrontKeys.expiresAt), gt(storefrontKeys.expiresAt, now))))
   return r?.n ?? 0
 }
 

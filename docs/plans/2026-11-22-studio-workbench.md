@@ -155,9 +155,17 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 ## Deviations (BUILT AS DRAWN; for the owner before a phase ships)
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
-| Screen 2: the Live key's chip "Starts when the store opens" | No chip; the approved key list's row (one-address § 4) | A fact the mockup got wrong: a Live key answers once the Website is on a proved domain, opened or not (0149). Mockup corrected 2026-11-22 | told 2026-11-22 |
-| Screen 2: the refusal names the address the Test key is used from | "Your website runs on a Test key. Test keys stop when the store opens." | A fact the mockup got wrong: Frrata never learns where a Test key is used from. Mockup corrected 2026-11-22 | told 2026-11-22 |
-| Screen 2: "New key", and key rows without prefix, maker, last used or Delete | The approved key list and "Create key" (one-address § 4), plus the days-left chip | Screen 2 was a sketch beside an approved, fuller drawing of the same list | told 2026-11-22 |
+| Screen 2: the Live key's chip "Starts when the store opens" | No chip; the approved key list's row (one-address § 4) | A fact the mockup got wrong: a Live key answers once the Website is on a proved domain, opened or not (0149). Mockup corrected 2026-11-22 | yes, 2026-11-22 |
+| Screen 2: the refusal names the address the Test key is used from | "Your website runs on a Test key. Test keys stop when the store opens." | A fact the mockup got wrong: Frrata never learns where a Test key is used from. Mockup corrected 2026-11-22 | yes, 2026-11-22 |
+| Screen 2: "New key", and key rows without prefix, maker, last used or Delete | The approved key list and "Create key" (one-address § 4), plus the days-left chip | Screen 2 was a sketch beside an approved, fuller drawing of the same list | yes, 2026-11-22 |
+| Screen 2: the days-left chip as a "Test" tag beside a warn chip "6 days left" | One warn chip "Test · 6 days left" in the key list's own chip (from day 7 down; "Test · ends 22 Dec" before) | The approved list (one-address § 4) carries the kind inside the chip; one chip, as drawn there | yes, 2026-11-22 |
+| Screen 2: the refusal as a raised card on the page | The console's Dialog primitive, title, body and the two buttons as ruled | A refusal that stops an action is a dialog in the design language; words and buttons as drawn | yes, 2026-11-22 |
+| One-address § 4: a build key's maker "Made by Kabir Shah, Neel Studio" | "Made by kabir@…, Neel Studio" (the person's email) | Frrata stores no name for a partner's Lead or Builder, only their email | yes, 2026-11-22 |
+| One-address § 4: "Used 10:06 am" on a build key | "Used today" | A key's last use is stored as a day, not a time (last_seen_on) | yes, 2026-11-22 |
+| One-address § 4: "Kabir Shah’s access ended · 16 Nov" | "<email>’s access ended · 16 Nov"; the date only when the person left the partner (an unassignment has no date) | As the maker row above; an assignment's removal is not dated | yes, 2026-11-22 |
+| One-address § 4: Delete's line "Neel Studio’s work with it stops within a minute." | The same for a partner's key; a key the store's own people made reads "Websites using it stop working within a minute." (the words review) | Undrawn case: the mockup draws only a partner's build key; a store-made key has no partner to name | yes, 2026-11-22 |
+| One-address § 4: every build key reads "Made by …" | A partner's key reads "Made by <email>, <partner>"; a store-made key shows only its last use | Undrawn case: the mockup draws only a partner's key, and the makers list (`app_build_key_makers`) names partner people only | yes, 2026-11-22 |
+| One-address § 4: "Deleted by Anita Rao · Just now" | "Deleted by Owner · Just now" (the deleter's role) | Older than this lane (the key list as built before G·2): Frrata stores no person's name, and the list reads no member's email | yes, 2026-11-22 |
 | Screen 1: the step "Site" | "Website" | Owner, 2026-11-22 | yes, 2026-11-22 |
 | Screen 1, phone bar: "Chat · Site · More" | "Chat · Website · More" (its icon the console's More, not the brush) | Owner's step name; the orchestrator's ruling on More (2026-11-22) | yes, 2026-11-22 |
 | Screen 1, chat: one bare proposal, Apply and Not this | The 16 Nov redraw's "Words for Content" card: 3 proposals, "3 to apply", Apply all 3 | The approved chat cards stay as drawn 16 Nov (plan § V3b); orchestrator ruling 2 | yes, 2026-11-22 |
@@ -187,6 +195,7 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |
 | G·4 `jsonLd` URLs | `site_origin` when set, else the store's frrata.shop host: one pure function P5·2 moves behind the predicate |
 | G·1 the per-key limit | 300 a minute a key for Test and Build, failing closed; judged by `speed-reviewer` and `security-reviewer` on the diff |
+| G·3 a partner's Builder and a developer key | None: `mintBuildKey` keeps `api.manage` as its check, which Builders don't hold. Owner, 2026-11-22: "let be things as it is for now. no need to offer access to builders for now." |
 
 ## Lane D's mockup check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, composer and build status follow the redraw

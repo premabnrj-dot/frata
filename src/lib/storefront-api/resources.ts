@@ -2,14 +2,18 @@ import 'server-only'
 import { apiBrand, previewBrand } from '@/lib/queries/brand'
 import { rasterLogoMade } from '@/lib/media/brand-files'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
-import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
-import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
+import { collectionOut, collectionPageOut, fromOurStore, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
+import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, draftCatalogue, previewProduct, shopAnnouncement, shopSettingsFor, type Lookup } from '@/lib/queries/storefront'
 import { BadParam, type ApiCtx } from './request'
 import { facetsOut, filterPageOut, parseFilter, type FilterQuery } from '@/domains/storefront-api/2026-12/filter'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import { storeHost } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { contentOut, faqOut, storePageOut } from '@/domains/storefront-api/2026-12/content-map'
+import { collectionLd, homeCollection, productLd, shopLd, type LdShop } from '@/domains/storefront-api/2026-12/structured'
+import { websiteOrigin } from '@/domains/storefront-api/origin'
+import { collectionCovers } from '@/domains/storefront/sources'
+import { apiCollections } from '@/lib/queries/storefront-collections'
 import { resolvePage } from '@/domains/pages/page'
 import { HANDLE as PAGE_HANDLE } from '@/domains/pages/templates'
 import { apiContent, previewContent } from '@/lib/queries/content'
@@ -27,22 +31,36 @@ import { paise } from '@/domains/money/paise'
 // else, and never opens a withTenant around a cached loader (P4). The answer is a mapper's output; apiRequest parses it.
 // =============================================================================
 
-const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
-  ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
-  : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent, brand: apiBrand }
+// A build key (G·2, the header tree) reads what a test key reads, drafts included: its catalogue from the one raw draft
+// entry per store (15 s, purged by every catalogue save), its pages and FAQ as they stand now (drafts and hidden ones).
+// A Test key reads the same entry (security review 2026-11-22 MED-2): it is in browsers and request logs by design, so
+// its 300 reads a minute must not each be a 200–370 ms uncached catalogue read.
+const loaders = (ctx: ApiCtx) => ctx.keyKind === 'public'
+  ? { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent, brand: apiBrand }
+  // The shop's settings have no drafts: the 60 s entry every settings save purges (speed review MED-3), not ~16 statements.
+  : { shop: shopSettingsFor, catalogue: draftCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
+/** The store's pages for this key: a build key's include drafts and hidden ones (the build-key amendment, point 4). */
+const pagesFor = (ctx: ApiCtx) => (ctx.keyKind === 'build' ? previewPages(ctx.tenantId) : shopPages(ctx.tenantId))
 
 /** One page by its address: a live page only, under either key. A draft page or FAQ needs ADR-0018 § 12's signed
  *  preview token (tenant, key id, entry, ≤ 10 minutes), which SA1b builds; until then a test key reads what is live
  *  (owner, 2026-11-15: ship with drafts closed to test keys). */
 async function pageAt(ctx: ApiCtx, handle: string): Promise<Pick<ShopPage, 'handle' | 'title' | 'template' | 'fill'> | null> {
   if (!PAGE_HANDLE.test(handle)) return null
-  return (await shopPages(ctx.tenantId)).find((p) => p.handle === handle) ?? null
+  return (await pagesFor(ctx)).find((p) => p.handle === handle) ?? null
 }
 /** A page as the store shows a shopper (never a sample or an example), bound answers from the store's Settings. */
 async function pageNodes(ctx: ApiCtx, p: Pick<ShopPage, 'template' | 'fill'>) {
   const s = await loaders(ctx).shop(ctx.tenantId)
   return s ? resolvePage(p.template, p.fill, 'shop', { facts: s, overrides: s.overrides, inr: (n) => formatInr(paise(n)) }) : null
 }
+
+/** G15: what the structured data reads of the shop entry, by name (never the entry spread), and the website's origin. */
+type ShopEntry = NonNullable<Awaited<ReturnType<typeof apiShop>>>
+const ldShop = (s: ShopEntry, logo: string | null): LdShop => ({ shopName: s.shopName, logo, instagram: s.instagram, codOn: s.codOn, returnDays: s.returnDays,
+  returnKind: s.returnKind, shippingFlat: s.shippingFlat, freeShippingAbove: s.freeShippingAbove, metroDays: s.metroDays, restDays: s.restDays,
+  dispatchDays: s.dispatchDays, zones: s.zones ?? null })
+const originOf = (s: ShopEntry) => websiteOrigin(s.siteOrigin, `https://${s.host}`)
 
 /** The mappers' context: the shop from the key, and Frrata's one media store (photos from anywhere else are dropped). */
 const mapCtx = (ctx: ApiCtx) => ({ tenantId: ctx.tenantId, mediaHost: storeHost(BLOB_STORE_ID) })
@@ -79,7 +97,9 @@ export const RESOURCES = {
     if (!s) return null
     const logoUrl = await rasterLogoMade(ctx.tenantId, s.logoUrl)
     // M7: shop.logo stays raster; an SVG main logo is answered there as its PNG rendition (brand.logos carries the SVG).
-    return shopOut(mapCtx(ctx), { ...s, logoUrl }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand)
+    const m = mapCtx(ctx)
+    const logo = logoUrl && fromOurStore(m, logoUrl) ? logoUrl : null
+    return shopOut(m, { ...s, logoUrl }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand, shopLd(ldShop(s, logo), originOf(s)))
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
     pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },
@@ -89,22 +109,34 @@ export const RESOURCES = {
     // A moved product answers with its current handle (spec § 3, architecture 8): one more read, never a redirect.
     if (found.kind === 'moved' && HANDLE.test(found.to)) found = await read(ctx.tenantId, found.to)
     if (found.kind !== 'current') return null
-    const out = productOut(mapCtx(ctx), found.product, ctx.now)
     // Under a live key, only what the shop's own product page would open now (its rule, not a copy): no draft, and no
     // scheduled product before its moment (security of the drop; impact review 2026-11-15 BLOCKER).
     const got = found.product
-    return ctx.keyKind === 'public' && !visibility(got.status as Status, got.publishAt ? new Date(got.publishAt) : null, ctx.now).reachable ? null : out
+    if (ctx.keyKind === 'public' && !visibility(got.status as Status, got.publishAt ? new Date(got.publishAt) : null, ctx.now).reachable) return null
+    // G6 and G15 (contract review M10), only for a product that answers: the home collection reads the catalogue's
+    // collections, the JSON-LD the shop's settings, so this copy carries their tags too (a Website move re-addresses it).
+    // Live copies read the collections alone (speed review MED-2); test and build keys the shared draft entry.
+    const [shop, colls] = await Promise.all([loaders(ctx).shop(ctx.tenantId),
+      ctx.keyKind === 'public' ? apiCollections(ctx.tenantId) : loaders(ctx).catalogue(ctx.tenantId).then((c) => c.collections)])
+    const m = mapCtx(ctx)
+    return { ...productOut(m, got, ctx.now), collection: homeCollection(got, colls, ctx.now),
+      ...(shop ? { jsonLd: productLd(m, got, ldShop(shop, shop.logoUrl && fromOurStore(m, shop.logoUrl) ? shop.logoUrl : null), originOf(shop), ctx.now) } : {}) }
   } },
-  collections: { schema: S.Collections, run: async (ctx: ApiCtx) =>
-    ({ collections: (await loaders(ctx).catalogue(ctx.tenantId)).collections.slice(0, 500).map(collectionOut) }) },
-  collection: { schema: S.CollectionPage, run: async (ctx: ApiCtx, p: { handle: string; page: number }) => {
+  collections: { schema: S.Collections, run: async (ctx: ApiCtx) => {
     const cat = await loaders(ctx).catalogue(ctx.tenantId)
-    const c = cat.collections.find((x) => x.handle === p.handle) ?? cat.collections.find((x) => x.handle === cat.movedCollections?.[p.handle])
-    return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now) : null
+    const m = mapCtx(ctx)
+    const list = cat.collections.slice(0, 500)
+    const covers = collectionCovers(list, cat.products, ctx.now)
+    return { collections: list.map((c) => collectionOut(c, { m, first: covers.get(c) ?? null })) }
   } },
-  offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await (ctx.keyKind === 'test' ? shopAnnouncement : apiAnnouncement)(ctx.tenantId), ctx.now) },
+  collection: { schema: S.CollectionPage, run: async (ctx: ApiCtx, p: { handle: string; page: number }) => {
+    const [cat, shop] = await Promise.all([loaders(ctx).catalogue(ctx.tenantId), loaders(ctx).shop(ctx.tenantId)])
+    const c = cat.collections.find((x) => x.handle === p.handle) ?? cat.collections.find((x) => x.handle === cat.movedCollections?.[p.handle])
+    return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now, shop ? collectionLd(c, cat.products, shop.shopName, originOf(shop), ctx.now) : undefined) : null
+  } },
+  offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await (ctx.keyKind === 'public' ? apiAnnouncement : shopAnnouncement)(ctx.tenantId), ctx.now) },
   content: { schema: S.Content, run: async (ctx: ApiCtx) => {
-    const [c, pages] = await Promise.all([loaders(ctx).content(ctx.tenantId), shopPages(ctx.tenantId)])
+    const [c, pages] = await Promise.all([loaders(ctx).content(ctx.tenantId), pagesFor(ctx)])
     return contentOut(c, pages, ctx.now)
   } },
   page: { schema: S.StorePage, run: async (ctx: ApiCtx, p: { handle: string }) => {
@@ -114,7 +146,7 @@ export const RESOURCES = {
   } },
   faq: { schema: S.Faq, run: async (ctx: ApiCtx) => {
     // The live FAQ under either key, as pages/{handle}: its draft waits for the signed preview token (ADR-0018 § 12).
-    const page = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
+    const page = (await pagesFor(ctx)).find((x) => x.template === 'faq')
     const nodes = page && await pageNodes(ctx, page)
     return page && nodes ? faqOut(page, nodes) : null
   } },
