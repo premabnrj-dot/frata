@@ -251,7 +251,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
   read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
   column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0155), the live
-  `brand_tokens` columns and `shop_settings.logo_url`, and nothing else, with `builder_rows` + restrictive `builder_only` policies.
+  `brand_tokens` columns and `shop_settings.logo_url`, and, for Brand › Checkout's preview (one-address P2, drizzle/0156), the live
+  `checkout_design` columns and `shop_settings`' seven public delivery, returns and Pay on delivery facts, and nothing else, with
+  `builder_rows` + restrictive `builder_only` policies.
   Builder reads live in `src/lib/queries/builder.ts` and call the owner list's own SQL (`listProductsWith`,
   `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
   store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through

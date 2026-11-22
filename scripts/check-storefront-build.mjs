@@ -42,6 +42,8 @@ const BLOCK_CSS_KB = 1.0
 // their own ceiling here, outside the sheet's: the shop's shared sheet keeps its 15.9 kB for every theme shop.
 const BRAND_FONTS_CSS_KB = 0.45
 const isBrandFonts = (f) => readFileSync(join('.next', f), 'utf8').includes('--font-store-mukta')
+/** The whole of a page's CSS stays under the two ceilings together (architecture review 2026-11-22). */
+const css_total_over = (files) => files.filter((f) => f.endsWith('.css')).reduce((a, f) => a + gz(f), 0) / 1024 > CSS_BUDGET_KB + BRAND_FONTS_CSS_KB
 // The visit beacon (A·2, public/fe.js): a static async script the shell adds to every live shop page. It isn't a build
 // chunk, so it isn't in a page's first-load figure (it runs in its own task, after parsing: 0 TBT; speed review
 // 2026-11-11), but its bytes are shown beside each page's and held by scripts/build-beacon.mjs (≤ 1.7 kB gzip).
@@ -81,6 +83,7 @@ for (const [k, files] of Object.entries(build)) {
   const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
   const all = [...new Set([...above.flatMap((l) => build[l] ?? []), ...files])]
   const fonts = all.filter((f) => f.endsWith('.css') && isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
+  if (css_total_over(all)) failures.push(`${k}  loads more than ${CSS_BUDGET_KB + BRAND_FONTS_CSS_KB} kB of CSS gzipped in all (the sheet and the brand faces)`)
   if (fonts > BRAND_FONTS_CSS_KB) failures.push(`${k}  loads ${fonts.toFixed(2)} kB of the brand faces' rules gzipped (budget ${BRAND_FONTS_CSS_KB} kB)`)
   const css = all.filter((f) => f.endsWith('.css') && !isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
   // Signal S2-0: a shop page loads the shop's own sheet (src/app/shop.css), never the app's (globals.css: console classes).

@@ -11,7 +11,9 @@ import localFont from 'next/font/local'
 const mukta = localFont({ src: [{ path: '../fonts/mukta/mukta-latin-400-normal.woff2', weight: '400' }, { path: '../fonts/mukta/mukta-latin-600-normal.woff2', weight: '600' }], display: 'swap', preload: false, variable: '--font-store-mukta' })
 const tiro = localFont({ src: '../fonts/tiro-devanagari-hindi/tiro-devanagari-hindi-latin-400-normal.woff2', weight: '400', display: 'swap', preload: false, variable: '--font-store-tiro' })
 
-/** The brand faces' variables beside the store's (Console › Brand only; a theme shop's pages never load them). */
+/** The brand faces' variables beside the store's: Console › Brand, and a code-site store's checkout, bag-link, order and
+ *  policy pages (one-address P2·3). Those routes are shared, so their @font-face rules (0.35 kB) load for theme shops too;
+ *  the faces themselves download only where a record uses them. check:storefront-build holds their own ceiling. */
 export const BRAND_FONT_VARS = `${mukta.variable} ${tiro.variable}`
 
 import { brandFamily } from './font-families'

@@ -22,7 +22,7 @@ import { acceptedBrandFile, rasterBase } from '@/domains/brand/files'
 import { COLOUR_ROLES, DENSITIES, FONTS, LOGO_SLOTS, normalHex, RADII, type BrandRecord, type LogoSlot } from '@/domains/brand/record'
 import { readRecord } from '@/domains/brand/schema'
 import { BRAND_REFUSAL, brandSaver, decidesBrand } from '@/domains/brand/who'
-import { cleanLine, DEFAULT_DESIGN, designChanges, designProblems, designSummary, HEADERS, MAX_TRUST, readDesign, TRUST_KEYS, type CheckoutDesign } from '@/domains/brand/checkout'
+import { cleanLine, DEFAULT_DESIGN, designChanges, checkoutProblems, designSummary, HEADERS, MAX_TRUST, readDesign, TRUST_KEYS, type CheckoutDesign } from '@/domains/brand/checkout'
 
 // =============================================================================
 // FILE: src/lib/content/save.ts — THE ONE WRITER OF A STORE'S BRAND RECORD (one-address plan P1·3; spec § 5: "saveBrand
@@ -237,7 +237,7 @@ export async function decideBrand(input: unknown): Promise<BrandResult> {
     }
     if (p.kind === 'checkout') {
       const next = readDesign(p.record), row = await heldDesign(tx, t)
-      if (!next || designProblems(next).length) return { error: NOTHING }
+      if (!next || checkoutProblems(next).length) return { error: NOTHING }
       if ((row?.version ?? 0) !== p.base) return { error: 'Your checkout changed after this was sent. Decline it and ask for a new one.' }
       const live = row?.design ?? DEFAULT_DESIGN
       const v = await putDesign(tx, t, me, live, next, row)
@@ -283,7 +283,7 @@ export async function undoBrand(input: unknown): Promise<BrandResult> {
 // ── The checkout design (one-address plan P2·6; spec § 3; owner-approved mockup docs/mockups/2026-11-16-p2-checkout.html
 // screens 8–10). Who saves is the brand record's rule (who.ts): the owner and Managers live; the store's partner live
 // until the store opens, then its save waits for the owner beside a brand change (one open of each kind); a Builder, staff
-// and a support visit never save. The lines are checked as the page checks them (designProblems); the record before the
+// and a support visit never save. The lines are checked as the page checks them (checkoutProblems); the record before the
 // save is kept for Undo; one audit row with the parts' names only; after the commit `shop:<t>:settings` only.
 
 const STALE_DESIGN = 'Checkout changed since you opened it. Reload to see it.'
@@ -336,7 +336,7 @@ export async function saveCheckout(input: unknown): Promise<BrandResult> {
     if (saver === 'support' || saver === 'preview') return { error: BRAND_REFUSAL[saver] }
     const row = await heldDesign(tx, t)
     if (version !== (row?.version ?? null)) return { error: STALE_DESIGN }
-    const problems = designProblems(next)
+    const problems = checkoutProblems(next)
     if (problems.length) return { error: problems.length === 1 ? '1 line needs fixing' : `${problems.length} lines need fixing`, fields: Object.fromEntries(problems.map((p) => [p.field, p.message])) }
     const live = row?.design ?? DEFAULT_DESIGN
     const changes = designChanges(live, next)

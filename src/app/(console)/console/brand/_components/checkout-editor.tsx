@@ -17,7 +17,7 @@ import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { useToast } from '@/components/ui/toast'
 import dynamic from 'next/dynamic'
 import type { PreviewData } from '@/components/shop-preview/checkout-preview'
-import { designChanges, designProblems, HEADING_MAX, MAX_TRUST, THANKS_MAX, trustBlocks, trustOrder, trustWords, TRUST_NAMES, type CheckoutDesign, type TrustFacts, type TrustKey } from '@/domains/brand/checkout'
+import { designChanges, checkoutProblems, HEADING_MAX, MAX_TRUST, THANKS_MAX, trustBlocks, trustOrder, trustWords, TRUST_NAMES, type CheckoutDesign, type TrustFacts, type TrustKey } from '@/domains/brand/checkout'
 import { PREVIEW_PAGES, PREVIEW_STATES, type PreviewPage, type PreviewState } from '@/domains/brand/checkout-sample'
 import type { BrandRecord } from '@/domains/brand/record'
 import { cn } from '@/lib/utils'
@@ -62,7 +62,7 @@ export function CheckoutEditor({ mode, live, version: startVersion, waiting, rec
   const form = useRef<HTMLFormElement>(null)
 
   // The lines' refusals are live as typed (screen 9); Save counts them in one error toast with Show.
-  const live$ = useMemo(() => Object.fromEntries(designProblems(draft).map((p) => [p.field, p.message])), [draft])
+  const live$ = useMemo(() => Object.fromEntries(checkoutProblems(draft).map((p) => [p.field, p.message])), [draft])
   const errors: Record<string, string> = { ...live$, ...serverErrors }
   useErrorSummary(attempt > 0 ? errors : {}, { attempt, scope: form, noun: 'line' })
   const changes = designChanges(saved, draft)

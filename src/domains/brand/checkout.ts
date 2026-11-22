@@ -12,6 +12,7 @@
 
 import { rupeesWords } from '@/domains/money/rupees'
 import { lineProblem } from './lines'
+import { zoneDays, type PublicZone } from '@/domains/delivery/public'
 
 export const HEADERS = ['left', 'centre'] as const
 export type HeaderAlign = (typeof HEADERS)[number]
@@ -47,7 +48,7 @@ export type DesignField = 'header' | 'back' | 'rows' | 'trust' | 'heading' | 'th
 export type DesignProblem = { field: DesignField; message: string }
 
 /** Every rule a design must meet: the one function for save, preview and render (spec § 3, "The check"). */
-export function designProblems(d: CheckoutDesign): DesignProblem[] {
+export function checkoutProblems(d: CheckoutDesign): DesignProblem[] {
   const out: DesignProblem[] = []
   if (!(HEADERS as readonly string[]).includes(d.header)) out.push({ field: 'header', message: 'Choose Left or Centred.' })
   if (typeof d.back !== 'boolean') out.push({ field: 'back', message: 'Turn the link on or off.' })
@@ -67,7 +68,7 @@ export const cleanLine = (s: string) => s.normalize('NFC').trim()
  */
 export function renderDesign(d: CheckoutDesign | null): CheckoutDesign {
   if (!d) return DEFAULT_DESIGN
-  const bad = new Set(designProblems(d).map((p) => p.field))
+  const bad = new Set(checkoutProblems(d).map((p) => p.field))
   return {
     header: bad.has('header') ? DEFAULT_DESIGN.header : d.header,
     back: bad.has('back') ? DEFAULT_DESIGN.back : d.back,
@@ -90,11 +91,15 @@ export type TrustFacts = {
   codMax: number
   /** A regular GSTIN: every order gets a GST invoice. */
   gstInvoice: boolean
+  /** Delivery Zones while usable: the days come from the zones, and Pay on delivery's limit is the zone's, so no single
+   *  limit is promised (checkout decides it by PIN code, src/domains/delivery/resolve.ts). */
+  zones?: readonly PublicZone[] | null
 }
 export type TrustBlock = { key: TrustKey; words: string }
 
 /** A store's settings as the trust blocks read them (the storefront's StoreShop, or the Builder's granted columns). */
 export const trustFactsOf = (s: Omit<TrustFacts, 'gstInvoice'> & { gst: { invoice: boolean } }): TrustFacts => ({
+  zones: s.zones ?? null,
   dispatchDays: s.dispatchDays, metroDays: s.metroDays, restDays: s.restDays, returnKind: s.returnKind, returnDays: s.returnDays,
   codOn: s.codOn, codMax: s.codMax, gstInvoice: s.gst.invoice,
 })
@@ -112,7 +117,8 @@ export function returnsWords(kind: string, days: number, form: 'line' | 'block')
 }
 
 /** Days from order to delivery by the store's settings: dispatch plus metro (soonest) to dispatch plus elsewhere. */
-export function deliveryWindow(f: Pick<TrustFacts, 'dispatchDays' | 'metroDays' | 'restDays'>): { lo: number; hi: number } | null {
+export function deliveryWindow(f: Pick<TrustFacts, 'dispatchDays' | 'metroDays' | 'restDays' | 'zones'>): { lo: number; hi: number } | null {
+  if (f.zones?.length) { const [lo, hi] = zoneDays(f.zones); return hi ? { lo: f.dispatchDays + lo, hi: f.dispatchDays + hi } : null }
   if (!f.restDays) return null
   return { lo: f.dispatchDays + Math.min(f.metroDays || f.restDays, f.restDays), hi: f.dispatchDays + f.restDays }
 }
@@ -129,7 +135,7 @@ export function trustWords(k: TrustKey, f: TrustFacts): string | null {
       return returnsWords(f.returnKind, f.returnDays, 'block')
     case 'cod':
       if (!f.codOn) return null
-      return f.codMax > 0 ? `Pay on delivery up to ${rupeesWords(f.codMax)}` : 'Pay on delivery'
+      return f.codMax > 0 && !f.zones?.length ? `Pay on delivery up to ${rupeesWords(f.codMax)}` : 'Pay on delivery'
     case 'secure':
       return 'Secure payment by Razorpay'
     case 'gst':

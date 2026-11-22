@@ -5,6 +5,8 @@ import type { StoreShop } from '@/lib/queries/storefront'
 import { renderDesign, trustBlocks, trustFactsOf, type CheckoutDesign, type TrustBlock } from '@/domains/brand/checkout'
 import type { BrandRecord } from '@/domains/brand/record'
 import { liveSeason, withSeason } from '@/domains/brand/seasons'
+import { renderRecord } from '@/domains/brand/check'
+import { DEFAULT_PALETTE } from '@/domains/brand/defaults'
 import type { BrandFacts } from '@/components/storefront/brand-frame'
 
 // =============================================================================
@@ -20,7 +22,8 @@ export async function brandLookFor(shop: StoreShop, now: Date): Promise<BrandLoo
   const look = await checkoutLook(shop.id).catch((e: unknown) => { console.error('[brand look]', e instanceof Error ? e.name : 'error'); return null })
   if (!look) return null
   return {
-    record: withSeason(look.record, liveSeason(look.seasons, now)),
+    // A record (or today's season) that fails a rule made after it was saved draws Frrata's defaults (spec § 3).
+    record: renderRecord(withSeason(look.record, liveSeason(look.seasons, now)), DEFAULT_PALETTE),
     design: renderDesign(look.design),
     facts: brandFactsOf(shop),
     // The logo and "Back to <store>" lead to the store's own website; while it is being built, its Frrata home.

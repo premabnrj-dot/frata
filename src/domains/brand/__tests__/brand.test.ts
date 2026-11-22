@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PALETTE } from '../defaults'
 import { COLOUR_ROLES, emptyRecord, FONTS, fontStack, normalHex, type BrandRecord, type Palette } from '../record'
-import { brandProblems, logoFileProblem, pairChecks, pairProblem, sniffLogo } from '../check'
+import { brandProblems, logoFileProblem, pairChecks, pairProblem, renderRecord, sniffLogo } from '../check'
 import { LINE_WORDS, lineProblem } from '../lines'
 import { liveSeason, seasonProblem, withSeason, type Season } from '../seasons'
 import { accentOf } from '../accent'
@@ -84,6 +84,16 @@ describe('a logo file', () => {
     expect(logoFileProblem({ kind: 'svg', bytes: 300 * 1024 })).toMatch(/over 200 kB/)
     expect(logoFileProblem({ kind: null, bytes: 10 })).toBe('Upload an SVG, PNG or WebP file.')
     expect(logoFileProblem({ kind: 'png', bytes: 3 * 1024 * 1024, width: 800 })).toBe('This file is over 2 MB. Upload a smaller one.')
+  })
+})
+
+describe('renderRecord (spec § 3: a record that fails a later rule draws the defaults)', () => {
+  it('keeps a passing record and falls back, logos kept, when a season’s accent fails on its background', () => {
+    const ok = ayuda({ logos: { main: 'x.webp', mark: null, stacked: null, reversed: null } })
+    expect(renderRecord(ok, AYUDA)).toBe(ok)
+    const bad = { ...ok, palette: { ...ok.palette, accent: '#FBF7F0' as const } }
+    const r = renderRecord(bad, AYUDA)
+    expect(r.palette.accent).toBe(AYUDA.accent); expect(r.logos.main).toBe('x.webp'); expect(r.display).toBe('inter')
   })
 })
 

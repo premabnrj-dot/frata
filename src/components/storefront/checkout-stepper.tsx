@@ -1,7 +1,7 @@
 'use client'
 
 import { pick, urlFor } from '@/domains/media/sizes'
-import { bag } from './bag-store'
+import { bag, MAX_QTY } from './bag-store'
 import { inr, type PublicQuoteLine } from './shop-client'
 import { goneOf, lineRows, type GoneLine } from '@/domains/checkout/line-rows'
 
@@ -17,7 +17,6 @@ import { goneOf, lineRows, type GoneLine } from '@/domains/checkout/line-rows'
 // =============================================================================
 
 export type Gone = GoneLine
-const MAX_QTY = 10
 
 function Alert() {
   return <svg viewBox="0 0 24 24" aria-hidden="true" className="ck-ic-sm"><path d="M12 3.5 21 19.5H3Z" /><path d="M12 10v4.5M12 17v.2" /></svg>

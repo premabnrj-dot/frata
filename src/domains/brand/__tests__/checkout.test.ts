@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_DESIGN, designChanges, designProblems, designSummary, headingOf, readDesign, renderDesign, trustBlocks, trustOrder, trustWords, type CheckoutDesign, type TrustFacts } from '../checkout'
+import { DEFAULT_DESIGN, designChanges, checkoutProblems, designSummary, headingOf, readDesign, renderDesign, trustBlocks, trustOrder, trustWords, type CheckoutDesign, type TrustFacts } from '../checkout'
 import { LINE_WORDS } from '../lines'
 
 // House of Ayuda's test store (P2 mockup, 2026-11-16): dispatch 1, metro 3, elsewhere 6; 7-day exchange or returns;
@@ -26,6 +26,12 @@ describe('trust blocks', () => {
     expect(trustWords('delivery', { ...AYUDA, metroDays: 0, restDays: 5 })).toBe('Delivered in 6 days')
     expect(trustWords('delivery', { ...AYUDA, restDays: 0 })).toBeNull()
   })
+  it('follows Delivery Zones as checkout does: the zones’ days, no single Pay on delivery limit', () => {
+    const zone = (daysMin: number, daysMax: number) => ({ name: 'Z', charge: 0, freeAbove: null, daysMin, daysMax, codOn: true, codCharge: 0, codMax: null })
+    const z = { ...AYUDA, zones: [zone(2, 3), zone(4, 6)] }
+    expect(trustWords('cod', z)).toBe('Pay on delivery')
+    expect(trustWords('delivery', z)).toBe('Delivered in 3–7 days')
+  })
   it('lists the blocks that are on first, then the rest (screen 8)', () => {
     expect(trustOrder(['cod', 'delivery'])).toEqual(['cod', 'delivery', 'returns', 'secure', 'gst'])
   })
@@ -33,20 +39,20 @@ describe('trust blocks', () => {
 
 describe('the check', () => {
   it('passes the drawn design and the default', () => {
-    expect(designProblems(drawn)).toEqual([]); expect(designProblems(DEFAULT_DESIGN)).toEqual([])
+    expect(checkoutProblems(drawn)).toEqual([]); expect(checkoutProblems(DEFAULT_DESIGN)).toEqual([])
   })
   it('refuses five trust blocks, a repeat and one off the set', () => {
-    expect(designProblems({ ...drawn, trust: ['delivery', 'returns', 'cod', 'secure', 'gst'] })[0]?.field).toBe('trust')
-    expect(designProblems({ ...drawn, trust: ['cod', 'cod'] })[0]?.field).toBe('trust')
-    expect(designProblems({ ...drawn, trust: ['tweet' as never] })[0]?.field).toBe('trust')
+    expect(checkoutProblems({ ...drawn, trust: ['delivery', 'returns', 'cod', 'secure', 'gst'] })[0]?.field).toBe('trust')
+    expect(checkoutProblems({ ...drawn, trust: ['cod', 'cod'] })[0]?.field).toBe('trust')
+    expect(checkoutProblems({ ...drawn, trust: ['tweet' as never] })[0]?.field).toBe('trust')
   })
   it('names each line’s refusal at its field (screen 9)', () => {
-    const p = designProblems({ ...drawn, heading: 'Almost yours, beautiful one', thanks: 'Thank you. For exchanges, pay the fee to ayuda@okicici.' })
+    const p = checkoutProblems({ ...drawn, heading: 'Almost yours, beautiful one', thanks: 'Thank you. For exchanges, pay the fee to ayuda@okicici.' })
     expect(p).toEqual([{ field: 'heading', message: 'Up to 24 characters.' }, { field: 'thanks', message: LINE_WORDS.upi }])
   })
   it('refuses a header or rows off the closed set', () => {
-    expect(designProblems({ ...drawn, header: 'right' as never }).map((x) => x.field)).toEqual(['header'])
-    expect(designProblems({ ...drawn, rows: 3 as never }).map((x) => x.field)).toEqual(['rows'])
+    expect(checkoutProblems({ ...drawn, header: 'right' as never }).map((x) => x.field)).toEqual(['header'])
+    expect(checkoutProblems({ ...drawn, rows: 3 as never }).map((x) => x.field)).toEqual(['rows'])
   })
 })
 

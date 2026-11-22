@@ -116,7 +116,7 @@ export const brandSeasons = pgTable('brand_seasons', {
  * partner may set on checkout, the bag-link page, order pages and policies, and nothing more. Its rules live in
  * src/domains/brand/checkout.ts; the CHECKs below hold the closed sets and the lines' lengths (the money rules are the
  * domain's, run on save and again at render). `previous` keeps the design before the last save (Undo, once). Written
- * only by saveCheckoutDesign (src/lib/content/save.ts). Access: drizzle/0156 (frata_app; frata_builder named columns).
+ * only by saveCheckout, undoCheckout and decideBrand (src/lib/content/save.ts). Access: drizzle/0156 (frata_app; frata_builder named columns).
  */
 export const checkoutDesign = pgTable('checkout_design', {
   id: id(),
