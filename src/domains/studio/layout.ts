@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { inField, type KeyInput } from '@/domains/ui/shortcuts'
-import { clampTo, splitterDrag, splitterKey, type Splitter } from '@/domains/ui/splitter'
+import { clampTo, type Splitter } from '@/domains/ui/splitter'
 
 export type Side = 'chat' | 'inspector'
 export type Region = 'chat' | 'preview' | 'inspector'
@@ -29,7 +29,6 @@ export const PHONE_BELOW = 768
 /** Below this a computer starts with the inspector folded (mockup § States: "Narrow computer, under 900 px"). */
 export const NARROW_BELOW = 900
 export const INSPECTOR_TABS = ['design', 'code', 'checks', 'versions'] as const satisfies readonly InspectorTab[]
-export const REGIONS = ['chat', 'preview', 'inspector'] as const satisfies readonly Region[]
 /** The phone's bottom bar (spec § 1: one region at a time). */
 export const PHONE_TABS = ['chat', 'website', 'design'] as const satisfies readonly PhoneTab[]
 /** The preview's widths, as a shopper's phone, a tablet and a computer. */
@@ -77,8 +76,6 @@ export function layoutFor(viewport: number, stored: string | null | undefined): 
   return parseLayout(stored) ?? defaultLayout(viewport)
 }
 
-export const isPhone = (viewport: number): boolean => viewport < PHONE_BELOW
-
 export function toggle(l: Layout, side: Side): Layout {
   return { ...l, [side]: { ...l[side], folded: !l[side].folded } }
 }
@@ -98,12 +95,6 @@ export function previewOnly(l: Layout): Layout {
 export function resize(l: Layout, side: Side, px: number): Layout {
   return { ...l, [side]: { ...l[side], width: clampWidth(side, px) } }
 }
-
-/** A key on a panel's edge (← → Home End), or null when it is not an edge key. */
-export const edgeKey = (side: Side, width: number, key: string, shift = false): number | null => splitterKey(edgeOf(side, width), key, shift)
-
-/** A drag on a panel's edge: its new width from where the drag started and how far the pointer moved. */
-export const dragWidth = (side: Side, startWidth: number, dx: number): number => splitterDrag(edgeOf(side, startWidth), dx)
 
 /** The grid's three columns for a computer: each side its width or the rail. */
 export function columns(l: Layout): string {
@@ -126,12 +117,6 @@ export function inspectorTabs(phone: boolean, built = true): InspectorTab[] {
 /** On a phone, which region the bottom bar's tab shows. */
 export const phoneRegion = (tab: PhoneTab): Region => (tab === 'chat' ? 'chat' : tab === 'website' ? 'preview' : 'inspector')
 
-/** F6: the next region (Shift+F6 the one before), folded ones included, since a rail is still a place to land. */
-export function nextRegion(from: Region, back = false): Region {
-  const at = REGIONS.indexOf(from)
-  return REGIONS[(at + (back ? REGIONS.length - 1 : 1)) % REGIONS.length]!
-}
-
 export type StudioKey =
   | { do: 'toggle'; side: Side }
   | { do: 'previewOnly' }
@@ -149,10 +134,11 @@ type KeyRow = { keys: readonly string[]; shows: string; label: string; single: b
 export const STUDIO_KEYS = [
   { keys: ['['], shows: '[', label: 'Show or hide the chat', single: true, act: { do: 'toggle', side: 'chat' } },
   { keys: [']'], shows: ']', label: 'Show or hide the inspector', single: true, act: { do: 'toggle', side: 'inspector' } },
-  { keys: ['\\'], shows: '\\', label: 'Preview only', single: true, act: { do: 'previewOnly' } },
-  { keys: ['F6'], shows: 'F6', label: 'Next panel', single: false, act: { do: 'region', back: false } },
-  ...INSPECTOR_TABS.map((tab, i) => ({ keys: [String(i + 1)], shows: '1–4', label: 'Design, Code, Checks or Versions', single: true, act: { do: 'tab', tab } as StudioKey })),
-  { keys: ['?'], shows: '?', label: 'Show these keys', single: false, act: { do: 'help' } },
+  { keys: ['\\'], shows: '\\', label: 'Show only the preview', single: true, act: { do: 'previewOnly' } },
+  { keys: ['F6'], shows: 'F6', label: 'Go to the next panel', single: false, act: { do: 'region', back: false } },
+  { keys: [], shows: 'Shift+F6', label: 'Go to the previous panel', single: false, act: { do: 'region', back: true } },
+  ...INSPECTOR_TABS.map((tab, i) => ({ keys: [String(i + 1)], shows: '1–4', label: 'Open Design, Code, Checks or Versions', single: true, act: { do: 'tab', tab } as StudioKey })),
+  { keys: ['?'], shows: '?', label: 'Show shortcuts', single: false, act: { do: 'help' } },
 ] as const satisfies readonly KeyRow[]
 
 /** The `?` list: one row for each line the table shows (1–4 is one row). */

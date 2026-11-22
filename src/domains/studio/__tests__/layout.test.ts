@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  PANELS, RAIL, columns, defaultLayout, dragWidth, edgeKey, inspectorTabs, isPhone, layoutFor, nextRegion, open,
+  PANELS, RAIL, columns, defaultLayout, edgeOf, inspectorTabs, layoutFor, open,
   KEY_LIST, STUDIO_KEYS, parseLayout, phoneRegion, previewOnly, previewOnlyOn, previewScale, resize, serializeLayout, studioKeyFor, toggle,
 } from '../layout'
 
@@ -14,10 +14,6 @@ describe('the workbench layout (WB·1)', () => {
     expect(defaultLayout(899).inspector.folded).toBe(true)
     expect(defaultLayout(899).chat.folded).toBe(false)
     expect(defaultLayout(900).inspector.folded).toBe(false)
-  })
-
-  it('is the phone layout under 768 px', () => {
-    expect(isPhone(390)).toBe(true); expect(isPhone(767)).toBe(true); expect(isPhone(768)).toBe(false)
   })
 
   it('reads a stored layout safely and clamps its widths', () => {
@@ -44,25 +40,12 @@ describe('the workbench layout (WB·1)', () => {
     expect(previewOnlyOn(previewOnly(toggle(l, 'chat')))).toBe(true)
   })
 
-  it('keeps widths inside their limits, by drag, by keys and by value', () => {
+  it('keeps widths inside their limits, and gives each edge its splitter', () => {
     const l = defaultLayout(1280)
     expect(resize(l, 'chat', 2000).chat.width).toBe(PANELS.chat.max)
     expect(resize(l, 'inspector', 0).inspector.width).toBe(PANELS.inspector.min)
-    expect(dragWidth('chat', 340, 40)).toBe(380)
-    expect(dragWidth('inspector', 320, 40)).toBe(280) // dragging the inspector's edge right narrows it
-    expect(dragWidth('inspector', 320, -60)).toBe(380)
-  })
-
-  it('moves an edge by arrows as a window splitter: toward the preview widens the panel', () => {
-    expect(edgeKey('chat', 340, 'ArrowRight')).toBe(356)
-    expect(edgeKey('chat', 340, 'ArrowLeft')).toBe(324)
-    expect(edgeKey('chat', 340, 'ArrowRight', true)).toBe(404)
-    expect(edgeKey('inspector', 320, 'ArrowLeft')).toBe(336)
-    expect(edgeKey('inspector', 320, 'ArrowRight')).toBe(304)
-    expect(edgeKey('inspector', 288, 'ArrowRight')).toBe(280)
-    expect(edgeKey('chat', 340, 'Home')).toBe(280)
-    expect(edgeKey('chat', 340, 'End')).toBe(480)
-    expect(edgeKey('chat', 340, 'Enter')).toBeNull()
+    expect(edgeOf('chat', 340)).toEqual({ value: 340, min: 280, max: 480, grows: 'ArrowRight' })
+    expect(edgeOf('inspector', 320)).toEqual({ value: 320, min: 280, max: 440, grows: 'ArrowLeft' })
   })
 
   it('draws each side as its width or the 44 px rail', () => {
@@ -82,12 +65,6 @@ describe('the workbench layout (WB·1)', () => {
     expect(inspectorTabs(false, false)).toEqual(['design', 'versions'])
     expect(phoneRegion('website')).toBe('preview')
     expect(phoneRegion('design')).toBe('inspector')
-  })
-
-  it('moves F6 through the three regions and Shift+F6 back', () => {
-    expect(nextRegion('chat')).toBe('preview')
-    expect(nextRegion('inspector')).toBe('chat')
-    expect(nextRegion('chat', true)).toBe('inspector')
   })
 
   describe('keys', () => {
@@ -123,7 +100,7 @@ describe('the workbench layout (WB·1)', () => {
     it('every row of the table acts, and the ? list shows 1–4 once', () => {
       for (const row of STUDIO_KEYS) for (const k of row.keys) expect(key(k), k).toEqual(row.act)
       expect(['1', '2', '3', '4'].map((k) => (key(k) as { tab: string }).tab)).toEqual(['design', 'code', 'checks', 'versions'])
-      expect(KEY_LIST.map((k) => k.shows)).toEqual(['[', ']', '\\', 'F6', '1–4', '?'])
+      expect(KEY_LIST.map((k) => k.shows)).toEqual(['[', ']', '\\', 'F6', 'Shift+F6', '1–4', '?'])
     })
 
     it('holds every modifier off every key, F6 included', () => {

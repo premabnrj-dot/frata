@@ -43,6 +43,7 @@ const QUOTED_OK = [
   [/^src\/domains\/email\/(layouts|html)\.ts$/, 'email layouts: mail clients read inline colours only, outside the CSS tokens (email plan 2026-11-11)'],
   [/^src\/components\/ekcode\/icon\.ts$/, 'EkCode\'s icon as a data URI (tab and home screen), where CSS tokens cannot reach'],
   [/^src\/components\/brand\/mark-paths\.ts$/, 'the frrata mark rasterised for icons and OG images, where CSS tokens cannot reach'],
+  [/^src\/app\/\(partner\)\/partner\/fixtures\/studio\/_workbench\/fixtures\.ts$/, 'the Studio workbench shell\'s fixture store: its colours are its brand record\'s data, test-only (plan WB·3)'],
   [/^src\/app\/\(console\)\/console\/products\/_components\/colours-panel\.tsx$/, 'the native colour input needs a starting value before the merchant picks a product colour'],
 ]
 

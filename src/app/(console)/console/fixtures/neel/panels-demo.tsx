@@ -4,6 +4,7 @@ import { useId, useState } from 'react'
 import { Section } from '@/components/layout/section'
 import { Icon } from '@/components/icons/icon'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ICON_BUTTON, PanelRail } from '@/components/ui/panel-rail'
 import { ResizeEdge } from '@/components/ui/resize-edge'
 import { TabPanel, Tabs } from '@/components/ui/tabs'
@@ -28,7 +29,7 @@ export default function PanelsDemo() {
           {railed
             ? <PanelRail items={[{ icon: 'messages', label: 'Show the panel', expanded: false, controls: 'g-pane', onClick: () => setRailed(false) }]} className="border-r border-border" />
             : <div id="g-pane" className="relative shrink-0 border-r border-border bg-card p-3 text-sm" style={{ width: paneW }}>
-                <button type="button" className="text-label font-medium text-link" aria-expanded="true" aria-controls="g-pane" onClick={() => setRailed(true)}>Hide the panel</button>
+                <Button variant="link" aria-expanded="true" aria-controls="g-pane" onClick={() => setRailed(true)}>Hide the panel</Button>
                 <ResizeEdge label="Resize the panel" controls="g-pane" value={paneW} min={160} max={360} grows="ArrowRight" onChange={setPaneW} />
               </div>}
           <div className="grid flex-1 place-items-center bg-sunk text-small text-muted-foreground"><span className="font-num">{railed ? 'Folded' : `${paneW} px`}</span></div>
