@@ -28,6 +28,15 @@ the diff, `mockup-parity-reviewer` on a screen phase, one lane released at a tim
 | 4 | P5 · V2b · A1a · **AP2** | A, C, B | P3, V2a; AP2's blocks approved; the Mux cost review |
 | 6 | **V3b as the workbench** · P7 as a page in the preview's list | D | V3a's proof |
 
+## Lanes open now (owner, 2026-11-22: "we can proceed with what we can build next")
+Rules as `docs/plans/2026-11-15-parallel-lanes.md` § The rules every worker follows; the orchestrator is session
+`session_01SDQQsB1DwvmSsYZgaMUvaR` (branch `claude/clever-cray-pga9kk`). Workers branch from that branch.
+| Lane | Work | Branch | Mockup |
+|---|---|---|---|
+| E | P2 checkout and order pages in the brand's design (one-address plan § P2), with P3·1's spike report prepared for the owner's phones | `claude/lane-e-p2-checkout` | approved 2026-11-16 |
+| B | G·1–G·4 (Studio plan § G-a), then D0 (below) | `claude/lane-b-ga-d0` | G·2's key list: approved (website-one-address § 4); D0: screen 2, approved 2026-11-22 |
+| — | W0 and T1's spec: the orchestrator | this branch | — |
+
 ## W0 · Stale text (documents only)
 | # | Task | Verify |
 |---|---|---|
@@ -122,7 +131,7 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | Item | State | Blocks |
 |---|---|---|
 | **Where partner websites are hosted** | **Decided: Vercel teams** (owner, 2026-11-22: "vercel teams it is for now"), as ADR-0017 stands. Cloudflare for hosting and R2 for images are revisited on P5·0's 30-day usage read (§ Unit economics) | — |
-| S22 Vercel teams | **Proposed for the owner (2026-11-22, after `security-reviewer`, FIX BEFORE MERGE on a single shared team):** the existing team hosts **the pilot only**, deployed by Vercel's Git integration as today (ADR-0017:157-160 already rules it); **no fleet or build-service token ever lives in the `frata` team** (a team token there is a production token: it can deploy `frata`, change its firewall and repoint any store host). When V2a·5 builds the fleet, **one** new Pro team holds partner websites and the fleet (kit spec § 6 asks only that the fleet be "inside the hosting account"); staging is projects inside it. Split to three before outside partners' code is live. Forced, not remembered: `sites` records its host team and the create-site definer refuses a second site, or any store with a partner, while that team is `frata`'s (proved in `verify:tenancy`); the preflight refuses a host token of `frata`'s team; an accepted-findings row. Before the split: review S1's owner steps (Blob token rotation, old previews, MFA; `docs/setup.md:262-268`), P5·1 re-run across teams, the pen test | V2a·5 (the fleet), not before |
+| S22 Vercel teams | **Decided (owner, 2026-11-22: "keeping one vercel account for pilot/testing"), with `security-reviewer`'s conditions:** the existing team hosts **the pilot only**, deployed by Vercel's Git integration as today (ADR-0017:157-160 already rules it); **no fleet or build-service token ever lives in the `frata` team** (a team token there is a production token: it can deploy `frata`, change its firewall and repoint any store host). When V2a·5 builds the fleet, **one** new Pro team holds partner websites and the fleet (kit spec § 6 asks only that the fleet be "inside the hosting account"); staging is projects inside it. Split to three before outside partners' code is live. Forced, not remembered: `sites` records its host team and the create-site definer refuses a second site, or any store with a partner, while that team is `frata`'s (proved in `verify:tenancy`); the preflight refuses a host token of `frata`'s team; an accepted-findings row. Before the split: review S1's owner steps (Blob token rotation, old previews, MFA; `docs/setup.md:262-268`), P5·1 re-run across teams, the pen test | V2a·5 (the fleet), not before |
 | O6 preview domain | Open | V2a previews |
 | O4 `frrata.shop` to 3 years | Open | P4b only |
 | Frrata's Razorpay, live | Owner, 2026-11-22: "razorpay is live". Seen in Vercel (names and dates only, never values): `RAZORPAY_BILLING_KEY_ID` and `_SECRET` replaced 2026-11-20; `FRRATA_GSTIN`, `_LEGAL_NAME`, `_ADDRESS`, `_SAC` added the same day; `RAZORPAY_BILLING_WEBHOOK_SECRET` unchanged since 2026-11-15. Production: 5 invoices, all test mode; no billing webhook ever stored | C1 taking real money: the live webhook must be confirmed first |
