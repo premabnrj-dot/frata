@@ -97,6 +97,52 @@ export default {
         assert.equal(await p.locator('[data-banner="support"]').evaluate((b) => getComputedStyle(b).backgroundColor), 'rgb(34, 32, 30)')
       })
 
+      await t.step(`${size}: a folded panel's rail and a resize edge`, async () => {
+        const dot = p.getByRole('button', { name: 'Show chat. 1 new' })
+        assert.equal(await dot.getAttribute('aria-expanded'), 'false')
+        assert.equal(await dot.locator('[data-dot]').count(), 1, 'what needs the person is a dot, its words in the name')
+        assert.equal(await p.getByRole('button', { name: 'Checks. 1 to fix' }).count(), 1)
+        assert.equal(await p.getByRole('button', { name: 'Design', exact: true }).locator('[data-dot]').count(), 0)
+        const rail = await dot.evaluate((b) => { const r = b.closest('[data-rail]'); return [r.getBoundingClientRect().width, getComputedStyle(r).backgroundColor, b.getBoundingClientRect().width] })
+        assert.deepEqual([Math.round(rail[0]), rail[1], Math.round(rail[2])], [44, 'rgb(251, 250, 249)', size === 'phone' ? 44 : 32])
+        await p.getByRole('button', { name: 'Show the panel' }).click()
+        const edge = p.getByRole('separator', { name: 'Resize the panel' })
+        assert.deepEqual(await edge.evaluate((e) => [e.getAttribute('aria-valuenow'), e.getAttribute('aria-valuemin'), e.getAttribute('aria-valuemax'), e.getAttribute('aria-orientation')]), ['240', '160', '360', 'vertical'])
+        await edge.focus(); await p.keyboard.press('ArrowRight')
+        assert.equal(await edge.getAttribute('aria-valuenow'), '256')
+        await p.keyboard.press('Shift+ArrowLeft'); assert.equal(await edge.getAttribute('aria-valuenow'), '192')
+        await p.keyboard.press('Home'); assert.equal(await edge.getAttribute('aria-valuenow'), '160')
+        await p.keyboard.press('End'); assert.equal(await edge.getAttribute('aria-valuenow'), '360')
+        await p.waitForFunction(() => Math.round(document.getElementById('g-pane').getBoundingClientRect().width) === 360, null, { timeout: 2000 })
+        // The line shows in the focus colour while the edge has focus.
+        await p.waitForTimeout(250)
+        assert.equal(await edge.locator('span').evaluate((x) => [getComputedStyle(x).opacity, getComputedStyle(x).backgroundColor].join()), '1,rgb(76, 87, 214)')
+        if (size === 'desktop') {
+          const box = await edge.boundingBox()
+          await p.mouse.move(box.x + box.width / 2, box.y + 40); await p.mouse.down(); await p.mouse.move(box.x + box.width / 2 - 100, box.y + 40, { steps: 4 }); await p.mouse.up()
+          assert.equal(await edge.getAttribute('aria-valuenow'), '260', 'a drag moves the edge')
+        }
+        await p.getByRole('button', { name: 'Hide the panel' }).click()
+        await p.getByRole('button', { name: 'Show the panel' }).waitFor()
+        // A panel on the right: ← widens it.
+        const right = p.getByRole('separator', { name: 'Resize the right panel' })
+        await right.focus(); await p.keyboard.press('ArrowLeft'); assert.equal(await right.getAttribute('aria-valuenow'), '216')
+        await p.keyboard.press('ArrowRight'); await p.keyboard.press('ArrowRight'); assert.equal(await right.getAttribute('aria-valuenow'), '184')
+        // Line tabs: the chosen one in text with a 2 px neel line; arrows move and choose; one tab stop.
+        const tabs = p.getByRole('tablist', { name: 'Inspector' })
+        const design = tabs.getByRole('tab', { name: 'Design' })
+        assert.deepEqual(await design.evaluate((b) => [getComputedStyle(b).borderBottomWidth, getComputedStyle(b).borderBottomColor]), ['2px', 'rgb(58, 68, 194)'])
+        await design.focus(); await p.keyboard.press('ArrowRight')
+        assert.equal(await tabs.getByRole('tab', { name: 'Code' }).getAttribute('aria-selected'), 'true')
+        await p.getByRole('tabpanel', { name: 'Code' }).getByText('components/hero.tsx').waitFor()
+        assert.equal(await tabs.locator('[tabindex="0"]').count(), 1)
+        await p.keyboard.press('End'); assert.equal(await tabs.getByRole('tab', { name: /Checks/ }).getAttribute('aria-selected'), 'true')
+        // The workbench's icon buttons: 32 px from 768, 44 on a phone; pressed reads sunk.
+        const ib = await p.getByRole('button', { name: 'Icon copy' }).evaluate((b) => Math.round(b.getBoundingClientRect().width))
+        assert.equal(ib, size === 'phone' ? 44 : 32)
+        assert.equal(await p.getByRole('button', { name: 'Preview only' }).evaluate((b) => getComputedStyle(b).backgroundColor), 'rgb(246, 245, 243)')
+      })
+
       await t.step(`${size}: axe finds nothing serious, nothing scrolls sideways`, async () => {
         assert.deepEqual(await audit(p), [])
         assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll')

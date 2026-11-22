@@ -143,15 +143,38 @@ export const LIMITS = {
   brandSvg: { action: 'brand_svg:shop', max: 20, windowSeconds: 600 },
   contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 },
   // The Storefront API (V1 SA0, security and unit-economics reviews 2026-11-15), all failing closed. Unknown keys per
-  // network (counted after a lookup misses, on the dynamic tree); test keys at 60 a minute per network; a test key's
-  // search; keys made per shop (each is a new set of cached copies).
+  // network and per key hash (counted after a lookup misses, on the dynamic tree); test keys per key (G·1); a live
+  // key's search per network; keys made per shop (each is a new set of cached copies).
   apiMissIp: { action: 'api_miss:ip', max: 300, windowSeconds: 600 },
-  apiTestIp: { action: 'api_test:ip', max: 60, windowSeconds: 60 },
+  // G·1 (Studio plan G-a, G27; spec docs/specs/2026-11-16-studio-agent.md § 5): one key hash that keeps missing (a
+  // deleted or expired key on a stale preview) is refused on its own before its misses can fill its network's count,
+  // so one stale site never blocks every site leaving the same addresses.
+  apiMissKey: { action: 'api_miss:key', max: 30, windowSeconds: 600 },
+  // G·1: test and build keys are limited per key only (previews and sessions share their host's outbound addresses, so a
+  // per-network limit throttled every partner at once): 300 reads a minute a key, search included.
+  // The arithmetic (orchestrator ruling C7, 2026-11-22): shoppers never read through these keys (a Test key stops when the
+  // store opens; a festive day's pilot traffic, ~7.5k orders, is on its Live key: cached copies, never this limit). A
+  // key's readers are people checking a build. The starter keeps a deployed Test key's reads 15 s per address, so one
+  // server instance asks each address at most 4 times a minute; a page reads ~3 addresses (shop, content, the page's
+  // own). 300 a minute = 25 distinct pages a minute per instance, or 5 people each opening a new page every 12 s. 10× a
+  // usual review (one person, ~2 new pages a minute, 6 addresses, 24 reads) is 240, under 300. A Studio session's
+  // agent reads uncached (the build key's header tree) and is held by its own turn rate, well under 5 reads a second.
+  // Past it: 429 with Retry-After 60, never a 500.
+  apiTestKey: { action: 'api_test:key', max: 300, windowSeconds: 60 },
   apiSearchIp: { action: 'api_search:ip', max: 300, windowSeconds: 600 },
   // SA1b D·4: a preview (a token-bound draft), per key: sites share their host's outbound addresses, so one store's
   // previews never spend another's (security review 2026-11-16, LOW-2). Fails closed like every API limit.
   apiPreviewKey: { action: 'api_preview:key', max: 30, windowSeconds: 60 },
   apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
+  // G·2: build keys minted per store (a session, a preview, a developer's computer each make one), failing closed.
+  apiBuildKeyShop: { action: 'api_build_key:shop', max: 30, windowSeconds: 3600 },
+  // G·3, a developer's device sign-in, all failing closed: starts per network (each is a row for 10 minutes), the CLI's
+  // polls per network first (any 43-character string is a well-formed secret) then per device (one every 5 s for 10
+  // minutes is 120), confirms per person.
+  deviceStartIp: { action: 'device_start:ip', max: 20, windowSeconds: 600 },
+  devicePollIp: { action: 'device_poll:ip', max: 600, windowSeconds: 600 },
+  devicePollDevice: { action: 'device_poll:device', max: 150, windowSeconds: 600 },
+  deviceConfirmPerson: { action: 'device_confirm:person', max: 10, windowSeconds: 3600 },
   // Ask the owner (PP1): per person in a store ("<tenant>:<user>"), failing closed. The definer writes at most one line a
   // page an India day, so this only bounds the calls (four pages, a few retries).
   askOwner: { action: 'ask_owner:member', max: 20, windowSeconds: 3600 },

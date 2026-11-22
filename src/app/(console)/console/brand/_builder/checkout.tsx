@@ -8,7 +8,7 @@ import { CheckoutEditor } from '../_components/checkout-editor'
 /**
  * Console › Brand › Checkout for a partner's Builder (O9, mockup screen 10): every value as a fact, the preview, nothing
  * that saves. Read as frata_builder: the live record and design's named columns and the store's public delivery, returns
- * and Pay on delivery facts (drizzle/0156); never a waiting change, the GSTIN or the legal details (the preview's legal
+ * and Pay on delivery facts (drizzle/0161); never a waiting change, the GSTIN or the legal details (the preview's legal
  * block is the store's name, as P1's invoice preview; its GST block isn't drawn).
  */
 export async function BuilderCheckout({ actor, shopName, at, tabs }: { actor: BuilderActor; shopName: string; at: string; tabs: React.ReactNode }) {
@@ -17,7 +17,7 @@ export async function BuilderCheckout({ actor, shopName, at, tabs }: { actor: Bu
     builderBrandSample(actor).catch(() => null),
   ])
   if (!c || !c.facts) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
-  // No grant on the GSTIN (drizzle/0156): the Builder's preview never draws the GST block.
+  // No grant on the GSTIN (drizzle/0161): the Builder's preview never draws the GST block.
   const facts = trustFactsOf({ ...c.facts, gst: { invoice: false } })
   const data = {
     items: product ? [{ title: product.title, size: '', price: product.price, photo: product.photo }] : [],

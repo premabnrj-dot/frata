@@ -97,10 +97,12 @@ const ICONS = {
 } as const satisfies Record<string, readonly [string, string]>
 
 export type IconName = keyof typeof ICONS
+/** An icon drawn outside the shared set (one surface's own icons, kept out of every page's script): its body and tinge. */
+export type IconPaths = readonly [string, string]
 
 /** One frrata icon. `current` draws it at the current page's weight (2.25). */
-export function Icon({ name, className, current = false }: { name: IconName; className?: string; current?: boolean }) {
-  const [body, tinge] = ICONS[name]
+export function Icon({ name, className, current = false }: { name: IconName | IconPaths; className?: string; current?: boolean }) {
+  const [body, tinge] = typeof name === 'string' ? ICONS[name] : name
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={current ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
       <path d={body} />

@@ -125,7 +125,10 @@ Proposed:
 - § 5: handlers read through the shop's cached loaders keyed by `ctx.tenantId` (each opens its own `withTenant`), never a
   `withTenant` around a loader. § 7: the lookup is tagged `skey:<hex>`, not `skey:<id>` (a tag must be known before the
   call); a delete purges that tag. § 9: limits per network fail closed (`apiMissIp`, `apiTestIp`, `apiSearchIp`,
-  `apiKeyCreateShop`); the WAF path and rate rules are on the API host.
+  `apiKeyCreateShop`); the WAF path and rate rules are on the API host. **G·1 (2026-11-22, the build-key amendment's
+  point 6):** test and build keys are limited per key only (`apiTestKey`, 300 a minute a key, search included), never
+  per network; misses count per network (`apiMissIp`) and per key hash (`apiMissKey`, 30 in 10 minutes); `apiTestIp`
+  is gone. Live keys keep their per-network search limit.
 - § 2 "logs carry the key id": our logs do; a key is in the URL path, so Vercel's request logs hold it. A live key is
   public by design; a test key is visible to anyone who sees the developer's browser.
 
@@ -188,6 +191,12 @@ or a body, never a URL path. So a third key kind.
    is set, its maker is live (`app_pm_live`), still holds a `members` row on that store and, for a Lead or a Builder, is
    assigned to it. Unassigning or removing the person ends their keys at once. Before opening a build key answers as a
    test key does (the test-key amendment above).
+   *As built (G·2, 2026-11-22, orchestrator's ruling):* the maker check holds before opening too (stricter than written):
+   a partner person's build key answers only while that person is live, a member and, for a Lead or a Builder, assigned,
+   whatever the store's state. A build key the store's own people made answers before opening only. Build keys are never
+   listed on the Accept screen or Admin's API page and never make a store a code site (0157).
+   *As built (G·3, 2026-11-22):* the developer's device sign-in is built server-side (0159–0160, `src/lib/storefront-api/device.ts`):
+   start, confirm and a single-use claim that mints through `mintBuildKey`. Its confirm page waits for a mockup.
 8. **The owner sees and deletes them.** Settings › Website lists every build key with its maker and its end; the owner
    or a Manager deletes one there. A kill switch, removing a partner or a person (ADR-0014 amendment 6), and a stopped
    session delete their build keys.

@@ -14,6 +14,7 @@ import { availability, bestOffer, type Availability as Avail } from '../../catal
 import { cardBadge, liveLines, type ShowOffer } from '../../checkout/offer-showcase'
 import { offerStatus } from '../../checkout/offer-status'
 import { barText, type OfferWords } from '../../checkout/offer-text'
+import { collectionCover } from '../../storefront/sources'
 import { factsOf, inCollection, isListed, PAGE_SIZE, pageOf, priceOf, sortProducts, type ListCollection, type ListVariant } from '../../storefront/listing'
 import type { z } from 'zod'
 import { instagramHandle } from '../../settings/instagram'
@@ -52,7 +53,7 @@ export type CollectionIn = ListCollection & { id: string; handle: string; title:
  *  no photos at all). A photo is kept only from that one store, under this shop's own folder (security review LOW-2). */
 export type MapCtx = { tenantId: string; mediaHost: string | null }
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const fromOurStore = (m: MapCtx, url: string) => !!m.mediaHost && url.startsWith(`https://${m.mediaHost}/tenants/${m.tenantId}/`)
+export const fromOurStore = (m: MapCtx, url: string) => !!m.mediaHost && url.startsWith(`https://${m.mediaHost}/tenants/${m.tenantId}/`)
 
 /** A photo only from Frrata's media store, in this shop's own folder; anything else is left out. */
 export function imageOut(m: MapCtx, i: ImageIn | null | undefined): In<typeof S.Image> | null {
@@ -129,8 +130,10 @@ export function productOut(m: MapCtx, p: ProductIn, now: Date): In<typeof S.Prod
   }
 }
 
-export const collectionOut = (c: Pick<CollectionIn, 'handle' | 'title' | 'description'> & { seoTitle?: string; seoDescription?: string }): In<typeof S.Collection> =>
-  ({ handle: c.handle, title: plain(c.title, 200), description: plain(c.description, 2000), seo: { title: plain(c.seoTitle || c.title, 200), description: plain(c.seoDescription, 400) } })
+/** A collection; with `cover` (G11: its first listed product, collectionCover's rule) its picture too. */
+export const collectionOut = (c: Pick<CollectionIn, 'handle' | 'title' | 'description'> & { seoTitle?: string; seoDescription?: string }, cover?: { m: MapCtx; first: CardIn | null }): In<typeof S.Collection> =>
+  ({ handle: c.handle, title: plain(c.title, 200), description: plain(c.description, 2000), seo: { title: plain(c.seoTitle || c.title, 200), description: plain(c.seoDescription, 400) },
+    ...(cover ? { image: imageOut(cover.m, cover.first?.images[0]) } : {}) })
 
 /** The listed products, in the shop's order, a page of 48 (the shop's own paging). */
 export function pageOut<P extends CardIn>(m: MapCtx, all: P[], page: number, now: Date): In<typeof S.Page> | null {
@@ -142,11 +145,11 @@ export function pageOut<P extends CardIn>(m: MapCtx, all: P[], page: number, now
   return { products: items.map((p) => cardOut(m, p, now)), page, pages, total: capped.length, truncated }
 }
 
-export function collectionPageOut<P extends CardIn>(m: MapCtx, c: CollectionIn, all: P[], page: number, now: Date): In<typeof S.CollectionPage> | null {
+export function collectionPageOut<P extends CardIn>(m: MapCtx, c: CollectionIn, all: P[], page: number, now: Date, jsonLd?: string): In<typeof S.CollectionPage> | null {
   const listed = all.filter((p) => isListed(p, now))
   const members = sortProducts(inCollection(c, listed as never[], now) as P[], c.sort, c.productIds)
   const p = pageOut(m, members, page, now)
-  return p ? { collection: collectionOut(c), ...p } : null
+  return p ? { collection: collectionOut(c, { m, first: collectionCover(c, listed, now) }), ...p, ...(jsonLd ? { jsonLd } : {}) } : null
 }
 
 /** Search over the listed catalogue, in memory: every word of `q` in the title or a tag; at most 48. */
@@ -196,7 +199,7 @@ export function brandOut(m: MapCtx, b: BrandIn | null, now: Date): In<typeof S.B
 }
 
 /** The shop, with the legal block its website must show (E-Commerce Rules: runtime data, never compiled in). */
-export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; checkout: string }, now: Date, brand: BrandIn | null = null): In<typeof S.Shop> {
+export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; checkout: string }, now: Date, brand: BrandIn | null = null, jsonLd?: string): In<typeof S.Shop> {
   const wa = normaliseMobile(s.whatsapp)
   const logo = s.logoUrl && fromOurStore(m, s.logoUrl) ? s.logoUrl : null
   return {
@@ -219,6 +222,9 @@ export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; ch
     },
     social: { instagram: instagramHandle(s.instagram), whatsapp: wa ? `91${wa}` : null },
     siteOrigin: origins.site, checkoutOrigin: origins.checkout, cart: { url: `${origins.checkout}/cart`, maxLines: MAX_LINES, maxQty: MAX_QTY },
+    // G26: Frrata's media store, where every photo and logo file of this store is served from (null: none configured).
+    mediaOrigin: m.mediaHost ? `https://${m.mediaHost}` : null,
+    ...(jsonLd ? { jsonLd } : {}),
     brand: brandOut(m, brand, now),
   }
 }

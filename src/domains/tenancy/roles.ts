@@ -48,7 +48,8 @@ export const CAPABILITIES = {
   /** Setting shipping costs (was CAN_SET_COSTS); `seesCosts` decides the partner case. */
   'costs.set': ['owner', 'admin', 'partner'],
   /** Storefront API keys (lane A, ADR-0018): a partner only while the store has never had an owner, a rule beside this
-   *  list as `seesCosts` is (orchestrator 2026-11-15). */
+   *  list as `seesCosts` is (orchestrator 2026-11-15). Build keys are the one exception (ADR-0018's build-key amendment,
+   *  points 2 and 7): mintBuildKey asks only this tuple, so a partner's people make them after handover too. */
   'api.manage': ['owner', 'admin', 'partner'],
   /** Console › Content (lane B): the owner, a Manager and the store's partner, before and after handover (owner,
    *  2026-11-15); a partner's save tells the store in Notices (drizzle/0137). */

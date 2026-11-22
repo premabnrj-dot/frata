@@ -1,5 +1,5 @@
 {
-  "id": "dcf95038-3a7f-4499-99d9-09addf8f1e39",
+  "id": "e9836919-7c1c-465f-986f-1760a42ee58b",
   "prevId": "203a16bf-4bfe-4830-9915-fb0f83c35057",
   "version": "7",
   "dialect": "postgresql",
@@ -18914,6 +18914,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -19047,7 +19053,11 @@
       "checkConstraints": {
         "storefront_keys_kind": {
           "name": "storefront_keys_kind",
-          "value": "\"storefront_keys\".\"kind\" in ('public','test')"
+          "value": "\"storefront_keys\".\"kind\" in ('public','test','build')"
+        },
+        "storefront_keys_purpose": {
+          "name": "storefront_keys_purpose",
+          "value": "(\"storefront_keys\".\"kind\" = 'build') = (\"storefront_keys\".\"purpose\" is not null) and (\"storefront_keys\".\"purpose\" is null or \"storefront_keys\".\"purpose\" in ('session','preview','developer'))"
         },
         "storefront_keys_name": {
           "name": "storefront_keys_name",
@@ -19059,11 +19069,11 @@
         },
         "storefront_keys_prefix": {
           "name": "storefront_keys_prefix",
-          "value": "\"storefront_keys\".\"prefix\" ~ '^frs_(pub|test)_[0-9A-Za-z]{6}$'"
+          "value": "\"storefront_keys\".\"prefix\" ~ '^frs_(pub|test|build)_[0-9A-Za-z]{6}$' and starts_with(\"storefront_keys\".\"prefix\", case \"storefront_keys\".\"kind\" when 'public' then 'frs_pub_' else 'frs_' || \"storefront_keys\".\"kind\" || '_' end)"
         },
         "storefront_keys_expiry": {
           "name": "storefront_keys_expiry",
-          "value": "(\"storefront_keys\".\"kind\" = 'test') = (\"storefront_keys\".\"expires_at\" is not null)"
+          "value": "(\"storefront_keys\".\"kind\" in ('test','build')) = (\"storefront_keys\".\"expires_at\" is not null)"
         },
         "storefront_keys_revoked": {
           "name": "storefront_keys_revoked",
@@ -19092,13 +19102,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'brand'"
         },
         "record": {
           "name": "record",
@@ -19159,12 +19162,6 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "kind",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -19202,10 +19199,6 @@
       },
       "policies": {},
       "checkConstraints": {
-        "brand_proposals_kind": {
-          "name": "brand_proposals_kind",
-          "value": "\"brand_proposals\".\"kind\" in ('brand','checkout')"
-        },
         "brand_proposals_record_size": {
           "name": "brand_proposals_record_size",
           "value": "octet_length(\"brand_proposals\".\"record\"::text) <= 8192"
@@ -19603,150 +19596,6 @@
         "brand_tokens_previous_size": {
           "name": "brand_tokens_previous_size",
           "value": "\"brand_tokens\".\"previous\" is null or octet_length(\"brand_tokens\".\"previous\"::text) <= 8192"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.checkout_design": {
-      "name": "checkout_design",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "header": {
-          "name": "header",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'left'"
-        },
-        "back_link": {
-          "name": "back_link",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "policy_rows": {
-          "name": "policy_rows",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "trust": {
-          "name": "trust",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "array['delivery','returns','cod','secure']::text[]"
-        },
-        "heading": {
-          "name": "heading",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "thanks": {
-          "name": "thanks",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "previous": {
-          "name": "previous",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "checkout_design_tenant_id_tenants_id_fk": {
-          "name": "checkout_design_tenant_id_tenants_id_fk",
-          "tableFrom": "checkout_design",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "checkout_design_tenant": {
-          "name": "checkout_design_tenant",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "checkout_design_header": {
-          "name": "checkout_design_header",
-          "value": "\"checkout_design\".\"header\" in ('left','centre')"
-        },
-        "checkout_design_rows": {
-          "name": "checkout_design_rows",
-          "value": "\"checkout_design\".\"policy_rows\" in (1,2)"
-        },
-        "checkout_design_trust": {
-          "name": "checkout_design_trust",
-          "value": "cardinality(\"checkout_design\".\"trust\") <= 4 and \"checkout_design\".\"trust\" <@ array['delivery','returns','cod','secure','gst']::text[] and array_position(\"checkout_design\".\"trust\", null) is null"
-        },
-        "checkout_design_lines": {
-          "name": "checkout_design_lines",
-          "value": "char_length(\"checkout_design\".\"heading\") <= 24 and char_length(\"checkout_design\".\"thanks\") <= 120"
-        },
-        "checkout_design_previous_size": {
-          "name": "checkout_design_previous_size",
-          "value": "\"checkout_design\".\"previous\" is null or octet_length(\"checkout_design\".\"previous\"::text) <= 4096"
         }
       },
       "isRLSEnabled": false

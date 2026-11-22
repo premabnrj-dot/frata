@@ -130,7 +130,7 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
   - Errors log `[api] <code> key=<keyId>` (never the key, never the path, never the raw error).
 - **Limits** (`src/lib/db/rate-limit.ts` `LIMITS`, every call `failClosed = true`, a test that a database error gives
   429): `apiMissIp` (unknown keys per `ipBucket`, counted **after** a definer miss, never in front of a real read; a
-  60 s in-memory memo of missed hashes answers repeats without the definer), `apiTestIp` (60 a minute), `apiSearchIp`, `apiKeyCreateShop` (10 an hour). `n` is 1–13 (600 ÷ 48) and a
+  60 s in-memory memo of missed hashes answers repeats without the definer), `apiTestIp` (60 a minute; replaced by the per-key `apiTestKey` in G·1, 2026-11-22), `apiSearchIp`, `apiKeyCreateShop` (10 an hour). `n` is 1–13 (600 ÷ 48) and a
   handle must match the handle shape before any read. **One Vercel WAF per-IP rule on the API host is required, not
   optional** (above; numbers and Vercel unit prices re-verified by `integration-researcher` and dated in
   `frata-integrations` before SA1 ships).

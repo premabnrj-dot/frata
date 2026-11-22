@@ -1,6 +1,6 @@
 # Studio · one screen: the chat runs the whole flow
 Status: active (owner 2026-11-15: "approved. yes to phone. draw the no-logo part too."; the Studio mockup's site view now IS this screen: "frrata mockup still use multi screens"); nothing built · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ
-`docs/mockups/2026-11-15-studio-one-screen.html` · Approved: — · Owner (2026-11-15): "we have screens for setting up
+`docs/mockups/2026-11-15-studio-one-screen.html` · Approved: owner, 2026-11-15; its layout extended by `docs/specs/2026-11-22-studio-workbench.md` (owner, 2026-11-22: three panels that fold; Versions and Brand book docked) · Owner (2026-11-15): "we have screens for setting up
 brand identity, could all of this be as one screen, a flow completely handled by the chat. each and every part of it,
 I want a mockup first. cleaner, simpler, most userfriendly, understandable ux." · Replaces: the Build view's stage
 panels in `docs/specs/2026-11-12-studio-shell-clients-billing.md` and mockup v2.4/2.5 (Brand form, the design

@@ -35,9 +35,10 @@ Rules as `docs/plans/2026-11-15-parallel-lanes.md` § The rules every worker fol
 |---|---|---|---|
 | E | P2 checkout and order pages in the brand's design (one-address plan § P2), with P3·1's spike report prepared for the owner's phones | `claude/lane-e-p2-checkout` | approved 2026-11-16 |
 | B | G·1–G·4 (Studio plan § G-a), then D0 (below) | `claude/lane-b-ga-d0` | G·2's key list: approved (website-one-address § 4); D0: screen 2, approved 2026-11-22 |
+| D | Studio workbench shell on fixtures: WB·1, WB·2, WB·3 (shell only, a test-only route), WB·7. No data, agent, hosting or credits (owner, 2026-11-22: "when will you take up studio work"; brought forward because the layout is approved whatever the agent's proof says) | `claude/lane-d-workbench-shell` | workbench screen 1 (approved 2026-11-22) and the redraw's chat (approved 2026-11-16) |
 | — | W0 and T1's spec: the orchestrator | this branch | — |
 
-## W0 · Stale text (documents only)
+## W0 · Stale text (documents only) — done 2026-11-22
 | # | Task | Verify |
 |---|---|---|
 | W0·1 | V0·1 as written: ADR-0017's Decision, "What the owner sets up" and Consequences rewritten to its accepted status (or to the hosting decision below, once taken) | `npm run check:docs`; the ADR read |
@@ -154,3 +155,66 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 ## Deviations (BUILT AS DRAWN; for the owner before a phase ships)
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
+| Screen 2: the Live key's chip "Starts when the store opens" | No chip; the approved key list's row (one-address § 4) | A fact the mockup got wrong: a Live key answers once the Website is on a proved domain, opened or not (0149). Mockup corrected 2026-11-22 | yes, 2026-11-22 |
+| Screen 2: the refusal names the address the Test key is used from | "Your website runs on a Test key. Test keys stop when the store opens." | A fact the mockup got wrong: Frrata never learns where a Test key is used from. Mockup corrected 2026-11-22 | yes, 2026-11-22 |
+| Screen 2: "New key", and key rows without prefix, maker, last used or Delete | The approved key list and "Create key" (one-address § 4), plus the days-left chip | Screen 2 was a sketch beside an approved, fuller drawing of the same list | yes, 2026-11-22 |
+| Screen 2: the days-left chip as a "Test" tag beside a warn chip "6 days left" | One warn chip "Test · 6 days left" in the key list's own chip (from day 7 down; "Test · ends 22 Dec" before) | The approved list (one-address § 4) carries the kind inside the chip; one chip, as drawn there | yes, 2026-11-22 |
+| Screen 2: the refusal as a raised card on the page | The console's Dialog primitive, title, body and the two buttons as ruled | A refusal that stops an action is a dialog in the design language; words and buttons as drawn | yes, 2026-11-22 |
+| One-address § 4: a build key's maker "Made by Kabir Shah, Neel Studio" | "Made by kabir@…, Neel Studio" (the person's email) | Frrata stores no name for a partner's Lead or Builder, only their email | yes, 2026-11-22 |
+| One-address § 4: "Used 10:06 am" on a build key | "Used today" | A key's last use is stored as a day, not a time (last_seen_on) | yes, 2026-11-22 |
+| One-address § 4: "Kabir Shah’s access ended · 16 Nov" | "<email>’s access ended · 16 Nov"; the date only when the person left the partner (an unassignment has no date) | As the maker row above; an assignment's removal is not dated | yes, 2026-11-22 |
+| One-address § 4: Delete's line "Neel Studio’s work with it stops within a minute." | The same for a partner's key; a key the store's own people made reads "Websites using it stop working within a minute." (the words review) | Undrawn case: the mockup draws only a partner's build key; a store-made key has no partner to name | yes, 2026-11-22 |
+| One-address § 4: every build key reads "Made by …" | A partner's key reads "Made by <email>, <partner>"; a store-made key shows only its last use | Undrawn case: the mockup draws only a partner's key, and the makers list (`app_build_key_makers`) names partner people only | yes, 2026-11-22 |
+| One-address § 4: "Deleted by Anita Rao · Just now" | "Deleted by Owner · Just now" (the deleter's role) | Older than this lane (the key list as built before G·2): Frrata stores no person's name, and the list reads no member's email | yes, 2026-11-22 |
+| Screen 1: the step "Site" | "Website" | Owner, 2026-11-22 | yes, 2026-11-22 |
+| Screen 1, phone bar: "Chat · Site · More" | "Chat · Website · More" (its icon the console's More, not the brush) | Owner's step name; the orchestrator's ruling on More (2026-11-22) | yes, 2026-11-22 |
+| Screen 1, chat: one bare proposal, Apply and Not this | The 16 Nov redraw's "Words for Content" card: 3 proposals, "3 to apply", Apply all 3 | The approved chat cards stay as drawn 16 Nov (plan § V3b); orchestrator ruling 2 | yes, 2026-11-22 |
+| Screen 1, composer while v8 builds: Send, "Ask for a change" | Stop (named "Stop the agent"), "Working · you can still type" | The redraw's working state; orchestrator ruling 3 | yes, 2026-11-22 |
+| Screen 1, preview bar | Adds what is building before "Preview · v7": its spinner and words when the bar has room (46 rem), else the spinner with the words for a screen reader (so at 1280 with both panels open); absent on a phone | Screen 1 § States: "the preview keeps v7 and says so"; orchestrator ruling 4 | yes, 2026-11-22 |
+| Screen 1, cases: Normal, No products, Longest heading | Adds Sold out | Spec § 1 lists it; orchestrator ruling 5 | yes, 2026-11-22 |
+| Screen 1: Brand book's place | Not built in the shell | Undrawn; the orchestrator draws it for the owner (ruling 7) | yes, 2026-11-22 |
+| Undrawn: the resize edge, the `?` list, the keys switch, the rail dot's count | Edge: a 12 px separator over the panel's line, a 2 px neel line on hover and focus. `?`: the console's key sheet (Neel Dialog) with Shift+F6 and the one switch. Dot: drawn, its words in the button's name | Spec § 1 asks for them; orchestrator ruling 8 | yes, 2026-11-22 |
+| Screen 1 Keys card: Ctrl/⌘ K find | Not built | Find is not built anywhere yet (design language § Neel layout, "Not yet: ⌘K"); ruling 9 | yes, 2026-11-22 |
+| Screen 1: selects, segments, Apply, Not this and the suggestion chips 30 px | Neel's controls: 36 px (buttons 30) from 768, 44 on a phone | Design language § UX foundation 19 (controls' heights and phone targets); the bar scrolls on a phone as drawn | yes, 2026-11-22 |
+| Screen 1: steps not current, the agent's name, Design's labels and check details in text 3 | Text 2 | Text 3 on the side colour and on white is 3.3:1, under WCAG 1.4.3 (axe failed it) | yes, 2026-11-22 |
+| Screen 1: panels and the preview's width slide (200 ms) | They change at once | check:motion forbids animating a grid's columns or a width (UX foundation 22) | yes, 2026-11-22 |
+| Screen 1: the store drawn at 300 / 460 / 640 px | The store at its true 390 / 768 / 1280, scaled down to fit (never up) | A preview at a shopper's width; the mockup's widths were stand-ins | yes, 2026-11-22 |
+| Screen 1: the store's serif (Cormorant Garamond) | Georgia | Fixture only; the real preview draws the store's own faces (WB·4) | yes, 2026-11-22 |
+| Screen 1 § States: Publish reads "Fix 1 check" while a check fails | "Publish v8", as the screen draws it | The screen and its States table disagreed. Owner, 2026-11-22: "It should read publish v8"; the States table's "Fix 1 check" is dropped | yes, 2026-11-22 |
+| Screen 1: the device frame 14 px radius, the user's bubble 12/12/4/12, the box 10 px | 12 px (card role), 12 with a 4 px corner, 8 px (field role) | Radius by role (design language § Tokens) | yes, 2026-11-22 |
+| Screen 1: a folded panel's widths under 640 px (chat folds too) | Under 768 px is the phone layout, so that case never shows | The console's phone width (UX foundation 10) | yes, 2026-11-22 |
+| Screen 1 § States: someone else building ("Kabir is building v8"), a Builder (no Publish, Design a proposal), no code yet (no Code or Checks tab) | Not drawn in the shell | Each needs the session's data (who builds, the person's role, whether a build exists): WB·4. `inspectorTabs(phone, built)` already answers the third | yes, 2026-11-22 |
+| Screen 1's "Who" switch (Designer, Developer, Partner, chat only) | Not built | The mockup's own demo control, not part of the screen | yes, 2026-11-22 |
+
+## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
+| Item | Ruling |
+|---|---|
+| G·3 the page where a person confirms the device code (Settings › Developer) | Drawn in no approved mockup. The server parts are built; the page waits for a mockup. **Owner** |
+| D0·2 a Renew button on a Test key | Not drawn. The chip is built; the button waits. **Owner** |
+| D0·3 what "no proved address" means before `app_website_of` exists | Open my store refuses when the store holds a Test or Build key that still answers and has no Website on a proved, live domain |
+| G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |
+| G·4 `jsonLd` URLs | `site_origin` when set, else the store's frrata.shop host: one pure function P5·2 moves behind the predicate |
+| G·1 the per-key limit | 300 a minute a key for Test and Build, failing closed; judged by `speed-reviewer` and `security-reviewer` on the diff |
+| G·3 a partner's Builder and a developer key | None: `mintBuildKey` keeps `api.manage` as its check, which Builders don't hold. Owner, 2026-11-22: "let be things as it is for now. no need to offer access to builders for now." |
+
+## Lane D's mockup check (2026-11-22; the orchestrator's rulings, for the owner where marked)
+Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, composer and build status follow the redraw
+(approved for the chat) and the layout follows the workbench.
+| Item | Ruling |
+|---|---|
+| Phone bar | Chat · Website · More (the mockup's Phone card corrected) |
+| Proposal card, composer while building, the preview bar's build status | the redraw's |
+| Cases | the three drawn plus a sold-out product |
+| The branch button | "Hand branch to the agent" |
+| Brand book's place in the inspector | Not drawn. Not built in the shell; a drawing goes to the owner. **Owner** |
+| The resize edge, the `?` key list with its off switch, the rail dot's count | Not drawn. Built to defaults (a 4 px separator; a Dialog listing the keys with the switch; a dot with a hidden count) and shown to the owner on the built screen. **Owner** |
+| Ctrl/⌘+K find; the credits drawer | Not in the shell |
+
+## Owner's answers on the lanes' questions (2026-11-22)
+| Question | Answer |
+|---|---|
+| Lane D's 19 Deviations; the top button while a check fails | "differences approved. It should read publish v8" |
+| Lane B's Deviations and its five migrations | "approved" |
+| A developer key for a partner's Builder | "let be things as it is for now. no need to offer access to builders for now." |
+| Lane E's nine Deviations and its migration | "approved" |
+| An owner's review card on Brand › Checkout for a partner's waiting change | "Add one in a later phase … but not now." Until then Notices is the review. It joins the list of mockups still to draw |

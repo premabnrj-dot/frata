@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
 import { shopSettings } from '@/lib/db/schema'
 import { storefrontKeys } from '@/lib/db/schema-storefront-api'
 import { withTenant } from '@/lib/db/tenant'
@@ -39,7 +39,7 @@ export async function previewKeysIn(tx: Tx, tenantId: string): Promise<PreviewKe
     const rows = await tx.execute<{ id: string; name: string; prefix: string; last_seen_on: string | Date | null }>(sql`
       select k.id, k.name, k.prefix, k.last_seen_on from storefront_keys k join tenants t on t.id = k.tenant_id
        where k.tenant_id = ${tenantId} and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
-         and (k.kind = 'public' or t.first_opened_at is null)
+         and (k.kind = 'public' or t.first_opened_at is null) and k.kind <> 'build'
        order by k.last_seen_on desc nulls last, k.created_at desc limit 20`)
     return rows.map((r) => ({ id: r.id, name: r.name, prefix: r.prefix, lastSeenOn: r.last_seen_on === null ? null : String(r.last_seen_on instanceof Date ? r.last_seen_on.toISOString() : r.last_seen_on).slice(0, 10) }))
 }
@@ -71,12 +71,12 @@ export async function markKeySeen(ctx: { tenantId: string; keyId: string; versio
 
 /**
  * Purge every live key of a shop (its Website moved, or it opened: test keys stop by the definer, this drops their
- * cached copies too). At most MAX_LIVE_KEYS a shop.
+ * cached copies too). At most MAX_LIVE_KEYS a shop. Build keys are never cached (looked up uncached), so none is here.
  */
 export async function refreshKeys(tenantId: string): Promise<void> {
   try {
     const rows = await withTenant(tenantId, (tx) => tx.select({ hash: storefrontKeys.hash }).from(storefrontKeys)
-      .where(and(eq(storefrontKeys.tenantId, tenantId), isNull(storefrontKeys.revokedAt))))
+      .where(and(eq(storefrontKeys.tenantId, tenantId), isNull(storefrontKeys.revokedAt), ne(storefrontKeys.kind, 'build'))))
     for (const r of rows) refreshKey(r.hash)
   } catch (err) {
     // Called after a write committed: a failed purge never turns it into a refusal (the hour's backstop covers it).

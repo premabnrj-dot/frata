@@ -104,7 +104,7 @@ are taken; the Studio plan's `93-site-hosting` is renamed `site-hosting`).
   `words-reviewer`, `mockup-parity-reviewer`, `e2e-runner`, `impact-reviewer` per task.
 - **Owner decisions:** 12, 13, 14.
 
-**P2 as built (2026-11-22, lane E, branch `claude/lane-e-p2-checkout`):** P2·1 `drizzle/0156_checkout_design.sql`
+**P2 as built (2026-11-22, lane E, branch `claude/lane-e-p2-checkout`):** P2·1 `drizzle/0161_checkout_design.sql`
 (proof § 99; `brand_proposals` gains `kind`, one open change of each kind a store; the Builder also reads the store's
 public delivery, returns and Pay on delivery facts, never the GSTIN). P2·2 `src/domains/brand/checkout.ts`
 (`lineProblem` speaks screen 9's words). P2·3 `BrandFrame` with its rules inline (`brand-css.ts`), so the shop's

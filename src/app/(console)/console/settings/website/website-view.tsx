@@ -24,7 +24,7 @@ import { STARTER_URL } from '@/domains/storefront-api/kit'
 // action's reply and lives in this component's state until the dialog closes: never a URL, a toast or a later render.
 // =============================================================================
 
-export type KeyView = { id: string; name: string; prefix: string; chip: string; live: boolean; isPublic: boolean; line: { text: string; phone: string | null }[] }
+export type KeyView = { id: string; name: string; prefix: string; chip: string; warn: boolean; live: boolean; isPublic: boolean; line: { text: string; phone: string | null }[]; stops: string }
 type Choice = { domainId: string; www: boolean }
 type Option = Choice & { label: string }
 
@@ -51,17 +51,25 @@ function RadioCard({ on, disabled, onPick, title, note }: { on: boolean; disable
 export function WebsiteView(p: {
   canManage: boolean; canEditAddress: boolean; saved: Choice | null; options: Option[]; checkout: { host: string; razorpayOk: boolean; custom: boolean }
   keys: KeyView[]; liveCount: number; testAllowed: boolean; openapi: string | null; maxKeys: number
+  /** D0·1: the store's frrata.shop name, shown as its address while no domain is connected. */
+  frrataName: string
+  /** D0·3's state: a Test key builds the website and no proved address is set (the store not open). */
+  building: boolean
   /** The docs on the API host (SA1b): beside the OpenAPI address. */
   docs: string
 }) {
   const router = useRouter()
   const toast = useToast()
-  const [elsewhere, setElsewhere] = useState(!!p.saved)
+  // A website being built on a Test key with no domain connected is "Your own website" already, with nothing to save
+  // (D0·1). With a domain connected, picking it and saving stays the owner's step.
+  const building = p.building && p.options.length === 0
+  const [elsewhere, setElsewhere] = useState(!!p.saved || building)
   const [choice, setChoice] = useState<Choice | null>(p.saved ?? (p.options[0] ? { domainId: p.options[0].domainId, www: p.options[0].www } : null))
   const [saving, setSaving] = useState(false)
   const [confirmFrrata, setConfirmFrrata] = useState(false)
   const same = (a: Choice | null, b: Choice | null) => !!a && !!b && a.domainId === b.domainId && a.www === b.www
-  const dirty = elsewhere ? !p.saved || !same(choice, p.saved) : !!p.saved
+  // With no connected domain there is nothing to save for Your own website: the address row says what to do (D0·1).
+  const dirty = elsewhere ? (p.options.length > 0 && (!p.saved || !same(choice, p.saved))) : !!p.saved
   useLeaveGuard(dirty)
 
   const save = async () => {
@@ -73,14 +81,14 @@ export function WebsiteView(p: {
     toast.ok('Saved')
     router.refresh()
   }
-  const discard = () => { setElsewhere(!!p.saved); setChoice(p.saved ?? (p.options[0] ?? null)) }
+  const discard = () => { setElsewhere(!!p.saved || building); setChoice(p.saved ?? (p.options[0] ?? null)) }
   const value = choice ? `${choice.domainId}:${choice.www ? 'www' : 'apex'}` : ''
 
   return (
     <div className="max-w-215 space-y-3">
       {dirty && p.canManage ? <SaveBar onSave={save} onDiscard={discard} pending={saving} count={1} /> : null}
 
-      <Section title="Website">
+      <Section title={p.building ? <span className="flex flex-wrap items-center gap-2">Website<Badge tone="neutral">Building</Badge></span> : 'Website'}>
         {!p.canManage ? (
           <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><span>{p.saved ? 'Your own website' : 'Runs on Frrata'}</span>
             {p.saved ? <span className="font-mono text-small text-muted-foreground [overflow-wrap:anywhere]">{p.options.find((o) => o.domainId === p.saved!.domainId && o.www === p.saved!.www)?.label}</span> : null}</p>
@@ -89,26 +97,25 @@ export function WebsiteView(p: {
           <RadioCard on={!elsewhere} disabled={!p.canManage} onPick={() => setElsewhere(false)} title="Runs on Frrata" note="Designed in Look" />
           <RadioCard on={elsewhere} disabled={!p.canManage} onPick={() => setElsewhere(true)} title="Your own website" note="Built by your developer or partner" />
         </div>
-        {elsewhere ? (
+        {elsewhere ? (p.options.length ? (
           <>
             <label className="block space-y-1.5">
               <span className="text-label font-medium">Website address</span>
-              {p.options.length ? (
-                <select className={`${FIELD} w-full font-mono text-small`} value={value} disabled={!p.canManage}
-                  onChange={(e) => { const [id, w] = e.target.value.split(':'); setChoice({ domainId: id!, www: w === 'www' }) }}>
-                  {p.options.map((o) => <option key={`${o.domainId}:${o.www}`} value={`${o.domainId}:${o.www ? 'www' : 'apex'}`}>{o.label}</option>)}
-                </select>
-              ) : (
-                <select className={`${FIELD} w-full`} disabled><option>Connect a domain first</option></select>
-              )}
+              <select className={`${FIELD} w-full font-mono text-small`} value={value} disabled={!p.canManage}
+                onChange={(e) => { const [id, w] = e.target.value.split(':'); setChoice({ domainId: id!, www: w === 'www' }) }}>
+                {p.options.map((o) => <option key={`${o.domainId}:${o.www}`} value={`${o.domainId}:${o.www ? 'www' : 'apex'}`}>{o.label}</option>)}
+              </select>
             </label>
-            {p.options.length ? (
-              <Banner tone="warn" title={<span className="font-medium">Show your legal name, address, customer care and grievance officer.</span>} action={<Badge tone="warn">From 1 Jan 2027</Badge>} />
-            ) : (
-              <div><Link href="/console/settings/web-address" className={button({ variant: 'secondary', size: 'sm' })}>Connect domain</Link></div>
-            )}
+            <Banner tone="warn" title={<span className="font-medium">Show your legal name, address, customer care and grievance officer.</span>} action={<Badge tone="warn">From 1 Jan 2027</Badge>} />
           </>
-        ) : null}
+        ) : (
+          // D0·1 (workbench mockup screen 2): no domain is asked for. The store's frrata name is its address, and
+          // Connect my domain sits beside it; a Test key works meanwhile (0149).
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <span className="min-w-0 font-mono text-small [overflow-wrap:anywhere]">{p.frrataName}</span>
+            <Link href="/console/settings/web-address" className={button({ variant: 'secondary', size: 'sm' })}>Connect my domain</Link>
+          </div>
+        )) : null}
         </>}
       </Section>
 
@@ -149,7 +156,7 @@ export function WebsiteView(p: {
 
       <Dialog open={confirmFrrata} onClose={() => setConfirmFrrata(false)} title="Run your website on Frrata?"
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmFrrata(false)}>Keep your own website</Button><Button busy={saving} onClick={save}>Run on Frrata</Button></>}>
-        <p>Your developer’s website stops working within a minute. Test keys are deleted.</p>
+        <p>Your developer’s website stops working within a minute. Test and build keys are deleted.</p>
       </Dialog>
     </div>
   )
@@ -221,7 +228,7 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
         <ul className="divide-y divide-line-soft" data-list>
           {p.keys.map((k) => (
             <li key={k.id} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 first:pt-0 ${k.live ? '' : 'text-muted-foreground'}`}>
-              <span className="flex min-w-0 flex-wrap items-center gap-2 font-medium">{k.name}<Badge tone={k.live && k.isPublic ? 'info' : 'neutral'}>{k.chip}</Badge></span>
+              <span className="flex min-w-0 flex-wrap items-center gap-2 font-medium">{k.name}<Badge tone={k.warn ? 'warn' : k.live && k.isPublic ? 'info' : 'neutral'}>{k.chip}</Badge></span>
               <span>{k.live && p.canManage ? <Button size="sm" variant="danger" onClick={() => setDel(k)}>Delete</Button> : null}</span>
               <span className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted-foreground">
                 <span className="font-mono text-small">{k.prefix}</span>
@@ -259,13 +266,15 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
               <RadioCard on={kind === 'test'} disabled={!p.testAllowed} onPick={() => setKind('test')} title="Test"
                 note={p.testAllowed ? 'Ends when the store opens · 30 days at most' : 'Only before the store opens'} />
             </div>
+            {/* D0·4 (workbench spec § 2; security review): what a Test key opens that a Live key doesn't, said once. */}
+            {kind === 'test' ? <p className="text-label text-muted-foreground">A Test key also reads products not yet published.</p> : null}
           </div>
         )}
       </Dialog>
 
       <Dialog open={!!del} onClose={() => setDel(null)} title={del ? `Delete the key “${del.name}”?` : ''}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setDel(null)}>Keep key</Button><Button variant="destructive" busy={busy} onClick={remove}>Delete key</Button></>}>
-        <p>Websites using it stop working within a minute. This can’t be undone.</p>
+        <p>{del?.stops ?? 'Websites using it stop working within a minute.'} This can’t be undone.</p>
       </Dialog>
     </>
   )

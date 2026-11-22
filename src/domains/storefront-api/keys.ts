@@ -1,8 +1,8 @@
 // =============================================================================
 // FILE: src/domains/storefront-api/keys.ts
 //
-// A STOREFRONT KEY'S SHAPE (ADR-0018 § 2): `frs_pub_` (live) or `frs_test_` (test), 32 random base62 characters, then a
-// 6-character checksum (CRC32 of everything before it, in base62). Shape and checksum are checked here, before any
+// A STOREFRONT KEY'S SHAPE (ADR-0018 § 2): `frs_pub_` (live), `frs_test_` (test) or `frs_build_` (build, the build-key
+// amendment: sent in the Frrata-Key header from a server only), 32 random base62 characters, then a 6-character checksum (CRC32 of everything before it, in base62). Shape and checksum are checked here, before any
 // database read; the checksum is public, so it only stops typos and cheap junk, never a guesser (the WAF and the miss
 // limit do that). Stored is the key's sha256; the shown prefix is for people to recognise a key, never a lookup or a
 // limit key. Pure: the random bytes come from the caller (crypto.getRandomValues), never Math.random.
@@ -10,17 +10,27 @@
 
 import { holds } from '../tenancy/roles'
 
-export const KEY_KINDS = ['public', 'test'] as const
+export const KEY_KINDS = ['public', 'test', 'build'] as const
 export type KeyKind = (typeof KEY_KINDS)[number]
 
-const PREFIX: Record<KeyKind, string> = { public: 'frs_pub_', test: 'frs_test_' }
+const PREFIX: Record<KeyKind, string> = { public: 'frs_pub_', test: 'frs_test_', build: 'frs_build_' }
 const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 const RANDOM_CHARS = 32
 const CHECK_CHARS = 6
-const SHAPE = /^frs_(pub|test)_([0-9A-Za-z]{38})$/
+const SHAPE = /^frs_(pub|test|build)_([0-9A-Za-z]{38})$/
 
 /** Test keys end after 30 days at most, and all end when the store opens (ADR-0018 decision 4). */
 export const TEST_KEY_DAYS = 30
+
+/** The header a build key travels in, to the dynamic tree h/ only (the build-key amendment, point 3). Never a path. */
+export const KEY_HEADER = 'Frrata-Key'
+/** What holds a build key (amendment point 1): a Studio session, one preview deployment, a developer's computer. */
+export const BUILD_PURPOSES = ['session', 'preview', 'developer'] as const
+export type BuildPurpose = (typeof BUILD_PURPOSES)[number]
+/** A build key's end: a session's and a developer's 24 hours, a preview's 30 days at most (the database holds both). */
+export const BUILD_KEY_HOURS: Record<BuildPurpose, number> = { session: 24, preview: 30 * 24, developer: 24 }
+/** Build keys a store may hold live at once (a preview each, a session each, a developer each), beside MAX_LIVE_KEYS. */
+export const MAX_LIVE_BUILD_KEYS = 50
 /** Live (not deleted, not ended) keys a store may hold at once. */
 export const MAX_LIVE_KEYS = 20
 export const KEY_NAME_MAX = 40
@@ -54,7 +64,7 @@ export function keyShape(key: string): { kind: KeyKind } | null {
   if (!m) return null
   const head = key.slice(0, key.length - CHECK_CHARS)
   if (checksum(head) !== key.slice(-CHECK_CHARS)) return null
-  return { kind: m[1] === 'pub' ? 'public' : 'test' }
+  return { kind: m[1] === 'pub' ? 'public' : m[1] === 'test' ? 'test' : 'build' }
 }
 
 /**
@@ -78,7 +88,7 @@ export function newKey(kind: KeyKind, random: (n: number) => Uint8Array): string
 export const shownPrefix = (key: string) => key.slice(0, key.indexOf('_', 4) + 1 + 6)
 
 /** A name that holds a key (pasted by mistake) is refused, so a key never lands in a stored field. */
-export const looksLikeKey = (name: string) => /frs_(pub|test)_/i.test(name) || /[0-9A-Za-z]{30,}/.test(name)
+export const looksLikeKey = (name: string) => /frs_(pub|test|build)_/i.test(name) || /[0-9A-Za-z]{30,}/.test(name)
 
 /**
  * Is `origin` a website address this store may name, given the apex of the connected domain it picked? Only
@@ -109,27 +119,43 @@ export function mayManageApi(role: string, hasOwner: boolean): boolean {
 export type KeyState =
   | { kind: 'live' }
   | { kind: 'test'; endsAt: string }
+  | { kind: 'build'; endsAt: string }
   | { kind: 'deleted'; at: string }
-  | { kind: 'ended'; why: 'expired' | 'opened'; at: string | null }
+  | { kind: 'ended'; key: 'test' | 'build'; why: 'expired' | 'opened'; at: string | null }
   | { kind: 'partner_gone'; at: string | null }
+  | { kind: 'maker_gone'; at: string | null }
+
+/** A build key's maker as app_build_key_makers says (live: still in the partner, a member here, assigned if a Lead or a
+ *  Builder; the same check the definer makes). Absent for a key the store's own people made. */
+export type KeyMaker = { live: boolean; leftAt: string | null }
 
 export function keyState(k: { kind: KeyKind; expiresAt: string | null; revokedAt: string | null; partnerId: string | null },
-  store: { firstOpenedAt: string | null; partnerLinks: { partnerId: string; removedAt: string | null }[] }, now: Date): KeyState {
+  store: { firstOpenedAt: string | null; partnerLinks: { partnerId: string; removedAt: string | null }[] }, now: Date, maker?: KeyMaker | null): KeyState {
   if (k.revokedAt) return { kind: 'deleted', at: k.revokedAt }
   if (k.partnerId) {
     const live = store.partnerLinks.some((l) => l.partnerId === k.partnerId && !l.removedAt)
     if (!live) return { kind: 'partner_gone', at: store.partnerLinks.filter((l) => l.partnerId === k.partnerId).map((l) => l.removedAt).sort().at(-1) ?? null }
   }
-  if (k.kind === 'test') {
-    if (store.firstOpenedAt) return { kind: 'ended', why: 'opened', at: store.firstOpenedAt }
-    if (k.expiresAt && Date.parse(k.expiresAt) <= now.getTime()) return { kind: 'ended', why: 'expired', at: k.expiresAt }
-    return { kind: 'test', endsAt: k.expiresAt ?? '' }
+  if (k.kind === 'test' || k.kind === 'build') {
+    // A build key outlives the opening only as a partner's (ADR-0018 decision 5 as amended); a test key never does.
+    if (store.firstOpenedAt && (k.kind === 'test' || !k.partnerId)) return { kind: 'ended', key: k.kind, why: 'opened', at: store.firstOpenedAt }
+    if (k.expiresAt && Date.parse(k.expiresAt) <= now.getTime()) return { kind: 'ended', key: k.kind, why: 'expired', at: k.expiresAt }
+    if (k.kind === 'build' && k.partnerId && maker && !maker.live) return { kind: 'maker_gone', at: maker.leftAt }
+    return { kind: k.kind, endsAt: k.expiresAt ?? '' }
   }
   return { kind: 'live' }
 }
 
+/** D0·2: a Test key's days left, warned from day 7 down (Studio workbench plan; mockup screen 2). Derived from the row
+ *  already read, never stored: whole days, rounded up, so the last day reads "1 day left". Null before day 7. */
+export const TEST_WARN_DAYS = 7
+export function daysLeft(endsAt: string, now: Date): number | null {
+  const n = Math.ceil((Date.parse(endsAt) - now.getTime()) / 86_400_000)
+  return n > 0 && n <= TEST_WARN_DAYS ? n : null
+}
+
 /** A key still answers (shown first, with Delete). */
-export const keyAnswers = (s: KeyState) => s.kind === 'live' || s.kind === 'test'
+export const keyAnswers = (s: KeyState) => s.kind === 'live' || s.kind === 'test' || s.kind === 'build'
 
 /** When a key was last used, in words: "Used today", "Used yesterday", "Used 13 Nov", "Never used". India's days. */
 export function lastUsed(lastSeenOn: string | null, now: Date, dayMonth: (d: Date) => string): string {

@@ -2,7 +2,7 @@
 Status: active (approved, owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT); S9, S14, S26 replaced by the one-address plan, S27 renumbered ADR-0020) · Date: 2026-11-16 · Mockup: the approved flow is
 https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ (`docs/mockups/2026-11-15-studio-one-screen.html`), with three
 deviations, redrawn and approved (owner, 2026-11-16: "all mockups approved": https://claude.ai/artifact/LizEVx3Ms4NdpS1kScxU8o); the states this spec adds are drawn per phase (plan `docs/plans/2026-11-12-studio-build.md`)
-· Approved: — · Revises: the agent, runtime, environment, developer and credits parts of
+· Approved: owner, 2026-11-16 ("approve all") · Revises: the agent, runtime, environment, developer and credits parts of
 `docs/specs/2026-11-11-frrata-studio.md` · Pairs with: ADR-0014 (amendments 1, 4, 6, 8, 9), ADR-0015, ADR-0016, ADR-0017
 (proposed, revised), ADR-0018, `docs/specs/2026-11-12-kit-and-fleet.md`, `docs/specs/2026-11-14-site-content-layer.md`,
 `docs/specs/2026-11-16-partner-publishing.md`
@@ -508,9 +508,9 @@ apex reader's suffix entry. None of it is built.)*
 | Mockup element | What this spec builds | Reason | Owner seen |
 |---|---|---|---|
 | Pages priced 2–10 credits each (`docs/mockups/2026-11-15-studio-one-screen.html:317`) | ≈ 19 credits a page (§ 8) | The mockup's figures came before the token profile; showing them would mislead at 3× | no |
-| No Publish step: Send to Riya, then Hand over | A Publish card before handover (the version the store opens with) and Apply on each content card | ADR-0014 rule 4 and amendment 8.1: a person changes the store | no |
-| The site changes instantly with every choice | Tokens and words show within a couple of seconds (data, § 6.13); a code change after a build (≈ 1–2 min, "Building" line) | Runtime A has no open port (§ 2); the pane's purge rules | no |
-The plan's V3b opens with a redraw of these three before any build.
+| No Publish step: Send to Riya, then Hand over | A Publish card before handover (the version the store opens with) and Apply on each content card | ADR-0014 rule 4 and amendment 8.1: a person changes the store | yes, 2026-11-16 (redraw approved) |
+| The site changes instantly with every choice | Tokens and words show within a couple of seconds (data, § 6.13); a code change after a build (≈ 1–2 min, "Building" line) | Runtime A has no open port (§ 2); the pane's purge rules | yes, 2026-11-16 (redraw approved) |
+The redraw was approved 2026-11-16; V3b is built as the workbench of `docs/specs/2026-11-22-studio-workbench.md` (owner, 2026-11-22), which keeps these three.
 
 ## Design review
 - **UI/UX:** the approved one screen does every step, with § 14's deviations redrawn; added states (V3b): a turn paused at
@@ -605,7 +605,7 @@ The plan's V3b opens with a redraw of these three before any build.
 | High | One GitHub App for fleet and sessions would put the ruleset bypass in the agent's hands | — | Two Apps (§ 5) |
 | High | Hosting as guessed costs 7.6–19.1% of revenue and fails 3× | § 8 | Price on the pilot's measured usage before any paid site |
 | High | A second store's Frrata address would be refused (one live apex); the host CHECK refuses `frrata.` labels | `src/lib/db/schema-addresses.ts:95,99` | Gone with the sites domain: each store keeps its own `frrata.shop` host (ADR-0019). *(Was: the suffix entry and a relaxed CHECK.)* |
-| High | Per-network limits throttle every partner at once | pilot G27; `apiTestIp` | Per-key limits |
+| High | Per-network limits throttle every partner at once | pilot G27; `apiTestIp` | Per-key limits (done, G·1 2026-11-22: `apiTestKey`, `apiMissKey`) |
 | Medium | A repository's instruction files steer the agent | Managed Agents resources | Mount by SHA; check `.claude/`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json` |
 | Medium | The request that crosses a budget is not inside the ceiling | Managed Agents budget | The budget formula (§ 6.7) |
 | Medium | Credits in tenant rows would be readable by the brand | first draft | Ledger and definers only |

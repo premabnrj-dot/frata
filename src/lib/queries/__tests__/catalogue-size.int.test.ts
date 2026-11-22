@@ -50,5 +50,21 @@ describe.skipIf(!host)('the cached catalogue', () => {
     console.log(`[catalogue-size] ${entry.products.length} products → ${bytes} bytes`, process.env.SHOW ? JSON.stringify(entry.products[0]) : "")
     expect(entry.products.length).toBeGreaterThanOrEqual(600)
     expect(bytes).toBeLessThan(BUDGET)
+    // G·2: a build key's raw draft entry (one per store, 15 s; drafts included) under the same budget.
+    const { draftCatalogueRaw } = await import('@/lib/queries/storefront')
+    const draft = await draftCatalogueRaw(A)
+    const draftBytes = Buffer.byteLength(JSON.stringify(draft))
+    console.log(`[catalogue-size] draft entry: ${draft.products.length} products → ${draftBytes} bytes`)
+    expect(draft.products.length).toBeGreaterThanOrEqual(600)
+    expect(draftBytes).toBeLessThan(BUDGET)
+    // G·4 (speed review MED-2): a live product copy's collections entry holds the catalogue entry's collections, in
+    // its order with its members, and is a small part of the budget.
+    const { coreCollections } = await import('@/lib/queries/storefront-collections')
+    const colls = await coreCollections(A)
+    const pick = (c: { handle: string; kind: string; sort: string; productIds: string[] }) => ({ handle: c.handle, kind: c.kind, sort: c.sort, productIds: c.productIds })
+    expect(colls.map(pick)).toEqual(entry.collections.map(pick))
+    const collBytes = Buffer.byteLength(JSON.stringify(colls))
+    console.log(`[catalogue-size] collections entry: ${colls.length} collections → ${collBytes} bytes`)
+    expect(collBytes).toBeLessThan(BUDGET / 10)
   }, 120_000)
 })

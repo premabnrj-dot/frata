@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 10.1.2
+  version: 10.3.0
   owner: owner
   verified: 2026-11-22
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/app/site.css", "src/components/brand/site-home.tsx"]
@@ -271,6 +271,11 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
 - **Switch** 34×20; **Segmented** (`ui/segmented.tsx`) for two to four short words, arrows move the choice; more is a
   Select. **Checkbox and radio** are native inputs painted in neel.css: 16 px in a 24 px target.
 - **SaveBar** says "N unsaved changes" when given `count`; **Toast** actions in `--bar-link`.
+- **Panels** (Studio workbench WB·2, mockup 2026-11-22 screen 1): `PanelRail` (`ui/panel-rail.tsx`) is a side panel
+  folded to a 44 px column of icon buttons on `--side`; a dot marks what needs the person, its words in the button's name
+  ("Show chat. 1 new"); a panel never opens by itself. `ResizeEdge` (`ui/resize-edge.tsx`) is a window splitter on the
+  panel's inner edge: its value the width, ← → 16 px (Shift 64), Home and End its limits, a drag; a 2 px neel line on
+  hover and focus. `ICON_BUTTON`: 32 px from 768, 44 on a phone. `Tabs variant="line"`: underline tabs over a panel.
 - **Dialog**: 16 px, e3, its body `[data-dialog-body]` 18 in; a sheet on a phone. **Menu**: 12 px, e2, 220 wide.
 - **DataTable**: 36 px sunk header, 48 px rows from md (a phone reflows), `selected` rows in neel 50.
 - **Section**: 12 px, 20 in (16 on a phone). **Fields**: `FIELD` / `FIELD_BOX`; a mistake is `fieldProps` +

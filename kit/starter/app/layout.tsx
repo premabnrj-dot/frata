@@ -22,14 +22,14 @@ export default async function Layout({ children }: { children: React.ReactNode }
       <head><BrandStyle brand={s?.brand} /></head>
       <body>
         <Landing />
-        <header className="top"><Link href="/" className="brand"><Logo brand={s?.brand} name={s?.name ?? 'Store'} fallback={s?.logo ?? null} /></Link><nav><Link href="/bag">Bag</Link></nav></header>
+        <header className="top"><Link href="/" className="brand" prefetch={false}><Logo brand={s?.brand} name={s?.name ?? 'Store'} fallback={s?.logo ?? null} /></Link><nav><Link href="/bag" prefetch={false}>Bag</Link></nav></header>
         <main>{children}</main>
         {s ? (
           <footer className="legal">
             <span>{s.legal.legalName} · {s.legal.address}</span>
             <span>Customer care: {s.legal.customerCare.email} · {s.legal.customerCare.phone}</span>
             <span>Grievance officer: {s.legal.grievanceOfficer.name}, {s.legal.grievanceOfficer.role} · {s.legal.grievanceOfficer.email} · {s.legal.grievanceOfficer.phone}</span>
-            <span>{s.policies.map((p, i) => <span key={p.kind}>{i ? ' · ' : ''}<a href={p.url}>{p.title}</a></span>)} · <Link href="/faq">Questions</Link></span>
+            <span>{s.policies.map((p, i) => <span key={p.kind}>{i ? ' · ' : ''}<a href={p.url}>{p.title}</a></span>)} · <Link href="/faq" prefetch={false}>Questions</Link></span>
           </footer>
         ) : null}
       </body>

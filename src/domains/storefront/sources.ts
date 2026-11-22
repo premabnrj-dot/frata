@@ -1,4 +1,5 @@
-import { inCollection, isListed, priceOf, type ListCollection, type ListProduct } from './listing'
+import { compareBy, inCollection, isListed, priceOf, ruleFacts, type ListCollection, type ListProduct } from './listing'
+import { cleanRules, matches } from '../catalogue/collection-rules'
 
 // =============================================================================
 // FILE: src/domains/storefront/sources.ts — which products a theme section shows (the "shortcodes").
@@ -53,6 +54,31 @@ export function lookPieces<P extends ListProduct & { handle: string }, X extends
   return pins.flatMap((x) => { const p = products.find((q) => q.handle === x.handle && isListed(q, now)); return p ? [{ ...x, p }] : [] })
 }
 
+/** A collection's cover: its first listed piece (the tiles' rule, shared with the Storefront API's `image`, G·4). */
+export const collectionCover = <P extends ListProduct>(c: ListCollection, products: P[], now: Date): P | null => inCollection(c, products, now)[0] ?? null
+
+/**
+ * Every collection's cover at once, as collectionCover gives each (speed review 2026-11-22: 500 collections × 600 products
+ * filtered and sorted one by one took 146–221 ms). Listed products and their rule facts are worked out once; each
+ * collection then takes its first member by its own order in one pass (sortProducts' order, ties kept as listed).
+ */
+export function collectionCovers<P extends ListProduct, C extends ListCollection>(collections: readonly C[], products: P[], now: Date): Map<C, P | null> {
+  const live = products.filter((p) => isListed(p, now))
+  const facts = new Map(live.map((p) => [p, ruleFacts(p, now)]))
+  const out = new Map<C, P | null>()
+  for (const c of collections) {
+    const rules = c.kind === 'manual' ? null : cleanRules(c.rules)
+    const cmp = compareBy<P>(c.sort, c.productIds) // sortProducts' own order
+    let first: P | null = null
+    for (const p of live) {
+      if (rules ? !matches(rules, c.matchAll, facts.get(p)!) : !c.productIds.includes(p.id)) continue
+      if (!first || cmp(p, first) < 0) first = p
+    }
+    out.set(c, first)
+  }
+  return out
+}
+
 /** Collection tiles (the section and a design's block: one rule; TS1b architecture 8): the picked collections in the
  *  order picked, or (handles null) the shop's own in their order; only those with a listed piece, each with its first;
  *  stops at `count` (speed LOW 6). */
@@ -61,7 +87,7 @@ export function tilesOf<P extends ListProduct, C extends ListCollection & { hand
   const out: { c: C; first: P }[] = []
   for (const c of pool) {
     if (out.length >= count) break
-    const first = inCollection(c, cat.products, now)[0]
+    const first = collectionCover(c, cat.products, now)
     if (first) out.push({ c, first })
   }
   return out

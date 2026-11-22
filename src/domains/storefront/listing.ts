@@ -57,14 +57,18 @@ export function ruleFacts(p: ListProduct, now: Date): ProductFacts {
   return { categoryId: p.categoryId, attributes: p.attributes, colourFamilies: p.colours.map((c) => c.family).filter((x): x is string => !!x), minPrice: price?.min ?? null, inStock: canBuy(p, now), tags: p.tags }
 }
 
-export function sortProducts<T extends ListProduct>(list: T[], sort: string, manual: string[] = []): T[] {
-  const by = [...list]
+/** A list's order as one comparator (negative: a goes first), so the sort and a collection's cover never differ. */
+export function compareBy<T extends ListProduct>(sort: string, manual: readonly string[] = []): (a: T, b: T) => number {
   const price = (p: T) => priceOf(p)?.min ?? Number.MAX_SAFE_INTEGER
-  if (sort === 'manual') return by.sort((a, b) => manual.indexOf(a.id) - manual.indexOf(b.id))
-  if (sort === 'price_low') return by.sort((a, b) => price(a) - price(b))
-  if (sort === 'price_high') return by.sort((a, b) => price(b) - price(a))
-  if (sort === 'title') return by.sort((a, b) => a.title.localeCompare(b.title))
-  return by.sort((a, b) => b.since.localeCompare(a.since))
+  if (sort === 'manual') return (a, b) => manual.indexOf(a.id) - manual.indexOf(b.id)
+  if (sort === 'price_low') return (a, b) => price(a) - price(b)
+  if (sort === 'price_high') return (a, b) => price(b) - price(a)
+  if (sort === 'title') return (a, b) => a.title.localeCompare(b.title)
+  return (a, b) => b.since.localeCompare(a.since)
+}
+
+export function sortProducts<T extends ListProduct>(list: T[], sort: string, manual: string[] = []): T[] {
+  return [...list].sort(compareBy<T>(sort, manual))
 }
 
 /** A collection's products right now: listed ones only, picked or matching its rules, in its order. */

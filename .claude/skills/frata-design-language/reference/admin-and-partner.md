@@ -82,6 +82,15 @@ The nine rules (board Rules), binding on every Admin screen and mockup:
   `Facts`; the share reads "20% · ends <date>" while `SHARE_IN_RUPEES` is off). Remind opens WhatsApp on the partner's phone with the drafted words and no number; Frrata sends nothing.
   The partner's billing carries one line, "Your client never sees this". A removed client stays last in All, dimmed,
   and its page keeps billing (a final bill may be owed).
+- **The Studio workbench** (owner-approved 2026-11-22, `docs/mockups/2026-11-22-studio-workbench.html` screen 1;
+  shell built on fixtures, WB·3): three regions, each a named landmark: Chat (340 px, 280–480), Preview, Inspector
+  (320 px, 280–440; Design, Code, Checks, Versions). Each side folds to a `PanelRail` and resizes by its `ResizeEdge`; a
+  panel never opens by itself (picking a part of the preview or a tab key is asking). The layout is kept in the browser
+  only (`src/domains/studio/layout.ts`, read safely; the defaults draw without it); under 900 px the inspector starts
+  folded. Keys from one table: `[` chat, `]` inspector, `\` Preview only, F6 the next region, 1–4 a tab, `?` the list
+  with the console's one switch for single keys; never in a text box. A phone shows one region from its bar (Chat,
+  Website, More: Design, Checks, Versions), no Code tab. The agent's progress goes to one polite region, once a step. Code, Checks and
+  Versions load with next/dynamic; no diff or highlight library.
 - **F3 store switcher**: in the account block at every width and in More on
   phones, only with two or more places to go; it lists what app_access_for
   returned, current one marked.

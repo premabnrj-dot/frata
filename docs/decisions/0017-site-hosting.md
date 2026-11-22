@@ -1,4 +1,4 @@
-# ADR-0017: Shop websites run on Cloudflare Workers for Platforms, in an account apart from the console
+# ADR-0017: Shop websites run on Vercel, apart from the console's secrets; Cloudflare is the drawn second adapter
 
 Status: **accepted as revised: Vercel only** (owner, 2026-11-16: "approve all" (decision page https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT), decision S1; rules 3, 4 and 6 superseded by ADR-0019). Earlier: **proposed, revised** (2026-11-15). The owner: "why not stick to vercel only for now? do not wish to have
 complexity". **Revised recommendation: Vercel only for now** (§ Revised recommendation below); the Cloudflare design
@@ -6,6 +6,31 @@ stays drawn as the second adapter. Owner, 2026-11-15: "we can go ahead for the t
 we can plan testing later": **the test is planned as V2's first step** (§ The test, when) · amends ADR-0005 · Pairs with: ADR-0014
 amendments 4, 6, 7 and 8; `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1 Domains, § 4 Controls, § 5 Lanes, § 6 Fleet,
 § 7 Security); `docs/specs/2026-11-11-agentic-storefront.md` (V2 and its kill signal); ADR-0016
+
+## The decision as it stands (2026-11-22; this section is the rule, everything below it is the record of how it was reached)
+1. **Code websites run on Vercel** (owner, 2026-11-15 and 2026-11-16, decision S1; again 2026-11-22: "vercel teams it
+   is for now"). One project per site, Next.js native, bom1. The hosting adapter stays the only door to the host.
+2. **One address** (ADR-0019) replaces this record's rules 3, 4 and 6: no sites domain, no `frrata.site`, no router of
+   our own in front of every domain. Frrata's app holds the store's host and passes the site's paths to the store's one
+   verified site deployment. One separate preview domain is bought (O6).
+3. **Teams, by stage** (owner, 2026-11-22: "keeping one vercel account for pilot/testing"; `security-reviewer`,
+   2026-11-22):
+   - **Now:** the existing team hosts **the pilot only**, Frrata-written code deployed by Vercel's Git integration
+     (§ The pilot, before V2). No fleet, no build-service token, no partner's or Studio's code in that team: a team
+     token there is a production token.
+   - **When V2a·5 builds the fleet:** one new Pro team holds partner websites and the fleet (the kit spec § 6 asks only
+     that the fleet be inside the hosting account); staging is projects inside it.
+   - **Before outside partners' code is live:** three teams as S22 (`frrata-sites`, `frrata-fleet`,
+     `frrata-sites-staging`), the P5·1 spike re-run across teams, the pen test.
+   - **Forced, not remembered:** `sites` records its host team; the create-site definer refuses a second site, or any
+     store with a partner, while that team is the console's; the preflight refuses a host token of the console's team.
+4. **Cloudflare (Workers for Platforms for sites, R2 for images) is not built.** It is revisited on P5·0's 30-day read of
+   real usage (Blob transfer, Fast Data Transfer, requests a page view, Flat Rate on or off):
+   `unit-economics-reviewer`, 2026-11-22, puts the hosting saving under ₹6,000 a month at one to three sites, and the
+   image saving on a guess two reviews disagree about. Move when § Switch when is met.
+5. **Hosting is priced on measured numbers** before any paid store is hosted (decision 18).
+6. Rates: the tables below use ₹88 a dollar (2026-11-15); `frata-unit-economics` uses ₹94 and ADR-0019 ₹103.40 with
+   its loading. Any figure reused from below is restated at the skill's rate with its date.
 
 ## Context
 - ADR-0014 amendment 4: shop websites run in a separate hosting account that Frrata owns, pays for and runs, never the
@@ -88,7 +113,7 @@ Bandwidth decides it. Sites are page traffic, and only Cloudflare does not meter
   ₹251–489 (3× ₹752–1,465), Scale ₹748–1,540 (3× ₹2,244–4,620). Build minutes are most of it. Frrata's patch builds
   are never counted against a shop (kit spec, Unit economics).
 
-## Decision (proposed)
+## Decision as first proposed (2026-11-15, Cloudflare; superseded by § The decision as it stands; kept as the second adapter's design)
 1. **The first adapter is Cloudflare Workers for Platforms**, in a Cloudflare account Frrata's company owns, apart
    from the Vercel team `premabnrj-dots-projects`. One dispatch namespace for live sites, one for previews. Each site
    is one user Worker named by site id, never by shop name. The second adapter, kept drawn but unbuilt, is a Vercel

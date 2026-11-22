@@ -35,7 +35,7 @@ export async function builderBrandSample(actor: BuilderActor) {
 }
 
 /** Console › Brand › Checkout, preview only (one-address P2·6, O9): the live record and design, and the store's public
- *  delivery, returns and Pay on delivery facts the trust blocks name, as the Builder's grant allows (drizzle/0156). */
+ *  delivery, returns and Pay on delivery facts the trust blocks name, as the Builder's grant allows (drizzle/0161). */
 export function builderCheckout(actor: BuilderActor) {
   return withActor(actor, 'preview.read', async (tx, tenantId) => {
     const [record, c] = await Promise.all([builderBrandWith(tx, tenantId), builderCheckoutWith(tx, tenantId)])

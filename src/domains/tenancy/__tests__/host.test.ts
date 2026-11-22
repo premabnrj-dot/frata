@@ -168,6 +168,16 @@ describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
     expect(pub.destination).toBe('/api/storefront/2026-12/k/:key/:rest*')
     expect(KEY_BODY).toBe('[0-9A-Za-z]{38}')
   })
+  it('sends any versioned request carrying Frrata-Key to the header tree h/ only, first (G·2)', async () => {
+    const { apiRewrites } = await import('../host')
+    const r = apiRewrites('api.frrata.shop')
+    const versioned = r.filter((x) => x.source.startsWith('/2026-12/'))
+    expect(versioned[0]).toEqual({ source: '/2026-12/:rest*', destination: '/api/storefront/2026-12/h/:rest*',
+      has: [{ type: 'host', value: 'api\\.frrata\\.shop' }, { type: 'header', key: 'frrata-key' }], missing: [] })
+    // no other versioned rewrite (a cached tree among them) ever takes a request that carries the header
+    for (const x of versioned.slice(1)) expect(x.missing, x.source).toContainEqual({ type: 'header', key: 'frrata-key' })
+    expect(r.filter((x) => x.destination.includes('/h/'))).toHaveLength(1)
+  })
   it('serves its docs on the API host only, by their public paths (SA1b D·9; security review M1)', async () => {
     const { apiRewrites, apiRedirects } = await import('../host')
     for (const p of ['/docs', '/docs/bag-link', '/docs/reference/products-handle', '/llms.txt', '/_next/static/chunks/x.js'])

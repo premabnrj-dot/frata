@@ -1,12 +1,10 @@
 import { colourIndex } from '@/domains/catalogue/option-kind'
 import { zoneDays } from '@/domains/delivery/public'
 import { pdpLines } from '@/domains/checkout/offer-showcase'
-import { describeAttribute } from '@/domains/catalogue/taxonomy'
 import { labelRows, readLabel } from '@/domains/catalogue/label'
-import { defaultDescription, defaultTitle, productJsonLd, type LdRating } from '@/domains/seo/defaults'
-import { availability } from '@/domains/catalogue/availability'
+import { defaultTitle, productJsonLd, type LdRating } from '@/domains/seo/defaults'
+import { productDescription, productLdInput } from '@/domains/seo/product-ld'
 import { pick, urlFor } from '@/domains/media/sizes'
-import { factsOf, priceOf } from '@/domains/storefront/listing'
 import { offerFor } from '@/domains/seo/tags'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
@@ -24,10 +22,9 @@ import { detailsOf } from '@/domains/catalogue/details'
 export function productSeo(shop: StoreShop, p: StoreProduct) {
   const ci = colourIndex(p.options)
   const colours = ci >= 0 ? p.optionValues[ci] ?? [] : []
-  const fabric = detailsOf(p).find((d) => d.name === 'Fabric')?.value ?? null
   return {
     title: p.seoTitle || defaultTitle(p.title, colours, shop.shopName),
-    description: p.seoDescription || defaultDescription({ title: p.title, fabric, minPrice: priceOf(p)?.min ?? null, codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: null }),
+    description: productDescription(p, shop),
     url: `https://${shop.host}/products/${p.handle}`,
   }
 }
@@ -55,8 +52,6 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
   const seo = productSeo(shop, p)
   // The taxonomy's details, then what the pack says (label.ts: Legal Metrology declarations, beauty and wellness).
   const details = [...detailsOf(p), ...labelRows(readLabel(p.label), p.originCountry)]
-  const gender = p.attributes['target-gender']?.[0] ? describeAttribute('target-gender')?.values.find((v) => v.id === p.attributes['target-gender']![0])?.name ?? null : null
-  const ci = colourIndex(p.options)
   const w = wordsFor(shop.shopLanguage)
   const model = p.modelHeight && p.modelSize ? fill(w.model.both, { h: p.modelHeight, s: p.modelSize }) : p.modelHeight ? fill(w.model.height, { h: p.modelHeight }) : p.modelSize ? fill(w.model.size, { s: p.modelSize }) : null
   const rt = (w.returns as Record<string, string>)[shop.returnKind]
@@ -68,15 +63,8 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
       : fill(w.ships, { d: shop.dispatchDays, days: shop.dispatchDays === 1 ? w.day : w.days, m: shop.metroDays, r: shop.restDays }),
     ...(ret ? [ret] : []),
   ]
-  const ld = productJsonLd({
-    rating,
-    name: p.title, description: seo.description, url: seo.url, groupId: p.id, brand: shop.shopName, options: p.options, material: details.find((d) => d.name === 'Fabric')?.value ?? null, gender,
-    images: p.images.slice(0, 6).map((i) => urlFor(i.base, pick(i.widths, 1200))),
-    variants: p.variants.filter((v) => v.price > 0).map((v) => {
-      const img = ci >= 0 ? p.images.find((i) => i.optionValue === v.values[ci]) : undefined
-      return { sku: v.sku, gtin: v.gtin, values: v.values, price: v.price, availability: availability(factsOf(v), now), image: img ? urlFor(img.base, pick(img.widths, 1200)) : null }
-    }),
-  })
+  // One input rule with the Storefront API's product.jsonLd (src/domains/seo/product-ld.ts): this page's address and photos.
+  const ld = productJsonLd(productLdInput(p, shop, { url: seo.url, photo: (i) => urlFor(i.base, pick(i.widths, 1200)), now, rating }))
   const stacked = layout?.gallery === 'stack'
   const stories = extras?.stories ? p.stories : []
   const pairs = extras?.pairs ? <PairRows pairs={p.pairs} now={now} live={live} w={w} bw={buyWords(shop.shopLanguage)} href={href} /> : null

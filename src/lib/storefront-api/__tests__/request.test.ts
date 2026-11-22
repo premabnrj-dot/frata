@@ -3,13 +3,13 @@ import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { newKey } from '@/domains/storefront-api/keys'
 
-const rows = new Map<string, { keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null }>()
+const rows = new Map<string, { keyId: string; tenantId: string; kind: 'public' | 'test' | 'build'; expiresAt: string | null }>()
 const limits = { over: false, within: true }
-vi.mock('@/lib/queries/storefront-keys', () => ({ storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null), storefrontKeyNow: vi.fn(async (k: string) => rows.get(k) ?? null) }))
+vi.mock('@/lib/queries/storefront-keys', () => ({ keyHash: (k: string) => `h:${k}`, storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null), storefrontKeyNow: vi.fn(async (k: string) => rows.get(k) ?? null) }))
 vi.mock('@/lib/env', async (orig) => ({ ...(await orig<object>()), STOREFRONT_PREVIEW_KEY: Buffer.alloc(32, 7) }))
 vi.mock('@/lib/queries/storefront-api', () => ({ markKeySeen: vi.fn(async () => {}), siteOriginFor: vi.fn(async () => 'https://kesarstudio.in') }))
 vi.mock('@/lib/db/rate-limit', () => ({
-  LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {}, apiPreviewKey: {} },
+  LIMITS: { apiMissIp: { n: 'missIp' }, apiMissKey: { n: 'missKey' }, apiTestKey: { n: 'testKey' }, apiSearchIp: { n: 'searchIp' }, apiPreviewKey: { n: 'previewKey' } },
   overLimit: vi.fn(async () => limits.over),
   withinLimit: vi.fn(async () => limits.within),
 }))
@@ -18,7 +18,7 @@ const limiter = await import('@/lib/db/rate-limit')
 const seenApi = await import('@/lib/queries/storefront-api')
 
 const rnd = (n: number) => new Uint8Array(randomBytes(n))
-const LIVE = newKey('public', rnd), TEST = newKey('test', rnd), OTHER = newKey('public', rnd)
+const LIVE = newKey('public', rnd), TEST = newKey('test', rnd), OTHER = newKey('public', rnd), BUILD = newKey('build', rnd)
 const A = '11111111-1111-1111-1111-111111111111'
 const Shop = z.object({ name: z.string() }).strict()
 
@@ -32,6 +32,7 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     rows.clear(); limits.over = false; limits.within = true
     rows.set(LIVE, { keyId: 'k1', tenantId: A, kind: 'public', expiresAt: null })
     rows.set(TEST, { keyId: 'k2', tenantId: A, kind: 'test', expiresAt: null })
+    rows.set(BUILD, { keyId: 'k3', tenantId: A, kind: 'build', expiresAt: null })
   })
   const seenBy: string[] = []
   const live = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'shop', schema: Shop, run: async (ctx) => { seenBy.push(ctx.tenantId); return { name: 'Kesar Studio' } } })
@@ -114,13 +115,92 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     expect(vi.mocked(limiter.withinLimit).mock.calls.length).toBeGreaterThan(0)
     expect(vi.mocked(limiter.withinLimit).mock.calls.every((c) => c[3] === true)).toBe(true)
   })
+  it('G·1: a test key is limited per key only, its search too; a live key’s search per network', async () => {
+    vi.mocked(limiter.withinLimit).mockClear()
+    const search = apiRequest({ version: '2026-12', tree: 'test', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+    expect((await search(req({ 'x-forwarded-for': '203.0.113.9' }), at(TEST))).status).toBe(200)
+    const calls = vi.mocked(limiter.withinLimit).mock.calls
+    expect(calls.map((c) => [c[0], c[1]])).toEqual([[limiter.LIMITS.apiTestKey, 'k2']])
+    vi.mocked(limiter.withinLimit).mockClear()
+    const liveSearch = apiRequest({ version: '2026-12', tree: 'live', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+    expect((await liveSearch(req(), at(LIVE))).status).toBe(200)
+    expect(vi.mocked(limiter.withinLimit).mock.calls.map((c) => c[0])).toEqual([limiter.LIMITS.apiSearchIp])
+  })
+  it('G·1: a miss counts per network and per key hash; a hash over its count is refused before any lookup', async () => {
+    vi.mocked(limiter.withinLimit).mockClear()
+    const stale = newKey('test', rnd)
+    await test(req(), at(stale))
+    expect(vi.mocked(limiter.withinLimit).mock.calls.map((c) => [c[0], c[1]])).toEqual(expect.arrayContaining([[limiter.LIMITS.apiMissKey, `h:${stale}`], [limiter.LIMITS.apiMissIp, expect.any(String)]]))
+    const keys = await import('@/lib/queries/storefront-keys')
+    vi.mocked(keys.storefrontKeyFor).mockClear()
+    vi.mocked(limiter.overLimit).mockImplementation(async (l, subject) => l === limiter.LIMITS.apiMissKey && subject === `h:${stale}`)
+    try {
+      expect((await test(req(), at(stale))).status).toBe(429)
+      expect(keys.storefrontKeyFor).not.toHaveBeenCalled()
+      expect((await test(req(), at(TEST))).status).toBe(200) // another key on the same network still reads
+    } finally { vi.mocked(limiter.overLimit).mockImplementation(async () => limits.over) }
+    // both miss counts are asked failing closed; the network over its count refuses whatever the hash's count says
+    vi.mocked(limiter.overLimit).mockClear()
+    vi.mocked(limiter.overLimit).mockImplementation(async (l) => l === limiter.LIMITS.apiMissIp)
+    try {
+      expect((await test(req(), at(TEST))).status).toBe(429)
+      expect(vi.mocked(limiter.overLimit).mock.calls.map((c) => [c[0], c[3]])).toEqual(expect.arrayContaining([[limiter.LIMITS.apiMissKey, true], [limiter.LIMITS.apiMissIp, true]]))
+    } finally { vi.mocked(limiter.overLimit).mockImplementation(async () => limits.over) }
+  })
+  it('G·1: a test key past its own count is busy; a live key’s search past its network’s count is busy', async () => {
+    vi.mocked(limiter.withinLimit).mockImplementation(async (l) => l !== limiter.LIMITS.apiTestKey)
+    try { expect((await test(req(), at(TEST))).status).toBe(429) } finally { vi.mocked(limiter.withinLimit).mockImplementation(async () => limits.within) }
+    const liveSearch = apiRequest({ version: '2026-12', tree: 'live', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+    vi.mocked(limiter.withinLimit).mockImplementation(async (l) => l !== limiter.LIMITS.apiSearchIp)
+    try { expect((await liveSearch(req(), at(LIVE))).status).toBe(429) } finally { vi.mocked(limiter.withinLimit).mockImplementation(async () => limits.within) }
+  })
+  describe('the header tree (G·2; ADR-0018’s build-key amendment)', () => {
+    const h = apiRequest({ version: '2026-12', tree: 'header', mode: 'dynamic', resource: 'shop', schema: Shop, run: async (ctx) => { seenBy.push(`${ctx.keyKind}:${ctx.tenantId}`); return { name: 'Kesar Studio' } } })
+    const noKey = { params: Promise.resolve({}) }
+    it('reads a build key from Frrata-Key: private, no-store, Vary on the header, no CORS header at all', async () => {
+      const keys = await import('@/lib/queries/storefront-keys')
+      vi.mocked(keys.storefrontKeyFor).mockClear(); vi.mocked(keys.storefrontKeyNow).mockClear()
+      const r = await h(req({ 'Frrata-Key': BUILD, Origin: 'http://localhost:3000' }), noKey)
+      expect(r.status).toBe(200)
+      expect(seenBy.at(-1)).toBe(`build:${A}`)
+      expect(r.headers.get('cache-control')).toBe('private, no-store')
+      expect(r.headers.get('vary')).toBe('Frrata-Key')
+      expect([...r.headers.keys()].filter((k) => k.startsWith('access-control-'))).toEqual([])
+      expect(r.headers.get('set-cookie')).toBeNull()
+      // looked up uncached: a deleted key or a removed maker stops at once
+      expect(keys.storefrontKeyNow).toHaveBeenCalled()
+      expect(keys.storefrontKeyFor).not.toHaveBeenCalled()
+      expect(vi.mocked(seenApi.markKeySeen).mock.calls.at(-1)?.[0]).toMatchObject({ keyId: 'k3' })
+    })
+    it('one 404 for no header, a key of another kind, a build key in a path tree, a definer row of another kind', async () => {
+      const bodies = new Set<string>()
+      for (const r of [await h(req(), noKey), await h(req({ 'Frrata-Key': TEST }), noKey), await h(req({ 'Frrata-Key': LIVE }), noKey),
+        await test(req(), at(BUILD)), await live(untouchable(), at(BUILD)), await h(req({ 'Frrata-Key': 'frs_build_nope' }), noKey)]) {
+        expect(r.status).toBe(404)
+        bodies.add(await r.text())
+      }
+      rows.set(BUILD, { keyId: 'k3', tenantId: A, kind: 'test', expiresAt: null })
+      expect((await h(req({ 'Frrata-Key': BUILD }), noKey)).status).toBe(404)
+      expect([...bodies]).toEqual(['{"error":"not_found"}'])
+    })
+    it('is limited per key only, its search too, failing closed; never cached or token-bound', async () => {
+      vi.mocked(limiter.withinLimit).mockClear()
+      const search = apiRequest({ version: '2026-12', tree: 'header', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+      expect((await search(req({ 'Frrata-Key': BUILD }), noKey)).status).toBe(200)
+      expect(vi.mocked(limiter.withinLimit).mock.calls.map((c) => [c[0], c[1], c[3]])).toEqual([[limiter.LIMITS.apiTestKey, 'k3', true]])
+      vi.mocked(limiter.withinLimit).mockImplementation(async (l) => l !== limiter.LIMITS.apiTestKey)
+      try { expect((await h(req({ 'Frrata-Key': BUILD }), noKey)).status).toBe(429) } finally { vi.mocked(limiter.withinLimit).mockImplementation(async () => limits.within) }
+      const cached = apiRequest({ version: '2026-12', tree: 'header', mode: 'isr', resource: 'shop', schema: Shop, run: async () => ({ name: 'x' }) })
+      expect((await cached(req({ 'Frrata-Key': BUILD }), noKey)).status).toBe(404)
+    })
+  })
   it('null from run is the same 404; a test route declared cached is refused', async () => {
     const none = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'product', schema: Shop, run: async () => null })
     expect(await (await none(untouchable(), at(LIVE))).text()).toBe('{"error":"not_found"}')
     const wrong = apiRequest({ version: '2026-12', tree: 'test', mode: 'isr', resource: 'shop', schema: Shop, run: async () => ({ name: 'x' }) })
     expect((await wrong(req(), at(TEST))).status).toBe(404)
   })
-  it('notes a key seen only on the cached tree', async () => {
+  it('notes a key seen on the cached tree and the header tree, never the test tree', async () => {
     vi.mocked(seenApi.markKeySeen).mockClear()
     await live(untouchable(), at(LIVE))
     expect(seenApi.markKeySeen).toHaveBeenCalledTimes(1)

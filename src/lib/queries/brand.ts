@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, isNull, ne, or, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings } from '@/lib/db/schema'
@@ -46,10 +46,11 @@ export function recordOf(r: LiveRow | undefined, logoUrl: string | null): BrandR
 /** What every reader gets: the record (Frrata's defaults until one is saved) and its seasons, or null for a theme shop. */
 export type ShopBrand = { record: BrandRecord; saved: boolean; seasons: Season[] }
 
-/** Keys that are not deleted and not expired at `now` (code-site.ts: a site being built). */
+/** Live and Test keys that are not deleted and not expired at `now` (code-site.ts: a site being built). Never a build
+ *  key (G·2): Studio's session or a developer's 24 hours on a theme store make no code site. */
 const liveKeysWith = async (tx: Tx, t: string, now: Date) => {
   const [r] = await tx.select({ n: sql<number>`count(*)::int` }).from(storefrontKeys)
-    .where(and(eq(storefrontKeys.tenantId, t), isNull(storefrontKeys.revokedAt), or(isNull(storefrontKeys.expiresAt), gt(storefrontKeys.expiresAt, now))))
+    .where(and(eq(storefrontKeys.tenantId, t), ne(storefrontKeys.kind, 'build'), isNull(storefrontKeys.revokedAt), or(isNull(storefrontKeys.expiresAt), gt(storefrontKeys.expiresAt, now))))
   return r?.n ?? 0
 }
 
@@ -86,7 +87,7 @@ export const apiBrand = shopCached('api-brand-v1', 'settings', coreBrand, 3600)
 
 // ── Checkout design (one-address P2·3) ────────────────────────────────────────────────────────────────────────────
 
-/** The live design's columns (the Builder's grant is the same list, drizzle/0156); never `previous` or `updated_by`. */
+/** The live design's columns (the Builder's grant is the same list, drizzle/0161); never `previous` or `updated_by`. */
 const designCols = { header: checkoutDesign.header, back: checkoutDesign.backLink, rows: checkoutDesign.policyRows, trust: checkoutDesign.trust, heading: checkoutDesign.heading, thanks: checkoutDesign.thanks }
 
 /** The store's saved design inside the caller's transaction, or null when none is saved (the pages draw the default). */
@@ -194,7 +195,7 @@ export async function builderBrandWith(tx: Tx, t: string): Promise<BrandRecord> 
   return recordOf(row, s?.logoUrl ?? null) ?? emptyRecord(DEFAULT_PALETTE, s?.logoUrl ?? null)
 }
 
-/** What a Builder reads for the checkout preview (as frata_builder, drizzle/0156): the live design's named columns and
+/** What a Builder reads for the checkout preview (as frata_builder, drizzle/0161): the live design's named columns and
  *  the store's public delivery, returns and Pay on delivery facts. Never the GSTIN, the legal details or a waiting change. */
 export async function builderCheckoutWith(tx: Tx, t: string) {
   const [design, [f]] = await Promise.all([

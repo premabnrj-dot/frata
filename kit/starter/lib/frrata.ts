@@ -6,8 +6,23 @@ import { cookies } from 'next/headers'
 const ORIGIN = process.env.FRRATA_API_ORIGIN || 'https://api.frrata.shop'
 const KEY = process.env.FRRATA_KEY || ''
 const VERSION = '2026-12'
-// A test key (frs_test_…, before the store opens) reads drafts too: never cached, so an edit shows at once.
-const READ: RequestInit = KEY.startsWith('frs_test_') ? { cache: 'no-store' } : { next: { revalidate: 60 } }
+// A test key (frs_test_…, before the store opens) reads drafts too. On your computer it is never cached, so an edit
+// shows at once; deployed (a preview), its reads are kept 15 s so a busy preview stays inside the key's limit.
+const DEPLOYED = !!process.env.VERCEL // Vercel sets it at build and at run; nothing sets it on your computer
+// FRRATA_KEY_MODE=header: a build key (Studio, a preview, your computer through `npx frrata dev`) travels in the
+// Frrata-Key header, never the address. It reads drafts and hidden pages too and works from a server only; like a test
+// key, it is never cached on your computer and kept 15 s when deployed (the cache is keyed by the header too).
+const HEADER = process.env.FRRATA_KEY_MODE === 'header'
+const DRAFTS = HEADER || KEY.startsWith('frs_test_')
+const READ: RequestInit = {
+  ...(DRAFTS ? (DEPLOYED ? { next: { revalidate: 15 } } : { cache: 'no-store' as const }) : { next: { revalidate: 60 } }),
+  ...(HEADER ? { headers: { 'Frrata-Key': KEY } } : {}),
+}
+// A test or build key is limited to 300 reads a minute. Past it (429) a read gives this server's last good answer for
+// the same address, up to 5 minutes old, rather than failing the page.
+const lastGood = new Map<string, { at: number; body: unknown }>()
+const KEEP_MS = 5 * 60_000
+const at = (path: string) => (HEADER ? `${ORIGIN}/${VERSION}/${path}` : `${ORIGIN}/${VERSION}/k/${KEY}/${path}`)
 export const PREVIEW_COOKIE = '__Host-frrata-preview'
 
 export type Image = { sizes: { width: number; url: string }[]; width: number; height: number; alt: string; colour: string | null }
@@ -41,15 +56,23 @@ export type Faq = { handle: string; title: string; items: FaqItem[] }
 /** One read. Null for any 404 (unknown, deleted, hidden: the API gives one answer for all). */
 export async function api<T>(path: string): Promise<T | null> {
   if (!KEY) throw new Error('FRRATA_KEY is not set')
-  const res = await fetch(`${ORIGIN}/${VERSION}/k/${KEY}/${path}`, READ)
+  const res = await fetch(at(path), READ)
   if (res.status === 404) return null
+  const kept = res.status === 429 ? lastGood.get(path) : undefined
+  if (kept && Date.now() - kept.at < KEEP_MS) return kept.body as T
   if (!res.ok) throw new Error(`Frrata ${res.status}`)
-  return res.json() as Promise<T>
+  const body = (await res.json()) as T
+  if (DRAFTS) {
+    if (lastGood.size >= 500) lastGood.delete(lastGood.keys().next().value as string) // a bound: the oldest goes first
+    lastGood.delete(path) // re-set at the end, so the oldest stays first
+    lastGood.set(path, { at: Date.now(), body })
+  }
+  return body
 }
 
 /** A hidden page while the brand previews it (/frrata-preview set the cookie): never cached, the token in a header. */
 export async function previewOr<T>(path: string): Promise<T | null> {
-  const token = (await cookies()).get(PREVIEW_COOKIE)?.value
+  const token = HEADER ? null : (await cookies()).get(PREVIEW_COOKIE)?.value // a build key already reads hidden pages
   if (!token) return api<T>(path)
   const res = await fetch(`${ORIGIN}/${VERSION}/k/${KEY}/preview/${path}`, { cache: 'no-store', headers: { 'Frrata-Preview': token } })
   return res.ok ? (res.json() as Promise<T>) : api<T>(path)

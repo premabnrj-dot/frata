@@ -28,11 +28,13 @@ export const GUIDES: Guide[] = [
     { p: 'The starter is a working site. Its `CLAUDE.md` gives Claude Code the rules, and `npm run check` enforces them.' },
     { code: `git clone ${STARTER_URL} my-shop && cd my-shop\nnpm install\necho 'FRRATA_KEY=frs_test_…' > .env.local\nnpm run dev` },
     { p: 'Use a test key from Settings › Website. It reads drafts too and works from localhost until the store opens.' },
+    { p: 'On a preview address, read the store on your site’s server. A browser there gets no answer.' },
     { p: 'Open Claude Code in the folder and ask for the change. Work on a branch. Your host builds a preview of each branch.' },
     { p: 'Merge to publish. Put the live key in the host’s production settings, never in the code.' },
   ] },
   { slug: 'keys', title: 'Keys', lead: 'A key names one store. Put the live key in your site’s server settings, never in its code.', body: [
-    { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.']], head: ['Key', 'Reads'] },
+    { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.'],
+      ['frs_build_…', 'Build. Sent in the Frrata-Key header to /2026-12/<resource>, never in the address. Reads drafts and hidden pages. Never cached. Answers no browser. Ends after 24 hours, a preview’s after 30 days at most.']], head: ['Key', 'Reads'] },
     { p: 'Every refusal is the same 404: an unknown, deleted or expired key, a product of another store, a draft under a live key.' },
     { p: 'A test key works before any domain is connected.' },
     { p: 'A live key works once the Website points at a connected domain.' },
@@ -58,7 +60,7 @@ export const GUIDES: Guide[] = [
     { p: 'A change in the console reaches the API within seconds. A drop, an offer or a brand season starting reaches it within five minutes.' },
     { p: 'Search and filters are cached for 60 seconds per address. Send filter parameters in their order and leave out defaults.' },
     { p: 'Cache answers on your site for a minute. Read again after that.' },
-    { p: 'Too many requests from one network get 429 with Retry-After.' },
+    { p: 'Too many requests from one network, or under one Test or build key, get 429 with Retry-After.' },
   ] },
   { slug: 'preview', title: 'Preview', lead: 'Show a hidden page on the brand’s site before shoppers see it.', body: [
     { p: 'In Content › Pages the brand picks Preview on website. Frrata opens your site at /frrata-preview with a token for 10 minutes.' },
@@ -85,7 +87,9 @@ const note = (s: Schema): string => s.description ?? s.anyOf?.find((x) => x.desc
 export function referencePages(): RefPage[] {
   const doc = openApi() as unknown as { paths: Record<string, { get: { summary: string; parameters?: { name: string; in: string; description?: string; schema?: Schema }[]; responses: Record<string, { description: string; content?: Record<string, { schema: Schema }> }> } }> }
   const rank = (slug: string) => { const i = ORDER.indexOf(slug); return i < 0 ? ORDER.length : i }
-  return Object.entries(doc.paths).map(([path, { get }]) => {
+  // One page per resource: the header tree's paths (a build key in Frrata-Key, G·2) are the same resources, said once in
+  // the guides and in the description's securitySchemes, never a second page per path.
+  return Object.entries(doc.paths).filter(([path]) => path.startsWith('/k/')).map(([path, { get }]) => {
     const schema = get.responses['200']?.content?.['application/json']?.schema ?? {}
     const fields: RefField[] = []
     for (const [k, v] of Object.entries(schema.properties ?? {})) {
