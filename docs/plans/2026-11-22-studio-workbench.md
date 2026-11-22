@@ -277,6 +277,7 @@ Check code 10 and Give key 5 a minute a person, failing closed. Any live support
 | Delete key · confirm: "Delete key" as the primary button | The destructive button (red), "Keep key" secondary with focus | A delete is the destructive variant everywhere in the console and workspace (design language § Neel primitives: Button) | no |
 | Your computers: the row's "Delete key" as a plain secondary button | The danger button (red text), as Passkeys' Delete | A row action that loses something is the danger variant in the workspace (design language § Neel primitives: Button; design-system review) | no |
 | Undrawn: where Give key's reason sits when it is off | Beside the button, wrapping under it in a narrow dialog (Button's `reason`) | The primitive ties the reason to the button for a screen reader; no drawing for the off state | no |
+| Undrawn: "Started somewhere else" gives a key with one click | A checkbox "This is my computer" when the code started from another network or one Frrata can't tell (read as another); Give key off until it is ticked ("Tick This is my computer first."); the server refuses Give key from another network without it | Security review MED-1: a code a phisher sends must not be one click from a key | yes, 2026-11-22 |
 | Four screens § 2, "The store’s owner · Settings › Website, as built": the key row with a plain Build tag, "Made by …, Neel Studio · ends in 21 hours" and a secondary Delete key | The row as built from the one-address mockup § 4 (approved earlier): a chip "Build · ends 23 Nov", the "Made by …" line, a "Used …" line and the red Delete | The two approved mockups draw the same row differently; the later one labels its drawing "as built", so the earlier, fuller drawing governs (mockup-parity, 2026-11-22) | no |
 
 Proposed for `docs/decisions/accepted-findings.md` (the owner's words go in its Ruling column; not added until then):
@@ -284,6 +285,4 @@ Proposed for `docs/decisions/accepted-findings.md` (the owner's words go in its 
 |---|---|---|
 | A device code's network is kept as an unkeyed sha256 of its /64 or /24, so a reader of the row recovers the /24 (security review LOW-2, G·3 page) | Accepted while `build_key_device_codes` has no reader but its definers (no role's grant, proof § 81) and a row is gone at the first daily run after its 10 minutes; a keyed hash (a server secret) if the row ever lives longer than a day or gains a reader (orchestrator, 2026-11-22, for the owner) | security-reviewer, 2026-11-22 |
 
-Waiting on the owner (not built): security review MED-1, a "This is my computer" checkbox in the dialog when the code
-started on another or an unknown network (unknown read as another), Give key off until it is ticked; the orchestrator
-recommends it.
+Security review MED-1, built (owner, 2026-11-22: "yes, this is my computer"): see the Deviations row above.

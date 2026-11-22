@@ -25,6 +25,7 @@ const SAY: Record<Why, string> = {
   no_passkey: 'Add a passkey to give a key.',
   not_confirmed: 'Not confirmed. Try again, or use your other passkey.',
   sign_in_again: 'Sign in again.',
+  not_mine: 'Tick This is my computer first.',
   builder: 'Only a Partner owner or a Lead can sign in a computer.',
 }
 const fullFor = (store: string) => `${store} has its limit of keys. Delete one first.`
@@ -74,11 +75,13 @@ export function SignInComputer() {
 function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; at: Date }; onClose: () => void; onDone: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const elsewhere = look.sameNetwork === false
-  const off = look.full ? fullFor(look.store) : !look.hasPasskey ? SAY.no_passkey : undefined
+  // Another network, or one Frrata can't tell: marked, and Give key waits for "This is my computer" (owner, 2026-11-22).
+  const elsewhere = look.sameNetwork !== true
+  const [mine, setMine] = useState(false)
+  const off = look.full ? fullFor(look.store) : !look.hasPasskey ? SAY.no_passkey : elsewhere && !mine ? SAY.not_mine : undefined
   const give = async () => {
     setBusy(true); setError(null)
-    const o = await giveOptionsAction(look.code).catch(() => ({ ok: false as const, why: 'busy' as const }))
+    const o = await giveOptionsAction(look.code, mine).catch(() => ({ ok: false as const, why: 'busy' as const }))
     if (!o.ok) { setBusy(false); return setError(o.why === 'full' ? fullFor(look.store) : SAY[o.why]) }
     let response
     try { response = await startAuthentication({ optionsJSON: o.value as Parameters<typeof startAuthentication>[0]['optionsJSON'] }) } catch (e) {
@@ -100,12 +103,17 @@ function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; a
         <dt className="text-muted-foreground">Code</dt><dd className="font-mono">{look.code.replace(/^(\w{4})-?(\w{4})$/, '$1-$2')}</dd>
         <dt className="text-muted-foreground">Started</dt>
         <dd className="flex flex-wrap items-center gap-2">{startedWords(new Date(look.startedAt), look.at)}
-          {look.sameNetwork === true && <Badge tone="ok">Your network</Badge>}
-          {elsewhere && <Badge tone="warn">Another network</Badge>}</dd>
+          {elsewhere ? <Badge tone="warn">Another network</Badge> : <Badge tone="ok">Your network</Badge>}</dd>
         {!elsewhere && <><dt className="text-muted-foreground">The key</dt><dd>Reads the store’s products, drafts too. Ends in 24 hours.</dd></>}
       </dl>
       {/* As drawn: the warning under the facts, just above the buttons. */}
       <p className="mt-3 text-sm text-muted-foreground">{elsewhere ? 'This code was not started from your network. Frrata never asks you for a code.' : 'Frrata never asks you for a code. Type only one from your own screen.'}</p>
+      {elsewhere && (
+        <label className="mt-3 flex min-h-6 items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={mine} onChange={(e) => { setMine(e.target.checked); setError(null) }} />
+          This is my computer
+        </label>
+      )}
     </Dialog>
   )
 }

@@ -96,8 +96,9 @@ The nine rules (board Rules), binding on every Admin screen and mockup:
   (store, a Build tag, "Confirmed <momentIN> · ends in 21 hours", Delete key). Mistakes stay at the field ("Type the 8
   characters from your terminal.", "This code has ended. Run the command again for a new one." for ended, used or not a
   client's, "Too many tries. Wait a minute."). The confirm dialog lists Store, Code, Started (with an ok chip "Your
-  network" or a warn chip "Another network") and The key, with "Frrata never asks you for a code." From another network
-  "Don’t give key" is the primary button. Give key asks for the passkey there and then; a store at its limit or a person
+  network" or a warn chip "Another network") and The key, with "Frrata never asks you for a code." From another network,
+  or one Frrata can't tell, "Don’t give key" is the primary button and a checkbox "This is my computer" must be ticked
+  before Give key turns on (owner, 2026-11-22; the server refuses it too). Give key asks for the passkey there and then; a store at its limit or a person
   with no passkey turns Give key off with its reason. A Builder's page is one panel: "Only a Partner owner or a Lead can
   sign in a computer."
 - **F3 store switcher**: in the account block at every width and in More on

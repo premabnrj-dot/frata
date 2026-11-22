@@ -79,11 +79,14 @@ describe.skipIf(!host)('the device sign-in', () => {
       expect(await checkDeviceCode(me, s.code, otherIp)).toMatchObject({ ok: true, look: { sameNetwork: false } })
 
       // Give key: the device signs this code's challenge; a signature over another challenge is refused.
-      const o1 = await giveOptions(me, s.code, site)
+      // From another network without "This is my computer" ticked: no challenge (owner, 2026-11-22); ticked, one.
+      expect(await giveOptions(me, s.code, site, otherIp, false)).toEqual({ ok: false, why: 'not_mine' })
+      expect((await giveOptions(me, s.code, site, otherIp, true)).ok).toBe(true)
+      const o1 = await giveOptions(me, s.code, site, ip, false)
       expect(o1.ok).toBe(true)
       if (!o1.ok) return
       expect(await giveVerify(me, s.code, key.assert(b64u('not the challenge')) as never, site)).toEqual({ ok: false, why: 'not_confirmed' })
-      const o2 = await giveOptions(me, s.code, site)
+      const o2 = await giveOptions(me, s.code, site, ip, false)
       if (!o2.ok) return
       expect(await giveVerify(me, s.code, key.assert((o2.options as { challenge: string }).challenge) as never, site)).toEqual({ ok: true, store: 'Dev' })
       expect(await checkDeviceCode(me, s.code, ip)).toEqual({ ok: false, why: 'ended' }) // used
@@ -108,7 +111,7 @@ describe.skipIf(!host)('the device sign-in', () => {
       // A store that reached its ceiling after Give key: the poll says "full", and the code stays claimable while live.
       const s2 = await startDeviceSignIn(slug, ip)
       if (!s2) return
-      const o3 = await giveOptions(me, s2.code, site)
+      const o3 = await giveOptions(me, s2.code, site, ip, false)
       if (!o3.ok) return
       expect(await giveVerify(me, s2.code, key.assert((o3.options as { challenge: string }).challenge) as never, site)).toEqual({ ok: true, store: 'Dev' })
       await su`insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at)

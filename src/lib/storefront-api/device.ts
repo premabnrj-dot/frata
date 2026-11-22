@@ -44,7 +44,7 @@ export async function startDeviceSignIn(slug: string, ip: string): Promise<Start
 }
 
 /** Why Check code or Give key said no, as the page words it (four screens § 2 States). */
-export type DeviceRefusal = 'bad_code' | 'ended' | 'busy' | 'full' | 'no_passkey' | 'not_confirmed' | 'sign_in_again'
+export type DeviceRefusal = 'bad_code' | 'ended' | 'busy' | 'full' | 'no_passkey' | 'not_confirmed' | 'sign_in_again' | 'not_mine'
 export type Checked = { ok: true; look: CodeLook } | { ok: false; why: DeviceRefusal }
 
 /** Check code: what the dialog shows for the code the person typed, from the network they are on now. */
@@ -90,10 +90,18 @@ function codeCeremony(p: PartnerSession, codeHash: string, given: { store?: stri
 const asRefusal = (error: string): DeviceRefusal => CODES[error] ?? 'not_confirmed'
 
 /** Give key, step 1: the options the browser signs, a challenge for this code alone. */
-export async function giveOptions(p: PartnerSession, typed: string, site: PasskeySite): Promise<{ ok: true; options: unknown } | { ok: false; why: DeviceRefusal }> {
+/** `mine`: the person ticked "This is my computer". Without it a code started from another or an unknown network gets no
+ *  challenge (security review MED-1, owner 2026-11-22: "yes, this is my computer"); the network is read again here,
+ *  never taken from the page. */
+export async function giveOptions(p: PartnerSession, typed: string, site: PasskeySite, ip: string, mine: boolean): Promise<{ ok: true; options: unknown } | { ok: false; why: DeviceRefusal }> {
   const code = deviceCodeOf(typed)
   if (!code) return { ok: false, why: 'bad_code' }
   if (!(await withinLimit(LIMITS.deviceGivePerson, p.userId, new Date(), true))) return { ok: false, why: 'busy' }
+  if (!mine) {
+    const look = await deviceCodeLook(p, sha(code), netHash(ip)).catch((err) => { refusalOf(err); return null })
+    if (!look) return { ok: false, why: 'ended' }
+    if (look.sameNetwork !== true) return { ok: false, why: 'not_mine' }
+  }
   const r = await codeCeremony(p, sha(code), {}).confirmOptions({ userId: p.userId, sessionId: p.sessionId }, site)
   return r.ok ? { ok: true, options: r.value } : { ok: false, why: asRefusal(r.error) }
 }

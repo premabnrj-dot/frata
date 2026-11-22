@@ -42,15 +42,16 @@ export async function checkCodeAction(typed: unknown): Promise<DeviceAnswer<Code
   return r.ok ? { ok: true, value: r.look } : r
 }
 
-/** Give key, step 1: the options the device signs (a challenge for this code alone). */
-export async function giveOptionsAction(typed: unknown): Promise<DeviceAnswer<unknown>> {
+/** Give key, step 1: the options the device signs (a challenge for this code alone). `mine`: "This is my computer" ticked
+ *  (needed when the code started from another or an unknown network; the server reads the network itself). */
+export async function giveOptionsAction(typed: unknown, mine: unknown = false): Promise<DeviceAnswer<unknown>> {
   const code = Code.safeParse(typed)
   if (!code.success) return { ok: false, why: 'bad_code' }
   const w = await who()
   if (!w.ok) return w
   const s = await site()
   if (!s) return { ok: false, why: 'not_confirmed' }
-  const r = await giveOptions(w.p, code.data, s)
+  const r = await giveOptions(w.p, code.data, s, await clientIp(), mine === true)
   return r.ok ? { ok: true, value: r.options } : r
 }
 
