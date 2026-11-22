@@ -169,8 +169,10 @@ export const LIMITS = {
   // G·2: build keys minted per store (a session, a preview, a developer's computer each make one), failing closed.
   apiBuildKeyShop: { action: 'api_build_key:shop', max: 30, windowSeconds: 3600 },
   // G·3, a developer's device sign-in, all failing closed: starts per network (each is a row for 10 minutes), the CLI's
-  // polls per device (one every 5 s for 10 minutes is 120), confirms per person.
+  // polls per network first (any 43-character string is a well-formed secret) then per device (one every 5 s for 10
+  // minutes is 120), confirms per person.
   deviceStartIp: { action: 'device_start:ip', max: 20, windowSeconds: 600 },
+  devicePollIp: { action: 'device_poll:ip', max: 600, windowSeconds: 600 },
   devicePollDevice: { action: 'device_poll:device', max: 150, windowSeconds: 600 },
   deviceConfirmPerson: { action: 'device_confirm:person', max: 10, windowSeconds: 3600 },
   // Ask the owner (PP1): per person in a store ("<tenant>:<user>"), failing closed. The definer writes at most one line a

@@ -11,8 +11,7 @@ import { KEY_NAME_MAX } from './keys'
 
 const ALPHABET = 'BCDFGHJKLMNPQRSTVWXZ23456789' // 28 characters
 const B64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
-/** A sign-in lives 10 minutes (the database holds the same); the CLI polls no faster than every 5 seconds. */
-export const DEVICE_CODE_MINUTES = 10
+/** The CLI polls no faster than every 5 seconds (a sign-in lives 10 minutes: the database's CHECK and definer). */
 export const DEVICE_POLL_SECONDS = 5
 /** The confirm page asks for a passkey check no older than this (the amendment's "in the last 5 minutes"). */
 export const DEVICE_CONFIRM_FRESH_MS = 5 * 60_000

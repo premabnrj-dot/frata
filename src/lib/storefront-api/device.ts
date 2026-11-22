@@ -1,11 +1,11 @@
 import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
-import { auditEvents } from '@/lib/db/schema'
-import { deviceCodeApprove, deviceCodeClaim, deviceCodeStart } from '@/lib/db/device-codes'
+import { deviceCodeApprove, deviceCodeClaim, deviceCodePeek, deviceCodeStart, deviceCodeUnclaim } from '@/lib/db/device-codes'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { mintBuildKey } from './build-keys'
+import { holds } from '@/domains/tenancy/roles'
 import { DEVICE_CONFIRM_FRESH_MS, DEVICE_POLL_SECONDS, deviceCodeOf, deviceKeyName, newDeviceCode, newDeviceSecret } from '@/domains/storefront-api/device'
 import { errName } from '@/lib/log'
 
@@ -15,8 +15,9 @@ import { errName } from '@/lib/log'
 // waits for its mockup (orchestrator ruling B1, 2026-11-22), and calls confirmDeviceCode when it lands.
 //
 //   start   (the CLI, no sign-in)  → a device secret for the CLI and a code for the person; stored as sha256s, 10 minutes.
-//   confirm (the person, signed in, a passkey check in the last 5 minutes) → binds the code to them and the store the
-//            CLI named, only if they hold a members row there; limited per person; an audit row in that store.
+//   look    (the person, signed in)  → the store the code names, if they hold api.manage there (the page shows it).
+//   confirm (the person, a passkey check in the last 5 minutes) → binds the code to them and the store the CLI named,
+//            only with api.manage there; limited per person; the store's audit row in the same transaction.
 //   poll    (the CLI, its secret)  → pending, or the confirmed sign-in claimed ONCE: mintBuildKey as that person
 //            (purpose developer, 24 hours), the key in the answer once, never stored, logged or shown again.
 // Every limit fails closed. No answer says whether a store, a code or a person exists.
@@ -34,38 +35,52 @@ export async function startDeviceSignIn(slug: string, ip: string): Promise<Start
   return { device, code, verify: `https://${CONSOLE_HOST}/console/settings/developer`, expiresAt, interval: DEVICE_POLL_SECONDS }
 }
 
-export type Confirmed = 'ok' | 'check_again' | 'bad_code' | 'busy' | 'not_found'
+/** What the confirm page shows before the person confirms: the store the CLI named, if they may make a key there. */
+export type CodeFor = { storeName: string } | 'bad_code' | 'not_found' | 'not_allowed'
+export async function deviceCodeFor(userId: string, typed: string): Promise<CodeFor> {
+  const code = deviceCodeOf(typed)
+  if (!code) return 'bad_code'
+  const peek = await deviceCodePeek(userId, sha(code))
+  if (!peek) return 'not_found'
+  return holds(peek.role, 'api.manage') ? { storeName: peek.storeName } : 'not_allowed'
+}
+
+export type Confirmed = 'ok' | 'check_again' | 'bad_code' | 'busy' | 'not_found' | 'not_allowed'
 /**
- * The person confirms the code their CLI shows. `who` is the signed-in person and when their passkey last checked (the
- * page's guard gives both); the store is the one the CLI named, never one the page sends.
+ * The person confirms the code their CLI shows. `who` is the signed-in person and when their passkey last checked: the
+ * page's guard derives both from the session, never the request. The store is the one the CLI named, never one the
+ * page sends; the person must hold `api.manage` there (mintBuildKey's rule), checked before anything is written. The
+ * approval and the store's audit row are one transaction (the definer).
  */
 export async function confirmDeviceCode(who: { userId: string; email: string; confirmedAt: Date | null }, typed: string, now: Date): Promise<Confirmed> {
   if (!who.confirmedAt || now.getTime() - who.confirmedAt.getTime() > DEVICE_CONFIRM_FRESH_MS) return 'check_again'
   const code = deviceCodeOf(typed)
   if (!code) return 'bad_code'
   if (!(await withinLimit(LIMITS.deviceConfirmPerson, who.userId, now, true))) return 'busy'
-  const tenantId = await deviceCodeApprove(who.userId, sha(code))
-  if (!tenantId) return 'not_found'
-  await withTenant(tenantId, (tx) => tx.insert(auditEvents).values({ tenantId, actorUserId: who.userId, actorEmail: who.email, actorKind: 'member',
-    action: 'build_key.device_confirmed', target: 'developer', detail: { fields: ['device'] } }))
-  return 'ok'
+  const peek = await deviceCodePeek(who.userId, sha(code))
+  if (!peek) return 'not_found'
+  if (!holds(peek.role, 'api.manage')) return 'not_allowed'
+  return (await deviceCodeApprove(who.userId, sha(code), who.email)) ? 'ok' : 'not_found'
 }
 
 export type Polled = { status: 'pending' } | { status: 'ok'; key: string; expiresAt: string } | { status: 'busy' } | { status: 'refused' } | null
 /** The CLI's poll with its secret. Null: unknown, past its 10 minutes or already claimed (one answer for all). */
-export async function pollDeviceSignIn(device: string): Promise<Polled> {
+export async function pollDeviceSignIn(device: string, ip: string): Promise<Polled> {
   const hash = sha(device)
-  if (!(await withinLimit(LIMITS.devicePollDevice, hash, new Date(), true))) return { status: 'busy' }
+  const now = new Date() // clock-ok: server, a limit window
+  if (!(await withinLimit(LIMITS.devicePollIp, ip, now, true)) || !(await withinLimit(LIMITS.devicePollDevice, hash, now, true))) return { status: 'busy' }
   const claim = await deviceCodeClaim(hash)
   if (!claim) return null
   if (claim.state === 'pending') return { status: 'pending' }
+  let minted: Awaited<ReturnType<typeof mintBuildKey>> | null = null
   try {
-    const minted = await withTenant(claim.tenantId, (tx) => mintBuildKey(tx, { tenantId: claim.tenantId, userId: claim.userId, email: claim.email, role: claim.role, support: false },
+    minted = await withTenant(claim.tenantId, (tx) => mintBuildKey(tx, { tenantId: claim.tenantId, userId: claim.userId, email: claim.email, role: claim.role, support: false },
       { purpose: 'developer', name: deviceKeyName(claim.email) }))
-    if (minted.ok) return { status: 'ok', key: minted.key, expiresAt: minted.expiresAt }
-    return minted.why === 'busy' || minted.why === 'full' ? { status: 'busy' } : { status: 'refused' }
   } catch (err) {
     console.error('[device] mint', errName(err))
-    return { status: 'busy' }
   }
+  if (minted?.ok) return { status: 'ok', key: minted.key, expiresAt: minted.expiresAt }
+  // Not minted: the code is given back while it is live, so the CLI's next poll tries again (impact review 2026-11-22).
+  await deviceCodeUnclaim(hash).catch((e) => console.error('[device] unclaim', errName(e)))
+  return minted && minted.why === 'not_allowed' ? { status: 'refused' } : { status: 'busy' }
 }

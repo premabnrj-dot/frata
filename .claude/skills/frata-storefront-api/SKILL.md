@@ -124,9 +124,10 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    CLI POSTs `/api/dev/device/start` (a store slug; no shop read, the same answer for any slug, `deviceStartIp`) and
    gets a device secret and an 8-character code; only their sha256s are stored in `build_key_device_codes` (no grant to
    any role; the `app_device_code_*` definers, `src/lib/db/device-codes.ts`), for 10 minutes. `confirmDeviceCode`
-   (`src/lib/storefront-api/device.ts`, for the future page) needs a passkey check in the last 5 minutes and a members
-   row on the store the CLI named, never one the page sends; audited. `/api/dev/device/poll` claims a confirmed code
-   ONCE and mints through `mintBuildKey` as that person (developer, 24 hours).
+   (`src/lib/storefront-api/device.ts`, for the future page; `deviceCodeFor` shows the store's name first) needs a
+   passkey check in the last 5 minutes and `api.manage` on the store the CLI named, never one the page sends; the
+   approval and its audit row are one definer. `/api/dev/device/poll` (per network, then per device) claims a confirmed
+   code ONCE and mints through `mintBuildKey` as that person (developer, 24 hours); a mint that fails gives it back.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run

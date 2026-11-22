@@ -4409,7 +4409,7 @@ do $$ begin
   if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
              where has_table_privilege(r, 'build_key_device_codes', p))
   then raise exception 'FAIL: a role reaches build_key_device_codes'; end if;
-  if exists (select 1 from unnest(array['app_device_code_start(text, text, text)', 'app_device_code_approve(uuid, text)', 'app_device_code_claim(text)']) f
+  if exists (select 1 from unnest(array['app_device_code_start(text, text, text)', 'app_device_code_peek(uuid, text)', 'app_device_code_approve(uuid, text, text)', 'app_device_code_claim(text)', 'app_device_code_unclaim(text)']) f
              where not (select prosecdef from pg_proc where oid = f::regprocedure)
                 or (select proconfig from pg_proc where oid = f::regprocedure) is distinct from array['search_path=""']
                 or not has_function_privilege('frata_app', f::regprocedure, 'execute')
@@ -4429,25 +4429,35 @@ do $$ declare t uuid; c record; n int; begin
   select * into c from app_device_code_claim(repeat('a', 63) || '1');
   if c.state is distinct from 'pending' then raise exception 'FAIL: an unconfirmed sign-in is not pending'; end if;
   -- a person with no members row on that store confirms nothing; the store's partner owner (a member of E) does
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1') is not null then raise exception 'FAIL: a non-member confirmed a sign-in for E'; end if;
-  t := app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1');
+  if exists (select 1 from app_device_code_peek('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1')) then raise exception 'FAIL: a non-member sees what a code for E names'; end if;
+  if (select store_name from app_device_code_peek('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1')) is distinct from 'Proof E81' then raise exception 'FAIL: E''s member does not see E named'; end if;
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1', 'gone@studio81.test') is not null then raise exception 'FAIL: a non-member confirmed a sign-in for E'; end if;
+  t := app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1', 'owner@studio81.test');
   if t is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s member did not confirm E''s sign-in'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1') is not null then raise exception 'FAIL: a code confirmed twice'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '3') is not null then raise exception 'FAIL: a code for an unknown store confirmed'; end if;
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1', 'x') is not null then raise exception 'FAIL: a code confirmed twice'; end if;
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '3', 'x') is not null then raise exception 'FAIL: a code for an unknown store confirmed'; end if;
   -- claimed once, as the person on the store now
   select * into c from app_device_code_claim(repeat('a', 63) || '1');
   if c.state is distinct from 'approved' or c.tenant_id is distinct from 'e8100000-0000-0000-0000-000000000001' or c.user_id is distinct from 'e8100000-0000-0000-0000-0000000000f1' or c.role is distinct from 'partner'
   then raise exception 'FAIL: the claim is not the confirming person on E'; end if;
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
   if n <> 0 then raise exception 'FAIL: a sign-in claimed twice'; end if;
+  -- a claim given back (its mint failed) is claimable once more, while live
+  perform app_device_code_unclaim(repeat('a', 63) || '1');
+  select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
+  if n <> 1 then raise exception 'FAIL: a given-back claim is not claimable again'; end if;
   select count(*) into n from app_device_code_claim(repeat('f', 64));
   if n <> 0 then raise exception 'FAIL: an unknown device answered'; end if;
 end $$;
 commit;
+do $$ begin
+  if (select count(*) from audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'build_key.device_confirmed' and actor_user_id = 'e8100000-0000-0000-0000-0000000000f1') <> 1
+  then raise exception 'FAIL: a confirmed sign-in did not leave exactly one audit row'; end if;
+end $$;
 update build_key_device_codes set created_at = now() - interval '11 minutes', expires_at = now() - interval '1 minute' where device_hash = repeat('a', 63) || '2';
 begin; set local role frata_app;
 do $$ declare n int; begin
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '2') is not null then raise exception 'FAIL: an ended code confirmed'; end if;
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '2', 'x') is not null then raise exception 'FAIL: an ended code confirmed'; end if;
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '2');
   if n <> 0 then raise exception 'FAIL: an ended sign-in answered'; end if;
 end $$;

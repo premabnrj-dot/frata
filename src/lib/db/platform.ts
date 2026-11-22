@@ -376,4 +376,3 @@ export async function deleteEndedBuildKeys(): Promise<number> {
   const rows = await db().execute<{ n: number }>(sql`select app_delete_ended_build_keys() as n`)
   return Number(rows[0]?.n ?? 0)
 }
-

@@ -9,8 +9,10 @@
 -- ONCE and the server mints the build key (purpose developer, 24 hours) as that person through mintBuildKey. No Frrata
 -- role reads or writes the table: these three definers are the only door, frata_app alone runs them.
 --   app_device_code_start(device, code, slug)   a new sign-in, the same answer for any well-formed store slug
---   app_device_code_approve(uid, code)          binds a live, unclaimed code to its store for a member of it
+--   app_device_code_peek(uid, code)             what a live code names for a member of its store (store, role); no write
+--   app_device_code_approve(uid, code, email)   binds it to the person and the store, with the store's audit row
 --   app_device_code_claim(device)               the approved code, once: the store and the person
+--   app_device_code_unclaim(device)             a claim whose mint failed is given back while the code is live
 -- Codes past their 10 minutes answer nothing; the daily delete removes them with ended build keys.
 -- =============================================================================
 create or replace function app_device_code_start(p_device_hash text, p_code_hash text, p_slug text) returns timestamptz
@@ -26,7 +28,20 @@ begin
   return v_at;
 end $$;
 --> statement-breakpoint
-create or replace function app_device_code_approve(p_uid uuid, p_code_hash text) returns uuid
+-- What a code names, before anyone confirms it (impact review 2026-11-22): the store and the caller's role there, only for
+-- a caller who holds a members row on the store the CLI named and only while the code is live and unconfirmed. Writes
+-- nothing. The confirm page shows the store's name from it, and the caller's role decides (api.manage) before approve.
+create or replace function app_device_code_peek(p_uid uuid, p_code_hash text) returns table (tenant_id uuid, store_name text, role text)
+  language sql stable security definer set search_path = '' as $$
+  select t.id, t.name, m.role
+    from public.build_key_device_codes c
+    join public.tenants t on t.slug = c.store_slug
+    join public.members m on m.tenant_id = t.id and m.user_id = p_uid
+   where c.code_hash = p_code_hash and c.expires_at > now() and c.approved_at is null and c.claimed_at is null
+$$;
+--> statement-breakpoint
+-- Binds the code to the person and its store, and writes the store's audit row in the same transaction (one or neither).
+create or replace function app_device_code_approve(p_uid uuid, p_code_hash text, p_email text) returns uuid
   language plpgsql volatile security definer set search_path = '' as $$
 declare v_id uuid; v_tenant uuid;
 begin
@@ -38,6 +53,8 @@ begin
    for update of c;
   if v_id is null then return null; end if;
   update public.build_key_device_codes set approved_by = p_uid, approved_at = now(), tenant_id = v_tenant where id = v_id;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+  values (v_tenant, p_uid, left(p_email, 320), 'member', 'build_key.device_confirmed', 'developer', '{"fields":["device"]}'::jsonb);
   return v_tenant;
 end $$;
 --> statement-breakpoint
@@ -57,10 +74,18 @@ begin
    where m.tenant_id = c.tenant_id and m.user_id = c.approved_by;
 end $$;
 --> statement-breakpoint
-revoke all on function app_device_code_start(text, text, text), app_device_code_approve(uuid, text), app_device_code_claim(text)
+-- A claim whose mint could not finish (the store's limit, its ceiling, a failure) is given back while the code is still
+-- live, so the CLI's next poll tries again; a key once minted is never given back (the poll answers it at once).
+create or replace function app_device_code_unclaim(p_device_hash text) returns void
+  language sql volatile security definer set search_path = '' as $$
+  update public.build_key_device_codes set claimed_at = null
+   where device_hash = p_device_hash and claimed_at is not null and expires_at > now()
+$$;
+--> statement-breakpoint
+revoke all on function app_device_code_start(text, text, text), app_device_code_peek(uuid, text), app_device_code_approve(uuid, text, text), app_device_code_claim(text), app_device_code_unclaim(text)
   from public, anon, authenticated, service_role, frata_admin, frata_builder;
 --> statement-breakpoint
-grant execute on function app_device_code_start(text, text, text), app_device_code_approve(uuid, text), app_device_code_claim(text) to frata_app;
+grant execute on function app_device_code_start(text, text, text), app_device_code_peek(uuid, text), app_device_code_approve(uuid, text, text), app_device_code_claim(text), app_device_code_unclaim(text) to frata_app;
 --> statement-breakpoint
 create or replace function app_delete_ended_build_keys() returns integer
   language sql volatile security definer set search_path = '' as $$
