@@ -50,3 +50,27 @@ export const storefrontKeys = pgTable('storefront_keys', {
   check('storefront_keys_revoked', sql`(${t.revokedAt} is null) = (${t.revokedBy} is null)`),
   check('storefront_keys_version', sql`${t.lastSeenVersion} is null or ${t.lastSeenVersion} ~ '^[0-9]{4}-[0-9]{2}$'`),
 ])
+
+// G·3: a developer's device sign-in for a build key (ADR-0018's build-key amendment, point 1; Studio spec § 10). Platform
+// scope until confirmed: the CLI holds a device secret and shows a short code; only their sha256 hex is stored, with the
+// store the CLI named, for 10 minutes. A person confirms the code (a passkey check in the last 5 minutes), which binds it
+// to them and that store; the CLI's next poll claims it once and the server mints the key. No Frrata role holds any
+// privilege on the table: the app_device_code_* definers are the only door (the access migration; proof § 81).
+export const buildKeyDeviceCodes = pgTable('build_key_device_codes', {
+  id: id(),
+  deviceHash: text('device_hash').notNull().unique('build_key_device_codes_device_unique'),
+  codeHash: text('code_hash').notNull().unique('build_key_device_codes_code_unique'),
+  storeSlug: text('store_slug').notNull(),
+  createdAt: createdAt(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
+  approvedBy: uuid('approved_by'),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  claimedAt: timestamp('claimed_at', { withTimezone: true }),
+}, (t) => [
+  index('build_key_device_codes_expires').on(t.expiresAt),
+  check('build_key_device_codes_hashes', sql`${t.deviceHash} ~ '^[0-9a-f]{64}$' and ${t.codeHash} ~ '^[0-9a-f]{64}$'`),
+  check('build_key_device_codes_end', sql`${t.expiresAt} <= ${t.createdAt} + interval '10 minutes'`),
+  check('build_key_device_codes_approved', sql`(${t.approvedAt} is null) = (${t.approvedBy} is null) and (${t.approvedAt} is null) = (${t.tenantId} is null)`),
+  check('build_key_device_codes_claimed', sql`${t.claimedAt} is null or ${t.approvedAt} is not null`),
+])

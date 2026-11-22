@@ -53,6 +53,10 @@ const ENTRY_POINTS = {
   'src/app/api/storefront/2026-12/openapi.json/route.ts': ['the Storefront API description: public, read-only, no shop', 'openApi('],
   'src/app/api-docs/llms.txt/route.ts': ['the Storefront API docs for agents (SA1b D·9): public, static, no shop', 'llmsTxt('],
   'src/app/s/[host]/og/[...card]/route.ts': ['a shop\'s share card: public, read-only, canonical ids looked up inside the host\'s shop', 'shopForRoute('],
+  // G·3 (Studio plan; ADR-0018's build-key amendment): the CLI's device sign-in. Start reads no shop and answers the same
+  // for any store name; poll's credential is the device secret, whose sign-in a signed-in person confirmed with a passkey.
+  'src/app/api/dev/device/start/route.ts': ['a developer CLI starts a device sign-in: no shop read, limited per network', 'startDeviceSignIn('],
+  'src/app/api/dev/device/poll/route.ts': ['a developer CLI polls with its device secret: a build key once its person confirmed', 'pollDeviceSignIn('],
 }
 
 const walk = dir => readdirSync(dir).flatMap(n => {

@@ -4401,6 +4401,57 @@ do $$ begin
      or not has_function_privilege('frata_app', 'app_store_building_keys()', 'execute')
   then raise exception 'FAIL: app_store_building_keys is not a pinned definer for frata_app alone'; end if;
 end $$;
+-- G·3 (0159–0160): a device sign-in. No role reaches the table; the three definers are pinned and frata_app alone runs
+-- them; a code binds only for a member of the store the CLI named; the CLI's poll claims it once; an ended code is gone.
+do $$ begin
+  if exists (select 1 from pg_tables where tablename = 'build_key_device_codes' and not rowsecurity) then raise exception 'FAIL: build_key_device_codes without RLS'; end if;
+  if (select count(*) from pg_policies where tablename = 'build_key_device_codes' and policyname = 'definer_only' and permissive = 'RESTRICTIVE' and qual = 'false') <> 1 then raise exception 'FAIL: build_key_device_codes without its definer_only policy'; end if;
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
+             where has_table_privilege(r, 'build_key_device_codes', p))
+  then raise exception 'FAIL: a role reaches build_key_device_codes'; end if;
+  if exists (select 1 from unnest(array['app_device_code_start(text, text, text)', 'app_device_code_approve(uuid, text)', 'app_device_code_claim(text)']) f
+             where not (select prosecdef from pg_proc where oid = f::regprocedure)
+                or (select proconfig from pg_proc where oid = f::regprocedure) is distinct from array['search_path=""']
+                or not has_function_privilege('frata_app', f::regprocedure, 'execute')
+                or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r where has_function_privilege(r, f::regprocedure, 'execute'))
+                or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = f::regprocedure and a.grantee = 0))
+  then raise exception 'FAIL: a device-code definer is not pinned to frata_app alone'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ declare t uuid; c record; n int; begin
+  perform app_device_code_start(repeat('a', 63) || '1', repeat('b', 63) || '1', 'proof-e81');
+  perform app_device_code_start(repeat('a', 63) || '2', repeat('b', 63) || '2', 'proof-e81');
+  perform app_device_code_start(repeat('a', 63) || '3', repeat('b', 63) || '3', 'no-such-store');
+  begin perform app_device_code_start('x', repeat('b', 63) || '4', 'proof-e81'); raise exception 'FAIL: a device hash of another shape'; exception when invalid_parameter_value then null; end;
+  begin insert into build_key_device_codes (device_hash, code_hash, store_slug, expires_at) values (repeat('c', 64), repeat('d', 64), 'proof-e81', now() + interval '1 minute');
+    raise exception 'FAIL: frata_app wrote a device code'; exception when insufficient_privilege then null; end;
+  -- pending until a member confirms
+  select * into c from app_device_code_claim(repeat('a', 63) || '1');
+  if c.state is distinct from 'pending' then raise exception 'FAIL: an unconfirmed sign-in is not pending'; end if;
+  -- a person with no members row on that store confirms nothing; the store's partner owner (a member of E) does
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1') is not null then raise exception 'FAIL: a non-member confirmed a sign-in for E'; end if;
+  t := app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1');
+  if t is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s member did not confirm E''s sign-in'; end if;
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1') is not null then raise exception 'FAIL: a code confirmed twice'; end if;
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '3') is not null then raise exception 'FAIL: a code for an unknown store confirmed'; end if;
+  -- claimed once, as the person on the store now
+  select * into c from app_device_code_claim(repeat('a', 63) || '1');
+  if c.state is distinct from 'approved' or c.tenant_id is distinct from 'e8100000-0000-0000-0000-000000000001' or c.user_id is distinct from 'e8100000-0000-0000-0000-0000000000f1' or c.role is distinct from 'partner'
+  then raise exception 'FAIL: the claim is not the confirming person on E'; end if;
+  select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
+  if n <> 0 then raise exception 'FAIL: a sign-in claimed twice'; end if;
+  select count(*) into n from app_device_code_claim(repeat('f', 64));
+  if n <> 0 then raise exception 'FAIL: an unknown device answered'; end if;
+end $$;
+commit;
+update build_key_device_codes set created_at = now() - interval '11 minutes', expires_at = now() - interval '1 minute' where device_hash = repeat('a', 63) || '2';
+begin; set local role frata_app;
+do $$ declare n int; begin
+  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '2') is not null then raise exception 'FAIL: an ended code confirmed'; end if;
+  select count(*) into n from app_device_code_claim(repeat('a', 63) || '2');
+  if n <> 0 then raise exception 'FAIL: an ended sign-in answered'; end if;
+end $$;
+commit;
 -- the two readers that list keys leave build keys out: Admin's API page (E has build keys only, no Website) and the
 -- Accept screen's list
 do $$ begin

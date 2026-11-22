@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.4.0
+  version: 2.5.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -119,6 +119,14 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    (`src/domains/storefront-api/origin.ts`, the one rule P5·2 moves behind `app_website_of`), serialised with every `<`
    escaped (`structured.ts`). The product and collection routes read `apiShop` too, so their copies carry `settings`.
    G14 (a compliance certificate as a policy kind) waits: Frrata holds no such record.
+
+16. **G·3 (2026-11-22), a developer's device sign-in, server parts only** (the confirm page waits for its mockup): the
+   CLI POSTs `/api/dev/device/start` (a store slug; no shop read, the same answer for any slug, `deviceStartIp`) and
+   gets a device secret and an 8-character code; only their sha256s are stored in `build_key_device_codes` (no grant to
+   any role; the `app_device_code_*` definers, `src/lib/db/device-codes.ts`), for 10 minutes. `confirmDeviceCode`
+   (`src/lib/storefront-api/device.ts`, for the future page) needs a passkey check in the last 5 minutes and a members
+   row on the store the CLI named, never one the page sends; audited. `/api/dev/device/poll` claims a confirmed code
+   ONCE and mints through `mintBuildKey` as that person (developer, 24 hours).
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run

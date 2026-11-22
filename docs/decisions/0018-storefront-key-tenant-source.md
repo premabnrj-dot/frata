@@ -195,6 +195,8 @@ or a body, never a URL path. So a third key kind.
    a partner person's build key answers only while that person is live, a member and, for a Lead or a Builder, assigned,
    whatever the store's state. A build key the store's own people made answers before opening only. Build keys are never
    listed on the Accept screen or Admin's API page and never make a store a code site (0157).
+   *As built (G·3, 2026-11-22):* the developer's device sign-in is built server-side (0159–0160, `src/lib/storefront-api/device.ts`):
+   start, confirm and a single-use claim that mints through `mintBuildKey`. Its confirm page waits for a mockup.
 8. **The owner sees and deletes them.** Settings › Website lists every build key with its maker and its end; the owner
    or a Manager deletes one there. A kill switch, removing a partner or a person (ADR-0014 amendment 6), and a stopped
    session delete their build keys.
