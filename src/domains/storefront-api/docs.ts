@@ -32,7 +32,8 @@ export const GUIDES: Guide[] = [
     { p: 'Merge to publish. Put the live key in the host’s production settings, never in the code.' },
   ] },
   { slug: 'keys', title: 'Keys', lead: 'A key names one store. Put the live key in your site’s server settings, never in its code.', body: [
-    { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.']], head: ['Key', 'Reads'] },
+    { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.'],
+      ['frs_build_…', 'Build. Sent in the Frrata-Key header to /2026-12/<resource>, never in the address. Drafts and hidden pages too, never cached, no browser. Ends after 24 hours.']], head: ['Key', 'Reads'] },
     { p: 'Every refusal is the same 404: an unknown, deleted or expired key, a product of another store, a draft under a live key.' },
     { p: 'A test key works before any domain is connected.' },
     { p: 'A live key works once the Website points at a connected domain.' },

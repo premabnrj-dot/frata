@@ -2,7 +2,7 @@ import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { and, count, eq, gt, isNull, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
-import { auditEvents, members } from '@/lib/db/schema'
+import { auditEvents, members, shopSettings } from '@/lib/db/schema'
 import { partnerLinks } from '@/lib/db/schema-partners'
 import { storefrontKeys } from '@/lib/db/schema-storefront-api'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
@@ -39,6 +39,9 @@ export async function mintBuildKey(tx: Tx, maker: BuildMaker, input: { purpose: 
     ? (await tx.select({ id: partnerLinks.partnerId }).from(partnerLinks).where(and(eq(partnerLinks.tenantId, t), isNull(partnerLinks.removedAt))))[0]?.id ?? null
     : null
   if (m.pm && !partnerId) return { ok: false, why: 'not_allowed' }
+  // The store's settings row first, as createKeyAction does: two mints count under one lock, and none slips in beside
+  // an opening (which updates that row).
+  await tx.select({ t: shopSettings.tenantId }).from(shopSettings).where(eq(shopSettings.tenantId, t)).for('update')
   const [n] = await tx.select({ n: count() }).from(storefrontKeys)
     .where(and(eq(storefrontKeys.tenantId, t), eq(storefrontKeys.kind, 'build'), isNull(storefrontKeys.revokedAt), gt(storefrontKeys.expiresAt, sql`now()`)))
   if ((n?.n ?? 0) >= MAX_LIVE_BUILD_KEYS) return { ok: false, why: 'full' }

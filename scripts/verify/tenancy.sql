@@ -4380,6 +4380,15 @@ do $$ begin
   if (select count(*) from storefront_keys where tenant_id in ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-000000000002')) <> 8 then raise exception 'FAIL: the daily delete took a live key'; end if;
   if not exists (select 1 from storefront_keys where id = 'c8100000-0000-0000-0000-00000000000e') then raise exception 'FAIL: the daily delete took an ended test key'; end if;
 end $$;
+-- the two readers that list keys leave build keys out: Admin's API page (E has build keys only, no Website) and the
+-- Accept screen's list
+do $$ begin
+  if exists (select 1 from admin_storefront_api_shops() where tenant_id = 'e8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: Admin lists a store for its build keys'; end if;
+  if pg_get_functiondef('app_my_handover_keys(uuid)'::regprocedure) not like '%k.kind <> ''build''%' then raise exception 'FAIL: the Accept screen lists build keys'; end if;
+  if has_function_privilege('frata_app', 'admin_storefront_api_shops()', 'execute') or not has_function_privilege('frata_admin', 'admin_storefront_api_shops()', 'execute')
+     or has_function_privilege('frata_admin', 'app_my_handover_keys(uuid)', 'execute') or not has_function_privilege('frata_app', 'app_my_handover_keys(uuid)', 'execute')
+  then raise exception 'FAIL: a re-defined key listing lost its grants'; end if;
+end $$;
 
 -- 80. Store content (V1 content, 0133–0136; plan docs/plans/2026-11-15-v1-content.md; tenancy-auditor 2026-11-15): a
 -- store's bars, menus and Contact line are its own both ways; tenant, kind and key never change; at most 3 bars a store

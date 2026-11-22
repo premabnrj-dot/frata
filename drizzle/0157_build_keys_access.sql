@@ -16,6 +16,9 @@
 -- app_build_key_makers() lists, for Settings › Website, the people who made this store's build keys: their email, their
 -- partner's name, whether they still answer and when they left. Ids of the caller's own store only.
 -- app_delete_ended_build_keys() deletes build keys past their end, once a day (the daily cron), and answers a count.
+-- Two readers that list keys leave build keys out (impact review 2026-11-22): the Accept screen's list
+-- (app_my_handover_keys: a brand accepts the website, not a partner's working keys) and Admin's API page
+-- (admin_storefront_api_shops: a Studio preview's reads are not the website's). Both keep their columns and grants.
 -- =============================================================================
 alter table storefront_keys drop constraint storefront_keys_test_days;
 --> statement-breakpoint
@@ -86,3 +89,49 @@ $$;
 revoke all on function app_delete_ended_build_keys() from public, anon, authenticated, service_role, frata_admin, frata_builder;
 --> statement-breakpoint
 grant execute on function app_delete_ended_build_keys() to frata_app;
+--> statement-breakpoint
+create or replace function app_my_handover_keys(p_uid uuid) returns table (invite_id uuid, site_host text, name text, kind text, prefix text)
+  language sql stable security definer set search_path = '' as $$
+  select h.invite_id, substring(s.site_origin from 9), k.name, k.kind, k.prefix
+    from public.app_my_handovers(p_uid) h
+    join public.tenants t on t.id = h.tenant_id
+    join public.shop_settings s on s.tenant_id = h.tenant_id
+    join public.storefront_keys k on k.tenant_id = h.tenant_id
+   where k.revoked_at is null and (k.expires_at is null or k.expires_at > now()) and k.kind <> 'build'
+     and (k.kind = 'public' or t.first_opened_at is null)
+   order by h.invite_id, k.kind, k.created_at
+   limit 200
+$$;
+--> statement-breakpoint
+revoke all on function app_my_handover_keys(uuid) from public, anon, authenticated, service_role, frata_admin, frata_builder;
+--> statement-breakpoint
+grant execute on function app_my_handover_keys(uuid) to frata_app;
+--> statement-breakpoint
+create or replace function admin_storefront_api_shops() returns table (
+  tenant_id uuid, name text, slug text, site_host text, main_host text, published boolean, opened_at timestamptz,
+  live_keys integer, test_keys integer, last_read date, last_version text, partner text)
+  language sql stable security definer set search_path = '' as $$
+  select t.id, t.name, t.slug, substring(s.site_origin from 9),
+         (select d.host from public.shop_domains d where d.tenant_id = t.id and d.main_at is not null and d.removed_at is null and d.failing_since is null limit 1),
+         s.published_at is not null, t.first_opened_at,
+         coalesce(k.live, 0), coalesce(k.test, 0), k.last_read, k.last_version,
+         (select coalesce(nullif(pa.business_name, ''), pa.name) from public.partner_links l join public.partners pa on pa.id = l.partner_id
+           where l.tenant_id = t.id and l.removed_at is null limit 1)
+    from public.tenants t
+    join public.shop_settings s on s.tenant_id = t.id
+    left join lateral (
+      select (count(*) filter (where x.kind = 'public'))::int live,
+             (count(*) filter (where x.kind = 'test' and t.first_opened_at is null))::int test,
+             max(x.last_seen_on) last_read,
+             (array_agg(x.last_seen_version order by x.last_seen_on desc nulls last))[1] last_version
+        from public.storefront_keys x
+       where x.tenant_id = t.id and x.kind <> 'build' and x.revoked_at is null and (x.expires_at is null or x.expires_at > now())
+    ) k on true
+   where s.site_origin is not null or k.live > 0 or k.test > 0
+   order by t.name
+   limit 5000
+$$;
+--> statement-breakpoint
+revoke all on function admin_storefront_api_shops() from public, anon, authenticated, service_role, frata_app, frata_builder;
+--> statement-breakpoint
+grant execute on function admin_storefront_api_shops() to frata_admin;

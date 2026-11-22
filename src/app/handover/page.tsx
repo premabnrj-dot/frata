@@ -46,7 +46,7 @@ export default async function HandoverPage() {
                 {sites.get(h.inviteId)!.keys.map((k, i) => (
                   <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-0.5 border-t border-line-soft py-2 first:border-t-0 first:pt-0">
                     <span className="min-w-0 truncate">{k.name}</span>
-                    <Badge tone={k.kind === 'public' ? 'info' : 'neutral'}>{k.kind === 'public' ? 'Live' : k.kind === 'build' ? 'Build' : 'Test'}</Badge>
+                    <Badge tone={k.kind === 'public' ? 'info' : 'neutral'}>{k.kind === 'public' ? 'Live' : 'Test'}</Badge>
                     {k.kind === 'test' ? <span className="col-span-2 text-small text-muted-foreground">Ends when the store opens</span> : null}
                   </li>
                 ))}

@@ -13,7 +13,7 @@ import { hasCodeSite } from '@/domains/brand/code-site'
  */
 export async function brandPaperLogoWith(tx: Tx, tenantId: string): Promise<string | null> {
   const [r] = await tx.execute<{ logo_url: string | null; site_origin: string | null; keys: number }>(sql`
-    select s.logo_url, s.site_origin, (select count(*)::int from storefront_keys k where k.tenant_id = s.tenant_id and k.revoked_at is null
+    select s.logo_url, s.site_origin, (select count(*)::int from storefront_keys k where k.tenant_id = s.tenant_id and k.kind <> 'build' and k.revoked_at is null
       and (k.expires_at is null or k.expires_at > now())) as keys
     from shop_settings s where s.tenant_id = ${tenantId}`)
   if (!r?.logo_url || !hasCodeSite({ siteOrigin: r.site_origin, liveKeys: Number(r.keys) })) return null

@@ -16,7 +16,7 @@ const SKIP = new Set(['node_modules', '.next', '.git', '.vercel', 'out'])
 const walk = (d) => readdirSync(d).flatMap((n) => { if (SKIP.has(n) || /^\.env(\..+)?\.local$/.test(n)) return []; const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
 const code = walk('.').filter((f) => /\.(tsx?|jsx?|mjs|json|md|css|env\.example)$/.test(f) || f.endsWith('.env.example'))
 const problems = []
-const KEY = /frs_(pub|test)_[0-9A-Za-z]{6,}/
+const KEY = /frs_(pub|test|build)_[0-9A-Za-z]{6,}/
 for (const f of walk('.').filter((x) => !x.endsWith('.png'))) if (KEY.test(readFileSync(f, 'latin1'))) problems.push(`${f}: a Frrata key in source. Put it in .env.local (FRRATA_KEY), never in a file.`)
 // Comments don't count: the fields must be rendered (JSX), not mentioned.
 const layout = (existsSync('app/layout.tsx') ? readFileSync('app/layout.tsx', 'utf8') : '').replace(/\/\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}|^\s*\/\/.*$/gm, '')
