@@ -89,7 +89,7 @@ export const VERSIONS = [
 ] as const
 
 /** The Brand book (mockup docs/mockups/2026-11-22-four-screens.html § 3): the brand record read-only, in Design. */
-export const BRAND_ROW = ['#8C1D2C', '#D9A441', '#FAF6EF'] as const
+export const BRAND_ROW = [SITE.accent, SITE.hero[0], SITE.paper] as const
 export const BOOK = {
   line: 'Kurtas, saris and lehengas for haldi mornings, sangeet nights and every day after.',
   voice: 'Warm · English',
@@ -98,7 +98,7 @@ export const BOOK = {
   never: 'cheap · hurry · trendy',
   logo: 'House of Ayuda · from the console',
   look: 'Sindoor paper',
-  lookSwatches: ['#FAF6EF', '#8C1D2C', '#2B1B14'],
+  lookSwatches: [SITE.paper, SITE.accent, SITE.ink],
   type: 'For the days you’ll keep',
 } as const
 /** The shell's states, set from the test page's address (?builder=1, ?nologo=1, ?waiting=1); fixtures only. */

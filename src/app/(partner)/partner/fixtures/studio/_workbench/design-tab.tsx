@@ -11,7 +11,8 @@ import { BRAND_ROW, PARTS, type Part, type ShellFlags } from './fixtures'
 
 // Design (mockup screen 1, `data-panel="design"`): the picked part's words, photo, height, heading position, the
 // Brand row (it opens the Brand book in place, four-screens § 3), its block and a note for the agent. Fixture only: nothing saves (WB·4 makes each change
-// a chat line and a version). Keyed by the part, so picking another starts from its own words.
+// a chat line and a version). Keyed by the part, so picking another starts from its own words (and closes the Brand
+// book: a picked part shows its own Design).
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="flex min-h-8 items-center justify-between gap-2.5"><span className="text-label text-muted-foreground">{label}</span>{children}</div>

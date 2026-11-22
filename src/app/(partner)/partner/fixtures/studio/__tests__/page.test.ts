@@ -26,6 +26,14 @@ describe('the Studio fixtures page', () => {
     await expect(page({})).rejects.toThrow('NEXT_NOT_FOUND')
     expect(requirePartner).toHaveBeenCalledOnce()
   })
+  it('reads the shell\'s states from the address, each only as 1', async () => {
+    env.E2E_FIXTURES = true
+    const page = (await import('../page')).default
+    const el = await page({ searchParams: Promise.resolve({ builder: '1', nologo: '1', waiting: 'yes' }) }) as { props: { flags: unknown } }
+    expect(el.props.flags).toEqual({ builder: true, noLogo: true, waiting: false })
+    const none = await page({ searchParams: Promise.resolve({}) }) as { props: { flags: unknown } }
+    expect(none.props.flags).toEqual({ builder: false, noLogo: false, waiting: false })
+  })
   it('renders for a partner with the switch on', async () => {
     env.E2E_FIXTURES = true
     const page = (await import('../page')).default
