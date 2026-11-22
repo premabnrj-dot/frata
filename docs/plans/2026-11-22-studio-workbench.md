@@ -168,3 +168,16 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |
 | G·4 `jsonLd` URLs | `site_origin` when set, else the store's frrata.shop host: one pure function P5·2 moves behind the predicate |
 | G·1 the per-key limit | 300 a minute a key for Test and Build, failing closed; judged by `speed-reviewer` and `security-reviewer` on the diff |
+
+## Lane D's mockup check (2026-11-22; the orchestrator's rulings, for the owner where marked)
+Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, composer and build status follow the redraw
+(approved for the chat) and the layout follows the workbench.
+| Item | Ruling |
+|---|---|
+| Phone bar | Chat · Website · More (the mockup's Phone card corrected) |
+| Proposal card, composer while building, the preview bar's build status | the redraw's |
+| Cases | the three drawn plus a sold-out product |
+| The branch button | "Hand branch to the agent" |
+| Brand book's place in the inspector | Not drawn. Not built in the shell; a drawing goes to the owner. **Owner** |
+| The resize edge, the `?` key list with its off switch, the rail dot's count | Not drawn. Built to defaults (a 4 px separator; a Dialog listing the keys with the switch; a dot with a hidden count) and shown to the owner on the built screen. **Owner** |
+| Ctrl/⌘+K find; the credits drawer | Not in the shell |
