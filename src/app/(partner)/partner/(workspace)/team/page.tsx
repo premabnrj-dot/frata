@@ -74,7 +74,7 @@ export default async function TeamPage() {
                   askedMinutes: Math.max(0, Math.floor((now.getTime() - p.request.createdAt.getTime()) / 60_000)) }} />}
                 {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && <DeletePasskeys memberId={p.memberId} name={firstName(p.email)} count={p.passkeys} />}
                 {state === 'invited' && <ResendInvite memberId={p.memberId} />}
-                {p.role !== 'owner' && state !== 'expired' && <RoleSelect memberId={p.memberId} label={p.email} role={p.role} />}
+                {p.role !== 'owner' && state !== 'expired' && <RoleSelect memberId={p.memberId} role={p.role} />}
                 {p.role !== 'owner' && <RemovePerson memberId={p.memberId} label={p.email} invited={state !== 'active'} />}
               </div>
             </li>

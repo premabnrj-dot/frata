@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { button } from '@/components/ui/button'
@@ -40,7 +41,7 @@ export function ShopLogo({ tenantId, current }: { tenantId: string; current: str
           {busy ? 'Saving…' : current ? 'Replace' : 'Upload logo'}
           <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={busy} onChange={(e) => { choose(e.target.files?.[0]); e.target.value = '' }} />
         </label>
-        {current && <button type="button" className={button({ variant: 'ghost' })} disabled={busy} onClick={remove}>Remove</button>}
+        {current && <RemoveButton label="Remove logo" disabled={busy} onClick={remove} />}
       </div>
     </Section>
   )

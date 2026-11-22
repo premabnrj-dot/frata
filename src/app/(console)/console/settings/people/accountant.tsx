@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useToast } from '@/components/ui/toast'
 import { inviteShopAccountant, removeShopAccountant, revokeShopAccountantInvite } from './actions'
 
@@ -22,7 +23,7 @@ export function AccountantCard({ member, invites, consoleUrl }: { member: { user
       {member ? (
         <div className="flex flex-wrap items-center gap-3">
           <span className="min-w-0 flex-1 truncate font-num text-sm">{member.email}</span>
-          <Button variant="secondary" disabled={pending} onClick={() => act(() => removeShopAccountant(member.userId), 'Removed.')}>Remove</Button>
+          <RemoveButton label={`Remove ${member.email}`} disabled={pending} onClick={() => act(() => removeShopAccountant(member.userId), 'Removed.')} />
         </div>
       ) : (
         <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); act(() => inviteShopAccountant(email), `Invited. They sign in at ${consoleUrl} with ${email}.`) }}>
