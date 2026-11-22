@@ -46,6 +46,9 @@ async function realPasskey(page, db, user) {
     privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'), userHandle: Buffer.from(`partner:${me.member_id}`).toString('base64'), signCount: 0 } })
 }
 
+/** The dialog's entrance finished, so a screenshot shows its real state (not the fade). */
+const settled = (dialog) => dialog.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+
 async function axe(p, t, label) {
   await p.addScriptTag({ content: AXE })
   const v = await p.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations.filter((x) => x.impact === 'serious' || x.impact === 'critical').map((x) => `${x.id}: ${x.nodes.length}`))
@@ -104,7 +107,7 @@ export default {
       await dialog.getByText('Reads the store’s products, drafts too. Ends in 24 hours.').waitFor()
       await dialog.getByText('Frrata never asks you for a code. Type only one from your own screen.').waitFor()
       assert.equal(await dialog.getByLabel('This is my computer').count(), 0, 'the box shows on the person’s own network')
-      await pia.screenshot({ path: t.out('developer-confirm-1280') })
+      await settled(dialog); await pia.screenshot({ path: t.out('developer-confirm-1280') })
       await axe(pia, t, 'confirm dialog')
       await dialog.getByRole('button', { name: 'Give key', exact: true }).click()
       await expectToast(pia, 'Signed in. This computer has a key for 24 hours.', 'ok')
@@ -126,7 +129,7 @@ export default {
       await row.getByRole('button', { name: 'Delete key' }).click()
       const dlg = pia.getByRole('dialog', { name: 'Delete this computer’s key?' })
       await dlg.getByText('That computer is signed out at once.').waitFor()
-      await pia.screenshot({ path: t.out('developer-delete-1280') })
+      await settled(dlg); await pia.screenshot({ path: t.out('developer-delete-1280') })
       await dlg.getByRole('button', { name: 'Delete key' }).click()
       await expectToast(pia, 'Key deleted.', 'ok')
       await pia.getByText('No computers signed in').waitFor()
@@ -149,7 +152,7 @@ export default {
       await box.uncheck()
       const dont = dialog.getByRole('button', { name: 'Don’t give key' })
       assert.match(await dont.getAttribute('class'), /(^| )bg-primary( |$)/, 'Don’t give key is not the main button')
-      await pia.screenshot({ path: t.out('developer-elsewhere-1280') })
+      await settled(dialog); await pia.screenshot({ path: t.out('developer-elsewhere-1280') })
       await dont.click()
       await dialog.waitFor({ state: 'detached' })
       assert.equal((await poll(far.device)).status, 202, 'a code not given is still waiting')
@@ -161,7 +164,8 @@ export default {
       const dialog = pia.getByRole('dialog', { name: 'Give this computer a Build key?' })
       await dialog.getByText('Another network').waitFor()
       await dialog.getByLabel('This is my computer').check()
-      await pia.screenshot({ path: t.out('developer-mine-1280') })
+      assert.equal(await dialog.getByRole('button', { name: 'Give key', exact: true }).getAttribute('aria-disabled'), null)
+      await settled(dialog); await pia.screenshot({ path: t.out('developer-mine-1280') })
       await dialog.getByRole('button', { name: 'Give key', exact: true }).click()
       await expectToast(pia, 'Signed in. This computer has a key for 24 hours.', 'ok')
       assert.equal((await poll(blind.device)).status, 200, 'the key after This is my computer')
@@ -198,7 +202,7 @@ export default {
         const dialog = pia.getByRole('dialog', { name: 'Give this computer a Build key?' })
         await dialog.getByText('Add a passkey to give a key.').waitFor()
         assert.equal(await dialog.getByRole('button', { name: 'Give key', exact: true }).getAttribute('aria-disabled'), 'true', 'Give key is on with no passkey')
-        await pia.screenshot({ path: t.out('developer-no-passkey-1280') })
+        await settled(dialog); await pia.screenshot({ path: t.out('developer-no-passkey-1280') })
         await dialog.getByRole('link', { name: 'Add passkey' }).click()
         await pia.waitForURL(/\/partner\/passkeys$/)
       } finally {
