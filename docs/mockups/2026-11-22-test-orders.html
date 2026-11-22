@@ -230,7 +230,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <div class="doc">
 <div class="head">
   <h1>Test orders before opening</h1>
-  <p>T1 of the Studio workbench plan. 22 Nov 2026 · Spec <span class="mono">docs/specs/2026-11-22-test-orders.md</span> · Draft for the owner. Nothing here is built.</p>
+  <p>T1 of the Studio workbench plan. 22 Nov 2026 · Spec <span class="mono">docs/specs/2026-11-22-test-orders.md</span> · Draft for the owner. Three reviews are folded in. Nothing here is built.</p>
 </div>
 <nav aria-label="Sections">
   <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#take">What to take</a><a href="#console">1 · Start testing</a>
@@ -241,11 +241,11 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <section id="in-short">
   <h2>In short</h2>
   <div class="answers">
-    <div class="card"><h3>What you get</h3><p>The store’s own team places orders on a store that has not opened. They go through the real checkout, pay with Razorpay’s test keys or choose Pay on delivery, and see the real order page, email and console queue.</p></div>
-    <div class="card"><h3>The one idea</h3><p>Every order placed before a store first opens is a test order. Nothing is stored to say so. At opening they are all deleted in the same step. After that no test order exists, so no report ever has to leave one out.</p></div>
-    <div class="card"><h3>Who can reach checkout</h3><p>Only the team. Start testing in the console opens the store for that browser for 12 hours. Everyone else still sees Opening soon.</p></div>
-    <div class="card"><h3>What it will not do</h3><p>It moves no stock, takes no invoice number, sends no WhatsApp and books no courier. It cannot be packed. It works only before the first opening, so not on the pilot, which is open.</p></div>
-    <div class="card"><h3>What I need</h3><p>Your answers to the six calls at the end.</p></div>
+    <div class="card"><h3>What you get</h3><p>The store’s own team places orders on a store that has not opened. They use the real checkout. They pay with Razorpay’s test keys or on delivery. They see the real order page, email and console list.</p></div>
+    <div class="card"><h3>The one idea</h3><p>Every order placed before a store first opens is a test order. Nothing is stored to say so. They are all deleted in the same step as opening. After that none exists, so no report has to leave one out.</p></div>
+    <div class="card"><h3>Who can reach checkout</h3><p>Only the team. Start testing in the console lets that browser price, place and pay for 12 hours. Nobody else can.</p></div>
+    <div class="card"><h3>What it will not do</h3><p>It takes no invoice number and cannot be packed or shipped. Stock it takes comes back when it is deleted. It works only before the first opening, so not on the pilot.</p></div>
+    <div class="card"><h3>What I need</h3><p>Your answers to the seven calls at the end.</p></div>
   </div>
 </section>
 
@@ -253,11 +253,11 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <h2>Audit: an unopened store today</h2>
   <div class="tw"><table>
     <tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr>
-    <tr><td>Every page of an unopened store, checkout and order pages included, shows Opening soon.</td><td>A developer cannot see checkout with their own bag before opening day.</td><td>The team’s browser gets through after Start testing (screen 1).</td></tr>
+    <tr><td>Every page of an unopened store, checkout and order pages included, shows Opening soon.</td><td>A developer cannot see checkout with their own bag before opening day.</td><td>Checkout and the order page are drawn. Only the team’s browser can price or place (screen 1).</td></tr>
     <tr><td>Placing and paying refuse while the store is closed.</td><td>No order can exist before opening. The first real shopper is the first test.</td><td>Placing is allowed for the team’s browser on a store never opened (screen 2).</td></tr>
-    <tr><td>Paying online needs live Razorpay keys, a working webhook and an approved address.</td><td>None exist before launch.</td><td>A test order pays with the store’s Razorpay test keys, or on delivery.</td></tr>
+    <tr><td>Paying online needs live Razorpay keys, Razorpay’s payment updates and an approved address.</td><td>None exist before launch.</td><td>A test order pays with the store’s Razorpay test keys, or on delivery.</td></tr>
     <tr><td>The console’s preview draws the store’s pages on the console’s address.</td><td>Nothing is priced or placed from it.</td><td>Unchanged. Test orders happen on the store’s own address.</td></tr>
-    <tr><td>About twenty lists and reports read orders.</td><td>A stored “test” mark would need a filter in each, and one miss puts a test order in a GST report.</td><td>No mark. Test orders exist only before opening and are deleted at opening.</td></tr>
+    <tr><td>About 20 lists and reports read orders.</td><td>A stored “test” mark needs a filter in each. One miss puts a test order in a GST report.</td><td>No mark. Test orders exist only before opening and are deleted at opening.</td></tr>
   </table></div>
 </section>
 
@@ -266,7 +266,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <p class="lede">Vendor pages read 22 Nov 2026.</p>
   <div class="cards">
     <div class="card"><h3>Razorpay</h3><p>Test keys are made “without adding a website”. Live keys need the website’s details. A test key moves no money.</p><span class="src">razorpay.com/docs … /api-keys · undated</span><span class="take">Take: a test order pays with the store’s own test keys. Live keys are never used for one.</span></div>
-    <div class="card"><h3>Stripe</h3><p>A sandbox has its own keys and its own data, apart from live data. It needs no setup to start.</p><span class="src">docs.stripe.com/keys · undated</span><span class="take">Take: test data lives apart from real data. Here that line is the first opening.</span><span class="skip">Skip: a test mode that runs beside live orders for ever. It needs a mark in every report.</span></div>
+    <div class="card"><h3>Stripe</h3><p>Stripe’s test mode (“sandbox”) has its own keys and its own data. It needs no setup to start.</p><span class="src">docs.stripe.com/keys · undated</span><span class="take">Take: test data lives apart from real data. Here that line is the first opening.</span><span class="skip">Skip: a test mode that runs beside live orders for ever. It needs a mark in every report.</span></div>
     <div class="card"><h3>Shopify themes</h3><p>A local theme preview “can’t preview checkout customizations”.</p><span class="src">shopify.dev … /theme-dev · undated</span><span class="take">Take: the gap is real elsewhere too. Checkout is tested on the store’s own address.</span></div>
   </div>
   <p class="lede">No current source was read for Shopify’s own test orders.</p>
@@ -284,10 +284,10 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
       </div>
     </div></div>
     <div class="screen"><div class="cap">Testing on this browser</div><div class="in">
-      <div class="sec"><h4>Test checkout <span class="chip ok">On this browser · 11 h left</span></h4>
+      <div class="sec"><h4>Test checkout <span class="chip ok">On this browser · 11 hours left</span></h4>
         <div class="row"><span>Pay online</span><span class="chip ok">Razorpay test keys</span></div>
         <div class="row"><span>Pay on delivery</span><span class="chip ok">On</span></div>
-        <div class="row"><span>Test orders</span><span class="num">4 of 50</span></div>
+        <div class="row"><span>Placed today</span><span class="num">4 of 50</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri sm">Place a test order</button><button class="btn sm">Stop testing</button></div>
       </div>
     </div></div>
@@ -301,15 +301,15 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   </div>
   <div class="tw"><table>
     <tr><th>Step by step</th><th>What happens</th></tr>
-    <tr><td>1. A team member taps Start testing.</td><td>The console makes a pass good for 12 hours and opens the store’s address with it. The store sets it for that browser only.</td></tr>
-    <tr><td>2. They tap Place a test order, or send a bag from the website they are building.</td><td>Checkout opens on the store’s address with that bag. Place a test order uses the store’s first product.</td></tr>
-    <tr><td>3. They tap Stop testing, or 12 hours pass.</td><td>That browser sees Opening soon again.</td></tr>
+    <tr><td>1. A team member taps Start testing.</td><td>The console makes a 12-hour pass. It opens the store’s address with it. The pass is set for that browser only.</td></tr>
+    <tr><td>2. They tap Place a test order. Or they send a bag from their website.</td><td>Checkout opens on the store’s address with that bag. Place a test order uses the store’s first product.</td></tr>
+    <tr><td>3. They tap Stop testing, or 12 hours pass.</td><td>That browser can no longer price or place.</td></tr>
   </table></div>
 </section>
 
 <section id="store">
   <h2>2 · Checkout and the order page</h2>
-  <p class="lede">On the store’s address, in the brand’s look (P2). The only additions are the Test tag and the order number’s T.</p>
+  <p class="lede">On the store’s address, in the brand’s look (P2). The only addition is the Test tag.</p>
   <div class="screens">
     <div class="screen"><div class="cap">house-of-ayuda.frrata.shop/checkout · the team’s browser</div>
       <div class="shopf">
@@ -325,13 +325,13 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
       <div class="shopf">
         <h4>House of Ayuda <span class="t">Test</span></h4>
         <div style="font:600 20px/24px var(--serif)">Order placed</div>
-        <div class="ln"><span>Order</span><span class="mono">T-0005</span></div>
+        <div class="ln"><span>Order</span><span class="mono">HOA-1005</span></div>
         <div class="ln"><span>Sage Floral Kurta Set · M</span><span class="num">₹2,790</span></div>
         <div class="ln"><span>Paid online</span><span class="num">₹2,790</span></div>
         <div class="ln"><span>Delivers to</span><span>Bengaluru 560034</span></div>
       </div>
     </div>
-    <div class="screen"><div class="cap">The same address · anyone else</div>
+    <div class="screen"><div class="cap">The store’s other pages · anyone</div>
       <div class="soon"><b>House of Ayuda</b><span>Opening soon</span></div>
     </div>
   </div>
@@ -342,18 +342,22 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <p class="lede">Console › Orders on a store that has not opened. Every order here is a test order.</p>
   <div class="screens">
     <div class="screen"><div class="cap">Orders · To confirm</div><div class="in">
-      <div class="row"><span class="chip">Test orders · deleted when you open</span><button class="btn sm">Delete 5 test orders</button></div>
+      <div class="row"><span class="chip">Test orders · deleted when your store opens</span><button class="btn sm">Delete 5 test orders</button></div>
       <div>
-        <div class="orow"><a href="#orders">T-0005</a><span>Today, 4:12 pm</span><span class="tag">Paid</span><span class="num">₹2,790</span></div>
-        <div class="orow"><a href="#orders">T-0004</a><span>Today, 3:58 pm</span><span class="tag">COD</span><span class="num">₹1,890</span></div>
-        <div class="orow"><a href="#orders">T-0003</a><span>Today, 3:40 pm</span><span class="tag">COD</span><span class="num">₹7,490</span></div>
+        <div class="orow"><a href="#orders">HOA-1005</a><span>Today, 4:12 pm</span><span class="tag">Paid</span><span class="num">₹2,790</span></div>
+        <div class="orow"><a href="#orders">HOA-1004</a><span>Today, 3:58 pm</span><span class="tag">COD</span><span class="num">₹1,890</span></div>
+        <div class="orow"><a href="#orders">HOA-1003</a><span>Today, 3:40 pm</span><span class="tag">COD</span><span class="num">₹7,490</span></div>
       </div>
     </div></div>
-    <div class="screen"><div class="cap">Order T-0005</div><div class="in">
-      <div class="row"><span><b class="mono">T-0005</b> <span class="tag">Test</span> <span class="chip warn">To confirm</span></span></div>
+    <div class="screen"><div class="cap">Order HOA-1005</div><div class="in">
+      <div class="row"><span><b class="mono">HOA-1005</b> <span class="tag">Test</span> <span class="chip warn">To confirm</span></span></div>
       <div class="row"><span>Sage Floral Kurta Set · M</span><span class="num">₹2,790</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri sm">Confirm order</button><button class="btn sm">Cancel order</button></div>
-      <div class="row"><span>Mark packed</span><span class="chip">After you open</span></div>
+      <div class="row"><span>Mark packed</span><span class="chip">After your store opens</span></div>
+    </div></div>
+    <div class="screen"><div class="cap">Delete test orders · confirm</div><div class="in">
+      <div class="dlg"><h4>Delete 5 test orders?</h4><p>They cannot be brought back.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm">Keep them</button><button class="btn pri sm">Delete 5 test orders</button></div></div>
     </div></div>
   </div>
 </section>
@@ -367,12 +371,11 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
     </div></div>
     <div class="screen"><div class="cap">After opening</div><div class="in">
       <div class="sec"><h4>Orders</h4><p style="color:var(--text-2)">No orders yet</p></div>
-      <div class="row"><span>Next order number</span><span class="mono">HOA-1001</span></div>
-    </div></div>
+          </div></div>
   </div>
   <div class="tw"><table>
     <tr><th>Deleted in the same step as opening</th><th>Left as it was</th></tr>
-    <tr><td>Test orders and their items · the shoppers they made · their codes’ use counts · their queued emails · the T counter · every testing pass</td><td>Products, stock, offers, the brand, content, Razorpay keys (the owner swaps test keys for live ones before opening, as today)</td></tr>
+    <tr><td>Test orders and their items · their codes’ use counts · their unsent emails · every testing pass. Stock they took is put back. Order numbers start again.</td><td>Products, stock, offers, the brand, content, Razorpay keys (the owner swaps test keys for live ones before opening, as today)</td></tr>
   </table></div>
 </section>
 
@@ -380,14 +383,15 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <h2>States</h2>
   <div class="tw"><table>
     <tr><th>State</th><th>What shows</th></tr>
-    <tr><td>The pass ran out mid-checkout</td><td>Place refuses with “Testing has ended on this browser.” and Start again, which returns through the console.</td></tr>
-    <tr><td>50 test orders reached</td><td>Place refuses with “Delete test orders to place more.” The console’s count reads 50 of 50.</td></tr>
-    <tr><td>Live Razorpay keys saved before opening</td><td>Pay online is absent on test checkout. Pay on delivery stays. The card reads “Live keys · not used for tests”.</td></tr>
-    <tr><td>A Builder (no orders in the console)</td><td>Can start testing and place. Sees the order page of their own test order. Console › Orders stays closed to them.</td></tr>
+    <tr><td>The pass ran out mid-checkout</td><td>Place refuses with “Testing has ended on this browser.” Start testing goes back through the console.</td></tr>
+    <tr><td>50 test orders placed today</td><td>Place refuses with “You placed 50 test orders today. Try again tomorrow.”</td></tr>
+    <tr><td>No pass on this browser</td><td>Checkout shows its empty bag. Nothing is priced.</td></tr>
+    <tr><td>Live Razorpay keys saved before opening</td><td>Pay online is hidden on test checkout. Pay on delivery stays. The card reads “Live keys · not used for tests”.</td></tr>
+    <tr><td>A Builder (no orders in the console)</td><td>Can start testing and place. Sees the order page of a test order whose link they hold. Console › Orders stays closed to them.</td></tr>
     <tr><td>Frrata support visit</td><td>Reads the card. Cannot start testing or delete.</td></tr>
-    <tr><td>The store has opened once, then closed</td><td>The card is absent. Orders are real from the first opening on.</td></tr>
+    <tr><td>The store has opened once, then closed</td><td>The card is hidden. Orders are real from the first opening on.</td></tr>
     <tr><td>Phone</td><td>The card stacks. Checkout and the order page are the phone layouts of P2.</td></tr>
-    <tr><td>Razorpay does not answer</td><td>As today: “Razorpay did not answer.” The order waits to be paid.</td></tr>
+    <tr><td>Razorpay does not answer</td><td>“Razorpay did not answer. Try again in a minute.” The order waits to be paid.</td></tr>
   </table></div>
 </section>
 
@@ -395,16 +399,16 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <h2>What a test order does and does not do</h2>
   <div class="tw"><table>
     <tr><th>Part</th><th>Real order</th><th>Test order</th></tr>
-    <tr><td>Price, offers, delivery fee, GST shown</td><td>Yes</td><td>Yes, the same code</td></tr>
-    <tr><td>Order number</td><td>The store’s series</td><td>Its own T series, deleted at opening</td></tr>
-    <tr><td>Stock</td><td>Taken</td><td>Not taken</td></tr>
+    <tr><td>Price, offers, delivery fee, GST shown</td><td>Yes</td><td>Yes, worked out the same way</td></tr>
+    <tr><td>Order number</td><td>The store’s series</td><td>The same series. It starts again at opening.</td></tr>
+    <tr><td>Stock</td><td>Taken</td><td>Taken, and put back when the test order is deleted</td></tr>
     <tr><td>Pay online</td><td>Live keys</td><td>Test keys only</td></tr>
-    <tr><td>Order email</td><td>Sent</td><td>Sent, subject starts “Test order”</td></tr>
-    <tr><td>WhatsApp, courier, Meta events</td><td>Sent</td><td>Never queued</td></tr>
-    <tr><td>EkCode sign-in</td><td>Offered</td><td>Not offered: EkCode accounts are real</td></tr>
+    <tr><td>Order email</td><td>Sent to the shopper</td><td>Sent to the team member testing. Its subject starts “Test order”.</td></tr>
+    <tr><td>Marketing sign-up</td><td>Offered</td><td>Never</td></tr>
+    <tr><td>EkCode sign-in</td><td>Offered</td><td>Not offered. EkCode accounts are real.</td></tr>
     <tr><td>Confirm, cancel</td><td>Yes</td><td>Yes</td></tr>
     <tr><td>Pack, invoice number, ship</td><td>Yes</td><td>No. An invoice series must never have a gap.</td></tr>
-    <tr><td>Frrata’s fee, trial clock</td><td>Counted</td><td>Never: nothing ships and the clock starts at opening</td></tr>
+    <tr><td>Frrata’s fee</td><td>Counted</td><td>Never. Nothing ships.</td></tr>
     <tr><td>Analytics visits</td><td>Counted</td><td>Not recorded</td></tr>
   </table></div>
 </section>
@@ -414,11 +418,12 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <div class="tw"><table>
     <tr><th>#</th><th>Call</th><th>Recommendation</th></tr>
     <tr><td>1</td><td>Every order before the first opening is a test order, deleted at opening</td><td>Yes. No mark is stored, so no report can ever count one.</td></tr>
-    <tr><td>2</td><td>Test orders cannot be packed or shipped</td><td>Yes. It keeps invoice numbers, couriers and Frrata’s fee out. Bring it back if partners ask to demo the full journey.</td></tr>
-    <tr><td>3</td><td>The order email is sent on a test order</td><td>Yes. Developers and owners want to see it. The subject says “Test order”.</td></tr>
-    <tr><td>4</td><td>Who may start testing</td><td>Anyone who can preview the store: owner, Manager, staff, the partner’s people and Builders.</td></tr>
-    <tr><td>5</td><td>A limit of 50 test orders a store, and a 12-hour pass</td><td>Yes. It keeps opening day’s clean-up small.</td></tr>
-    <tr><td>6</td><td>Test orders on a store that is already open, like the pilot</td><td>Not now. It needs a stored mark and a filter in about twenty reports. Use a second store that has not opened.</td></tr>
+    <tr><td>2</td><td>Test orders cannot be packed or shipped</td><td>Yes. It keeps invoice numbers, couriers and Frrata’s fee out. Add it if partners ask to show packing and shipping.</td></tr>
+    <tr><td>3</td><td>The order email is sent on a test order</td><td>Yes, to the team member who is testing, never to a typed address.</td></tr>
+    <tr><td>4</td><td>Who may start testing</td><td>Owner, Manager, Staff, the partner’s people and Builders. A Builder still never sees the console’s Orders.</td></tr>
+    <tr><td>5</td><td>A limit of 50 test orders a store a day, and a 12-hour pass</td><td>Yes.</td></tr>
+    <tr><td>6</td><td>Test orders on a store that is already open, like the pilot</td><td>Not now. It needs a stored mark and a filter in about 20 reports. Use a second store that has not opened.</td></tr>
+    <tr><td>7</td><td>Anyone can load the checkout and order pages of a store that has not opened. They show the brand’s name and an empty bag.</td><td>Yes. The other way checks every visit to every store page.</td></tr>
   </table></div>
 </section>
 </div>

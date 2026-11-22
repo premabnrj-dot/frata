@@ -1,16 +1,19 @@
 # Test orders before opening (T1)
-Status: draft (for the owner; reviews pending; nothing built) · Date: 2026-11-22 · Mockup: MOCKUP_LINK
+Status: draft (for the owner; three reviews folded in 2026-11-22, § Reviews; nothing built) · Date: 2026-11-22 · Mockup: https://claude.ai/artifact/XUp8WAwaCWwxJxnxyHoY9j
 (`docs/mockups/2026-11-22-test-orders.html`) · Approved: —
 Phase T1 of `docs/plans/2026-11-22-studio-workbench.md` (owner, 2026-11-22: "Yes, test orders before opening").
 
 ## In short
 - The store's own team places orders on a store that has never opened: real checkout, Razorpay test keys or Pay on
   delivery, the real order page, email and console queue.
-- **Every order placed while `tenants.first_opened_at is null` is a test order. No column says so.** The trigger that
-  sets `first_opened_at` deletes them in the same transaction, so after opening none exists and no reader of `orders`
-  (about twenty: `src/lib/db/order-predicates.ts`, analytics, True Profit, billing's draft, risk, offers, GST) needs an
+- **Every order placed while `tenants.first_opened_at is null` is a test order. No column says so.** One definer deletes
+  them, puts their stock back and resets the order numbering; the first-opening trigger calls it in the opening's own
+  transaction, and so does **Delete test orders**. After opening none exists, so no reader of `orders` needs an
   exclusion.
-- Only a browser holding a 12-hour pass from the console gets past Opening soon.
+- A test order is an ordinary order in every other way (same number series, same stock, same states), which is what
+  keeps the change small: the first draft's separate numbering and skipped stock each broke a reader (§ Reviews).
+- Only a browser holding a 12-hour pass from the console can price, place or pay. The checkout and order page shells
+  of a never-opened store are drawn for anyone; they show the brand's name and nothing else until an API answers.
 
 ## Goal
 Ranked problem 4 (mobile checkout conversion) and 5 (a premium storefront as code): a website is tested end to end
@@ -43,42 +46,61 @@ the team would see, and opens the store clean.
 No current source read for Shopify's own test orders.
 
 ## Design (screens in the mockup)
-1. **Start testing** (Settings › Website on a store never opened; later Studio's Checkout page): shows whether Pay
-   online has test keys and Pay on delivery is on; **Start testing** mints a pass and opens the store's address;
-   **Place a test order** opens checkout with the store's first product; **Stop testing**; a count "4 of 50".
-2. **The pass.** The console action (`requireCapability('preview.read')`, so Builders too; never on a support visit)
-   signs `{ tenant, exp ≤ 12 h, nonce }` with a server secret and redirects to
-   `https://<store host>/_frrata/test?p=…`; that route, on the store's host, checks the signature, that the host's
-   tenant equals the pass's and that `first_opened_at is null`, sets `__Host-test` (HttpOnly, Secure, SameSite=Lax,
-   12 h) and redirects to `/checkout`. The tenant always comes from the host; the pass only proves the browser.
-3. **Getting past Opening soon without making shop pages dynamic.** The middleware, on a shop host, when
-   `__Host-test` is present and verifies, rewrites `/checkout` and `/orders` to an ungated copy of those two routes
-   (static, as today's are); every other path and every other browser is unchanged. The APIs (`/api/shop/orders`,
-   pay, view, retry, switch) accept a closed-but-never-opened store only with a valid pass, checked on the server.
-4. **Checkout and the order page** are P2's, with a **Test** tag by the brand's name and the number's **T** series
-   (`T-0005`, counter kind `test_order`). EkCode is not offered. Pay online shows only when the store's saved keys are
-   `rzp_test_`; with live keys saved, or none, Pay on delivery only.
-5. **In the console** an unopened store's Orders shows its test orders with a **Test** tag, a chip "Test orders ·
-   deleted when you open" and **Delete N test orders**. Confirm and Cancel work. Mark packed is absent ("After you
-   open").
-6. **Opening.** The confirm reads "N test orders will be deleted." The trigger `app_shop_first_opened` deletes, for
-   that tenant: `order_discounts`, `order_lines`, `orders`, the `customers` rows those orders made, their outbox rows,
-   their `webhook_events`, the `test_order` counter. Passes die by the `first_opened_at` check.
+1. **Start testing** (Settings › Website on a store never opened; later Studio's Checkout page): whether Pay online
+   has test keys and Pay on delivery is on; **Start testing**; **Place a test order** (checkout with the store's first
+   product); **Stop testing** (this browser); "4 placed today".
+2. **The pass.** A console server action behind a new capability **`orders.test`** (owner, Manager, staff, the
+   partner's people and Builders; never a support visit; limited per member) signs a 60-second token
+   `{ host, user, exp }` and redirects to `https://<store host>/api/shop/test/start?p=…` (the pattern of
+   `ekcode/start`). That route, on the store's host, checks the signature, that `host` equals the request's Host and
+   that the host's tenant has `first_opened_at is null`, then sets its own 12-hour value in `__Host-test` (HttpOnly,
+   Secure, SameSite=Lax) and redirects to `/checkout` with `Referrer-Policy: no-referrer` and `Cache-Control:
+   no-store`. The tenant always comes from the host; the pass proves the browser and names the member. Its secret is
+   Production only, one owner module. No middleware change.
+3. **Opening soon gives way on two pages only.** `_frame.tsx:23`'s gate and `(order)/layout.tsx:13` draw the checkout
+   and order page shells when the store has never opened (static, as today); every other page stays Opening soon.
+   **The APIs are the lock.** One helper beside `requireShop` decides, per route, on a never-opened store:
+   - accept only with a valid pass: `orders`, `orders/pay`, `orders/cod`, `orders/retry`, `orders/change`, `quote`,
+     `delivery`, `pincode`;
+   - accept by the order's own token, pass or not: `orders/view` (so the email's link opens on the tester's phone);
+   - refuse: `orders/invoice`, `email-drops`, `ekcode/*`, the beacon `e`.
+   Without a pass the checkout shell shows the empty-bag state and prices nothing.
+4. **Checkout and the order page** are P2's, with a **Test** tag by the brand's name. The number is the store's own
+   series. EkCode is not offered.
+5. **Pay online on a test order** needs only that the store's saved keys are `rzp_test_` and Razorpay accepts them
+   (`testOnline`, a predicate beside `canTakeOnline`; no webhook seen, no approved host). `startPayment` and the edit
+   payments refuse a live key on a never-opened store. `canTakeOnline` and `setupSteps` are unchanged: opening still
+   needs live keys.
+6. **The order email** goes to the member who started testing (the pass names them), never to the typed address;
+   its subject starts "Test order"; it carries no marketing link.
+7. **In the console** a never-opened store's Orders, Home and Analytics carry the chip "Test orders · deleted when
+   your store opens"; Orders has **Delete N test orders** with a confirm. Confirm and Cancel work. Mark packed, invoices,
+   credit notes and refunds through Frrata's fee rows refuse ("After your store opens").
+8. **Deleting.** `app_delete_test_orders()` (security definer; the tenant from `app_current_tenant()` when called by a
+   member, from the trigger's row at opening; locks the tenant row; raises unless `first_opened_at is null`; refuses a
+   Builder and a support visit): puts back stock on every line stamped `stock_taken_at`, deletes the tenant's `orders`
+   (cascading `order_lines`, `order_events`, `order_notes`, `order_discounts`, `shipments`, `review_requests`,
+   `customer_consents`, `email_messages`, `order_edits`, `order_refunds`), its `outbox` rows by `payload->>'orderId'`,
+   Razorpay `webhook_events` of the tenant, every `shop_customers` row of the tenant, and the `order` counter's row.
+   It never touches `audit_events`, `email_suppressions`, `rate_limits` or `payment_keys`.
+9. **Opening.** The confirm reads "N test orders will be deleted." In `app_shop_first_opened` the definer runs **only
+   inside `if found`** after the existing `update … where first_opened_at is null`, so a store that closes and
+   reopens deletes nothing. Placing on a never-opened store first takes
+   `select first_opened_at from tenants where id = $1 for share` and re-reads the fact under it, so no placement can
+   commit across the opening.
 
 ### What a test order does (one rule each, where it lives)
 | Part | Rule | Where |
 |---|---|---|
-| Is this a test order | `first_opened_at is null` for the order's tenant, read with the shop (`checkoutShop` gains `neverOpened`) | `src/lib/queries/checkout.ts` |
-| May place | `shop.open`, or `neverOpened` with a valid pass; at most 50 unerased orders | `place.ts:135`; the route |
-| Number | counter kind `test_order`, shown `T-0000` | `place.ts:160` |
-| Stock | `takeStock` is skipped when `neverOpened` | `src/lib/orders/stock.ts` |
-| Pay online | offered only with `payment_keys.mode = 'test'`; `startPayment` refuses a live key on a never-opened store | `checkout.ts:81`; `place.ts:280-307` |
-| Email | `email.order` queued, subject prefixed "Test order" | `src/lib/email/enqueue.ts` |
-| WhatsApp, courier, Conversions API | never queued for a never-opened store (one guard where order messages are enqueued) | the enqueue call sites |
-| EkCode | not offered; `/api/shop/ekcode/*` refuses under a pass | checkout; the routes |
-| Pack, invoice, ship | `pack()` refuses on a never-opened store | `src/lib/orders/work.ts:158` |
-| Billing | nothing ships, so `draft.ts:88-90` counts nothing; the trial clock starts at opening as today | — |
-| Analytics | the beacon is not loaded on the ungated routes | `shell.tsx` |
+| Is this a test order | `first_opened_at is null` for the order's tenant: `src/domains/orders/test-order.ts`, read by one `neverOpenedIn(tx)`; `checkoutShop`, `pack()`, the console lists and the email sender read through it | new |
+| May place | `shop.open`, or never opened with a valid pass; 50 placements a store a day (`rate_limits`, failing closed) | `place.ts:135`; the route |
+| Number, stock, states, offers | as any order; undone by the definer | unchanged |
+| Pay online | `testOnline`; a live key refused | `keys.ts`; `place.ts:280-307`; `edit.ts` |
+| Email | to the pass's member; "Test order" subject; no drops link; `consentToDrops` refuses | `src/lib/email/enqueue.ts`; `queries/drops.ts:32` |
+| EkCode | not offered; its routes refuse | checkout; `ekcode/*` |
+| Pack, invoice, credit note, fee rows | refuse on a never-opened store (two foreign keys there are RESTRICT and would abort the opening) | `work.ts:158`; `drizzle/0052:23`; `0047:100` |
+| Analytics | the beacon is not loaded on the two shells | `shell.tsx` |
+| Billing | nothing ships, so the draft counts nothing | `draft.ts:88-90` |
 
 ## Design review
 - **UI/UX** — one job: place a test order; one primary action per state on the card. Readers: owner, Manager, staff,
@@ -86,21 +108,23 @@ No current source read for Shopify's own test orders.
   pass ended, limit reached, Builder, support visit, opened once, phone, Razorpay down. Norman: the Test tag and the T
   number are the signifiers on every surface; the limit and the 12 hours are constraints, not refusals to recover
   from; Delete test orders and Stop testing are the undo; the model is the merchant's ("before I open").
-- **Tenancy** — no new table. The tenant comes from the store's host on every request; the pass is checked against it.
+- **Tenancy** — no new table; one definer and one capability. The tenant comes from the store's host on every request; the pass is checked against it.
   The trigger's deletes are scoped to `new.id`. Proof block: a pass for store X refused on store Y's host; store Y's
   rows untouched by X's opening; nothing of X's testing left after opening. `tenancy-auditor`.
 - **Modularity** — pure: `src/domains/checkout/test-pass.ts` (payload, expiry), `src/domains/orders/test-order.ts`
-  (what a never-opened store may do); server: `src/lib/auth/test-pass.ts` (sign, verify; one owner of the secret).
+  (the predicate and the per-route table); server: `src/lib/auth/test-pass.ts` (sign, verify; one owner of the secret);
+  the per-route helper joins P3·4's shared handler set, so the secure frame carries the pass without a second design
+  (on a one-address host the cookie is set on `secure.<host>`).
 - **SSOT / DRY** — "test order" is derived from `first_opened_at`, once (`neverOpened`); the pass's secret has one
-  module; the ungated routes re-export the gated pages' components, no second checkout.
+  module; no second checkout and no copy of a page.
 - **YAGNI** — out: test orders on an open store, packing and shipping a test order, a sandbox courier, per-order marks.
-- **KISS** — a signed cookie, a middleware rewrite for two paths, a handful of `neverOpened` branches, deletes in an
-  existing trigger. No table, no column, no reader changed.
-- **Scalability** — at most 50 test orders a store, so the opening transaction deletes ≤ 50 orders and their rows.
-  The middleware check runs only when the cookie is present.
+- **KISS** — a signed cookie, one helper on the shop routes, one definer called from two places. No table, no
+  column, no middleware change, no reader changed, no second numbering.
+- **Scalability** — 50 placements a store a day bound the opening transaction's deletes (a store testing for a
+  month could hold more: Delete test orders, and the opening confirm's count, keep it visible).
 - **Performance and speed** — (a) `checkoutShop` gains one column already in its join; (b) no new query on
   `orders`; the 50 count is by `tenant_id` on a never-opened store (a handful of rows); (c) no cached entry grows;
-  (d) no shop page changes for the public; the two ungated routes stay static; (e) opening already purges the store;
+  (d) the two shells stay static; no other shop page changes; (e) opening already purges the store;
   (f) no first-load JS added for shoppers (the Test tag is server-drawn); (g) nothing preloaded.
 - **Reliability** — Razorpay through the existing `fetchWithTimeout` path; a miss reads as today. The deletes are in
   the opening transaction: opening and the clean-up succeed or fail together.
@@ -123,15 +147,27 @@ No current source read for Shopify's own test orders.
 ### Stress test
 | Severity | What | Where | Fix |
 |---|---|---|---|
-| High | A pass leaks (shared screenshot, a forwarded link) | the `?p=` hop | single hop, dropped at once; the cookie is HttpOnly; 12 h; dies at opening; it places test orders only |
-| High | Live keys saved before opening, then a test payment | `online-payments/actions.ts:20` accepts live keys early | Pay online absent; `startPayment` refuses |
-| High | An order survives opening and reaches a report | the trigger | proof line: zero rows of every listed table after opening; a second open after a close deletes nothing |
-| Medium | A test order's email goes to a real stranger's address | checkout's email field | the subject says Test order; at most 50 a store |
-| Medium | A webhook for a deleted test order arrives after opening | `webhooks/razorpay` | the event finds no order and is stored as unmatched, as an unknown order is today (to confirm in review) |
-| Medium | Offers with a use limit consumed by tests | `discountUses` | `order_discounts` deleted at opening restores the count |
-| Medium | Stock looks untouched after a test, confusing a tester | `stock.ts` | the Test tag; the rules table in the docs' Start guide |
-| Low | A store opened once and closed wants to test | — | out of scope; orders are real from first opening |
-| Low | The pilot (open) wants test orders | — | out of scope (call 6) |
+| High | A placement commits across the opening and becomes a real order | `place.ts:135,160`; `0068:82` | the `for share` read in placing (design 9) |
+| High | A reopen wipes real orders | `0068:87-88` | deletes only inside `if found` (design 9); a `verify:tenancy` block |
+| High | A pass for one's own unopened store used on another store's host | the cookie | the pass carries the host; the route compares it with Host and the host's tenant |
+| High | Live keys saved before opening, then a test payment | `online-payments/actions.ts:20` | `testOnline`; `startPayment` refuses |
+| Medium | The `?p=` value replayed from a log | the hop | 60 seconds; the cookie's value is separate; no referrer; no store |
+| Medium | Test emails sent to strangers from Frrata's sender | checkout's email field | sent to the pass's member only; 50 placements a day |
+| Medium | A test email creates a real marketing consent | `queries/drops.ts:32` | no drops link; `consentToDrops` refuses; `shop_customers` deleted |
+| Medium | A credit note or fee row blocks the opening | RESTRICT keys | both refuse on a never-opened store |
+| Medium | Home, Analytics and Admin's offer totals count test orders before opening | their queries | the chip on Home and Analytics; Admin's totals accepted until opening (staff read) |
+| Low | A webhook for a deleted order | `payment.ts:370,339` | confirmed safe: "no such order", marked processed, trimmed |
+| Low | Orders already on never-opened stores in production | — | a proof line before the migration: zero |
+| Low | A partner store's trial clock runs from creation, not opening | `0063:103` | unchanged; test orders do not move it |
+
+## Reviews (2026-11-22, on the first draft; all folded in above)
+| Agent | Verdict | What changed |
+|---|---|---|
+| `security-reviewer` (also as tenancy auditor) | FIX BEFORE MERGE (4 high, 6 medium, 2 low) | the `for share` read; deletes only on the first opening; the delete definer; the pass bound to the host, 60-second hop; the route table; `orders.test`; emails to the member only; no drops consent; the delete list and the two RESTRICT keys |
+| `architecture-reviewer` | CHANGES NEEDED (3 blockers, 4 majors) | stock taken as usual and put back by the definer (a skipped take made paid orders read "refund due"); no middleware rewrite or page copies (shells drawn, the APIs the lock); the store's own number series (a T series touched eight formatters); the predicate in one domain module; `testOnline`; designed into P3·4's handlers |
+| `words-reviewer` | 24 rows on the mockup | all rewritten; the Delete confirm drawn |
+To run on the revised spec before the plan's tasks are written: `tenancy-auditor` on the definer, `security-reviewer`
+on the pass and the route table, `speed-reviewer`.
 
 ## Out of scope
 | Left out | Signal that brings it back |
@@ -142,8 +178,11 @@ No current source read for Shopify's own test orders.
 
 ## Owner decisions
 1 every order before first opening is a test order, deleted at opening (yes) · 2 no pack or ship (yes) · 3 the order
-email is sent (yes) · 4 anyone who can preview may start testing, Builders included (yes) · 5 50 orders and a 12-hour
-pass (yes) · 6 an open store (not now).
+email is sent, to the member testing (yes) · 4 anyone on the team may test, Builders included, as a new permission
+(yes; amends ADR-0015 § 5: a Builder sees the order page of a test order whose link they hold, never the console's
+Orders) · 5 50 placements a store a day and a 12-hour pass (yes) · 6 an open store (not now) · 7 the checkout and
+order page shells of a never-opened store are drawn for anyone, the brand's name only (yes; the alternative is a
+per-request check on every shop page).
 
 ## Facts used
 Razorpay api-keys page, Stripe keys page, Shopify theme-dev page: read 2026-11-22, undated. The code facts above.
