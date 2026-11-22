@@ -38,7 +38,7 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    (`storefrontKeyNow`), limited per key (`apiTestKey`), drafts included (`resources.ts`: the one raw draft catalogue per
    store, `draftCatalogue`, 15 s, catalogue tags; pages and FAQ as they stand, hidden ones too). Minted ONLY by
    `mintBuildKey` (`src/lib/storefront-api/build-keys.ts`, inside the store's tenant transaction, `api.manage`, audited,
-   `apiBuildKeyShop`, at most 50 live a store), deleted daily once ended (`app_delete_ended_build_keys`, the daily cron).
+   `apiBuildKeyShop` checked first by `buildKeyLimitOk`, outside the transaction, at most 50 live a store), deleted daily once ended (`app_delete_ended_build_keys`, the daily cron).
    The starter sends the header only with `FRRATA_KEY_MODE=header`.
 3. **Every refusal is one 404 body** (one exception: a filter's grammar error, `400 {"error":"bad_filter","param"}`,
    after the key checks out, through `BadParam`) (`{"error":"not_found"}`): bad shape, unknown, deleted, expired, wrong tree, a
@@ -113,7 +113,8 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    live one is applied to `colours` and carries `until`; its start and end purge `settings` through the boundary sweep.
 
 15. **G·4 (2026-11-22), additive on `2026-12`:** `shop.mediaOrigin` (Frrata's media store); `collection.image` (the
-   store tiles' own cover rule, `collectionCover` in `src/domains/storefront/sources.ts`); `product.collection` (the
+   store tiles' own cover rule, `collectionCover` in `src/domains/storefront/sources.ts`; the list's covers in one pass,
+   `collectionCovers`); `product.collection` (the
    first collection, in the store's order, holding it); `jsonLd` on shop, product and a collection page: the store
    pages' own builders (`src/domains/seo/defaults.ts`) on `websiteOrigin(site, checkout)`
    (`src/domains/storefront-api/origin.ts`, the one rule P5·2 moves behind `app_website_of`), serialised with every `<`
