@@ -28,6 +28,10 @@ import { DropZone } from '@/components/ui/drop-zone'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import { SearchPicker } from '@/components/ui/search-picker'
 import { DateField, TimeField } from '@/components/ui/date-field'
+import dynamic from 'next/dynamic'
+
+// The rail, the resize edge and line tabs (Studio WB·2) load apart: the gallery sits at the console's 150 kB budget.
+const PanelsDemo = dynamic(() => import('./panels-demo'))
 
 // Neel's primitives in their states (fixtures/neel/page.tsx). Each block is one row of § Components.
 export function Gallery({ today }: { today: string }) {
@@ -189,6 +193,8 @@ export function Gallery({ today }: { today: string }) {
           <div className="grid content-start gap-1.5"><span className="text-label font-medium">At</span><TimeField label="Starts at" value={time} onChange={setTime} /></div>
         </div>
       </Section>
+
+      <PanelsDemo />
 
       <Section title="Upload and confirm" id="g-upload">
         <div className="grid gap-3 md:grid-cols-2">
