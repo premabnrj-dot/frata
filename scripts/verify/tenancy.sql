@@ -3765,7 +3765,7 @@ do $$ declare r record; allowed jsonb := '{
   "product_attributes": ["tenant_id","product_id","attribute","values"],
   "brand_tokens": ["tenant_id","logo_mark_url","logo_stacked_url","logo_reversed_url","color_bg","color_panel","color_text","color_muted","color_accent","color_on","color_edge","color_line","color_good","color_warn","color_bad","font_display","font_body","radius","density"],
   "checkout_design": ["tenant_id","header","back_link","policy_rows","trust","heading","thanks"],
-  "shop_settings": ["tenant_id","logo_url"]}'; begin
+  "shop_settings": ["tenant_id","logo_url","dispatch_days","metro_days","rest_days","return_kind","return_days","cod_on","cod_max"]}'; begin
   for r in select c.oid as rel, n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where c.relkind in ('r','v','m','p','f') and n.nspname not in ('pg_catalog','information_schema') loop
     if has_table_privilege('frata_builder', r.rel, 'insert') or has_table_privilege('frata_builder', r.rel, 'update')
@@ -4964,6 +4964,10 @@ do $$ declare n int; begin
   begin perform previous from checkout_design; raise exception 'FAIL: 99 the Builder read previous'; exception when insufficient_privilege then null; end;
   begin perform updated_by from checkout_design; raise exception 'FAIL: 99 the Builder read updated_by'; exception when insufficient_privilege then null; end;
   begin update checkout_design set heading = 'x'; raise exception 'FAIL: 99 the Builder wrote'; exception when insufficient_privilege then null; end;
+  select count(*) into n from (select dispatch_days, metro_days, rest_days, return_kind, return_days, cod_on, cod_max from shop_settings) x;
+  if n <> 1 then raise exception 'FAIL: 99 the Builder can''t read the trust facts'; end if;
+  begin perform gstin from shop_settings; raise exception 'FAIL: 99 the Builder read the GSTIN'; exception when insufficient_privilege then null; end;
+  begin perform cod_charge from shop_settings; raise exception 'FAIL: 99 the Builder read a setting past the trust facts'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;
 do $$ declare r text; begin

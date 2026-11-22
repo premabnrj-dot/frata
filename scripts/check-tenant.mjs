@@ -273,7 +273,8 @@ const BUILDER_COLUMNS = {
   // Checkout design (one-address P2·1, drizzle/*_checkout_design.sql): the live design a Builder previews beside the
   // record. Never `previous` or `updated_by`.
   checkout_design: 'tenant_id header back_link policy_rows trust heading thanks',
-  shop_settings: 'tenant_id logo_url',
+  // + one-address P2·6: the public delivery, returns and Pay on delivery facts a checkout preview's trust blocks name.
+  shop_settings: 'tenant_id logo_url dispatch_days metro_days rest_days return_kind return_days cod_on cod_max',
 }
 const builderSelectOk = (what) => {
   const m = what.match(/^select \(([a-z_, \n]+)\) on ([a-z_]+)$/)

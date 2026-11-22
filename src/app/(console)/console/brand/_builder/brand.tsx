@@ -9,7 +9,7 @@ import { BrandEditor } from '../_components/brand-editor'
  * Read as frata_builder: the live record's named columns and the store's logo (drizzle/0155), never a waiting change,
  * who saved or the store's legal details (the invoice preview shows the store's name only).
  */
-export async function BuilderBrand({ actor, shopName, at }: { actor: BuilderActor; shopName: string; at: string }) {
+export async function BuilderBrand({ actor, shopName, at, tabs }: { actor: BuilderActor; shopName: string; at: string; tabs?: React.ReactNode }) {
   const [record, product] = await Promise.all([
     builderBrand(actor).catch((err: unknown) => { console.error('[brand builder]', err instanceof Error ? err.name : err); return null }),
     builderBrandSample(actor).catch(() => null),
@@ -18,7 +18,7 @@ export async function BuilderBrand({ actor, shopName, at }: { actor: BuilderActo
   return (
     <NowProvider at={at}>
       <BrandEditor tenantId="" mode="preview" live={record} version={null} waiting={null} decides={false}
-        sample={{ shopName, product, paper: { legalName: '', address: '', gstin: null, prefix: '' } }} tagline="" />
+        sample={{ shopName, product, paper: { legalName: '', address: '', gstin: null, prefix: '' } }} tagline="" tabs={tabs} />
     </NowProvider>
   )
 }

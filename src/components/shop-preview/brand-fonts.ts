@@ -1,5 +1,4 @@
 import localFont from 'next/font/local'
-import { displayFamily } from './fonts'
 
 // =============================================================================
 // FILE: src/components/shop-preview/brand-fonts.ts — the brand record's extra faces for Console › Brand only (one-address
@@ -15,10 +14,5 @@ const tiro = localFont({ src: '../fonts/tiro-devanagari-hindi/tiro-devanagari-hi
 /** The brand faces' variables beside the store's (Console › Brand only; a theme shop's pages never load them). */
 export const BRAND_FONT_VARS = `${mukta.variable} ${tiro.variable}`
 
-/** A brand record's font on Frrata's own pages (Console › Brand's preview): the self-hosted face by its variable, then a
- *  fallback of its kind. What leaves Frrata (the API, the kit) names the family instead (src/domains/brand/record.ts). */
-export function brandFamily(font: string): string {
-  if (font === 'mukta') return 'var(--font-store-mukta), var(--font-store-deva), system-ui, sans-serif'
-  if (font === 'tiro') return 'var(--font-store-tiro), var(--font-store-deva), Georgia, serif'
-  return displayFamily(font)
-}
+import { brandFamily } from './font-families'
+export { brandFamily }

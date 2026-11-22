@@ -26,10 +26,10 @@ type Tx = Parameters<Parameters<typeof withTenant>[1]>[0]
 export type NoticeRow = typeof notices.$inferSelect
 export type ShownNotice = { id: string; type: NoticeType; title: string; body: string; href: string | null; required: boolean; at: Date; read: boolean
   /** A partner's waiting brand change (one-address P1): its id and where it stands, for Approve change and Decline. */
-  brand?: { id: string; state: BrandNoticeState } }
+  brand?: { id: string; state: BrandNoticeState; kind: 'brand' | 'checkout' } }
 
 /** The words for a set of notices, reading their sources in two queries (billing notices, support visits). */
-export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string, brandChanges?: Map<string, { summary: string; state: BrandNoticeState }>): Promise<Map<string, { title: string; body: string }>> {
+export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string, brandChanges?: Map<string, { summary: string; state: BrandNoticeState; kind: string }>): Promise<Map<string, { title: string; body: string }>> {
   const billIds = rows.filter((n) => n.sourceKind === 'billing_notice' && n.sourceId).map((n) => n.sourceId!)
   const visitIds = rows.filter((n) => n.sourceKind === 'support_session' && n.sourceId).map((n) => n.sourceId!)
   const trialIds = rows.filter((n) => n.sourceKind === 'addon_trial' && n.sourceId).map((n) => n.sourceId!)
@@ -77,7 +77,7 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string, b
     } else if (n.sourceKind === 'brand') {
       // One-address P1: the waiting change's own line, kept with it ("4 logo files and 2 fonts.").
       const b = n.sourceId ? brand.get(n.sourceId) : undefined
-      if (b) src = { kind: 'brand', summary: b.summary }
+      if (b) src = { kind: 'brand', summary: b.summary, ...(b.kind === 'checkout' ? { area: 'checkout' as const } : {}) }
     } else if (n.title) src = { kind: 'admin', title: n.title, body: n.body }
     out.set(n.id, src ? noticeWords(src, shopName) : noticeFallback(n))
   }
@@ -85,12 +85,12 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string, b
 }
 
 /** Each `brand` notice's change: its line and where it stands now (Needs you, Approved, Declined; replaced by a newer one). */
-async function brandChangesIn(tx: Tx, rows: NoticeRow[]): Promise<Map<string, { summary: string; state: BrandNoticeState }>> {
+async function brandChangesIn(tx: Tx, rows: NoticeRow[]): Promise<Map<string, { summary: string; state: BrandNoticeState; kind: string }>> {
   const ids = rows.filter((n) => n.sourceKind === 'brand' && n.sourceId).map((n) => n.sourceId!)
   if (!ids.length) return new Map()
-  const got = await tx.select({ id: brandProposals.id, summary: brandProposals.summary, decision: brandProposals.decision }).from(brandProposals)
+  const got = await tx.select({ id: brandProposals.id, kind: brandProposals.kind, summary: brandProposals.summary, decision: brandProposals.decision }).from(brandProposals)
     .where(and(eq(brandProposals.tenantId, rows[0]!.tenantId), inArray(brandProposals.id, ids)))
-  return new Map(got.map((p) => [p.id, { summary: p.summary, state: (p.decision ?? 'open') as BrandNoticeState }]))
+  return new Map(got.map((p) => [p.id, { summary: p.summary, kind: p.kind, state: (p.decision ?? 'open') as BrandNoticeState }]))
 }
 export type BrandNoticeState = 'open' | 'approved' | 'declined' | 'replaced'
 
@@ -114,7 +114,7 @@ export async function listNotices(tenantId: string, userId: string, role: string
     const read = new Set(reads.map((r) => r.id))
     return rows.map((n) => {
       const b = n.sourceKind === 'brand' && n.sourceId ? brand.get(n.sourceId) : undefined
-      return { id: n.id, type: n.type as NoticeType, ...words.get(n.id)!, href: n.href, required: n.required, at: n.createdAt, read: read.has(n.id), ...(b ? { brand: { id: n.sourceId!, state: b.state } } : {}) }
+      return { id: n.id, type: n.type as NoticeType, ...words.get(n.id)!, href: n.href, required: n.required, at: n.createdAt, read: read.has(n.id), ...(b ? { brand: { id: n.sourceId!, state: b.state, kind: b.kind === 'checkout' ? 'checkout' as const : 'brand' as const } } : {}) }
     })
   })
 }

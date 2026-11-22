@@ -1,13 +1,16 @@
 // =============================================================================
-// FILE: src/components/storefront/brand-css.ts — THE BRAND FRAME'S OWN RULES (one-address plan P2·3; owner-approved
+// FILE: src/lib/storefront/brand-css.ts — THE BRAND FRAME'S OWN RULES (one-address plan P2·3; owner-approved
 // mockup docs/mockups/2026-11-16-p2-checkout.html, its .s-* rules). Sent inline by BrandFrame, so only a code-site
 // store's checkout, bag-link, order and policy pages carry them: the shop's shared sheet (check:storefront-build, 15.9
 // kB) and every theme shop stay as they were. A constant: nothing a merchant or shopper typed is ever in it. Colours
-// are the store's tokens, which BrandFrame sets from the brand record. Unlayered, so it wins over the views' utilities.
+// are the store's tokens, which BrandFrame sets from the brand record. Unlayered, so it wins over the views' utilities. Its breakpoint is the frame's own width (a container query), so the
+// console's preview at 390 px lays out as a phone inside a wide page, and a live page as before (its frame is the page).
+// Kept outside the folders the shop's Tailwind scans (src/app/shop.css @source): its words (container, flex, grid) would
+// otherwise become utilities in the shared sheet.
 // =============================================================================
 
 export const BRAND_CSS = `
-[data-brand]{font-family:var(--store-body)}
+[data-brand]{font-family:var(--store-body);container:brand/inline-size}
 .bf-hd{border-bottom:1px solid var(--store-line);background:var(--store-paper)}
 .bf-hw{position:relative;margin:0 auto;display:flex;height:56px;max-width:1200px;align-items:center;gap:12px;padding:0 16px}
 .bf-hw.c{justify-content:center}
@@ -59,7 +62,7 @@ export const BRAND_CSS = `
 .ck-note{grid-column:2/-1;margin:0;font-size:14px;line-height:20px;color:var(--store-warn)}
 .ck-ic-sm{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .ck-err .ck-ic-sm{margin-top:2px}
-@media (min-width:640px){
+@container brand (min-width:640px){
 .bf-hw{height:72px;padding:0 40px}.bf-hw.c .bf-back{left:40px}.bf-hw.c .bf-back span{display:inline}.bf-logo{height:40px}
 .bf-fw{padding:28px 40px 32px}.bf-ft dl{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
 .bf-trust{grid-template-columns:repeat(4,minmax(0,1fr))}

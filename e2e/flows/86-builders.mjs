@@ -115,6 +115,17 @@ export default {
       for (const w of PRIVATE) assert.ok(!pv.includes(w), `the preview shows "${w}"`)
     })
 
+    await t.step('Brand › Checkout: the Builder reads the design as facts beside the preview, nothing that saves (one-address P2·6, O9)', async () => {
+      await bp.goto(CONSOLE + '/console/brand/checkout')
+      await bp.getByText('Preview only', { exact: true }).first().waitFor()
+      await bp.locator('[data-pv="checkout"] >> visible=true').first().waitFor()
+      assert.equal(await bp.getByLabel('Checkout heading').count(), 0, 'no field to type in')
+      assert.equal(await bp.getByRole('button', { name: /^Save/ }).count(), 0)
+      const html = await bp.content()
+      for (const w of PRIVATE) assert.ok(!html.includes(w), `Brand › Checkout shows "${w}"`)
+      await bp.screenshot({ path: t.out('builder-checkout'), fullPage: true })
+    })
+
     await t.step('THE SWEEP: every other console page and route refuses the Builder and says nothing private', async () => {
       const all = addresses()
       assert.ok(all.length > 40, `the sweep found only ${all.length} addresses`)

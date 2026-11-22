@@ -1,8 +1,7 @@
-import { brandFamily } from '@/components/shop-preview/brand-fonts'
+import { brandFamily } from '@/components/shop-preview/font-families'
 import { FIELD_HEIGHT, type BrandRecord } from '@/domains/brand/record'
 import type { CheckoutDesign } from '@/domains/brand/checkout'
 import type { PolicyFacts } from '@/domains/policies/render'
-import { formatPhone } from '@/lib/format'
 import { POLICY_TITLE } from './policy-titles'
 
 // =============================================================================
@@ -11,6 +10,7 @@ import { POLICY_TITLE } from './policy-titles'
 // and Console › Brand › Checkout's preview (checkout-preview.tsx) draw the same parts. Rules: brand-css.ts.
 // =============================================================================
 
+/** The store's facts the frame draws; `supportPhone` already as people read it (formatPhone, on the server). */
 export type BrandFacts = Pick<PolicyFacts, 'shopName' | 'legalName' | 'address' | 'supportEmail' | 'supportPhone' | 'grievanceName' | 'grievanceEmail'>
 
 /** The record as the store's tokens: the checkout, order and policy views read only these. */
@@ -54,7 +54,7 @@ export function BrandHeader({ record, design, name, home, link = true }: { recor
 
 /** The policy links in one row or two, and the legal block, always. */
 export function BrandFooter({ facts: f, rows }: { facts: BrandFacts; rows: CheckoutDesign['rows'] }) {
-  const care = [f.supportEmail, f.supportPhone ? formatPhone(f.supportPhone) : ''].filter(Boolean).join(' · ')
+  const care = [f.supportEmail, f.supportPhone].filter(Boolean).join(' · ')
   return (
     <footer className="bf-ft">
       <div className="bf-fw">

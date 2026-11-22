@@ -10,7 +10,8 @@ import { emptyRecord, type BrandRecord, type Density, type Font, type Hex, type 
 import { readRecord } from '@/domains/brand/schema'
 import type { Season } from '@/domains/brand/seasons'
 import { hasCodeSite } from '@/domains/brand/code-site'
-import { readDesign, type CheckoutDesign } from '@/domains/brand/checkout'
+import { DEFAULT_DESIGN, readDesign, type CheckoutDesign, type TrustFacts } from '@/domains/brand/checkout'
+import type { SampleItem } from '@/domains/brand/checkout-sample'
 import { shopCached, shopCatalogue } from './storefront'
 import { isListed } from '@/domains/storefront/listing'
 import { urlFor } from '@/domains/media/sizes'
@@ -144,6 +145,36 @@ export const brandPage = (t: string, now: Date) => withTenant(t, async (tx): Pro
   }
 }, { snapshot: true })
 
+/** Console › Brand › Checkout (one-address P2·6), in one snapshot: the live record, the live design (Frrata's default
+ *  until one is saved), its version, whether the store is open, and the store's waiting checkout change. */
+export type CheckoutPageData = { brand: ShopBrand | null; design: CheckoutDesign; saved: boolean; version: number | null; open: boolean; waiting: { id: string; design: CheckoutDesign } | null }
+export const checkoutPage = (t: string, now: Date) => withTenant(t, async (tx): Promise<CheckoutPageData> => {
+  const [brand, design, [meta], [open], [w]] = await Promise.all([
+    shopBrandWith(tx, t, now),
+    checkoutDesignWith(tx, t),
+    tx.select({ version: checkoutDesign.version }).from(checkoutDesign).where(eq(checkoutDesign.tenantId, t)),
+    tx.select({ at: shopSettings.publishedAt }).from(shopSettings).where(eq(shopSettings.tenantId, t)),
+    tx.select({ id: brandProposals.id, record: brandProposals.record }).from(brandProposals)
+      .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.kind, 'checkout'), isNull(brandProposals.decidedAt))).limit(1),
+  ])
+  const waiting = w ? readDesign(w.record) : null
+  return {
+    brand: brand ? { record: brand.record, saved: brand.saved, seasons: brand.seasons } : null,
+    design: design ?? DEFAULT_DESIGN, saved: !!design, version: meta?.version ?? null, open: !!open?.at,
+    waiting: w && waiting ? { id: w.id, design: waiting } : null,
+  }
+}, { snapshot: true })
+
+/** The checkout preview's sample bag: the store's own first two listed products with their first size (reconciliation 2). */
+export async function checkoutSamples(t: string, now: Date): Promise<SampleItem[]> {
+  const cat = await shopCatalogue(t)
+  const listed = cat.products.filter((x) => isListed(x, now) && x.variants.length)
+  return [...listed.filter((x) => x.images.length), ...listed.filter((x) => !x.images.length)].slice(0, 2).map((p) => {
+    const v = p.variants[0]!
+    return { title: p.title, size: v.values.join(' · '), price: v.price, photo: p.images[0] ? urlFor(p.images[0].base, 400) : null }
+  })
+}
+
 /** The preview's sample product: the store's own first listed product with a photo (reconciliation 2), from the cached
  *  catalogue the store's pages read; null when it has none (the preview then shows the store's name only). */
 export async function brandSample(t: string, now: Date): Promise<{ title: string; price: number; mrp: number | null; photo: string | null } | null> {
@@ -161,4 +192,15 @@ export async function builderBrandWith(tx: Tx, t: string): Promise<BrandRecord> 
     tx.select(live).from(brandTokens).where(eq(brandTokens.tenantId, t)),
   ])
   return recordOf(row, s?.logoUrl ?? null) ?? emptyRecord(DEFAULT_PALETTE, s?.logoUrl ?? null)
+}
+
+/** What a Builder reads for the checkout preview (as frata_builder, drizzle/0156): the live design's named columns and
+ *  the store's public delivery, returns and Pay on delivery facts. Never the GSTIN, the legal details or a waiting change. */
+export async function builderCheckoutWith(tx: Tx, t: string) {
+  const [design, [f]] = await Promise.all([
+    checkoutDesignWith(tx, t),
+    tx.select({ dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays, restDays: shopSettings.restDays, returnKind: shopSettings.returnKind,
+      returnDays: shopSettings.returnDays, codOn: shopSettings.codOn, codMax: shopSettings.codMax }).from(shopSettings).where(eq(shopSettings.tenantId, t)),
+  ])
+  return { design: design ?? DEFAULT_DESIGN, facts: f ? { ...f, returnKind: f.returnKind as TrustFacts['returnKind'] } : null }
 }

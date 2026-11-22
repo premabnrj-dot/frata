@@ -54,6 +54,11 @@ create policy builder_rows on checkout_design as permissive for select to frata_
 --> statement-breakpoint
 create policy builder_only on checkout_design as restrictive for select to frata_builder using ((select app_member_role()) = 'builder');
 --> statement-breakpoint
+-- The Builder's checkout preview words its trust blocks from the store's own delivery, returns and Pay on delivery
+-- settings: facts every shopper reads on the store's policy pages and checkout. Never the GSTIN, the legal details or a
+-- cost (its GST block isn't drawn; its legal block is the store's name, as P1's invoice preview).
+grant select (dispatch_days, metro_days, rest_days, return_kind, return_days, cod_on, cod_max) on shop_settings to frata_builder;
+--> statement-breakpoint
 -- 0155's, pointing a checkout change at its own tab. Same signature: its grants stay.
 create or replace function app_brand_notice(p_proposal uuid) returns uuid
   language plpgsql volatile security definer set search_path = '' as $$

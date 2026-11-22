@@ -6,7 +6,7 @@ import { BEACON_VERSION } from '@/lib/analytics/beacon-version'
 import { isCountingVisits } from '@/lib/env'
 import { CaptureAttribution } from './capture'
 import { StoreToaster } from './store-toaster'
-import { BRAND_CSS } from './brand-css'
+import { BRAND_CSS } from '@/lib/storefront/brand-css'
 import { BrandFooter, BrandHeader, brandStyle, type BrandFacts } from './brand-parts'
 export type { BrandFacts } from './brand-parts'
 

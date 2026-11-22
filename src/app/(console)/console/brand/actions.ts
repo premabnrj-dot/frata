@@ -1,7 +1,7 @@
 'use server'
 
 import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
-import { decideBrand, saveBrand, undoBrand, type BrandResult } from '@/lib/content/save'
+import { decideBrand, saveBrand, saveCheckout, undoBrand, undoCheckout, type BrandResult } from '@/lib/content/save'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { storeSvgLogo } from '@/lib/media/brand-files'
 import { BRAND_REFUSAL } from '@/domains/brand/who'
@@ -15,6 +15,9 @@ import { BRAND_REFUSAL } from '@/domains/brand/who'
 export async function saveBrandAction(input: unknown): Promise<BrandResult> { return saveBrand(input) }
 export async function decideBrandAction(input: unknown): Promise<BrandResult> { return decideBrand(input) }
 export async function undoBrandAction(input: unknown): Promise<BrandResult> { return undoBrand(input) }
+// Console › Brand › Checkout (one-address P2·6): the checkout design, through the same door (decideBrand answers either kind).
+export async function saveCheckoutAction(input: unknown): Promise<BrandResult> { return saveCheckout(input) }
+export async function undoCheckoutAction(input: unknown): Promise<BrandResult> { return undoCheckout(input) }
 
 /**
  * An SVG logo: its text comes here (the browser's upload token takes photos only), is cleaned and stored under its own

@@ -42,7 +42,7 @@ export default async function NoticesPage() {
                     : <Badge tone={n.required ? 'warn' : 'neutral'}>{TYPE_LABEL[n.type]}</Badge>}{momentIN(n.at, now)}
                   {n.href && n.brand?.state !== 'declined' && n.brand?.state !== 'replaced' ? <Link href={n.href} className="inline-flex min-h-6 items-center underline underline-offset-4">Open</Link> : null}
                 </p>
-                {n.brand?.state === 'open' && decides ? <BrandDecision id={n.brand.id} /> : null}
+                {n.brand?.state === 'open' && decides ? <BrandDecision id={n.brand.id} kind={n.brand.kind} /> : null}
               </div>
             </li>
           ))}

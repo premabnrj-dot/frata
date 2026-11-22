@@ -7,13 +7,13 @@ import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { shopSettings } from '@/lib/db/schema'
-import { brandProposals, brandTokens } from '@/lib/db/schema-brand'
+import { brandProposals, brandTokens, checkoutDesign } from '@/lib/db/schema-brand'
 import { LIMITS, uncount, withinLimit, type Limit } from '@/lib/db/rate-limit'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { svgIsStored, afterMainLogo } from '@/lib/media/brand-files'
-import { shopBrand, shopBrandWith } from '@/lib/queries/brand'
+import { checkoutDesignWith, shopBrand, shopBrandWith } from '@/lib/queries/brand'
 import { refreshShop } from '@/lib/storefront/refresh'
 import { storeHost } from '@/domains/media/sizes'
 import { brandProblems, type BrandField } from '@/domains/brand/check'
@@ -22,6 +22,7 @@ import { acceptedBrandFile, rasterBase } from '@/domains/brand/files'
 import { COLOUR_ROLES, DENSITIES, FONTS, LOGO_SLOTS, normalHex, RADII, type BrandRecord, type LogoSlot } from '@/domains/brand/record'
 import { readRecord } from '@/domains/brand/schema'
 import { BRAND_REFUSAL, brandSaver, decidesBrand } from '@/domains/brand/who'
+import { cleanLine, DEFAULT_DESIGN, designChanges, designProblems, designSummary, HEADERS, MAX_TRUST, readDesign, TRUST_KEYS, type CheckoutDesign } from '@/domains/brand/checkout'
 
 // =============================================================================
 // FILE: src/lib/content/save.ts — THE ONE WRITER OF A STORE'S BRAND RECORD (one-address plan P1·3; spec § 5: "saveBrand
@@ -37,9 +38,9 @@ import { BRAND_REFUSAL, brandSaver, decidesBrand } from '@/domains/brand/who'
 
 export type BrandResult =
   | { ok: true; outcome: 'live' | 'waits' | 'unchanged'; version: number | null }
-  | { ok: false; error: string; fields?: Partial<Record<BrandField | LogoSlot, string>> }
+  | { ok: false; error: string; fields?: Partial<Record<BrandField | LogoSlot | 'heading' | 'thanks' | 'trust', string>> }
 type Auth = Extract<Awaited<ReturnType<typeof requireMember>>, { ok: true }>
-type Out = { error: string; fields?: Partial<Record<BrandField | LogoSlot, string>> } | { outcome: 'live' | 'waits' | 'unchanged'; version: number | null; main?: string | null }
+type Out = { error: string; fields?: Partial<Record<BrandField | LogoSlot | 'heading' | 'thanks' | 'trust', string>> } | { outcome: 'live' | 'waits' | 'unchanged'; version: number | null; main?: string | null }
 
 const NOTHING = 'We couldn’t save that. Nothing was changed.'
 const FULL = 'Too many saves this minute. Nothing was changed. Try again in a minute.'
@@ -221,16 +222,28 @@ export async function decideBrand(input: unknown): Promise<BrandResult> {
   return write({ action: `brand.${decision}`, roles: CAN_MANAGE, limit: LIMITS.brandSave }, async (tx, auth) => {
     if (!decidesBrand(auth.membership.role, auth.membership.supportSessionId)) return { error: auth.membership.supportSessionId ? BRAND_REFUSAL.support : 'Only the owner or a Manager can answer this change. Nothing was changed.' }
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
-    // A checkout change is answered by decideCheckout (its own record and version); never applied as a brand record.
-    const [p] = await tx.select({ id: brandProposals.id, record: brandProposals.record, base: brandProposals.baseVersion }).from(brandProposals)
-      .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id), eq(brandProposals.kind, 'brand'), isNull(brandProposals.decidedAt))).for('update')
+    // One door for both kinds (the Notices row answers either): a checkout change is applied to checkout_design against
+    // its own version, never as a brand record (one-address P2·6).
+    const [p] = await tx.select({ id: brandProposals.id, kind: brandProposals.kind, record: brandProposals.record, base: brandProposals.baseVersion }).from(brandProposals)
+      .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id), isNull(brandProposals.decidedAt))).for('update')
     if (!p) return { error: 'This change was already answered. Reload to see it.' }
     const settle = () => tx.update(brandProposals).set({ decidedAt: now, decision: decision === 'approve' ? 'approved' : 'declined', decidedBy: me })
       .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id)))
+    const area = p.kind === 'checkout' ? 'brand.checkout' : 'brand'
     if (decision === 'decline') {
       await settle()
-      await memberAudit(tx, auth, 'brand.decline', id)
+      await memberAudit(tx, auth, `${area}.decline`, id)
       return { outcome: 'unchanged', version: null }
+    }
+    if (p.kind === 'checkout') {
+      const next = readDesign(p.record), row = await heldDesign(tx, t)
+      if (!next || designProblems(next).length) return { error: NOTHING }
+      if ((row?.version ?? 0) !== p.base) return { error: 'Your checkout changed after this was sent. Decline it and ask for a new one.' }
+      const live = row?.design ?? DEFAULT_DESIGN
+      const v = await putDesign(tx, t, me, live, next, row)
+      await settle()
+      await memberAudit(tx, auth, 'brand.checkout.approve', id, { fields: designChanges(live, next), version: v })
+      return { outcome: 'live', version: v }
     }
     const brand = await shopBrandWith(tx, t, now)
     const next = readRecord(p.record)
@@ -264,5 +277,94 @@ export async function undoBrand(input: unknown): Promise<BrandResult> {
     const v = await putLive(tx, t, auth.userId, brand.record, before, row, false)
     await memberAudit(tx, auth, 'brand.undo', undefined, { fields: changesOf(brand.record, before).map((c) => c.label), version: v })
     return { outcome: 'live', version: v, main: before.logos.main !== brand.record.logos.main ? before.logos.main : undefined }
+  })
+}
+
+// ── The checkout design (one-address plan P2·6; spec § 3; owner-approved mockup docs/mockups/2026-11-16-p2-checkout.html
+// screens 8–10). Who saves is the brand record's rule (who.ts): the owner and Managers live; the store's partner live
+// until the store opens, then its save waits for the owner beside a brand change (one open of each kind); a Builder, staff
+// and a support visit never save. The lines are checked as the page checks them (designProblems); the record before the
+// save is kept for Undo; one audit row with the parts' names only; after the commit `shop:<t>:settings` only.
+
+const STALE_DESIGN = 'The checkout design changed since you opened it. Reload to see it.'
+const DesignInput = z.strictObject({
+  version: z.number().int().positive().nullable(),
+  design: z.strictObject({
+    header: z.enum(HEADERS), back: z.boolean(), rows: z.union([z.literal(1), z.literal(2)]),
+    trust: z.array(z.enum(TRUST_KEYS)).max(MAX_TRUST), heading: z.string().max(200), thanks: z.string().max(600),
+  }),
+})
+
+/** The store's design row, held for this transaction (null: none saved yet). */
+async function heldDesign(tx: Tx, t: string) {
+  const [row] = await tx.select({ version: checkoutDesign.version, previous: checkoutDesign.previous, updatedBy: checkoutDesign.updatedBy, updatedAt: checkoutDesign.updatedAt })
+    .from(checkoutDesign).where(eq(checkoutDesign.tenantId, t)).for('update')
+  if (!row) return null
+  return { ...row, design: (await checkoutDesignWith(tx, t)) ?? DEFAULT_DESIGN }
+}
+
+const designColumns = (d: CheckoutDesign) => ({ header: d.header, backLink: d.back, policyRows: d.rows, trust: d.trust, heading: d.heading, thanks: d.thanks })
+
+/** Makes `next` live, the design before it kept for Undo. Returns the new version. */
+async function putDesign(tx: Tx, t: string, userId: string, live: CheckoutDesign, next: CheckoutDesign, row: { version: number } | null, keepPrevious = true): Promise<number> {
+  const previous = keepPrevious ? live : null
+  if (row) {
+    const [u] = await tx.update(checkoutDesign).set({ ...designColumns(next), previous, version: sql`${checkoutDesign.version} + 1`, updatedAt: new Date(), updatedBy: userId })
+      .where(eq(checkoutDesign.tenantId, t)).returning({ version: checkoutDesign.version })
+    return u!.version
+  }
+  const [i] = await tx.insert(checkoutDesign).values({ tenantId: t, ...designColumns(next), previous, updatedBy: userId }).returning({ version: checkoutDesign.version })
+  return i!.version
+}
+
+/** Save the checkout design from Console › Brand › Checkout. `input`: `{ version, design }`. */
+export async function saveCheckout(input: unknown): Promise<BrandResult> {
+  const parsed = DesignInput.safeParse(input)
+  const version = parsed.success ? parsed.data.version : null
+  const next: CheckoutDesign | null = parsed.success ? { ...parsed.data.design, heading: cleanLine(parsed.data.design.heading), thanks: cleanLine(parsed.data.design.thanks) } : null
+  return write({ action: 'brand.checkout.save', roles: CAN_BUILD, limit: LIMITS.brandSave }, async (tx, auth) => {
+    if (!next) return { error: NOTHING }
+    const t = auth.membership.tenantId, me = auth.userId, now = new Date()
+    if (auth.membership.supportSessionId) return { error: BRAND_REFUSAL.support }
+    // A theme shop has no checkout design (O19): its checkout keeps its theme.
+    if (!(await shopBrandWith(tx, t, now))) return { error: NOTHING }
+    const [open] = await tx.select({ at: shopSettings.publishedAt }).from(shopSettings).where(eq(shopSettings.tenantId, t))
+    const saver = brandSaver(auth.membership.role, auth.membership.supportSessionId, !!open?.at)
+    if (saver === 'support' || saver === 'preview') return { error: BRAND_REFUSAL[saver] }
+    const row = await heldDesign(tx, t)
+    if (version !== (row?.version ?? null)) return { error: STALE_DESIGN }
+    const problems = designProblems(next)
+    if (problems.length) return { error: problems.length === 1 ? '1 line needs fixing' : `${problems.length} lines need fixing`, fields: Object.fromEntries(problems.map((p) => [p.field, p.message])) }
+    const live = row?.design ?? DEFAULT_DESIGN
+    const changes = designChanges(live, next)
+    if (!changes.length) return { outcome: 'unchanged', version: row?.version ?? null }
+    if (saver === 'waits') {
+      // A newer save takes the waiting one's place: one open checkout change a store (beside one brand change).
+      await tx.update(brandProposals).set({ decidedAt: now, decision: 'replaced', decidedBy: me }).where(and(eq(brandProposals.tenantId, t), eq(brandProposals.kind, 'checkout'), isNull(brandProposals.decidedAt)))
+      const [p] = await tx.insert(brandProposals).values({ tenantId: t, kind: 'checkout', record: next, summary: designSummary(changes), baseVersion: row?.version ?? 0, proposedBy: me }).returning({ id: brandProposals.id })
+      await tx.execute(sql`select app_brand_notice(${p!.id}::uuid)`)
+      await memberAudit(tx, auth, 'brand.checkout.propose', p!.id, { fields: changes })
+      return { outcome: 'waits', version: row?.version ?? null }
+    }
+    const v = await putDesign(tx, t, me, live, next, row)
+    await memberAudit(tx, auth, 'brand.checkout.save', undefined, { fields: changes, version: v })
+    return { outcome: 'live', version: v }
+  })
+}
+
+/** Undo the last checkout-design save (or Approve), by whoever made it, within a minute: the design before it, once. */
+export async function undoCheckout(input: unknown): Promise<BrandResult> {
+  const parsed = UndoInput.safeParse(input)
+  return write({ action: 'brand.checkout.undo', roles: CAN_BUILD, limit: LIMITS.brandUndo }, async (tx, auth) => {
+    const t = auth.membership.tenantId, now = new Date()
+    if (auth.membership.supportSessionId) return { error: BRAND_REFUSAL.support }
+    const row = await heldDesign(tx, t)
+    const before = row ? readDesign(row.previous) : null
+    if (!parsed.success || !row || !before || row.version !== parsed.data.version || row.updatedBy !== auth.userId || now.getTime() - row.updatedAt.getTime() > UNDO_MS) {
+      return { error: 'That can’t be undone now. Nothing was changed.' }
+    }
+    const v = await putDesign(tx, t, auth.userId, row.design, before, row, false)
+    await memberAudit(tx, auth, 'brand.checkout.undo', undefined, { fields: designChanges(row.design, before), version: v })
+    return { outcome: 'live', version: v }
   })
 }

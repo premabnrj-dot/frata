@@ -23,9 +23,10 @@ import { join } from 'node:path'
 // store choice itself (the switch and the tenant check; check:capabilities pins its callers
 // holds which files may call it).
 // apiRequest (src/lib/storefront-api/request.ts) is the Storefront API's door: the shop from a key's definer row (ADR-0018).
-// saveBrand, decideBrand, undoBrand (src/lib/content/save.ts, one-address P1·3): the brand record's one writer; each asks
+// saveBrand, decideBrand, undoBrand (src/lib/content/save.ts, one-address P1·3): the brand record's one writer, and
+// saveCheckout, undoCheckout beside them (the checkout design's, one-address P2·6); each asks
 // requireMember and writes through asMember itself, so an action that calls one is behind both.
-const CHOKEPOINTS = ['saveBrand', 'decideBrand', 'undoBrand', 'requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
+const CHOKEPOINTS = ['saveBrand', 'decideBrand', 'undoBrand', 'saveCheckout', 'undoCheckout', 'requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -137,7 +138,7 @@ for (const file of existsSync('src/app/(partner)') ? walk('src/app/(partner)') :
 for (const file of walk('src/app/(console)')) {
   const text = readFileSync(file, 'utf8')
   // saveBrand, decideBrand and undoBrand write through asMember inside src/lib/content/save.ts (one-address P1·3).
-  if (/^\s*['"]use server['"]/m.test(text) && !/\b(asMember|asModule|saveBrand|decideBrand|undoBrand)\(/.test(text)) {
+  if (/^\s*['"]use server['"]/m.test(text) && !/\b(asMember|asModule|saveBrand|decideBrand|undoBrand|saveCheckout|undoCheckout)\(/.test(text)) {
     failures.push(`${file}  console server actions must use asMember( or asModule( (support visits are audited there)`)
   }
 }
