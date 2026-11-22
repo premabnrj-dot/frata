@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_PALETTE } from '../defaults'
 import { COLOUR_ROLES, emptyRecord, FONTS, fontStack, normalHex, type BrandRecord, type Palette } from '../record'
 import { brandProblems, logoFileProblem, pairChecks, pairProblem, sniffLogo } from '../check'
-import { lineProblem } from '../lines'
+import { LINE_WORDS, lineProblem } from '../lines'
 import { liveSeason, seasonProblem, withSeason, type Season } from '../seasons'
 import { accentOf } from '../accent'
 import { hasCodeSite } from '../code-site'
@@ -93,13 +93,21 @@ describe('lineProblem', () => {
     ['call ９８４５０１２３４５'], ['www.ayuda.in'], ['https://x.co'], ['visit ayuda.shop'], ['visit ayuda.online'], ['ayuda.site'], ['ａｙｕｄａ．ｓｈｏｐ']])('refuses %j', (s) => {
     expect(lineProblem(s, 80)).not.toBeNull()
   })
-  it('refuses a date in figures (write it in words)', () => { expect(lineProblem('sale till 10-11-2026', 80)).toBe('Leave out phone numbers and long numbers.') })
+  // The P2 mockup's words, screen 9 (owner-approved 2026-11-16).
+  it.each([
+    ['Thank you. For exchanges, pay the fee to ayuda@okicici.', LINE_WORDS.upi],
+    ['Call 98000 00000', LINE_WORDS.phone], ['कॉल ९८४५०१२३४५', LINE_WORDS.phone], ['call +91 98450 12345', LINE_WORDS.phone], ['call ０９８４５０１２３４５', LINE_WORDS.phone],
+    ['Thank you. See our new edit at houseofayuda.com', LINE_WORDS.link],
+    ['Thank you. Your loyalty code is 4471 9021.', LINE_WORDS.number], ['account 1234 5678', LINE_WORDS.number],
+  ])('names what to take out: %j', (s, words) => { expect(lineProblem(s, 120)).toBe(words) })
+  it('refuses a date in figures (write it in words)', () => { expect(lineProblem('sale till 10-11-2026', 80)).toBe(LINE_WORDS.number) })
   it('keeps M.R.P. and a price', () => { expect(lineProblem('M.R.P. ₹2,790 inclusive of all taxes', 80)).toBeNull() })
   it('allows a short number (a size, a year)', () => { expect(lineProblem('Ships in 2 days, since 2019', 80)).toBeNull() })
   it('holds its length and the plain-text rule', () => {
-    expect(lineProblem('a'.repeat(61), 60)).toBe('Keep it to 60 characters.')
+    expect(lineProblem('Almost yours, beautiful one', 24)).toBe('Up to 24 characters.')
     expect(lineProblem('<b>hi</b>', 60)).toBe(PLAIN_WORDS)
   })
+  it('names the money rule before the length', () => { expect(lineProblem('Almost yours, pay ayuda@okicici', 24)).toBe(LINE_WORDS.upi) })
 })
 
 describe('seasons', () => {
