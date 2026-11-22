@@ -2,6 +2,7 @@
 name: release-agent
 description: Takes a Frrata branch that is ready to ship to production - merges origin/main, resolves migration and e2e numbering collisions, runs npm test, typecheck, the e2e flows the change touches and verify:tenancy when drizzle/ changed, pushes to main, watches the Vercel production deploy and its runtime errors, and prints (never runs) the exact production migration SQL and drizzle row for any new migration. Give it the branch and what changed. It runs commands and reports; it does not edit source beyond merge renumbering.
 tools: Bash, Read, Grep, Glob
+model: opus
 metadata:
   version: 1.1.0
   owner: owner

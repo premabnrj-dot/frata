@@ -2,6 +2,7 @@
 name: impact-reviewer
 description: Reviews a Frata diff, branch or task for cross-module impact, test gaps, tech debt and maintainability - every caller of a changed export and whether it still holds, which tests cover each changed path and which path has none, a fact now computed in two places, a file grown past its size, dead code, a skill or doc the change made wrong. Give it a diff range (e.g. HEAD~1..HEAD or main...branch) or a file list. Run it on every task's diff before commit. It reads and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
+model: sonnet
 metadata:
   version: 1.2.0
   owner: owner

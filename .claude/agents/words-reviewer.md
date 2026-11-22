@@ -2,6 +2,7 @@
 name: words-reviewer
 description: Reviews every word a person reads in a Frrata diff, file list or mockup - console, Admin, partner workspace, emails, toasts, errors, dialogs, PDFs - against the Words rulebook (frata-design-language § Words, Neel mockup § Words) and the glossary, and returns each line that breaks a rule with its rewrite and file:line. Run it on any diff that touches UI strings, on every mockup before it is published, and for a copy sweep. It reads and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
+model: sonnet
 metadata:
   version: 1.1.0
   owner: owner

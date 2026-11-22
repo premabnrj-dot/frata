@@ -2,6 +2,7 @@
 name: unit-economics-reviewer
 description: Reviews a Frata pricing, fee, tier or feature change for what it does to merchant profit per order, Frata's revenue and cost per tenant, and the business model's hypotheses - always against the Shopify-plus-India-apps baseline - computing rupee figures with the repo's own profit engine. Give it the change, a spec path or the question. It reads, computes and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
+model: opus
 metadata:
   version: 1.1.0
   owner: owner

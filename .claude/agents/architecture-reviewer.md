@@ -2,6 +2,8 @@
 name: architecture-reviewer
 description: Runs Frata's design review on a spec, plan or branch - UI/UX states, tenancy, layers and modularity, single source of truth, YAGNI, KISS, performance at festive volume, reliability of outbound calls, security of actions and webhooks, unit-economics impact and blast radius - against the repo's skills and ADRs, and returns ranked findings with the fix each needs. Give it a spec path, plan path or branch. It reads and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
+model: opus
+effort: high
 metadata:
   version: 1.1.1
   owner: owner

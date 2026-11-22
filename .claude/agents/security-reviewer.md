@@ -2,6 +2,8 @@
 name: security-reviewer
 description: Reviews a Frata diff, branch, plan or the whole codebase for security beyond tenancy - who may call each action or route and whether its role tuple means that, IDOR on the row, Zod caps, replies, rate limits and fail-closed, webhook size caps and payload trimming, cookies and CSP and headers, XSS through merchant content, SSRF, open redirects, upload checks, secrets and key rotation, PII in rows and logs, preview environments, npm audit. Pair it with tenancy-auditor for data isolation. It reads, runs gates and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
+model: opus
+effort: high
 metadata:
   version: 1.1.0
   owner: owner

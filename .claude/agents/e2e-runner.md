@@ -2,6 +2,7 @@
 name: e2e-runner
 description: Boots Frata's committed local end-to-end stack (throwaway Postgres, migrations, seed shop, fake Supabase auth, fake Razorpay, production build) and runs the browser flows in e2e/flows - all of them or the ones named - at phone and desktop width, then looks at the screenshots and reports what passed, what failed with the first error line, and anything on screen that looks wrong. Give it the flows to run (or "all") and whether to rebuild. It runs and reports; it does not edit source.
 tools: Bash, Read, Grep, Glob
+model: sonnet
 metadata:
   version: 1.0.0
   owner: owner
