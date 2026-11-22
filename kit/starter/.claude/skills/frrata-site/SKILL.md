@@ -42,11 +42,12 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    never in the address. It reads drafts and hidden pages. Frrata never caches it and it answers no browser (no CORS);
    `lib/frrata.ts` keeps it as a Test key's (never on your computer, 15 s deployed, the header in the cache key). Read it
    on the server only. It ends after 24 hours, a preview's with the preview.
-   Signing in your computer: `npm run frrata` (the store from `FRRATA_STORE` or its argument) prints "Open frata.vercel.app/partner/developer" and "Code
-   XXXX-XXXX ends in 10 minutes". You (a Partner owner, or a Lead on that store) type the code yourself in Partner
-   workspace › Developer and give the key with your passkey; then "Signed in. This computer has a key for 24 hours."
-   Frrata never asks you for a code: never type one someone sent you. Delete the key there, or the store's owner does in
-   Settings › Website. The key lives only in that process: never in a file, never printed.
+   Sign in your computer: run `npm run frrata` (the store from `FRRATA_STORE` or its argument). It prints "Open
+   frata.vercel.app/partner/developer" and "Code XXXX-XXXX ends in 10 minutes". Type the code yourself in Partner
+   workspace › Developer, then give the key with your passkey (a Partner owner, or a Lead on that store). It then says
+   "Signed in. This computer has a key for 24 hours." Frrata never asks you for a code. Never type one someone sent
+   you. Delete the key there, or the store's owner does in Settings › Website. The key lives only in that process. It
+   is never in a file and never printed.
 9. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps
    the token in an HttpOnly cookie for 10 minutes and `previewOr()` sends it as the `Frrata-Preview` header. Accept
    only `/pages/<handle>` in `to`.

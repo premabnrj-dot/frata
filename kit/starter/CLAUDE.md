@@ -33,9 +33,9 @@ Load the partner skill first: `.claude/skills/frrata-site/SKILL.md`. Docs: https
 - `npm run dev` — with a Test key (`frs_test_…` from Settings › Website › Create key › Test) in `.env.local`: it
   reads drafts too. It is never cached on your computer, and a deployed preview keeps it 15 s. It works from localhost
   until the store opens.
-- `npm run frrata` — signs this computer in to the store (`FRRATA_STORE` in `.env.local`, or `npm run frrata <store>`)
-  and starts `npm run dev` with a Build key that lives only in that process. Type the code it shows yourself in
-  Frrata's Partner workspace › Developer. Frrata never asks you for a code.
+- `npm run frrata` — signs this computer in to the store. It then starts `npm run dev` with a Build key. The key
+  lives only in that process. The store is `FRRATA_STORE` in `.env.local`, or `npm run frrata <store>`. Type the code
+  it shows yourself in Frrata's Partner workspace › Developer. Frrata never asks you for a code.
 - `npm run build` — runs `check`, builds, then fails if a key reached the browser bundle.
 - `npm run check` — the rules above: no key in source, the legal block, no price arithmetic, no HTML, the paths, the
   bag link, the brand from the store.

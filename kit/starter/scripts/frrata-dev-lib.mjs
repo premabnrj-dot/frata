@@ -23,6 +23,11 @@ export function consoleOf(env) {
   return /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o) || /^http:\/\/localhost(:\d+)?$/i.test(o) ? o : 'https://frata.vercel.app'
 }
 
+/** A server's words as plain text for a terminal: control characters (escape codes included) taken out. */
+export function plain(text) {
+  return String(text ?? '').replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/g, '')
+}
+
 /**
  * One poll's answer as the next step: keep waiting (`wait`, after `seconds`), the key (`key`), or stop with Frrata's
  * own words (`stop`). A limit (429) waits longer and says so once; anything else Frrata refuses stops.

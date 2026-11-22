@@ -6,31 +6,34 @@
 // FRRATA_STORE in .env.local. Until the `frrata` package is published, this is the starter's `npx frrata dev`.
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { consoleOf, envFile, pollStep, storeOf } from './frrata-dev-lib.mjs'
+import { createRequire } from 'node:module'
+import { join } from 'node:path'
+import { consoleOf, envFile, plain, pollStep, storeOf } from './frrata-dev-lib.mjs'
 import { DONE, WAITING } from './frrata-words.mjs'
 
 const env = { ...(existsSync('.env.local') ? envFile(readFileSync('.env.local', 'utf8')) : {}), ...process.env }
 const store = storeOf(process.argv.slice(2), env)
-if (!store) { console.error('Name your store: npm run frrata <store>, or FRRATA_STORE in .env.local.'); process.exit(1) }
+if (!store) { console.error('Name your store. Run `npm run frrata <store>`, or set FRRATA_STORE in .env.local.'); process.exit(1) }
 const origin = consoleOf(env)
 const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000))
 
-async function post(path, body) {
+// A start is not retried (a lost answer would leave a second code behind); a poll is, three times.
+async function post(path, body, retries = 3) {
   for (let i = 0; ; i++) {
     try {
       const r = await fetch(origin + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15_000) })
       return { status: r.status, body: await r.json().catch(() => ({})) }
     } catch {
-      if (i >= 3) return { status: 0, body: { message: 'Frrata could not answer. Check your connection and try again.' } }
+      if (i >= retries) return { status: 0, body: { message: 'Frrata could not answer. Check your connection and try again.' } }
       await sleep(2 + i * 3)
     }
   }
 }
 
-const started = await post('/api/dev/device/start', { store })
-if (started.status !== 200 || !started.body.device) { console.error(started.body.message ?? 'Frrata could not answer. Try again in a minute.'); process.exit(1) }
+const started = await post('/api/dev/device/start', { store }, 0)
+if (started.status !== 200 || !started.body.device) { console.error(plain(started.body.message ?? 'Frrata could not answer. Try again in a minute.')); process.exit(1) }
 const { device, interval = 5, message } = started.body
-console.log(`\n${message}\n\n${WAITING}`)
+console.log(`\n${plain(message)}\n\n${WAITING}`)
 
 let key = null, said = null
 while (!key) {
@@ -38,17 +41,19 @@ while (!key) {
   const r = await post('/api/dev/device/poll', { device })
   const step = pollStep(r.status, r.body, interval)
   if (step.next === 'key') key = step.key
-  else if (step.next === 'stop') { console.error(step.say); process.exit(1) }
+  else if (step.next === 'stop') { console.error(plain(step.say)); process.exit(1) }
   else {
-    if (step.say && step.say !== said) console.log(step.say)
+    if (step.say && step.say !== said) console.log(plain(step.say))
     said = step.say ?? said
     if (step.seconds > interval) await sleep(step.seconds - interval)
   }
 }
 console.log(`${DONE}\n`)
 
-// The key goes to `next dev` in its environment only (Next keeps a variable already set over .env.local's).
-const child = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['next', 'dev'], { stdio: 'inherit', env: { ...process.env, FRRATA_KEY: key, FRRATA_KEY_MODE: 'header' } })
+// The key goes to `next dev` in its environment only (Next keeps a variable already set over .env.local's). Next's own
+// bin through this node, so no shell is involved on any system.
+const nextBin = createRequire(join(process.cwd(), 'package.json')).resolve('next/dist/bin/next')
+const child = spawn(process.execPath, [nextBin, 'dev'], { stdio: 'inherit', env: { ...process.env, FRRATA_KEY: key, FRRATA_KEY_MODE: 'header' } })
 key = null
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => child.kill(sig))
 child.on('exit', (code) => process.exit(code ?? 0))

@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { starterCartLink, starterFrrataWords } from '../../../../scripts/kit-sync.mjs'
-import { consoleOf, envFile, pollStep, storeOf } from '../../../../kit/starter/scripts/frrata-dev-lib.mjs'
+import { consoleOf, envFile, plain, pollStep, storeOf } from '../../../../kit/starter/scripts/frrata-dev-lib.mjs'
 import { Brand } from '../2026-12/schemas'
 
 describe('the partner kit (SA1b D·9)', () => {
@@ -20,6 +20,7 @@ describe('the partner kit (SA1b D·9)', () => {
     expect(storeOf([], { FRRATA_STORE: 'Neel-Studio' })).toBe('neel-studio')
     expect(storeOf(['--x', '../etc'], {})).toBeNull()
     expect(consoleOf({})).toBe('https://frata.vercel.app')
+    expect(plain('Code \u001b[2JHXKT\u0007')).toBe('Code [2JHXKT')
     expect(consoleOf({ FRRATA_CONSOLE_ORIGIN: 'http://localhost:3077/' })).toBe('http://localhost:3077')
     expect(consoleOf({ FRRATA_CONSOLE_ORIGIN: 'http://evil.test' })).toBe('https://frata.vercel.app')
     expect(pollStep(202, {}, 5)).toEqual({ next: 'wait', seconds: 5 })
@@ -45,12 +46,14 @@ describe('the partner kit (SA1b D·9)', () => {
     const port = (server.address() as { port: number }).port
     const dir = mkdtempSync(join(tmpdir(), 'frrata-dev-'))
     try {
-      // A stand-in `npx`: says what `next dev` would get, never the key itself.
-      mkdirSync(join(dir, 'bin'))
-      writeFileSync(join(dir, 'bin/npx'), '#!/bin/sh\necho "args=$*"\necho "has_key=$([ -n \"$FRRATA_KEY\" ] && echo yes)"\necho "mode=$FRRATA_KEY_MODE"\necho "key_ok=$(echo \"$FRRATA_KEY\" | grep -c ^frs_build_)"\n', { mode: 0o755 })
+      // A stand-in `next`: says what `next dev` would get, never the key itself.
+      mkdirSync(join(dir, 'node_modules/next/dist/bin'), { recursive: true })
+      writeFileSync(join(dir, 'package.json'), '{}')
+      writeFileSync(join(dir, 'node_modules/next/package.json'), '{"name":"next"}')
+      writeFileSync(join(dir, 'node_modules/next/dist/bin/next'), 'const k = process.env.FRRATA_KEY || ""\nconsole.log("args=next " + process.argv.slice(2).join(" "))\nconsole.log("has_key=" + (k ? "yes" : ""))\nconsole.log("mode=" + process.env.FRRATA_KEY_MODE)\nconsole.log("key_ok=" + (k.startsWith("frs_build_") ? 1 : 0))\n')
       const out = await new Promise<string>((resolve, reject) => {
         const c = spawn(process.execPath, [join(process.cwd(), 'kit/starter/scripts/frrata-dev.mjs'), 'house-of-ayuda'], {
-          cwd: dir, env: { PATH: `${join(dir, 'bin')}:${process.env.PATH}`, FRRATA_CONSOLE_ORIGIN: `http://localhost:${port}` } as unknown as NodeJS.ProcessEnv })
+          cwd: dir, env: { PATH: process.env.PATH, FRRATA_CONSOLE_ORIGIN: `http://localhost:${port}` } as unknown as NodeJS.ProcessEnv })
         let text = ''
         c.stdout.on('data', (d) => (text += d)); c.stderr.on('data', (d) => (text += d))
         c.on('exit', (code) => (code === 0 ? resolve(text) : reject(new Error(text))))

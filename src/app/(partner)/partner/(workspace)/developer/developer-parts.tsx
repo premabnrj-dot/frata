@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { DEVICE_TERMINAL, startedWords } from '@/domains/storefront-api/device'
+import { NO_PASSKEY_HERE } from '@/components/passkeys/passkey-client'
 import { settle } from '@/lib/settle'
 import type { CodeLook } from '@/lib/db/device-codes'
 import { checkCodeAction, deleteComputerAction, giveOptionsAction, giveVerifyAction, type DeviceAnswer } from './actions'
@@ -27,8 +28,6 @@ const SAY: Record<Why, string> = {
   builder: 'Only a Partner owner or a Lead can sign in a computer.',
 }
 const fullFor = (store: string) => `${store} has its limit of keys. Delete one first.`
-/** The device's prompt closed without a passkey (the partner gate's words). */
-const NO_PASSKEY_HERE = 'No passkey found here. Try again and pick Use a phone or tablet.'
 
 /** Sign in this computer: the code from the terminal, checked, then the confirm dialog. */
 export function SignInComputer() {
@@ -51,6 +50,7 @@ export function SignInComputer() {
   const done = () => {
     setLook(null); setCode('')
     toast.ok(DEVICE_TERMINAL.done); settle(router)
+    input.current?.focus() // the dialog is gone: back to the field, the toast says what happened
   }
   return (
     <form onSubmit={check} noValidate className="grid gap-3">
@@ -59,8 +59,8 @@ export function SignInComputer() {
         <input ref={input} name="code" value={code} onChange={(e) => { setCode(e.target.value); if (error) setError(null) }}
           className={`${FIELD} font-mono uppercase tracking-wider`} maxLength={12} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false}
           inputMode="text" {...fieldProps('code', error)} />
-        <FieldError name="code" message={error} />
       </label>
+      <FieldError name="code" message={error} className="-mt-1.5" />
       <div><Button type="submit" size="sm" busy={busy}>Check code</Button></div>
       {look && <GiveKey look={look} onClose={() => { setLook(null); input.current?.focus() }} onDone={done} />}
     </form>
