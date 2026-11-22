@@ -2,7 +2,8 @@
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { startAuthentication } from '@simplewebauthn/browser'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { Button, button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
@@ -20,7 +21,7 @@ const SAY: Record<Why, string> = {
   ended: 'This code has ended. Run the command again for a new one.',
   busy: 'Too many tries. Wait a minute.',
   full: 'This store has its limit of keys. Delete one first.',
-  no_passkey: 'Add a passkey first.',
+  no_passkey: 'Add a passkey to give a key.',
   not_confirmed: 'Not confirmed. Try again, or use your other passkey.',
   sign_in_again: 'Sign in again.',
   builder: 'Only a Partner owner or a Lead can sign in a computer.',
@@ -57,7 +58,7 @@ export function SignInComputer() {
         <span className="text-label">Code from your terminal</span>
         <input ref={input} name="code" value={code} onChange={(e) => { setCode(e.target.value); if (error) setError(null) }}
           className={`${FIELD} font-mono uppercase tracking-wider`} maxLength={12} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false}
-          inputMode="text" placeholder="XXXX-XXXX" {...fieldProps('code', error)} />
+          inputMode="text" {...fieldProps('code', error)} />
         <FieldError name="code" message={error} />
       </label>
       <div><Button type="submit" size="sm" busy={busy}>Check code</Button></div>
@@ -87,11 +88,11 @@ function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; a
     onDone()
   }
   const dont = <Button variant={elsewhere ? 'primary' : 'secondary'} data-autofocus onClick={onClose}>Don’t give key</Button>
+  // No passkey at all (an undrawn state, orchestrator ruling 6): Give key off, and a way to add one.
+  const add = !look.hasPasskey && <Link href="/partner/passkeys" className={button({ variant: 'secondary' })}>Add passkey</Link>
   const yes = <Button variant={elsewhere ? 'secondary' : 'primary'} busy={busy} disabled={!!off} reason={off} onClick={give}>Give key</Button>
   return (
-    <Dialog open onClose={onClose} title="Give this computer a Build key?" error={error}
-      description={elsewhere ? 'This code was not started from your network. Frrata never asks you for a code.' : 'Frrata never asks you for a code. Type only one from your own screen.'}
-      actions={<>{dont}{yes}</>}>
+    <Dialog open onClose={onClose} title="Give this computer a Build key?" error={error} actions={<>{dont}{add}{yes}</>}>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Store</dt><dd className="font-medium">{look.store}</dd>
         <dt className="text-muted-foreground">Code</dt><dd className="font-mono">{look.code.replace(/^(\w{4})-?(\w{4})$/, '$1-$2')}</dd>
@@ -101,6 +102,8 @@ function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; a
           {elsewhere && <Badge tone="warn">Another network</Badge>}</dd>
         {!elsewhere && <><dt className="text-muted-foreground">The key</dt><dd>Reads the store’s products, drafts too. Ends in 24 hours.</dd></>}
       </dl>
+      {/* As drawn: the warning under the facts, just above the buttons. */}
+      <p className="mt-3 text-sm text-muted-foreground">{elsewhere ? 'This code was not started from your network. Frrata never asks you for a code.' : 'Frrata never asks you for a code. Type only one from your own screen.'}</p>
     </Dialog>
   )
 }

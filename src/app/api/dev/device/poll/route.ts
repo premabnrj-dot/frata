@@ -11,9 +11,9 @@ const json = (status: number, body: object) => new Response(JSON.stringify(body)
 
 // Each answer keeps its code for machines and says in one line what the person at the CLI does next (words review).
 const SAY = {
-  too_large: 'That request was too large.', bad_request: 'Run `npx frrata dev <your store>` again.',
+  too_large: 'That request was too large.', bad_request: 'Run `npm run frrata` again.',
   busy: 'Too many tries. Wait a minute, then run it again.', unavailable: 'Frrata could not answer. Try again in a minute.',
-  not_found: 'This sign-in ended. Run `npx frrata dev` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
+  not_found: 'This sign-in ended. Run `npm run frrata` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
   full: 'The store has its limit of keys. Delete one first, then run it again.',
 } as const
 const fail = (status: number, error: keyof typeof SAY) => json(status, { error, message: SAY[error] })

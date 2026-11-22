@@ -235,3 +235,20 @@ limit on Check code; a refusal during a support visit; Approve on the review car
 **Built from it (lanes, 2026-11-22):** G·3's page and its four server changes: lane B (`claude/lane-b-g3-page`). Brand
 book in the workbench shell: lane D (`claude/lane-d-brand-book`). C1 Credits and billing: lane C
 (`claude/lane-c-credits`), plan check first. The review card on Brand › Checkout: lane E, after P2 is released.
+
+### G·3 page, lane B: the plan check's rulings and the Deviations (BUILT AS DRAWN; for the owner before it ships)
+Rulings (orchestrator, 2026-11-22): a code is looked at and given a key only by a live Partner owner, or a Lead assigned
+to the store, of the store's linked partner; everyone else reads "This code has ended…" (the security review's point:
+store owners and Managers do not confirm). Your computers lists and deletes the person's own developer keys. The key's
+name is the whole email when it fits the key name's 40 characters (`KEY_NAME_MAX`), else the part before the @. The
+network is IPv6 /64 or IPv4 /24, kept as a sha256 and deleted with its code at the first daily run after its 10 minutes.
+Check code 10 and Give key 5 a minute a person, failing closed. Any live support session is refused. The poll answers
+409 `full` at the store's ceiling. Give key's passkey challenge is bound to the code and taken with the approval.
+
+| Mockup element | What was built | Reason | Owner seen |
+|---|---|---|---|
+| Undrawn: a person with no passkey at Give key | Give key off; the dialog's line "Add a passkey to give a key."; a secondary "Add passkey" opening Partner workspace › Passkeys | Give key always needs a passkey made for that code, and while passkeys are switched off a partner person may have none (orchestrator ruling 6) | no |
+| The dialog's "Your network" / "Another network" | A mark only, never a refusal | Indian mobile networks (CGNAT, Wi-Fi and 4G) often read "Another network" for the real person; the mark swaps the main button and nothing else (ruling 4) | no |
+| The terminal's `$ npx frrata dev house-of-ayuda` | `npm run frrata` in the starter (`kit/starter/scripts/frrata-dev.mjs`), same words; the start's answer carries Open and Code | The `frrata` package is not published yet (kit spec § 2); ruling 8 | no |
+| Undrawn: what Delete key says after it is done | An ok toast "Key deleted." | The feedback rule: success is an ok toast (frata-design-language § Feedback 2) | no |
+| Delete key · confirm: "Delete key" as the primary button | The destructive button (red), "Keep key" secondary with focus | A delete is the destructive variant everywhere in the console and workspace (design language § Neel primitives: Button) | no |

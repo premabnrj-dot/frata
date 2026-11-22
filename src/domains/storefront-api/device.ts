@@ -2,7 +2,7 @@
 // FILE: src/domains/storefront-api/device.ts
 //
 // G·3: A DEVELOPER'S DEVICE SIGN-IN, ITS SHAPES (Studio spec § 10; ADR-0018's build-key amendment, point 1). The CLI
-// (`npx frrata dev <store>`) holds a device secret and shows the person a short code to confirm in Frrata; only their
+// (`npm run frrata` in the starter; `npx frrata dev <store>` once published) holds a device secret and shows the person a short code to confirm in Frrata; only their
 // sha256s are stored. The code is 8 characters from an alphabet with no vowels (no words) and no look-alikes (0/O, 1/I),
 // shown as XXXX-XXXX; typed any case, with or without the dash. Pure: the random bytes come from the caller.
 // =============================================================================

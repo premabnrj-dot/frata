@@ -37,16 +37,16 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    Header and footer links don't prefetch. Filters and
    search are dynamic: send filter parameters in their fixed order (collection, size, colour, price, stock, sort),
    values exactly as `facets` gives them, defaults left out.
-8. **A build key** works from Studio, a preview deployment, or your computer through `npx frrata dev`. Set
-   `FRRATA_KEY_MODE=header`. `lib/frrata.ts` then sends the key in the `Frrata-Key` header to `/2026-12/<resource>`,
+8. **A build key** works from Studio, a preview deployment, or your computer through `npm run frrata` (which
+   sets it for you). Otherwise set `FRRATA_KEY_MODE=header`. `lib/frrata.ts` then sends the key in the `Frrata-Key` header to `/2026-12/<resource>`,
    never in the address. It reads drafts and hidden pages. Frrata never caches it and it answers no browser (no CORS);
    `lib/frrata.ts` keeps it as a Test key's (never on your computer, 15 s deployed, the header in the cache key). Read it
    on the server only. It ends after 24 hours, a preview's with the preview.
-   Signing in your computer: `npx frrata dev <store>` prints "Open frata.vercel.app/partner/developer" and "Code
+   Signing in your computer: `npm run frrata` (the store from `FRRATA_STORE` or its argument) prints "Open frata.vercel.app/partner/developer" and "Code
    XXXX-XXXX ends in 10 minutes". You (a Partner owner, or a Lead on that store) type the code yourself in Partner
    workspace › Developer and give the key with your passkey; then "Signed in. This computer has a key for 24 hours."
    Frrata never asks you for a code: never type one someone sent you. Delete the key there, or the store's owner does in
-   Settings › Website.
+   Settings › Website. The key lives only in that process: never in a file, never printed.
 9. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps
    the token in an HttpOnly cookie for 10 minutes and `previewOr()` sends it as the `Frrata-Preview` header. Accept
    only `/pages/<handle>` in `to`.

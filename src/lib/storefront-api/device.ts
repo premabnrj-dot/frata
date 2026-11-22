@@ -105,6 +105,7 @@ export async function giveVerify(p: PartnerSession, typed: string, response: Aut
   if (!code) return { ok: false, why: 'bad_code' }
   const given: { store?: string } = {}
   const r = await codeCeremony(p, sha(code), given).confirmVerify({ userId: p.userId, sessionId: p.sessionId }, response, site)
+  if (!r.ok) console.error('[device] give refused', r.error) // a refusal code, never the code or the key
   return r.ok && given.store ? { ok: true, store: given.store } : { ok: false, why: r.ok ? 'not_confirmed' : asRefusal(r.error) }
 }
 

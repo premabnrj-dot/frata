@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "node scripts/check.mjs && next build && node scripts/scan-bundle.mjs",
     "start": "next start",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "frrata": "node scripts/frrata-dev.mjs"
   },
   "dependencies": {
     "next": "15.5.29",

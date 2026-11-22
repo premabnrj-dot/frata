@@ -38,6 +38,9 @@ async function realPasskey(page, db, user) {
   const cose = Buffer.concat([Buffer.from([0xa5, 0x01, 0x02, 0x03, 0x26, 0x20, 0x01, 0x21, 0x58, 0x20]), Buffer.from(jwk.x, 'base64url'), Buffer.from([0x22, 0x58, 0x20]), Buffer.from(jwk.y, 'base64url')])
   const id = randomBytes(32)
   const [me] = await db`select member_id from app_pm_live(${user.id}::uuid)`
+  // The sign-in seed's passkey id (e2e-seed-partner-…) is not base64url, and the browser refuses an offer that names it:
+  // give it a well-formed id (a real passkey's always is).
+  await db`update partner_passkeys set credential_id = ${randomBytes(16).toString('base64url')} where user_id = ${user.id} and credential_id like 'e2e-seed-partner-%'`
   await db`insert into partner_passkeys (partner_member_id, user_id, credential_id, public_key, name) values (${me.member_id}, ${user.id}, ${id.toString('base64url')}, ${cose.toString('base64url')}, 'This laptop')`
   await cdp.send('WebAuthn.addCredential', { authenticatorId, credential: { credentialId: id.toString('base64'), isResidentCredential: true, rpId: 'localhost',
     privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'), userHandle: Buffer.from(`partner:${me.member_id}`).toString('base64'), signCount: 0 } })
@@ -63,6 +66,7 @@ export default {
     const open = async (who, viewport) => { const ctx = await signedIn(t.browser, who, { viewport }); const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
 
     const pia = await open('partner', { width: 1280, height: 900 })
+    pia.on('console', (m) => { if (m.type() === 'warning' || m.type() === 'error') t.errors.push(`console: ${m.text()}`) })
     await realPasskey(pia, db, P)
     const field = () => pia.getByLabel('Code from your terminal')
     const check = async (code) => { await field().fill(code); await pia.getByRole('button', { name: 'Check code' }).click() }
@@ -101,7 +105,7 @@ export default {
       await dialog.getByText('Frrata never asks you for a code. Type only one from your own screen.').waitFor()
       await pia.screenshot({ path: t.out('developer-confirm-1280') })
       await axe(pia, t, 'confirm dialog')
-      await dialog.getByRole('button', { name: 'Give key' }).click()
+      await dialog.getByRole('button', { name: 'Give key', exact: true }).click()
       await expectToast(pia, 'Signed in. This computer has a key for 24 hours.', 'ok')
       const got = await poll(s.device)
       assert.equal(got.status, 200, JSON.stringify(got.body))
@@ -161,6 +165,25 @@ export default {
       await bp.getByText('Only a Partner owner or a Lead can sign in a computer.').waitFor()
       assert.equal(await bp.getByLabel('Code from your terminal').count(), 0)
       await bp.screenshot({ path: t.out('developer-builder-1280') })
+    })
+
+    await t.step('no passkey at all (undrawn, ruling 6): Give key is off with its reason, and Add passkey opens Passkeys', async () => {
+      const [b] = await db`select id from partner_members where user_id = ${B.id} and removed_at is null`
+      const [me] = await db`select member_id from app_pm_live(${P.id}::uuid)`
+      await db`update partner_passkeys set partner_member_id = ${b.id} where partner_member_id = ${me.member_id}`
+      try {
+        const none = await start()
+        await pia.goto(CONSOLE + '/partner/developer')
+        await check(none.code)
+        const dialog = pia.getByRole('dialog', { name: 'Give this computer a Build key?' })
+        await dialog.getByText('Add a passkey to give a key.').waitFor()
+        assert.equal(await dialog.getByRole('button', { name: 'Give key', exact: true }).getAttribute('aria-disabled'), 'true', 'Give key is on with no passkey')
+        await pia.screenshot({ path: t.out('developer-no-passkey-1280') })
+        await dialog.getByRole('link', { name: 'Add passkey' }).click()
+        await pia.waitForURL(/\/partner\/passkeys$/)
+      } finally {
+        await db`update partner_passkeys set partner_member_id = ${me.member_id} where user_id = ${P.id}`
+      }
     })
   },
 }

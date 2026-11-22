@@ -9,7 +9,7 @@ const VERSION = '2026-12'
 // A test key (frs_test_…, before the store opens) reads drafts too. On your computer it is never cached, so an edit
 // shows at once; deployed (a preview), its reads are kept 15 s so a busy preview stays inside the key's limit.
 const DEPLOYED = !!process.env.VERCEL // Vercel sets it at build and at run; nothing sets it on your computer
-// FRRATA_KEY_MODE=header: a build key (Studio, a preview, your computer through `npx frrata dev`) travels in the
+// FRRATA_KEY_MODE=header: a build key (Studio, a preview, your computer through `npm run frrata`) travels in the
 // Frrata-Key header, never the address. It reads drafts and hidden pages too and works from a server only; like a test
 // key, it is never cached on your computer and kept 15 s when deployed (the cache is keyed by the header too).
 const HEADER = process.env.FRRATA_KEY_MODE === 'header'

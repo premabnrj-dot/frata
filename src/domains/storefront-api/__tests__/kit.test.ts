@@ -3,13 +3,72 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { starterCartLink } from '../../../../scripts/kit-sync.mjs'
+import { starterCartLink, starterFrrataWords } from '../../../../scripts/kit-sync.mjs'
+import { consoleOf, envFile, pollStep, storeOf } from '../../../../kit/starter/scripts/frrata-dev-lib.mjs'
 import { Brand } from '../2026-12/schemas'
 
 describe('the partner kit (SA1b D·9)', () => {
   it('the starter’s bag link is the app’s own, limits written in (node scripts/kit-sync.mjs)', () => {
     expect(readFileSync('kit/starter/lib/cart-link.ts', 'utf8')).toBe(starterCartLink())
   })
+  it('npm run frrata says the terminal’s words as Frrata’s device module has them (kit-sync)', () => {
+    expect(readFileSync('kit/starter/scripts/frrata-words.mjs', 'utf8')).toBe(starterFrrataWords())
+  })
+  it('npm run frrata: the store, Frrata’s address, and each poll answer as the next step', () => {
+    expect(envFile('# x\nFRRATA_STORE="house-of-ayuda"\nFRRATA_KEY=\n')).toEqual({ FRRATA_STORE: 'house-of-ayuda', FRRATA_KEY: '' })
+    expect(storeOf(['house-of-ayuda'], {})).toBe('house-of-ayuda')
+    expect(storeOf([], { FRRATA_STORE: 'Neel-Studio' })).toBe('neel-studio')
+    expect(storeOf(['--x', '../etc'], {})).toBeNull()
+    expect(consoleOf({})).toBe('https://frata.vercel.app')
+    expect(consoleOf({ FRRATA_CONSOLE_ORIGIN: 'http://localhost:3077/' })).toBe('http://localhost:3077')
+    expect(consoleOf({ FRRATA_CONSOLE_ORIGIN: 'http://evil.test' })).toBe('https://frata.vercel.app')
+    expect(pollStep(202, {}, 5)).toEqual({ next: 'wait', seconds: 5 })
+    expect(pollStep(200, { key: 'frs_build_' + 'x'.repeat(38) }, 5)).toMatchObject({ next: 'key' })
+    expect(pollStep(429, { message: 'Too many tries. Wait a minute, then run it again.' }, 5)).toEqual({ next: 'wait', seconds: 30, say: 'Too many tries. Wait a minute, then run it again.' })
+    for (const [status, message] of [[409, 'The store has its limit of keys. Delete one first, then run it again.'], [404, 'This sign-in ended. Run `npm run frrata` again.'], [403, 'x']] as const)
+      expect(pollStep(status, { message }, 5)).toEqual({ next: 'stop', say: message })
+    expect(pollStep(0, {}, 5)).toEqual({ next: 'stop', say: 'Frrata could not answer. Try again in a minute.' })
+  })
+  it('npm run frrata: start, wait, the key to `next dev` in its environment only, never printed', async () => {
+    const { createServer } = await import('node:http')
+    const { spawn } = await import('node:child_process')
+    const key = 'frs_build_' + 'K'.repeat(38)
+    let polls = 0
+    const server = createServer((req, res) => {
+      res.setHeader('content-type', 'application/json')
+      if (req.url === '/api/dev/device/start') return res.end(JSON.stringify({ device: 'd'.repeat(43), code: 'HXKT-7P2M', interval: 0, message: 'Open localhost/partner/developer\nCode HXKT-7P2M ends in 10 minutes' }))
+      polls++
+      if (polls < 2) { res.statusCode = 202; return res.end(JSON.stringify({ status: 'pending' })) }
+      res.end(JSON.stringify({ key, expiresAt: '2026-11-23T10:00:00Z' }))
+    })
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()))
+    const port = (server.address() as { port: number }).port
+    const dir = mkdtempSync(join(tmpdir(), 'frrata-dev-'))
+    try {
+      // A stand-in `npx`: says what `next dev` would get, never the key itself.
+      mkdirSync(join(dir, 'bin'))
+      writeFileSync(join(dir, 'bin/npx'), '#!/bin/sh\necho "args=$*"\necho "has_key=$([ -n \"$FRRATA_KEY\" ] && echo yes)"\necho "mode=$FRRATA_KEY_MODE"\necho "key_ok=$(echo \"$FRRATA_KEY\" | grep -c ^frs_build_)"\n', { mode: 0o755 })
+      const out = await new Promise<string>((resolve, reject) => {
+        const c = spawn(process.execPath, [join(process.cwd(), 'kit/starter/scripts/frrata-dev.mjs'), 'house-of-ayuda'], {
+          cwd: dir, env: { PATH: `${join(dir, 'bin')}:${process.env.PATH}`, FRRATA_CONSOLE_ORIGIN: `http://localhost:${port}` } as unknown as NodeJS.ProcessEnv })
+        let text = ''
+        c.stdout.on('data', (d) => (text += d)); c.stderr.on('data', (d) => (text += d))
+        c.on('exit', (code) => (code === 0 ? resolve(text) : reject(new Error(text))))
+      })
+      expect(out).toContain('Code HXKT-7P2M ends in 10 minutes')
+      expect(out).toContain('Waiting for you to confirm…')
+      expect(out).toContain('Signed in. This computer has a key for 24 hours.')
+      expect(out).toContain('args=next dev')
+      expect(out).toContain('has_key=yes')
+      expect(out).toContain('mode=header')
+      expect(out).toContain('key_ok=1')
+      expect(out).not.toContain(key)
+      expect(polls).toBe(2)
+    } finally {
+      server.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }, 20_000)
   it('the starter never reads its key in the browser', () => {
     const lib = readFileSync('kit/starter/lib/frrata.ts', 'utf8')
     expect(lib).toContain("import 'server-only'")
