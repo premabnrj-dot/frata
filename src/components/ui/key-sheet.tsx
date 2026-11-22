@@ -12,14 +12,19 @@ import { Dialog } from './dialog'
 // fire commands). `?` itself always opens it, so the switch can be found.
 // =============================================================================
 
-/** `only`: the keys this screen wires (a key it does not handle is not offered). */
-export function KeySheet({ open, onClose, enabled, onEnabled, only }: { open: boolean; onClose: () => void; enabled: boolean; onEnabled: (on: boolean) => void; only?: ShortcutAction[] }) {
+/** `only`: the keys this screen wires (a key it does not handle is not offered). `keys`: another screen's own table
+ *  (the Studio workbench, src/domains/studio/layout.ts), shown instead of the queue's, with its own line and close. */
+export function KeySheet({ open, onClose, enabled, onEnabled, only, keys, description, close = 'Close' }: {
+  open: boolean; onClose: () => void; enabled: boolean; onEnabled: (on: boolean) => void; only?: ShortcutAction[]
+  keys?: readonly { key: string; label: string }[]; description?: string | null; close?: string
+}) {
+  const rows = keys ?? SHORTCUTS.filter((s) => !only || only.includes(s.action))
   return (
     <Dialog open={open} onClose={onClose} title="Keyboard shortcuts"
-      description="Work through the queue without the mouse. Keys do nothing while you type in a box."
-      actions={<Button data-autofocus variant="secondary" onClick={onClose}>Close</Button>}>
+      description={description === undefined ? 'Work through the queue without the mouse. Keys do nothing while you type in a box.' : description ?? undefined}
+      actions={<Button data-autofocus variant="secondary" onClick={onClose}>{close}</Button>}>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-        {SHORTCUTS.filter((s) => !only || only.includes(s.action)).map((s) => (
+        {rows.map((s) => (
           <div key={s.key} className="contents">
             <dt><kbd className="inline-grid min-w-7 place-items-center rounded-sm border border-input px-1.5 font-mono text-xs">{s.key === 'Enter' ? '↵' : s.key === ' ' ? 'Space' : s.key}</kbd></dt>
             <dd>{s.label}</dd>
