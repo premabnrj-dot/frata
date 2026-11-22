@@ -33,6 +33,11 @@
       "id": "agent_01MdoNXasV4LRsWFo7CYm5jE",
       "version": 1,
       "model": "claude-opus-5-5"
+    },
+    "agent-cache": {
+      "id": "agent_01R6LbrNdhxmhvobevBVkcqB",
+      "version": 1,
+      "model": "claude-opus-5-5"
     }
   },
   "runs": [
@@ -487,6 +492,1519 @@
             "ephemeral_5m_input_tokens": 164
           },
           "active_seconds": 4.582,
+          "list_cost_usd": 0.01
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "cache",
+      "item": "Cache shares: does a second session of one agent version read the first one's cache?",
+      "ran_at": "2026-11-22T19:38:08.173Z",
+      "session_ids": [
+        "sesn_016pMF95hMCCMkCpBzTKSXn3",
+        "sesn_01Xm6FybswLF8uoqgsP9tj4C"
+      ],
+      "list_cost_usd": 0.07,
+      "status": "answered",
+      "answer": "second session read 14680 cached tokens against the first's 0: cache shared across sessions: true",
+      "evidence": {
+        "sessions": [
+          {
+            "session": 1,
+            "input": 4,
+            "cache_read": 0,
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 14680
+            },
+            "list_cost_usd": 0.07
+          },
+          {
+            "session": 2,
+            "input": 4,
+            "cache_read": 14680,
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "list_cost_usd": 0
+          }
+        ]
+      },
+      "active_seconds": 2.66,
+      "usage": [
+        {
+          "session": "sesn_016pMF95hMCCMkCpBzTKSXn3",
+          "input": 4,
+          "output": 4,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 14680
+          },
+          "active_seconds": 1.289,
+          "list_cost_usd": 0.07
+        },
+        {
+          "session": "sesn_01Xm6FybswLF8uoqgsP9tj4C",
+          "input": 4,
+          "output": 4,
+          "cache_read": 14680,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 1.371,
+          "list_cost_usd": 0
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "concurrency",
+      "item": "Concurrency and rate limits: 10 sessions created at once (no model call)",
+      "ran_at": "2026-11-22T19:38:21.044Z",
+      "session_ids": [
+        "sesn_01F6D7fXqnw8GTNnEEcFLLKm",
+        "sesn_012zKp2nVRw4hsrDasoizoa6",
+        "sesn_01Jo59WfCDymKhaJZGHdvCNm",
+        "sesn_0183yFknsZgLyGo53XkLtdzM",
+        "sesn_01KAZMJAvsJmhRsxcsyUCK6s",
+        "sesn_01Ck8VhHX3rCY2hbiJ52ZYTX",
+        "sesn_01VfLSXhRmdq3Xb14j45vDNU",
+        "sesn_015LQS12pBGQiFyz5dwhC3mY",
+        "sesn_01WtxT9QYaynbPd9MDuKc9Sg",
+        "sesn_01Drb73piz5sDvSjvqYmfLts"
+      ],
+      "list_cost_usd": 0,
+      "status": "answered",
+      "answer": "10/10 sessions created at once in 502 ms; errors: none",
+      "evidence": {
+        "ok": 10,
+        "errors": []
+      },
+      "active_seconds": 0.7839999999999998,
+      "usage": [
+        {
+          "session": "sesn_01F6D7fXqnw8GTNnEEcFLLKm",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": null,
+          "active_seconds": 0,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_012zKp2nVRw4hsrDasoizoa6",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.09,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Jo59WfCDymKhaJZGHdvCNm",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.073,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_0183yFknsZgLyGo53XkLtdzM",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.102,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01KAZMJAvsJmhRsxcsyUCK6s",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.07,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Ck8VhHX3rCY2hbiJ52ZYTX",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.088,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01VfLSXhRmdq3Xb14j45vDNU",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.084,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_015LQS12pBGQiFyz5dwhC3mY",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.104,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01WtxT9QYaynbPd9MDuKc9Sg",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.088,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Drb73piz5sDvSjvqYmfLts",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.085,
+          "list_cost_usd": 0
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "concurrency-70",
+      "item": "Decision 29's 70 sessions at once: 70 created in one burst (no model call)",
+      "ran_at": "2026-11-22T19:38:51.879Z",
+      "session_ids": [
+        "sesn_019nEsRBn9ZTnDvvh3KPvnsR",
+        "sesn_01Q73Pm1YNHjgXzfsNmy4KMk",
+        "sesn_01TSRDpdAAFX1RDjMwYUB5os",
+        "sesn_01DjRhnexM54HiJuBtQ2cz37",
+        "sesn_01QbgzohBtyY5gfrUoGqW3BX",
+        "sesn_016CYEqELbdCdJUbKYv388T8",
+        "sesn_01Bszgs6H8Rd9X4pYEJhFgzp",
+        "sesn_011khoR5WsRmdb43XnrmRjDn",
+        "sesn_019uQGgMh2fqDyBNU9MJRYNK",
+        "sesn_01QirQ4s6n5rmxwqCzDrfVPB",
+        "sesn_017oeTETC43waWvAdePAoA8S",
+        "sesn_01Tgk2LxyvUKpJ4zKX1sBdZU",
+        "sesn_01QUXbYXH1cpSE9SW9GhcskD",
+        "sesn_01AQ3sj3LZMeqzWYCajDJA39",
+        "sesn_01AeNgFPAKpjRfWZybC3gBdX",
+        "sesn_01Q73Pm1YNHjwJP5s5CaYwE8",
+        "sesn_01X27rQabiS6E2JZSivTv5EX",
+        "sesn_01Qr1oL31fCENa2XNUTPbqo6",
+        "sesn_016pMF95tzviFkmqaLVfZQDV",
+        "sesn_01EqtK9CAHJiDJtoTznAdwcR",
+        "sesn_011ssCgFRknXGDPgc1vfvE84",
+        "sesn_01VufF43PnhCdEcxwTXGQfXm",
+        "sesn_01Nd6acxboU6Whtd1EQX7DwE",
+        "sesn_016Ss3MaAN6PRFJiNgcRCN6q",
+        "sesn_01QUXbYXH1s8raiWnyApumSF",
+        "sesn_01RLfQNifBt65fj5oLk6kkCn",
+        "sesn_01AQ3sj3LZMd4doeJwVdGpJ7",
+        "sesn_01AXDGzDFSiLTKweH4W5KP85",
+        "sesn_018RTTYJkTbqxLMWzKHWtQxS",
+        "sesn_01RqK1RQJiKbgxhqe7u6gMvd",
+        "sesn_01TouRc8toq56FU3oGTXV9X7",
+        "sesn_01Wmo3tEmxi9Yby3B2fdZFnT",
+        "sesn_014DwpeVkW7m7GyScrF4QeND",
+        "sesn_012cqcFGu3h1BxGJ8LEMD3ZE",
+        "sesn_015TZqGCsKDSgXkUsr6iXHQ6",
+        "sesn_01BGBgZEijcvEfhmWLD2Dwnd",
+        "sesn_01NzanQULSo9za7KgRj5dsKJ",
+        "sesn_01N1HaK73PvDsHt5mR715wZH",
+        "sesn_01KnNMc2dXwfwHPvbkz2cvGo",
+        "sesn_01RLfQNifBt5g3WRQSWKhyzB",
+        "sesn_014M7DuffPUXxmy4qKjnr9Kf",
+        "sesn_014M7DuffPirzZs8gbyr3et8",
+        "sesn_017gV3yHHBBy5wvA8bKPpQad",
+        "sesn_01GKq8HF6rsZ6sTZen1Gp7ds",
+        "sesn_016hBqsuz8ZSKUA1qmUSLaXE",
+        "sesn_0118to7DxUNiZyh76o8LZpnZ",
+        "sesn_019Xv4tqxQ5sQRRYBsa4M6Vq",
+        "sesn_01CFUtec1nFXgpyXBDVh7QWL",
+        "sesn_01NFcNqSsAPM9UaVo2TZCKAF",
+        "sesn_01FxLvVjNDJ5CBx2bMngHi33",
+        "sesn_01QMNCHMN91Com2UXJMDUEck",
+        "sesn_016wWeQFotXrH5K19qCYDVFv",
+        "sesn_0128C1CbFXVvyaqwpiKo7rK1",
+        "sesn_01C8KVPS6ttnQsaTfY3RFBBT",
+        "sesn_015q433ibxYZdCpomzfMSQzr",
+        "sesn_014UGdAqaGawHnUa814DyPjx",
+        "sesn_01Ri9cAEPqDFmomskiQE7T9s",
+        "sesn_012VgCz6zB5STox3cN23ZoD3",
+        "sesn_01212bwRLePZXqbW3HSMPU6i",
+        "sesn_01M99mUufE9jcg2V1C4PxQkj",
+        "sesn_015TZqGCsKTpZhBBQCgRJTsm",
+        "sesn_01MGKAk5a7kr4Sy5qyiszGX1",
+        "sesn_01Ey3iQN5AurLXz8bSiYqtDS",
+        "sesn_01KfCxLrieqPP2mRMrxCfaJh",
+        "sesn_01RqK1RQJipJ3RyhCcyuKWSS",
+        "sesn_014UGdAqaGqGq79TwC8uiBNh",
+        "sesn_017oeTETC4YkM58SiG3WkMhR",
+        "sesn_01LmfZhPvbKPfCTYEphAC8mA",
+        "sesn_01TouRc8tppbPCL5nXzdB6Gj",
+        "sesn_01FxLvVjNDnoUsm2UMAp8Dqw"
+      ],
+      "list_cost_usd": 0,
+      "status": "answered",
+      "answer": "70/70 sessions created at once in 569 ms; errors: none",
+      "evidence": {
+        "ok": 70,
+        "errors": []
+      },
+      "active_seconds": 5.866000000000001,
+      "usage": [
+        {
+          "session": "sesn_019nEsRBn9ZTnDvvh3KPvnsR",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": null,
+          "active_seconds": 0,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Q73Pm1YNHjgXzfsNmy4KMk",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.084,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01TSRDpdAAFX1RDjMwYUB5os",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.091,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01DjRhnexM54HiJuBtQ2cz37",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.078,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01QbgzohBtyY5gfrUoGqW3BX",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.09,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_016CYEqELbdCdJUbKYv388T8",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.086,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Bszgs6H8Rd9X4pYEJhFgzp",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.089,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_011khoR5WsRmdb43XnrmRjDn",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.086,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_019uQGgMh2fqDyBNU9MJRYNK",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.069,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01QirQ4s6n5rmxwqCzDrfVPB",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.081,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_017oeTETC43waWvAdePAoA8S",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.085,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Tgk2LxyvUKpJ4zKX1sBdZU",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.095,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01QUXbYXH1cpSE9SW9GhcskD",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.097,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01AQ3sj3LZMeqzWYCajDJA39",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.088,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01AeNgFPAKpjRfWZybC3gBdX",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.118,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Q73Pm1YNHjwJP5s5CaYwE8",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.092,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01X27rQabiS6E2JZSivTv5EX",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.074,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Qr1oL31fCENa2XNUTPbqo6",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.09,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_016pMF95tzviFkmqaLVfZQDV",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.082,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01EqtK9CAHJiDJtoTznAdwcR",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.092,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_011ssCgFRknXGDPgc1vfvE84",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.083,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01VufF43PnhCdEcxwTXGQfXm",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.116,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Nd6acxboU6Whtd1EQX7DwE",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.076,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_016Ss3MaAN6PRFJiNgcRCN6q",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.086,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01QUXbYXH1s8raiWnyApumSF",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.081,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01RLfQNifBt65fj5oLk6kkCn",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.081,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01AQ3sj3LZMd4doeJwVdGpJ7",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.077,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01AXDGzDFSiLTKweH4W5KP85",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.073,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_018RTTYJkTbqxLMWzKHWtQxS",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.077,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01RqK1RQJiKbgxhqe7u6gMvd",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.07,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01TouRc8toq56FU3oGTXV9X7",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.078,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Wmo3tEmxi9Yby3B2fdZFnT",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.088,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_014DwpeVkW7m7GyScrF4QeND",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.101,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_012cqcFGu3h1BxGJ8LEMD3ZE",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.077,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_015TZqGCsKDSgXkUsr6iXHQ6",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.101,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01BGBgZEijcvEfhmWLD2Dwnd",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.078,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01NzanQULSo9za7KgRj5dsKJ",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.071,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01N1HaK73PvDsHt5mR715wZH",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.077,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01KnNMc2dXwfwHPvbkz2cvGo",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.076,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01RLfQNifBt5g3WRQSWKhyzB",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.096,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_014M7DuffPUXxmy4qKjnr9Kf",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.093,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_014M7DuffPirzZs8gbyr3et8",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.076,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_017gV3yHHBBy5wvA8bKPpQad",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.085,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01GKq8HF6rsZ6sTZen1Gp7ds",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.079,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_016hBqsuz8ZSKUA1qmUSLaXE",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.072,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_0118to7DxUNiZyh76o8LZpnZ",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.099,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_019Xv4tqxQ5sQRRYBsa4M6Vq",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.102,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01CFUtec1nFXgpyXBDVh7QWL",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.078,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01NFcNqSsAPM9UaVo2TZCKAF",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.073,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01FxLvVjNDJ5CBx2bMngHi33",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.081,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01QMNCHMN91Com2UXJMDUEck",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.092,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_016wWeQFotXrH5K19qCYDVFv",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.075,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_0128C1CbFXVvyaqwpiKo7rK1",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.088,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01C8KVPS6ttnQsaTfY3RFBBT",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.087,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_015q433ibxYZdCpomzfMSQzr",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.086,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_014UGdAqaGawHnUa814DyPjx",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.098,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Ri9cAEPqDFmomskiQE7T9s",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.098,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_012VgCz6zB5STox3cN23ZoD3",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.088,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01212bwRLePZXqbW3HSMPU6i",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.074,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01M99mUufE9jcg2V1C4PxQkj",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.073,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_015TZqGCsKTpZhBBQCgRJTsm",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.077,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01MGKAk5a7kr4Sy5qyiszGX1",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.09,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Ey3iQN5AurLXz8bSiYqtDS",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.078,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01KfCxLrieqPP2mRMrxCfaJh",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.095,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01RqK1RQJipJ3RyhCcyuKWSS",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.082,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_014UGdAqaGqGq79TwC8uiBNh",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.075,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_017oeTETC4YkM58SiG3WkMhR",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.083,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01LmfZhPvbKPfCTYEphAC8mA",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.077,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01TouRc8tppbPCL5nXzdB6Gj",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.081,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01FxLvVjNDnoUsm2UMAp8Dqw",
+          "input": 0,
+          "output": 0,
+          "cache_read": 0,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "active_seconds": 0.101,
+          "list_cost_usd": 0
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "concurrency-active",
+      "item": "20 sessions each running one short command turn at the same moment",
+      "ran_at": "2026-11-22T19:39:30.619Z",
+      "session_ids": [
+        "sesn_018v74azaL8xxEDLnaQp5A1L",
+        "sesn_0118to7E8pE1k37RxjFU4c5R",
+        "sesn_01C8KVPSHEk9uwZpJjwE91zX",
+        "sesn_01XtFfEnAE451EQvuHu5Uy8w",
+        "sesn_015LQS138nCoFHRri1EGtZbw",
+        "sesn_01SwmcmwgzeyRF7EKzcy1RvA",
+        "sesn_01PVEPTAAKLQUZjJhPAPVZZn",
+        "sesn_01H4oXrGkVP5YqhYmgvLYizG",
+        "sesn_01KQt9pX5EiNMBN73bzYkx7T",
+        "sesn_01Bszgs6TVGWL6bDaUAkmx83",
+        "sesn_01PVEPTAAKLRrJDYDKH49JS5",
+        "sesn_01JRawj9nBb7SsdDFvEXRnf6",
+        "sesn_013yd28A75kUpACBRt4XyGbg",
+        "sesn_01KuXksCim9phUbZqgLBMRt8",
+        "sesn_018B8f1y73jFhyBcc8a7wd1X",
+        "sesn_01Ltpxxa1p2iL4EkfedtZadd",
+        "sesn_01AXDGzDRo4Xk1gvw4g1U2px",
+        "sesn_0111jPr4DwN5LYUp8QqwHh2d",
+        "sesn_01QECo2BdbzdoRq3jDweZcA5",
+        "sesn_01Bszgs6TX1F1AX3Eo3npTP9"
+      ],
+      "list_cost_usd": 0.13999999999999999,
+      "status": "answered",
+      "answer": "20/20 turns ran a command at once in 6920 ms wall; turn p50 2688 ms, p90 3737 ms, max 6475 ms; errors: none",
+      "evidence": {
+        "turns": [
+          {
+            "ms": 2677,
+            "first": 510,
+            "ok": true
+          },
+          {
+            "ms": 2639,
+            "first": 547,
+            "ok": true
+          },
+          {
+            "ms": 6475,
+            "first": 513,
+            "ok": true
+          },
+          {
+            "ms": 3649,
+            "first": 539,
+            "ok": true
+          },
+          {
+            "ms": 2665,
+            "first": 517,
+            "ok": true
+          },
+          {
+            "ms": 2795,
+            "first": 531,
+            "ok": true
+          },
+          {
+            "ms": 2656,
+            "first": 540,
+            "ok": true
+          },
+          {
+            "ms": 2684,
+            "first": 536,
+            "ok": true
+          },
+          {
+            "ms": 3650,
+            "first": 495,
+            "ok": true
+          },
+          {
+            "ms": 2688,
+            "first": 526,
+            "ok": true
+          },
+          {
+            "ms": 2794,
+            "first": 519,
+            "ok": true
+          },
+          {
+            "ms": 2669,
+            "first": 521,
+            "ok": true
+          },
+          {
+            "ms": 3700,
+            "first": 525,
+            "ok": true
+          },
+          {
+            "ms": 2681,
+            "first": 532,
+            "ok": true
+          },
+          {
+            "ms": 2581,
+            "first": 513,
+            "ok": true
+          },
+          {
+            "ms": 2678,
+            "first": 534,
+            "ok": true
+          },
+          {
+            "ms": 2928,
+            "first": 572,
+            "ok": true
+          },
+          {
+            "ms": 2661,
+            "first": 521,
+            "ok": true
+          },
+          {
+            "ms": 2701,
+            "first": 450,
+            "ok": true
+          },
+          {
+            "ms": 3737,
+            "first": 520,
+            "ok": true
+          }
+        ],
+        "errors": []
+      },
+      "active_seconds": 55.39,
+      "usage": [
+        {
+          "session": "sesn_018v74azaL8xxEDLnaQp5A1L",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.397,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_0118to7E8pE1k37RxjFU4c5R",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.347,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01C8KVPSHEk9uwZpJjwE91zX",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13930,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 121
+          },
+          "active_seconds": 3.408,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01XtFfEnAE451EQvuHu5Uy8w",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13930,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 121
+          },
+          "active_seconds": 3.297,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_015LQS138nCoFHRri1EGtZbw",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.259,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01SwmcmwgzeyRF7EKzcy1RvA",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.451,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01PVEPTAAKLQUZjJhPAPVZZn",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.363,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01H4oXrGkVP5YqhYmgvLYizG",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.507,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01KQt9pX5EiNMBN73bzYkx7T",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13930,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 121
+          },
+          "active_seconds": 6.167,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Bszgs6TVGWL6bDaUAkmx83",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13930,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 121
+          },
+          "active_seconds": 3.349,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01PVEPTAAKLRrJDYDKH49JS5",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.331,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01JRawj9nBb7SsdDFvEXRnf6",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.295,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_013yd28A75kUpACBRt4XyGbg",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.377,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01KuXksCim9phUbZqgLBMRt8",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.455,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_018B8f1y73jFhyBcc8a7wd1X",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13930,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 121
+          },
+          "active_seconds": 2.609,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01Ltpxxa1p2iL4EkfedtZadd",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.357,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01AXDGzDRo4Xk1gvw4g1U2px",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.361,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_0111jPr4DwN5LYUp8QqwHh2d",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13930,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 121
+          },
+          "active_seconds": 3.411,
+          "list_cost_usd": 0
+        },
+        {
+          "session": "sesn_01QECo2BdbzdoRq3jDweZcA5",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.35,
+          "list_cost_usd": 0.01
+        },
+        {
+          "session": "sesn_01Bszgs6TX1F1AX3Eo3npTP9",
+          "input": 6,
+          "output": 71,
+          "cache_read": 13815,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 236
+          },
+          "active_seconds": 2.299,
           "list_cost_usd": 0.01
         }
       ],

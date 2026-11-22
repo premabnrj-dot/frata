@@ -68,6 +68,8 @@ const PROBES = {
   'custom-tools-batched': { item: 'As custom-tools, answering every pending call in one send at each idle (as a webhook-driven server would)', needs: [], est: 0.5, run: probeCustomToolsBatched },
   cache: { item: 'Cache shares: does a second session of one agent version read the first one\'s cache?', needs: [], est: 1, run: probeCache },
   concurrency: { item: 'Concurrency and rate limits: 10 sessions created at once (no model call)', needs: [], est: 0.1, run: probeConcurrency },
+  'concurrency-70': { item: 'Decision 29\'s 70 sessions at once: 70 created in one burst (no model call)', needs: [], est: 0.1, run: probeConcurrency70 },
+  'concurrency-active': { item: '20 sessions each running one short command turn at the same moment', needs: [], est: 1, run: probeConcurrencyActive },
   'mount-sha': { item: 'Mount by commit SHA', needs: ['SPIKE_REPO_URL', 'SPIKE_REPO_SHA'], est: 0.5, run: probeMountSha },
   instructions: { item: 'Whether CLAUDE.md, AGENTS.md, .mcp.json or hooks load as instructions', needs: ['SPIKE_FIXTURE_REPO_URL', 'SPIKE_FIXTURE_REPO_SHA'], est: 0.75, run: probeInstructions },
   build: { item: '`next build` time and memory for Starter 0, the build key in a vault header to the API host', needs: ['SPIKE_BUILD_KEY', 'SPIKE_API_HOST'], est: 2, run: probeBuild },
@@ -374,6 +376,39 @@ async function probeConcurrency(r, run) {
   const ok = got.filter((g) => g.status === 'fulfilled').length
   const errors = got.filter((g) => g.status === 'rejected').map((g) => `${g.reason?.status ?? ''} ${g.reason?.error?.error?.type ?? g.reason?.message ?? ''}`.trim())
   return { status: 'answered', answer: `${ok}/10 sessions created at once in ${Date.now() - t0} ms; errors: ${errors.length ? errors.join(', ') : 'none'}`, evidence: { ok, errors } }
+}
+
+// Spec decision 29 caps Studio at 70 sessions at once. Create 70 with no message (no model call) in one burst.
+async function probeConcurrency70(r, run) {
+  const agent = await spikeAgent(r)
+  const env = await spikeEnv(r, 'env-closed', { type: 'limited', allowed_hosts: [], allow_package_managers: false, allow_mcp_servers: false })
+  const t0 = Date.now()
+  const got = await Promise.allSettled(Array.from({ length: 70 }, (_, i) => newSession(r, run, { agent, env, cap: 0.01, title: `concurrency-70 ${i}` })))
+  const ok = got.filter((g) => g.status === 'fulfilled').length
+  const errors = got.filter((g) => g.status === 'rejected').map((g) => `${g.reason?.status ?? ''} ${g.reason?.error?.error?.type ?? g.reason?.message ?? ''}`.trim())
+  return { status: 'answered', answer: `${ok}/70 sessions created at once in ${Date.now() - t0} ms; errors: ${errors.length ? [...new Set(errors)].join(', ') + ` (${errors.length})` : 'none'}`, evidence: { ok, errors } }
+}
+
+// 20 sessions each running one short bash turn at the same moment: do model calls and sandboxes start in parallel?
+async function probeConcurrencyActive(r, run) {
+  const agent = await spikeAgent(r)
+  const env = await spikeEnv(r, 'env-closed', { type: 'limited', allowed_hosts: [], allow_package_managers: false, allow_mcp_servers: false })
+  const N = 20, t0 = Date.now()
+  const one = async (i) => {
+    const s = await newSession(r, run, { agent, env, cap: PROBES['concurrency-active'].est / N, title: `concurrency-active ${i}` })
+    const t = await turn(s.id, 'Run: echo ok')
+    return { ms: t.ms, first: t.firstEventMs, ok: t.toolOutputs.join('').includes('ok') }
+  }
+  const got = await Promise.allSettled(Array.from({ length: N }, (_, i) => one(i)))
+  const done = got.filter((g) => g.status === 'fulfilled').map((g) => g.value)
+  const errors = got.filter((g) => g.status === 'rejected').map((g) => `${g.reason?.status ?? ''} ${g.reason?.error?.error?.type ?? g.reason?.message ?? ''}`.trim())
+  const ms = done.map((d) => d.ms).sort((a, b) => a - b)
+  const q = (p) => ms[Math.min(ms.length - 1, Math.floor(p * ms.length))]
+  return {
+    status: done.length ? 'answered' : 'failed',
+    answer: `${done.filter((d) => d.ok).length}/${N} turns ran a command at once in ${Date.now() - t0} ms wall; turn p50 ${q(0.5)} ms, p90 ${q(0.9)} ms, max ${ms.at(-1)} ms; errors: ${errors.length ? [...new Set(errors)].join(', ') : 'none'}`,
+    evidence: { turns: done, errors },
+  }
 }
 
 async function probeMountSha(r, run) {
