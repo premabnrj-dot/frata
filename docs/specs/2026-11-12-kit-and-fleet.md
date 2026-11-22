@@ -86,6 +86,8 @@ guards the reviews asked for:
 ## Design
 
 ### 1. Domains (security B1–B2, architecture 1)
+**Superseded by ADR-0019 (owner, 2026-11-16): one address per store, no `frrata.site`, no router of our own; one
+separate preview domain. The text below is the record of the earlier design.**
 - **Code sites live on their own registrable domain**, on the Public Suffix List (shown as `frrata.site`; name to
   decide), never on `frrata.shop` (checkout, sign-in, today's theme shops) and never on the console, Admin or Studio's
   domain. Previews on a second such domain. So site code never shares an origin or a site with checkout, sign-in or
@@ -236,6 +238,8 @@ A kit team of two engineers to start (the agents write most of the code under re
 release manager (rotating), the abuse queue part-time, partner success.
 
 ## Phases (each part where it is first needed; YAGNI per architecture 19)
+**The order of work is `docs/plans/2026-11-16-execution.md` and `docs/plans/2026-11-22-studio-workbench.md`; where this
+table names a separate site domain or a router, ADR-0019's one address stands instead.**
 | Phase | Kit and fleet work |
 |---|---|
 | V1 | `frrata-kit` (core, legal, ui, CLI with checks, skills) in one version; trusted + staged publishing; Starter 0 to the starter bar; budgets and the allow-list as the CLI's defaults (sites self-host; Frrata cannot enforce yet); staff phishing-resistant sign-in on GitHub and the registry |

@@ -37,7 +37,7 @@ Rules as `docs/plans/2026-11-15-parallel-lanes.md` § The rules every worker fol
 | B | G·1–G·4 (Studio plan § G-a), then D0 (below) | `claude/lane-b-ga-d0` | G·2's key list: approved (website-one-address § 4); D0: screen 2, approved 2026-11-22 |
 | — | W0 and T1's spec: the orchestrator | this branch | — |
 
-## W0 · Stale text (documents only)
+## W0 · Stale text (documents only) — done 2026-11-22
 | # | Task | Verify |
 |---|---|---|
 | W0·1 | V0·1 as written: ADR-0017's Decision, "What the owner sets up" and Consequences rewritten to its accepted status (or to the hosting decision below, once taken) | `npm run check:docs`; the ADR read |
