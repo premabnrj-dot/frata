@@ -258,3 +258,19 @@ V3, so reserve and settle ship with tests only; per-person caps and Leads settin
 pill's panel is built by lane C and mounted by lane D at V3b; about a dozen undrawn screens and five emails (the RBI
 pre-debit notice among them) are drawn as one small mockup for the owner before they are built. Open: the live billing
 webhook is unconfirmed (production has stored none).
+
+## The agent spike (V3a·1) and the owner-only first test (2026-11-22)
+Report: `docs/research/2026-11-22-studio-agent-spike.md` (17 runs, $0.45 list cost on `claude-opus-5-5` at low effort:
+the owner's "use haiku … for the agent for testing" reached the session after the probes; every later run uses
+`claude-haiku-5-5`, one constant in `scripts/studio/spike.mjs`). Nine items passed, none failed, nine wait on owner
+set-up (GitHub Team with the session and fleet Apps and a fixture repository; a build key for a store; the Console's
+service account, federation rule and webhook endpoint; a hosting team with a protected preview; a Mac and an iPhone).
+**Into the Studio plan:** the agent file pins `inference_geo: us` (the workspace's default measured `global`);
+`allow_package_managers` stays false and `registry.npmjs.org` is listed by name if the sandbox installs; vault
+credentials are sent `{header:true}` and api.frrata.shop never reflects the key header; `/api/cron/studio` is the main
+path (one idle per round of tool calls, deliveries can drop) and every pending call of a round is answered in one send;
+the 30-day session sweep is ours; data is stored in the US.
+**Owner, 2026-11-22: "yes, start the agents runtime lane."** Next target: Studio working end to end on one test store,
+Frrata staff only, under a hard spend cap and no credits. Lane D builds V3a's runtime against a stand-in for hosting
+(`claude/lane-d-agent-runtime`), plan check first. The first test still needs from the owner: GitHub Team and the two
+Apps, one new Vercel Pro team for hosted websites, the preview domain, and a yes to one 24-hour build key.
