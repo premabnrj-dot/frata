@@ -133,7 +133,9 @@ begin
   return c.name;
 end $$;
 --> statement-breakpoint
--- Your computers: the person's own live developer keys on their partner's client stores (newest first, at most 100).
+-- Your computers: the person's own live developer keys on their partner's client stores (newest first, at most 100), only
+-- on a store they still reach (the maker rule): an unassigned Lead or a removed partner no longer sees its name
+-- (tenancy audit HIGH); those keys stopped answering then and go at the daily cron.
 create or replace function app_partner_developer_keys(p_uid uuid, p_session uuid, p_stepup text) returns jsonb
   language plpgsql stable security definer set search_path = '' as $$
 begin
@@ -141,6 +143,7 @@ begin
   return coalesce((select jsonb_agg(jsonb_build_object('id', k.id, 'store', t.name, 'createdAt', k.created_at, 'expiresAt', k.expires_at) order by k.created_at desc)
     from (select k.* from public.storefront_keys k join public.app_pm_live(p_uid) me on me.partner_id = k.partner_id
            where k.kind = 'build' and k.purpose = 'developer' and k.created_by = p_uid and k.revoked_at is null and k.expires_at > now()
+             and public.app_build_key_maker_live(k.tenant_id, k.partner_id, p_uid)
            order by k.created_at desc limit 100) k
     join public.tenants t on t.id = k.tenant_id), '[]'::jsonb);
 end $$;
@@ -155,13 +158,31 @@ begin
   update public.storefront_keys k set revoked_at = now(), revoked_by = p_uid
     from public.app_pm_live(p_uid) me
    where k.id = p_key and k.partner_id = me.partner_id and k.created_by = p_uid and k.kind = 'build' and k.purpose = 'developer'
-     and k.revoked_at is null and k.expires_at > now()
+     and k.revoked_at is null and k.expires_at > now() and public.app_build_key_maker_live(k.tenant_id, k.partner_id, p_uid)
   returning k.tenant_id into v_tenant;
   if v_tenant is null then return false; end if;
   select pm.email into v_email from public.partner_members pm join public.app_pm_live(p_uid) me on me.member_id = pm.id;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
   values (v_tenant, p_uid, left(v_email, 320), 'member', 'storefront_key.delete', p_key::text, '{"fields":["revoked_at"]}'::jsonb);
   return true;
+end $$;
+--> statement-breakpoint
+-- The poll's claim, as 0160, with the person checked again as they are now (tenancy audit LOW): demoted to a Builder,
+-- unassigned or on a support visit since Give key, the claim is spent and nothing is minted.
+create or replace function app_device_code_claim(p_device_hash text) returns table (state text, tenant_id uuid, user_id uuid, role text, email text)
+  language plpgsql volatile security definer set search_path = '' as $$
+declare c record;
+begin
+  if p_device_hash !~ '^[0-9a-f]{64}$' then return; end if;
+  select x.id, x.tenant_id, x.approved_by, x.approved_at, x.claimed_at, x.expires_at into c
+    from public.build_key_device_codes x where x.device_hash = p_device_hash for update;
+  if c.id is null or c.expires_at <= now() or c.claimed_at is not null then return; end if;
+  if c.approved_at is null then return query select 'pending'::text, null::uuid, null::uuid, null::text, null::text; return; end if;
+  update public.build_key_device_codes set claimed_at = now() where id = c.id;
+  if not public.app_device_partner_ok(c.approved_by, c.tenant_id) then return; end if;
+  return query select 'approved'::text, m.tenant_id, m.user_id, m.role, u.email::text
+    from public.members m left join auth.users u on u.id = m.user_id
+   where m.tenant_id = c.tenant_id and m.user_id = c.approved_by;
 end $$;
 --> statement-breakpoint
 -- The daily cron: ended build keys, as 0160; device codes once ended (a code's network and challenge never outlive the
@@ -176,10 +197,11 @@ $$;
 revoke all on function app_device_code_start(text, text, text, text), app_device_partner_ok(uuid, uuid), app_device_store_full(uuid),
   app_device_code_look(uuid, uuid, text, text, text), app_device_code_challenge(uuid, uuid, text, text, text),
   app_device_code_take(uuid, uuid, text, text, text), app_device_code_give(uuid, uuid, text, text, text, uuid, bigint),
-  app_partner_developer_keys(uuid, uuid, text), app_partner_developer_key_delete(uuid, uuid, text, uuid), app_delete_ended_build_keys()
+  app_partner_developer_keys(uuid, uuid, text), app_partner_developer_key_delete(uuid, uuid, text, uuid), app_delete_ended_build_keys(),
+  app_device_code_claim(text)
   from public, anon, authenticated, service_role, frata_admin, frata_builder, frata_app;
 --> statement-breakpoint
 grant execute on function app_device_code_start(text, text, text, text), app_device_code_look(uuid, uuid, text, text, text),
   app_device_code_challenge(uuid, uuid, text, text, text), app_device_code_take(uuid, uuid, text, text, text),
   app_device_code_give(uuid, uuid, text, text, text, uuid, bigint), app_partner_developer_keys(uuid, uuid, text),
-  app_partner_developer_key_delete(uuid, uuid, text, uuid), app_delete_ended_build_keys() to frata_app;
+  app_partner_developer_key_delete(uuid, uuid, text, uuid), app_delete_ended_build_keys(), app_device_code_claim(text) to frata_app;

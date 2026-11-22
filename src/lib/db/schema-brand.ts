@@ -9,10 +9,11 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { check, index, integer, jsonb, pgTable, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, index, integer, jsonb, pgTable, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { at, createdAt, id, tenants } from './schema'
 import { brandFileCheck } from './brand-file-check'
 import { DENSITIES, FONTS, RADII } from '@/domains/brand/record'
+import { HEADERS, HEADING_MAX, MAX_TRUST, POLICY_ROWS, THANKS_MAX, TRUST_KEYS } from '@/domains/brand/checkout'
 import { sqlList } from '@/domains/tenancy/roles'
 
 const HEX = (c: unknown) => sql`${c} ~ '^#[0-9A-F]{6}$'`
@@ -57,11 +58,16 @@ export const brandTokens = pgTable('brand_tokens', {
 ])
 
 export const PROPOSAL_DECISIONS = ['approved', 'declined', 'replaced'] as const
+/** What a waiting change is to (one-address P2·1): the brand record, or the checkout design. One open of each a store. */
+export const PROPOSAL_KINDS = ['brand', 'checkout'] as const
+export type ProposalKind = (typeof PROPOSAL_KINDS)[number]
 
 export const brandProposals = pgTable('brand_proposals', {
   id: id(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  /** The whole record the change would make live, in saveBrand's shape (main logo included). */
+  /** brand: `record` is a brand record; checkout: a checkout design (one-address P2·1). */
+  kind: text('kind').notNull().default('brand'),
+  /** The whole record the change would make live, in saveBrand's shape (main logo included), or the whole design. */
   record: jsonb('record').notNull(),
   /** "4 logo files and 2 fonts." (changeSummary at the time it was sent): the Notices row's line. */
   summary: text('summary').notNull(),
@@ -75,7 +81,8 @@ export const brandProposals = pgTable('brand_proposals', {
   decidedBy: uuid('decided_by'),
 }, (t) => [
   unique('brand_proposals_tenant_id').on(t.tenantId, t.id),
-  uniqueIndex('brand_proposals_one_open').on(t.tenantId).where(sql`${t.decidedAt} is null`),
+  uniqueIndex('brand_proposals_one_open').on(t.tenantId, t.kind).where(sql`${t.decidedAt} is null`),
+  check('brand_proposals_kind', sql`${t.kind} in (${sql.raw(sqlList(PROPOSAL_KINDS))})`),
   check('brand_proposals_record_size', sql`octet_length(${t.record}::text) <= 8192`),
   check('brand_proposals_summary', sql`char_length(${t.summary}) between 1 and 120`),
   check('brand_proposals_decision', sql`(${t.decidedAt} is null) = (${t.decision} is null) and (${t.decision} is null or ${t.decision} in (${sql.raw(sqlList(PROPOSAL_DECISIONS))}))`),
@@ -102,4 +109,35 @@ export const brandSeasons = pgTable('brand_seasons', {
   check('brand_seasons_name', sql`char_length(${t.name}) between 1 and 40`),
   check('brand_seasons_ends', sql`${t.endsAt} is null or ${t.endsAt} > ${t.startsAt}`),
   check('brand_seasons_colours', sql`${HEX(t.colorAccent)} and ${HEX(t.colorOn)}`),
+])
+
+/**
+ * A code-site store's checkout design (one-address plan P2·1; spec § 3; owner decisions 12–14): one row a store, what a
+ * partner may set on checkout, the bag-link page, order pages and policies, and nothing more. Its rules live in
+ * src/domains/brand/checkout.ts; the CHECKs below hold the closed sets and the lines' lengths (the money rules are the
+ * domain's, run on save and again at render). `previous` keeps the design before the last save (Undo, once). Written
+ * only by saveCheckout, undoCheckout and decideBrand (src/lib/content/save.ts). Access: drizzle/0161 (frata_app; frata_builder named columns).
+ */
+export const checkoutDesign = pgTable('checkout_design', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  header: text('header').notNull().default('left'),
+  backLink: boolean('back_link').notNull().default(true),
+  policyRows: smallint('policy_rows').notNull().default(1),
+  /** On, in the partner's order. */
+  trust: text('trust').array().notNull().default(sql`array['delivery','returns','cod','secure']::text[]`),
+  heading: text('heading').notNull().default(''),
+  thanks: text('thanks').notNull().default(''),
+  previous: jsonb('previous'),
+  version: integer('version').notNull().default(1),
+  createdAt: createdAt(),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by'),
+}, (t) => [
+  unique('checkout_design_tenant').on(t.tenantId),
+  check('checkout_design_header', sql`${t.header} in (${sql.raw(sqlList(HEADERS))})`),
+  check('checkout_design_rows', sql`${t.policyRows} in (${sql.raw(POLICY_ROWS.join(','))})`),
+  check('checkout_design_trust', sql`cardinality(${t.trust}) <= ${sql.raw(String(MAX_TRUST))} and ${t.trust} <@ array[${sql.raw(sqlList(TRUST_KEYS))}]::text[] and array_position(${t.trust}, null) is null`),
+  check('checkout_design_lines', sql`char_length(${t.heading}) <= ${sql.raw(String(HEADING_MAX))} and char_length(${t.thanks}) <= ${sql.raw(String(THANKS_MAX))}`),
+  check('checkout_design_previous_size', sql`${t.previous} is null or octet_length(${t.previous}::text) <= 4096`),
 ])

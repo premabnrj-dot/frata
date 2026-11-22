@@ -1,5 +1,4 @@
 import localFont from 'next/font/local'
-import { displayFamily } from './fonts'
 
 // =============================================================================
 // FILE: src/components/shop-preview/brand-fonts.ts — the brand record's extra faces for Console › Brand only (one-address
@@ -12,13 +11,10 @@ import { displayFamily } from './fonts'
 const mukta = localFont({ src: [{ path: '../fonts/mukta/mukta-latin-400-normal.woff2', weight: '400' }, { path: '../fonts/mukta/mukta-latin-600-normal.woff2', weight: '600' }], display: 'swap', preload: false, variable: '--font-store-mukta' })
 const tiro = localFont({ src: '../fonts/tiro-devanagari-hindi/tiro-devanagari-hindi-latin-400-normal.woff2', weight: '400', display: 'swap', preload: false, variable: '--font-store-tiro' })
 
-/** The brand faces' variables beside the store's (Console › Brand only; a theme shop's pages never load them). */
+/** The brand faces' variables beside the store's: Console › Brand, and a code-site store's checkout, bag-link, order and
+ *  policy pages (one-address P2·3). Those routes are shared, so their @font-face rules (0.35 kB) load for theme shops too;
+ *  the faces themselves download only where a record uses them. check:storefront-build holds their own ceiling. */
 export const BRAND_FONT_VARS = `${mukta.variable} ${tiro.variable}`
 
-/** A brand record's font on Frrata's own pages (Console › Brand's preview): the self-hosted face by its variable, then a
- *  fallback of its kind. What leaves Frrata (the API, the kit) names the family instead (src/domains/brand/record.ts). */
-export function brandFamily(font: string): string {
-  if (font === 'mukta') return 'var(--font-store-mukta), var(--font-store-deva), system-ui, sans-serif'
-  if (font === 'tiro') return 'var(--font-store-tiro), var(--font-store-deva), Georgia, serif'
-  return displayFamily(font)
-}
+import { brandFamily } from './font-families'
+export { brandFamily }

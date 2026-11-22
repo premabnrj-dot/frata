@@ -1,7 +1,6 @@
 'use client'
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { STATES } from '@/domains/checkout/state-names'
 import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
 import type { Biz, BizCheck } from './checkout-biz'
@@ -13,6 +12,7 @@ import { api, dayRange, inr, type Pay, type PublicQuote } from './shop-client'
 import { PayBar, useQuoteToast } from './checkout-feedback'
 import { useStoreToast } from './store-toast'
 import { chunk } from './chunk'
+import type { Gone } from './checkout-stepper'
 
 // =============================================================================
 // ONE-PAGE CHECKOUT (checkout spec § Design, mockup approved 2026-11-07).
@@ -39,14 +39,25 @@ const CheckoutSummary = lazy(summary)
 // totals still carry every offer the server applied.
 type Offers = typeof import('./checkout-offers').default
 const loadOffers = chunk(() => import('./checkout-offers').then((m) => m.default))
+// A code-site store's editable lines (one-address P2·4): their own chunk too; until it is in, the plain lines show.
+type Stepper = typeof import('./checkout-stepper').default
+const loadStepper = chunk(() => import('./checkout-stepper').then((m) => m.default))
+// The brand frame's marks (note-marks.tsx, P2 mockup .s-msg/.s-err): shown and sized by BRAND_CSS, hidden on a theme shop.
+// Drawn here, not through NoteMark: its own module cost checkout's first load about 0.15 kB (budget 120 kB).
+const mark = (id: string, bad?: boolean) => <svg aria-hidden="true" className={bad ? 'ck-ic-sm hidden text-store-bad' : 'ck-ic-sm hidden'}><use href={id} /></svg>
 
-export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false, identity }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
+export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false, identity, brand, states }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
   /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
   gst?: { deliversWithin: string | null; b2b: boolean }
   /** Show the WhatsApp opt-in (the shop has WhatsApp connected): unticked, naming the shop. */
   waOptIn?: boolean
   /** What a module puts above the form (slot checkout.identity: EkCode's button or its signed-in strip). */
-  identity?: React.ReactNode }) {
+  identity?: React.ReactNode
+  /** The State choices as <option>s, drawn on the server (state-options.tsx). */
+  states: React.ReactNode
+  /** A code-site store's checkout design (one-address P2·3): its heading ('' draws "Checkout") and its trust blocks,
+   *  drawn on the server (trust-blocks.tsx); "Secure payment" hides itself while online payment isn't offered here. */
+  brand?: { heading: string; trust: React.ReactNode } }) {
   const [biz, setBiz] = useState<Biz>({ on: false, gstin: '', name: '' })
   const bizCheck = useRef<BizCheck | null>(null)
   const registerBiz = useCallback((c: BizCheck) => { bizCheck.current = c }, [])
@@ -84,6 +95,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     void loadOffers().then((C) => { if (live) setOffers({ C }) }, () => {})
     return () => { live = false }
   }, [Offers, q])
+  const [Stepper, setStepper] = useState<{ C: Stepper } | null>(null)
+  const [gone, setGone] = useState<Gone[]>([])
+  useEffect(() => { if (brand && !Stepper) void loadStepper().then((C) => setStepper({ C }), () => {}) }, [brand, Stepper, q])
 
   // Restore what was typed (this tab only); a pending online order goes to its own page. It never did (the key was
   // written and never read): a reload in Instagram's browser after the switch to the UPI app, or Back then Forward,
@@ -252,7 +266,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
 
   const field = 'store-field h-11 w-full rounded-[var(--store-radius)] border border-store-sub/45 bg-store-paper px-3 text-base aria-invalid:border-store-bad'
   // feedback-ok: shop field line (§ Feedback 3), shop colours
-  const Err = ({ k }: { k: string }) => (errors[k] ? <p id={`${k}-err`} className="mt-1 text-sm text-store-bad">{errors[k]}</p> : null)
+  const Err = ({ k }: { k: string }) => (errors[k] ? <p id={`${k}-err`} className="ck-fe mt-1 text-sm text-store-bad">{mark('#ck-a')}{errors[k]}</p> : null)
   const label = 'mb-1 block text-sm font-medium'
   const sect = 'mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-store-sub'
   const button = useMemo(() => {
@@ -262,14 +276,14 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     return method === 'cod' ? `Place order · ${inr(total)}` : `Pay · ${inr(total)}`
   }, [q, method, total, failed])
 
-  if (q && q.empty && !lines.length) return <p className="py-10 text-center">Your bag is empty. <a href="/products" className="underline">See what is new</a></p>
+  if (q && q.empty && !lines.length && !gone.length) return <p className="py-10 text-center">Your bag is empty. <a href="/products" className="underline">See what is new</a></p>
 
   return (
-    <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); if (failed) return method === 'cod' ? void switchToCod() : void retry(); void place() }} className="mx-auto max-w-lg px-4 pb-40 pt-4 sm:px-0">
-      <h1 className="text-2xl" style={{ fontFamily: 'var(--store-display)' }}>Checkout</h1>
+    <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); if (failed) return method === 'cod' ? void switchToCod() : void retry(); void place() }} className="ck-form mx-auto max-w-lg px-4 pb-40 pt-4 sm:px-0">
+      <h1 className="ck-h1 text-2xl" style={{ fontFamily: 'var(--store-display)' }}>{brand?.heading || 'Checkout'}</h1>
       {tries.n > 0 && <Suspense fallback={null}><CheckoutSummary toast={toast} errors={errors} attempt={tries.n} sub={tries.sub} scope={formRef} /></Suspense>}
       {/* feedback-ok: rule 5 — a failed payment's line with its filled form, a refused placement (nothing charged), a changed price */}
-      {msg && <p role="alert" className={`mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}>{msg.text}</p>}
+      {msg && <p role="alert" className={`ck-msg mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}>{msg.tone === 'changed' ? mark('#ck-i') : mark('#ck-a', true)}<span>{msg.text}</span></p>}
       {/* feedback-ok: no price at all is the page's state (Pay waits on it), so it stays; with an older price it is a toast */}
       {quoteError && !q && <p role="alert" className="mt-4 text-sm text-store-bad">{quoteError}</p>}
       {identity && <div className="mt-4 grid gap-3">{identity}</div>}
@@ -288,7 +302,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         <div className="space-y-3">
           <div><label htmlFor="name" className={label}>Full name</label><input id="name" autoComplete="name" value={f.name} onChange={(e) => set('name', e.target.value)} aria-invalid={!!errors.name || undefined} aria-describedby="name-err" className={field} /><Err k="name" /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label htmlFor="pincode" className={label}>Pincode</label><input id="pincode" inputMode="numeric" autoComplete="postal-code" maxLength={6} value={f.pincode} onChange={(e) => set('pincode', e.target.value.replace(/\D/g, ''))} aria-invalid={!!errors.pincode || undefined} aria-describedby="pincode-err" className={field} /><Err k="pincode" /></div>
+            <div><label htmlFor="pincode" className={label}>PIN code</label><input id="pincode" inputMode="numeric" autoComplete="postal-code" maxLength={6} value={f.pincode} onChange={(e) => set('pincode', e.target.value.replace(/\D/g, ''))} aria-invalid={!!errors.pincode || undefined} aria-describedby="pincode-err" className={field} /><Err k="pincode" /></div>
             <div><label htmlFor="city" className={label}>City</label><input id="city" autoComplete="address-level2" value={f.city} onChange={(e) => set('city', e.target.value)} aria-invalid={!!errors.city || undefined} aria-describedby="city-err" className={field} /><Err k="city" /></div>
           </div>
           <div><label htmlFor="addressLine" className={label}>House, street</label><input id="addressLine" autoComplete="address-line1" value={f.addressLine} onChange={(e) => set('addressLine', e.target.value)} aria-invalid={!!errors.addressLine || undefined} aria-describedby="addressLine-err" className={field} /><Err k="addressLine" /></div>
@@ -297,7 +311,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
               : <div className="mt-3"><label htmlFor="landmark" className={label}>Landmark <span className="font-normal text-store-sub">(optional)</span></label><input id="landmark" value={f.landmark} maxLength={80} onChange={(e) => set('landmark', e.target.value)} className={field} /></div>}</div>
           <div><label htmlFor="state" className={label}>State</label>
             <select id="state" autoComplete="address-level1" value={f.state} onChange={(e) => set('state', e.target.value)} aria-invalid={!!errors.state || undefined} aria-describedby="state-err" className={field}>
-              <option value="">Choose…</option>{STATES.map((s) => <option key={s}>{s}</option>)}</select>
+              <option value="">Choose…</option>{states}</select>
 
             <Err k="state" /></div>
         </div>
@@ -341,7 +355,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       </div>
 
       <h2 className={sect}>Your order</h2>
-      <ul className="divide-y divide-store-line text-sm">
+      {brand && Stepper ? <Stepper.C lines={q?.lines ?? []} gone={gone} setGone={setGone} /> : <ul className="divide-y divide-store-line text-sm">
         {lines.map((l) => (
           <li key={l.variantId} className="flex items-center gap-3 py-2">
             {l.image ? <img src={urlFor(l.image.base, pick(l.image.widths, 160))} alt="" width={40} height={50} data-photo className="h-[50px] w-10 rounded-sm object-cover" /> : <span className="h-[50px] w-10 rounded-sm bg-store-chip" />}
@@ -349,7 +363,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
             <span className="tabular-nums">{inr(l.unitPrice * l.qty)}</span>
           </li>
         ))}
-      </ul>
+      </ul>}
       {q && (
         <div className="mt-2 space-y-1 text-sm">
           <OfferRows applied={method === 'cod' ? q.cod?.applied ?? [] : q.appliedPrepaid.filter((a) => a.class !== 'payment' || method === 'prepaid')} />
@@ -357,10 +371,11 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
           {method === 'cod' && q.cod?.charge ? <p className="flex justify-between"><span>Pay on delivery fee</span><span>{inr(q.cod.charge)}</span></p> : null}
           {q.arrives && q.deliverable && <p className="flex justify-between text-store-sub"><span>Arrives</span><span>{dayRange(q.arrives)}</span></p>}
           {/* feedback-ok: the address's answer beside the total it stops (a state of this PIN code, not a failure after a button) */}
-          {!q.deliverable && <p role="alert" className="text-sm text-store-bad">This shop does not deliver to this PIN code yet.</p>}
+          {!q.deliverable && <p role="alert" className="ck-fe text-sm text-store-bad">{mark('#ck-a')}This shop does not deliver to this PIN code yet.</p>}
           {returnLine && <p className="flex justify-between text-store-sub"><span>Returns</span><span>{returnLine}</span></p>}
         </div>
       )}
+      {brand?.trust ? <div data-online={online ? '1' : '0'}>{brand.trust}</div> : null}
       <p className="mt-4 border-t border-store-line pt-3 text-xs text-store-sub">
         {legalName || shopName} uses your name, phone and address only to deliver this order and to contact you about it. <a href={privacyHref} className="underline">Your data and how to ask for it to be deleted</a>.
       </p>

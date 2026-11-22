@@ -7,7 +7,7 @@
 // staff can't open Brand; phone and desktop. Puts the store back.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, expectToast, partnerOn, signedIn } from '../lib.mjs'
+import { CONSOLE, USERS, expectToast, partnerOn, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const CLEAN = '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 52"><path d="M2 50h36" stroke="#221A14"/><circle cx="20" cy="12" r="2" fill="#8C1D2C"/></svg>'
@@ -23,6 +23,7 @@ export default {
     const store = await db`select logo_url, published_at from shop_settings where tenant_id = ${KESAR}`
     await db`delete from brand_proposals where tenant_id = ${KESAR}`
     await db`delete from brand_tokens where tenant_id = ${KESAR}`
+    await db`delete from checkout_design where tenant_id = ${KESAR}`
     await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${USERS.staff.id}, 'staff') on conflict (tenant_id, user_id) do nothing`
     const owner = await open('owner')
     const p = owner.p
@@ -128,6 +129,74 @@ export default {
         await p.screenshot({ path: t.out('brand-approved'), fullPage: true })
       })
 
+      await t.step('Brand › Checkout (P2·5, P2·6): the preview on the store’s products; the lines refused at the field; the owner saves live; Undo', async () => {
+        const design = async () => (await db`select header, back_link, policy_rows, trust, heading, thanks, version from checkout_design where tenant_id = ${KESAR}`)[0] ?? null
+        await p.goto(CONSOLE + '/console/brand/checkout')
+        await p.getByRole('navigation', { name: 'Brand' }).getByRole('link', { name: 'Checkout' }).waitFor()
+        assert.equal(await p.getByRole('navigation', { name: 'Brand' }).getByRole('link', { name: 'Checkout' }).getAttribute('aria-current'), 'page')
+        const pv = p.locator('[data-pv="checkout"] >> visible=true').first()
+        await pv.getByRole('heading', { name: 'Checkout' }).waitFor()
+        await pv.getByText(/^Place order ·|^Pay ·/).first().waitFor()
+        // Every page and state draws (sample data: the store's own products).
+        const card = p.locator('aside.sticky')
+        await card.getByLabel('Show').selectOption('sold'); await p.locator('[data-pv="checkout"] >> visible=true').first().getByText('Sold out since you added it.').waitFor()
+        await card.getByRole('radio', { name: 'Order page' }).click(); await p.locator('[data-pv="order"] >> visible=true').first().getByText('Order placed').waitFor()
+        await card.getByRole('radio', { name: 'Bag link' }).click(); await p.locator('[data-pv="baglink"] >> visible=true').first().getByText('Opening checkout').waitFor()
+        await card.getByRole('radio', { name: 'Policy' }).click(); await p.locator('[data-pv="policy"] >> visible=true').first().getByRole('heading', { name: 'Returns and exchanges' }).waitFor()
+        await card.getByRole('radio', { name: 'Checkout' }).click()
+        // The two lines: counted, refused at the field as typed, and Save counts them; nothing is saved.
+        await p.getByLabel('Checkout heading').fill('Almost yours')
+        await p.getByText('12/24').waitFor()
+        await p.locator('[data-pv="checkout"] >> visible=true').first().getByRole('heading', { name: 'Almost yours' }).waitFor()
+        await p.getByLabel('Thank-you line').fill('Thank you. For exchanges, pay the fee to ayuda@okicici.')
+        await p.getByText('This line has a UPI ID. Remove it to save.').waitFor()
+        await p.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: /^Save/ }).click()
+        await expectToast(p, '1 line needs fixing', 'error', { quiet: true })
+        assert.equal(await design(), null, 'nothing saved')
+        await p.screenshot({ path: t.out('checkout-refused'), fullPage: true })
+        // Fixed; the logo centred; the GST block can't be a fifth.
+        await p.getByLabel('Thank-you line').fill('We’re glad this one found you.')
+        await p.getByRole('radio', { name: 'Centred' }).click()
+        assert.equal(await p.locator('#trust-gst').getAttribute('aria-disabled'), 'true', 'four blocks are the most')
+        await p.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: /^Save/ }).click()
+        const saved = await expectToast(p, 'Saved.', 'ok')
+        let d = await design()
+        assert.deepEqual([d.header, d.heading, d.thanks, d.trust], ['centre', 'Almost yours', 'We’re glad this one found you.', ['delivery', 'returns', 'cod', 'secure']])
+        await p.screenshot({ path: t.out('checkout-saved'), fullPage: true })
+        // Undo puts the design back (a minute, by whoever saved).
+        await saved.getByRole('button', { name: 'Undo' }).click()
+        await until(async () => (await design()).heading === '', 8000)
+        assert.equal((await design()).header, 'left', 'Undo put the design back')
+        // Save it again for the steps after.
+        await p.reload(); await p.getByLabel('Checkout heading').fill('Almost yours')
+        await p.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: /^Save/ }).click()
+        await expectToast(p, 'Saved.', 'ok')
+        d = await design(); assert.equal(d.heading, 'Almost yours')
+      })
+
+      await t.step('the partner’s checkout change on the open store waits; the owner approves it in Notices', async () => {
+        const pia = await open('partner')
+        await pia.ctx.addCookies([{ name: 'frata_tenant', value: KESAR, domain: 'localhost', path: '/' }])
+        try {
+          const q = pia.p
+          await q.goto(CONSOLE + '/console/brand/checkout')
+          await q.getByLabel('Checkout heading').fill('Nearly yours')
+          await q.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: /^Save/ }).click()
+          await expectToast(q, 'Sent to the owner.', 'ok')
+          await q.getByText('Waiting for the owner', { exact: true }).first().waitFor()
+          await q.screenshot({ path: t.out('checkout-waiting'), fullPage: true })
+        } finally { await pia.ctx.close() }
+        assert.equal((await db`select heading from checkout_design where tenant_id = ${KESAR}`)[0].heading, 'Almost yours', 'the live design is unchanged')
+        const [w] = await db`select summary from brand_proposals where tenant_id = ${KESAR} and kind = 'checkout' and decided_at is null`
+        assert.equal(w.summary, 'The checkout heading.')
+        await p.goto(CONSOLE + '/console/notices')
+        const row = p.locator('li').filter({ hasText: 'Your partner changed your checkout' })
+        await row.getByText('The checkout heading.').waitFor()
+        await row.getByRole('button', { name: 'Approve change' }).click()
+        await expectToast(p, 'Approved. It’s live.', 'ok')
+        assert.equal((await db`select heading from checkout_design where tenant_id = ${KESAR}`)[0].heading, 'Nearly yours')
+      })
+
       await t.step('staff don’t open Brand', async () => {
         const staff = await open('staff')
         try {
@@ -139,6 +208,7 @@ export default {
       await owner.ctx.close()
       await db`delete from brand_proposals where tenant_id = ${KESAR}`
       await db`delete from brand_tokens where tenant_id = ${KESAR}`
+      await db`delete from checkout_design where tenant_id = ${KESAR}`
       await db`delete from notices where tenant_id = ${KESAR} and source_kind = 'brand'`
       await db`update shop_settings set logo_url = ${store[0].logo_url}, published_at = ${store[0].published_at} where tenant_id = ${KESAR}`
       if (key) await db`delete from storefront_keys where id = ${key.id}`

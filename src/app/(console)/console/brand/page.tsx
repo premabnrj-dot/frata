@@ -9,6 +9,7 @@ import { brandSaver, decidesBrand } from '@/domains/brand/who'
 import { holds } from '@/domains/tenancy/roles'
 import { BrandEditor } from './_components/brand-editor'
 import { BuilderBrand } from './_builder/brand'
+import { BrandTabs } from './_components/brand-tabs'
 
 export const metadata = { title: 'Brand' }
 
@@ -22,7 +23,7 @@ export const metadata = { title: 'Brand' }
 export default async function BrandPage() {
   const cap = await requireCapability('preview.read')
   if (!cap.ok) return <Panel title={cap.message} />
-  if (cap.kind === 'builder') return <BuilderBrand actor={cap.actor} shopName={cap.store.tenantName} at={new Date().toISOString()} />
+  if (cap.kind === 'builder') return <BuilderBrand actor={cap.actor} shopName={cap.store.tenantName} at={new Date().toISOString()} tabs={<BrandTabs at="record" />} />
   const { tenantId, role, supportSessionId } = cap.auth.membership
   if (!holds(role, 'shop.build')) return <Panel title="Brand opens for the owner, a Manager or the store’s partner" action={<Link href="/console" className={button({ variant: 'secondary' })}>Back to Home</Link>} />
   const now = new Date()
@@ -40,7 +41,7 @@ export default async function BrandPage() {
       <BrandEditor tenantId={tenantId} mode={mode} live={page.brand.record} version={page.version}
         waiting={page.waiting ? { id: page.waiting.id, record: page.waiting.record, proposedAt: page.waiting.proposedAt, proposer: page.proposer } : null}
         decides={decidesBrand(role, supportSessionId)}
-        sample={{ shopName: shop.shopName, product, paper: page.paper }} tagline={shop.tagline} />
+        sample={{ shopName: shop.shopName, product, paper: page.paper }} tagline={shop.tagline} tabs={<BrandTabs at="record" />} />
     </NowProvider>
   )
 }

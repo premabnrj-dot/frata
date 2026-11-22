@@ -13,7 +13,8 @@ import { useSyncExternalStore } from 'react'
 
 export type BagItem = { variantId: string; qty: number }
 const KEY = 'frata.bag.v1'
-const MAX_QTY = 10, MAX_LINES = 20
+export const MAX_QTY = 10
+const MAX_LINES = 20
 let memory: BagItem[] = []
 const listeners = new Set<() => void>()
 

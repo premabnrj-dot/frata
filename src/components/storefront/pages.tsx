@@ -97,8 +97,8 @@ export function CollectionView({ c, cat, href, now, top = 'title', lang, page = 
 export function PolicyView({ shop, page, contact }: { shop: StoreShop; page: PolicyPage; contact?: { line: string } }) {
   const wa = page === 'contact' ? waLink(shop.whatsapp) : null
   return (
-    <article className={`${wrap} max-w-3xl space-y-4 py-10 leading-relaxed`}>
-      <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{POLICY_TITLE[page]}</h1>
+    <article className={`${wrap} ck-col max-w-3xl space-y-4 py-10 leading-relaxed`}>
+      <h1 className="ck-h1 text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{POLICY_TITLE[page]}</h1>
       {page === 'contact' && contact?.line && <p className="text-lg text-store-sub">{contact.line}</p>}
       {wa && <p><a className="store-btn inline-flex min-h-11 items-center gap-2 rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button" href={wa} rel="noopener">Chat on WhatsApp</a></p>}
       <PolicyBody page={page} facts={shop} override={Object.hasOwn(shop.overrides, page) ? shop.overrides[page] : null} shopper />

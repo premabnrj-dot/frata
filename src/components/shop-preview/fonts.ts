@@ -29,12 +29,5 @@ const script = localFont({ src: './caveat/caveat-700-ascii.woff2', weight: '700'
 
 export const STORE_FONT_VARS = `${fraunces.variable} ${cormorant.variable} ${playfair.variable} ${dmserif.variable} ${schibsted.variable} ${schibstedExt.variable} ${deva.variable} ${script.variable}`
 
-/** The CSS font-family for a shop's display face (a theme's pairing; before themes, shop_settings.display_font). */
-export function displayFamily(font: string): string {
-  if (font === 'cormorant') return 'var(--font-store-cormorant), Georgia, serif'
-  if (font === 'inter') return 'var(--font-inter), system-ui, sans-serif'
-  if (font === 'playfair') return 'var(--font-store-playfair), Georgia, serif'
-  if (font === 'dmserif') return 'var(--font-store-dmserif), Georgia, serif'
-  if (font === 'schibsted') return 'var(--font-store-schibsted), var(--font-store-schibsted-ext), var(--font-inter), system-ui, sans-serif'
-  return 'var(--font-store-fraunces), Georgia, serif'
-}
+import { displayFamily } from './font-families'
+export { displayFamily }

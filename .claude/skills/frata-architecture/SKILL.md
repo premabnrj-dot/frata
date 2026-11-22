@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.6.0
+  version: 3.6.1
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -164,11 +164,20 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **One brand record** (one-address P1, drizzle/0155): a code-site store's logo files, colours, fonts, corners and
   spacing are written ONLY by `saveBrand` / `decideBrand` / `undoBrand` (`src/lib/content/save.ts`; check:actions pins
   that they call requireMember and asMember), the main logo too (`shop_settings.logo_url`). Who: `brandSaver`
-  (`src/domains/brand/who.ts`); a partner's save on an open store waits in `brand_proposals` for the owner (one
+  (`src/domains/brand/who.ts`); a partner's save on an open store waits in `brand_proposals` (`kind = 'brand'`) for the owner (one
   `brand` notice). Readers take the live record through `shopBrand` (60 s) or `apiBrand` (the API's hour), both on the
   `settings` tag, never `previous` or a proposal. An SVG logo is stored only as the cleaner writes it again
   (`src/domains/brand/svg.ts`) and shown only through `<img>`; paper and email read the PNG rendition
   (`renditionUrl`, derived from the main logo's URL, made by `ensureRendition`).
+- **The checkout design** (one-address P2, drizzle/0161): a code-site store's header, back link, policy rows, trust
+  blocks and two lines live in `checkout_design`, written ONLY by `saveCheckout` / `undoCheckout` and `decideBrand`
+  (one door for both kinds of waiting change) in `src/lib/content/save.ts`; its rules are `src/domains/brand/checkout.ts`
+  (save, preview and render run the same check; a part that fails a later rule renders as Frrata's default). A
+  partner's change on an open store waits in `brand_proposals` with `kind = 'checkout'`: **one open change of each kind
+  a store**, so every read and write of a proposal names its kind. The store's pages read it with the record through
+  `checkoutLook` (`settings` tag) and draw it with `BrandFrame` (`src/components/storefront/brand-frame.tsx`), whose
+  rules travel inline (`brand-css.ts`): nothing a code-site page needs goes in the shop's shared sheet (15.9 kB).
+  A Builder reads the live design's columns and the store's public delivery, returns and Pay on delivery facts.
 - **A partner's own records** (P2 Clients, 2026-11-16; drizzle/0146–0147): a partner's bills to its clients are
   platform-scope tables that NO Frrata role reads (`frata_app`, `frata_admin`, `frata_builder`: no grant, RLS on, a
   restrictive `definer_only` policy; `check:tenant` fails any table grant). Definers take the partner from the caller's
@@ -245,7 +254,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
   read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
   column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0155), the live
-  `brand_tokens` columns and `shop_settings.logo_url`, and nothing else, with `builder_rows` + restrictive `builder_only` policies.
+  `brand_tokens` columns and `shop_settings.logo_url`, and, for Brand › Checkout's preview (one-address P2, drizzle/0161), the live
+  `checkout_design` columns and `shop_settings`' seven public delivery, returns and Pay on delivery facts, and nothing else, with
+  `builder_rows` + restrictive `builder_only` policies.
   Builder reads live in `src/lib/queries/builder.ts` and call the owner list's own SQL (`listProductsWith`,
   `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
   store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through

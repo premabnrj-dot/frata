@@ -12,9 +12,11 @@ import { Workbench } from './_workbench/workbench'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Studio · House of Ayuda', robots: { index: false } }
 
-export default async function StudioFixture() {
+/** The shell's states for the flow (fixtures only): ?builder=1, ?nologo=1, ?waiting=1. */
+export default async function StudioFixture({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   if (!E2E_FIXTURES) notFound()
   const auth = await requirePartner()
   if (!auth.ok) notFound()
-  return <Workbench />
+  const q = (await searchParams) ?? {}
+  return <Workbench flags={{ builder: q.builder === '1', noLogo: q.nologo === '1', waiting: q.waiting === '1' }} />
 }

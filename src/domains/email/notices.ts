@@ -31,7 +31,7 @@ export type NoticeSource =
   /** PP1: the store's partner asks the owner to update a page only the owner or a Manager changes now (its fixed address). */
   | { kind: 'ask_owner'; page: AskPage }
   /** One-address P1: the store's partner changed the brand on an open store; it waits for the owner's yes (O17). */
-  | { kind: 'brand'; summary: string }
+  | { kind: 'brand'; summary: string; area?: 'checkout' }
 
 export type NoticeWords = { title: string; body: string }
 
@@ -58,7 +58,8 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
     case 'ask_owner':
       return { title: `Your partner asks you to update ${ASKED[s.page]}`, body: 'See it in Settings.' }
     case 'brand':
-      return { title: 'Your partner changed your brand', body: s.summary }
+      // One-address P2·6: a checkout design change says so (mockup screen 10).
+      return { title: s.area === 'checkout' ? 'Your partner changed your checkout' : 'Your partner changed your brand', body: s.summary }
   }
 }
 

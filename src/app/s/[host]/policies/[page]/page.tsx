@@ -11,6 +11,8 @@ import { shopCatalogue } from '@/lib/queries/storefront'
 import { shopTheme } from '@/lib/themes/page-look'
 import type { PolicyPage } from '@/domains/policies/render'
 import { shopFor, shopHref } from '../../_shop'
+import { brandLookFor } from '../../_brand'
+import { BrandFrame } from '@/components/storefront/brand-frame'
 import { shopTags, toMetadata } from '../../_meta'
 
 // Policies are live before the shop opens: payment providers read them during KYC.
@@ -32,6 +34,8 @@ export default async function Policy({ params }: { params: Params }) {
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  const [theme, content] = await Promise.all([shopTheme(shop), shopContent(shop.id).catch(() => null)])
+  const [theme, content, b] = await Promise.all([shopTheme(shop), shopContent(shop.id).catch(() => null), brandLookFor(shop, new Date())])
+  // A code-site store's policies wear its brand, the same header and legal block as checkout (one-address P2·3).
+  if (b) return <BrandFrame {...b} lang={shop.shopLanguage === 'hi' ? 'hi' : 'en'} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} contact={content?.contact ?? undefined} /></BrandFrame>
   return <ShopShell shop={shop} href={shopHref} theme={theme} content={shellContentOf(content, false, new Date())} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} contact={content?.contact ?? undefined} /></ShopShell>
 }
