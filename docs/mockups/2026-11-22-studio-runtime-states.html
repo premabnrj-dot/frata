@@ -251,7 +251,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <div class="doc">
 <div class="head">
   <h1>Studio runtime states</h1>
-  <p>What Studio shows while Frrata staff test the agent on one store. 22 Nov 2026 · Draft for the owner. The workbench and the chat cards are approved. These states are the ones neither drawing has.</p>
+  <p>What Studio shows while Frrata staff test the agent on one store. 22 Nov 2026 · Draft for the owner. The workbench and the chat cards are approved. Neither drawing shows these states.</p>
 </div>
 <nav aria-label="Sections">
   <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#states">The states</a><a href="#calls">Your calls</a>
@@ -260,9 +260,9 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <section id="in-short">
   <h2>In short</h2>
   <div class="cards">
-    <div class="card"><h3>What this is</h3><p>Studio's agent will run first on one test store, for Frrata staff only. It works under a hard spending limit and sells no credits. Websites are not hosted yet. Nine moments in that test have no drawing. This page draws them.</p></div>
-    <div class="card"><h3>Why now</h3><p>The agent's tables, its limits and its checks are built without a screen. The chat can't be wired until these states are approved.</p></div>
-    <div class="card"><h3>What it costs</h3><p>Nothing extra. Each state reuses an approved part: the chat's agent line, its card, the composer and the console's empty state.</p></div>
+    <div class="card"><h3>What this is</h3><p>Studio's agent will run first on one test store, for Frrata staff only. It runs under a fixed spending limit. No credits are sold. Websites are not hosted yet. Nine moments in that test have no drawing. This page draws them.</p></div>
+    <div class="card"><h3>Why now</h3><p>The agent's limits and checks are built but have no screen. The chat waits for your yes on these states.</p></div>
+    <div class="card"><h3>What it costs</h3><p>Nothing extra. Each state reuses an approved part. These are the agent line, its card, the composer and the empty state.</p></div>
     <div class="card"><h3>What I need</h3><p>Your yes on the nine states and the four calls at the end.</p></div>
   </div>
 </section>
@@ -276,7 +276,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
       <tr><td><b>The chat cards</b>, approved 16 Nov</td><td>Apply always succeeds</td><td>State 9: Apply refused</td></tr>
       <tr><td><b>The preview pane</b> frames the website</td><td>No website is hosted yet</td><td>State 7: the store's own preview</td></tr>
       <tr><td><b>Code and Checks</b>, drawn full</td><td>No repository or publish checks yet</td><td>State 8: one empty state each</td></tr>
-      <tr><td><b>Admin › Agent</b>, approved in the kit drawing</td><td>Not needed for a staff test</td><td>A switch only, no screen (call 4)</td></tr>
+      <tr><td><b>Frrata Admin › Agent</b>, approved in the kit drawing</td><td>Not needed for a staff test</td><td>A switch only, no screen (call 4)</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -286,12 +286,12 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <div class="screens">
 
     <div class="screen"><div class="cap">1 · Studio isn't open to this person</div><div class="in">
-      <div class="panel"><h4>Studio isn't open yet</h4><p>Frrata is testing it on one store.</p><a class="btn sm" href="#states">Back to Clients</a></div>
+      <div class="panel"><h4>Studio isn't open yet</h4><p>Frrata is testing it on one store.</p><a class="btn sm" href="#states">Open Clients</a></div>
     </div></div>
 
     <div class="screen"><div class="cap">2 · No request yet</div><div class="in">
       <div class="mini-chat"><div class="ph"><b>Frrata agent</b></div>
-        <div class="feed"><div class="empty"><b>Ask for your first change</b><p>Kesar · test store</p></div></div>
+        <div class="feed"><div class="empty"><b>No requests yet</b><p>Kesar · test store</p></div></div>
         <div class="composer"><label class="field"><input id="s2" placeholder="Ask for a change" aria-label="Ask for a change"><button class="btn sm pri">Send</button></label></div>
       </div>
     </div></div>
@@ -309,14 +309,14 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
     <div class="screen"><div class="cap">4 · Paused at a limit</div><div class="in">
       <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
-        <div class="stop warn"><b>This request reached its limit</b><span class="line">Nothing more was spent. What's done is kept.</span><div class="btns"><button class="btn sm">Continue</button></div></div></div>
+        <div class="stop warn"><b>This request reached its limit</b><span class="line">Nothing more ran. What's done is kept.</span><div class="btns"><button class="btn sm">Continue request</button></div></div></div>
       <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
-        <div class="stop warn"><b>Today's limit for Studio is used</b><span class="line">It opens again at midnight.</span></div></div>
+        <div class="stop warn"><b>Studio reached today's limit</b><span class="line">Ask again from 12:00 am.</span></div></div>
     </div></div>
 
     <div class="screen"><div class="cap">5 · Failed on Frrata's side</div><div class="in">
       <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
-        <div class="stop bad"><b>Something went wrong on our side</b><span class="line">Nothing was changed.</span><div class="btns"><button class="btn sm">Try again</button></div></div></div>
+        <div class="stop bad"><b>We couldn't finish this request</b><span class="line">Nothing was changed.</span><div class="btns"><button class="btn sm">Try again</button></div></div></div>
     </div></div>
 
     <div class="screen"><div class="cap">6 · Send refused</div><div class="in">
@@ -326,7 +326,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
       </div>
       <div class="composer" style="border:1px solid var(--line);border-radius:12px">
         <label class="field"><input id="s6b" value="Add a size chart to Product" aria-label="Ask for a change" aria-describedby="s6f"><button class="btn sm pri">Send</button></label>
-        <span class="err" id="s6f">Today's limit for Studio is used. It opens again at midnight.</span>
+        <span class="err" id="s6f">Studio reached today's limit. Ask again from 12:00 am.</span>
       </div>
     </div></div>
 
@@ -337,7 +337,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
     <div class="screen"><div class="cap">8 · Code and Checks with no website yet</div><div class="in">
       <div class="tabs" role="tablist" aria-label="Inspector"><button role="tab" aria-selected="false">Design</button><button role="tab" aria-selected="true">Code</button><button role="tab" aria-selected="false">Checks</button><button role="tab" aria-selected="false">Versions</button></div>
-      <div class="empty"><b>No code yet</b><p>Code shows here once the website has its own repository.</p></div>
+      <div class="empty"><b>No code yet</b><p>Code shows here once websites are hosted.</p></div>
       <div class="empty"><b>No checks yet</b><p>Checks run when a version is built.</p></div>
     </div></div>
 
@@ -346,8 +346,8 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
         <section aria-label="Colours for Brand" class="prop"><div style="display:flex;justify-content:space-between;gap:8px"><b>Colours for Brand</b><small>1 to apply</small></div>
           <small>Accent</small><div class="sw"><i style="background:#B5542B"></i><span class="mono">#B5542B</span></div>
           <span class="chip bad">Not applied</span>
-          <span class="err">The brand changed since you opened it. Reload to see it.</span>
-          <div class="btns"><button class="btn sm">Reload</button><button class="btn sm ghost">Not this</button></div>
+          <span class="err">The brand changed since you opened it. Reload to see the new colours.</span>
+          <div class="btns"><button class="btn sm">Reload Brand</button><button class="btn sm ghost">Not this</button></div>
         </section></div>
     </div></div>
 
@@ -358,10 +358,10 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <h2>Your calls</h2>
   <div class="answers">
     <div class="card"><h3>1 · Limits in words, not money</h3><p>Staff see that a limit was reached, never a dollar figure. Partners will see credits once credits exist. <b>Recommended: yes.</b></p></div>
-    <div class="card"><h3>2 · Continue after a request's limit</h3><p>Continue starts a new request with a fresh limit, counted against today's. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>2 · Continue after a request's limit</h3><p>Continue request starts a new request. It counts against today's limit. <b>Recommended: yes.</b></p></div>
     <div class="card"><h3>3 · The store's preview until hosting</h3><p>The preview pane shows the console's store preview, drafts included. The website's own preview replaces it once websites are hosted. <b>Recommended: yes.</b></p></div>
-    <div class="card"><h3>4 · No Admin › Agent screen yet</h3><p>Staff stop the agent with one switch. The approved Admin screen comes with partner access. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>4 · No Frrata Admin › Agent screen yet</h3><p>Staff stop the agent with one switch. The approved Frrata Admin screen comes with partner access. <b>Recommended: yes.</b></p></div>
   </div>
-  <p class="line">Not built now: credits, the brand's review link, intake, routines and code kept after a session. Each comes with its own phase.</p>
+  <p class="line">Not built now: credits, the brand's review link, and code kept after a session. Each comes with its own phase.</p>
 </section>
 </div>
