@@ -2,9 +2,9 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.1.0
+  version: 2.2.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
 ---
 
@@ -32,8 +32,9 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    holds it; `scripts/verify/api-isr.mjs` proves it under `next start`.
 3. **Every refusal is one 404 body** (one exception: a filter's grammar error, `400 {"error":"bad_filter","param"}`,
    after the key checks out, through `BadParam`) (`{"error":"not_found"}`): bad shape, unknown, deleted, expired, wrong tree, a
-   product of another shop, a draft under a live key. Limits fail closed (`apiMissIp`, `apiTestIp`, `apiSearchIp`,
-   `apiKeyCreateShop`), with the WAF path rule and rate rule in front (`ops/firewall.json`, held by `waf.test.ts`).
+   product of another shop, a draft under a live key. Limits fail closed (`apiMissIp` and `apiMissKey`: misses per
+   network and per key hash; `apiTestKey`: test and build keys per key only, never per network, G·1; `apiSearchIp`: a
+   live key's search; `apiKeyCreateShop`), with the WAF path rule and rate rule in front (`ops/firewall.json`, held by `waf.test.ts`).
 4. **Answers are closed.** Output schemas in `src/domains/storefront-api/<version>/schemas.ts` use `z.strictObject` and
    named fields only (no `object`, `record`, `unknown`, `any`, `passthrough`, `catchall`, `loose`: `check:api`). Pure
    mappers (`map.ts`) build each field from the shop's cached reads; nothing is spread from a row. The answer is

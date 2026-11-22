@@ -5,11 +5,11 @@ import { newKey } from '@/domains/storefront-api/keys'
 
 const rows = new Map<string, { keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null }>()
 const limits = { over: false, within: true }
-vi.mock('@/lib/queries/storefront-keys', () => ({ storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null), storefrontKeyNow: vi.fn(async (k: string) => rows.get(k) ?? null) }))
+vi.mock('@/lib/queries/storefront-keys', () => ({ keyHash: (k: string) => `h:${k}`, storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null), storefrontKeyNow: vi.fn(async (k: string) => rows.get(k) ?? null) }))
 vi.mock('@/lib/env', async (orig) => ({ ...(await orig<object>()), STOREFRONT_PREVIEW_KEY: Buffer.alloc(32, 7) }))
 vi.mock('@/lib/queries/storefront-api', () => ({ markKeySeen: vi.fn(async () => {}), siteOriginFor: vi.fn(async () => 'https://kesarstudio.in') }))
 vi.mock('@/lib/db/rate-limit', () => ({
-  LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {}, apiPreviewKey: {} },
+  LIMITS: { apiMissIp: { n: 'missIp' }, apiMissKey: { n: 'missKey' }, apiTestKey: { n: 'testKey' }, apiSearchIp: { n: 'searchIp' }, apiPreviewKey: { n: 'previewKey' } },
   overLimit: vi.fn(async () => limits.over),
   withinLimit: vi.fn(async () => limits.within),
 }))
@@ -113,6 +113,45 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     await test(req(), at(TEST))
     expect(vi.mocked(limiter.withinLimit).mock.calls.length).toBeGreaterThan(0)
     expect(vi.mocked(limiter.withinLimit).mock.calls.every((c) => c[3] === true)).toBe(true)
+  })
+  it('G·1: a test key is limited per key only, its search too; a live key’s search per network', async () => {
+    vi.mocked(limiter.withinLimit).mockClear()
+    const search = apiRequest({ version: '2026-12', tree: 'test', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+    expect((await search(req({ 'x-forwarded-for': '203.0.113.9' }), at(TEST))).status).toBe(200)
+    const calls = vi.mocked(limiter.withinLimit).mock.calls
+    expect(calls.map((c) => [c[0], c[1]])).toEqual([[limiter.LIMITS.apiTestKey, 'k2']])
+    vi.mocked(limiter.withinLimit).mockClear()
+    const liveSearch = apiRequest({ version: '2026-12', tree: 'live', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+    expect((await liveSearch(req(), at(LIVE))).status).toBe(200)
+    expect(vi.mocked(limiter.withinLimit).mock.calls.map((c) => c[0])).toEqual([limiter.LIMITS.apiSearchIp])
+  })
+  it('G·1: a miss counts per network and per key hash; a hash over its count is refused before any lookup', async () => {
+    vi.mocked(limiter.withinLimit).mockClear()
+    const stale = newKey('test', rnd)
+    await test(req(), at(stale))
+    expect(vi.mocked(limiter.withinLimit).mock.calls.map((c) => [c[0], c[1]])).toEqual(expect.arrayContaining([[limiter.LIMITS.apiMissKey, `h:${stale}`], [limiter.LIMITS.apiMissIp, expect.any(String)]]))
+    const keys = await import('@/lib/queries/storefront-keys')
+    vi.mocked(keys.storefrontKeyFor).mockClear()
+    vi.mocked(limiter.overLimit).mockImplementation(async (l, subject) => l === limiter.LIMITS.apiMissKey && subject === `h:${stale}`)
+    try {
+      expect((await test(req(), at(stale))).status).toBe(429)
+      expect(keys.storefrontKeyFor).not.toHaveBeenCalled()
+      expect((await test(req(), at(TEST))).status).toBe(200) // another key on the same network still reads
+    } finally { vi.mocked(limiter.overLimit).mockImplementation(async () => limits.over) }
+    // both miss counts are asked failing closed; the network over its count refuses whatever the hash's count says
+    vi.mocked(limiter.overLimit).mockClear()
+    vi.mocked(limiter.overLimit).mockImplementation(async (l) => l === limiter.LIMITS.apiMissIp)
+    try {
+      expect((await test(req(), at(TEST))).status).toBe(429)
+      expect(vi.mocked(limiter.overLimit).mock.calls.map((c) => [c[0], c[3]])).toEqual(expect.arrayContaining([[limiter.LIMITS.apiMissKey, true], [limiter.LIMITS.apiMissIp, true]]))
+    } finally { vi.mocked(limiter.overLimit).mockImplementation(async () => limits.over) }
+  })
+  it('G·1: a test key past its own count is busy; a live key’s search past its network’s count is busy', async () => {
+    vi.mocked(limiter.withinLimit).mockImplementation(async (l) => l !== limiter.LIMITS.apiTestKey)
+    try { expect((await test(req(), at(TEST))).status).toBe(429) } finally { vi.mocked(limiter.withinLimit).mockImplementation(async () => limits.within) }
+    const liveSearch = apiRequest({ version: '2026-12', tree: 'live', mode: 'dynamic', resource: 'search', schema: Shop, limit: 'search', run: async () => ({ name: 'x' }) })
+    vi.mocked(limiter.withinLimit).mockImplementation(async (l) => l !== limiter.LIMITS.apiSearchIp)
+    try { expect((await liveSearch(req(), at(LIVE))).status).toBe(429) } finally { vi.mocked(limiter.withinLimit).mockImplementation(async () => limits.within) }
   })
   it('null from run is the same 404; a test route declared cached is refused', async () => {
     const none = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'product', schema: Shop, run: async () => null })

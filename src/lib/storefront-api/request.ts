@@ -2,7 +2,7 @@ import 'server-only'
 import type { z } from 'zod'
 import { keyShape, type KeyKind } from '@/domains/storefront-api/keys'
 import { API_VERSIONS, type ApiVersion } from '@/domains/storefront-api/versions'
-import { storefrontKeyFor, storefrontKeyNow } from '@/lib/queries/storefront-keys'
+import { keyHash, storefrontKeyFor, storefrontKeyNow } from '@/lib/queries/storefront-keys'
 import { PREVIEW_HEADER, type PreviewEntry } from '@/domains/storefront-api/preview'
 import { previewOk } from './preview-token'
 import { markKeySeen, siteOriginFor } from '@/lib/queries/storefront-api'
@@ -25,7 +25,8 @@ import { errName } from '@/lib/log'
 //            Next owns Cache-Control. One exception, search (mode 'dynamic'): it varies by its query, so it reads the
 //            request, is limited per network, and answers `public, s-maxage=60` so repeats are CDN hits by URL.
 //   'test' — test keys, `t/`: never cached (`private, no-store`); drafts through the preview loaders; CORS only to the
-//            shop's own website or http://localhost:<port>; limits per network (ipBucket), failing closed.
+//            shop's own website or http://localhost:<port>; limited per key only (G·1: previews share their host's
+//            outbound addresses), failing closed.
 //   'preview' (either tree, SA1b D·4; ADR-0018 § 12): a hidden page or the FAQ's draft under a token Frrata signed in the
 //            console, read from the `Frrata-Preview` header. Its own branch, never the live one: `private, no-store`, no
 //            CORS (a site's server asks), the key looked up uncached (a stop applies at once), limited per network, no
@@ -65,7 +66,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
   resource: string
   schema: S
   params?: (raw: Record<string, string | string[] | undefined>, search: URLSearchParams | null) => P | BadParam | null
-  /** The dynamic tree's per-network limit for this resource beyond the test key's own (search). */
+  /** A live key's search: its per-network limit (a test key's search counts under its key's own, G·1). */
   limit?: 'search'
   /** mode 'preview' only: the one entry these params name (the token must name it too). */
   entry?: (params: P) => PreviewEntry | null
@@ -89,9 +90,13 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
 
     // Only the dynamic tree reads the request: the network, for its limits, and the Origin, for CORS.
     const ip = dynamic ? ipFrom(req.headers) : ''
+    // Misses are counted per network AND per key hash (G·1): a key hash that keeps missing is refused before its misses
+    // reach its network's count, so one stale preview never blocks every site on the same addresses.
+    const hex = dynamic ? keyHash(key) : ''
+    const busy = () => refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
     let row: Awaited<ReturnType<typeof storefrontKeyFor>>
     try {
-      if (dynamic && await overLimit(LIMITS.apiMissIp, ip, new Date(), true)) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
+      if (dynamic && (await Promise.all([overLimit(LIMITS.apiMissKey, hex, new Date(), true), overLimit(LIMITS.apiMissIp, ip, new Date(), true)])).some(Boolean)) return busy()
       row = preview ? await storefrontKeyNow(key) : await storefrontKeyFor(key)
     } catch (err) {
       // Never the raw error (its parameters carry the key's hash): security review LOW-4. A cached route rethrows, so
@@ -101,15 +106,16 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
       return refuse(500, JSON.stringify({ error: 'unavailable' }))
     }
     if (!row || row.kind !== shape.kind) {
-      if (dynamic) await withinLimit(LIMITS.apiMissIp, ip, new Date(), true)
+      if (dynamic) await Promise.all([withinLimit(LIMITS.apiMissKey, hex, new Date(), true), withinLimit(LIMITS.apiMissIp, ip, new Date(), true)])
       return refuse()
     }
     const ctx: ApiCtx = { tenantId: row.tenantId, keyId: row.keyId, keyKind: row.kind, version: opts.version, now: new Date() } // clock-ok: server
 
     let cors: Record<string, string> = {}
-    if (preview && !(await withinLimit(LIMITS.apiPreviewKey, ctx.keyId, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
-    if (test && !preview && !(await withinLimit(LIMITS.apiTestIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
-    if (dynamic && opts.limit === 'search' && !(await withinLimit(LIMITS.apiSearchIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
+    // Test keys per key only (G·1), search included; a live key's search per network, as before.
+    if (preview && !(await withinLimit(LIMITS.apiPreviewKey, ctx.keyId, ctx.now, true))) return busy()
+    if (test && !preview && !(await withinLimit(LIMITS.apiTestKey, ctx.keyId, ctx.now, true))) return busy()
+    if (!test && dynamic && opts.limit === 'search' && !(await withinLimit(LIMITS.apiSearchIp, ip, ctx.now, true))) return busy()
     if (test && !preview) {
       const origin = req.headers.get('origin')
       const site = origin && !LOCALHOST.test(origin) ? await siteOriginFor(ctx.tenantId).catch((e) => { console.error('[api]', opts.resource, 'origin', errName(e)); return null }) : null

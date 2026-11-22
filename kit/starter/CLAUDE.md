@@ -30,7 +30,7 @@ Load the partner skill first: `.claude/skills/frrata-site/SKILL.md`. Docs: https
 ## Commands
 
 - `npm run dev` — with a test key (`frs_test_…` from Settings › Website › Create key › Test) in `.env.local`: reads
-  drafts too, never cached, works from localhost until the store opens.
+  drafts too, never cached on your computer (15 s on a deployed preview), works from localhost until the store opens.
 - `npm run build` — runs `check`, builds, then fails if a key reached the browser bundle.
 - `npm run check` — the rules above: no key in source, the legal block, no price arithmetic, no HTML, the paths, the
   bag link, the brand from the store.

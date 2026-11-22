@@ -2,9 +2,9 @@
 name: frrata-site
 description: Use when building or changing an Indian D2C brand's website on its Frrata store with this starter - reading the store through the Frrata Storefront API (keys, products, collections, pages, filters), sending the shopper's bag to checkout with the bag link, caching, previews, the legal block, and Indian shopper conventions.
 metadata:
-  version: 2026.12.2
+  version: 2026.12.3
   api: '2026-12'
-  verified: 2026-11-16
+  verified: 2026-11-22
 ---
 
 # A brand's website on Frrata
@@ -31,7 +31,9 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    Checkout prices everything again and drops what sold out.
 6. **The legal block on every page.** `shop.legal` (legal name, address, customer care, grievance officer) and the
    policy links, from the API at runtime (the layout's footer). Never copy it into code.
-7. **Caching.** Read with `next: { revalidate: 60 }`. Frrata purges its own copies when the store changes. Filters and
+7. **Caching.** Read with `next: { revalidate: 60 }`. Frrata purges its own copies when the store changes. A test key
+   is never cached on your computer and kept 15 s on a deployed preview (each test key has its own limit, 300 reads a
+   minute); header and footer links don't prefetch. Filters and
    search are dynamic: send filter parameters in their fixed order (collection, size, colour, price, stock, sort),
    values exactly as `facets` gives them, defaults left out.
 8. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps

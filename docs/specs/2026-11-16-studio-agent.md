@@ -605,7 +605,7 @@ The plan's V3b opens with a redraw of these three before any build.
 | High | One GitHub App for fleet and sessions would put the ruleset bypass in the agent's hands | — | Two Apps (§ 5) |
 | High | Hosting as guessed costs 7.6–19.1% of revenue and fails 3× | § 8 | Price on the pilot's measured usage before any paid site |
 | High | A second store's Frrata address would be refused (one live apex); the host CHECK refuses `frrata.` labels | `src/lib/db/schema-addresses.ts:95,99` | Gone with the sites domain: each store keeps its own `frrata.shop` host (ADR-0019). *(Was: the suffix entry and a relaxed CHECK.)* |
-| High | Per-network limits throttle every partner at once | pilot G27; `apiTestIp` | Per-key limits |
+| High | Per-network limits throttle every partner at once | pilot G27; `apiTestIp` | Per-key limits (done, G·1 2026-11-22: `apiTestKey`, `apiMissKey`) |
 | Medium | A repository's instruction files steer the agent | Managed Agents resources | Mount by SHA; check `.claude/`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json` |
 | Medium | The request that crosses a budget is not inside the ceiling | Managed Agents budget | The budget formula (§ 6.7) |
 | Medium | Credits in tenant rows would be readable by the brand | first draft | Ledger and definers only |

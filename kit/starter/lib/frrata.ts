@@ -6,8 +6,10 @@ import { cookies } from 'next/headers'
 const ORIGIN = process.env.FRRATA_API_ORIGIN || 'https://api.frrata.shop'
 const KEY = process.env.FRRATA_KEY || ''
 const VERSION = '2026-12'
-// A test key (frs_test_…, before the store opens) reads drafts too: never cached, so an edit shows at once.
-const READ: RequestInit = KEY.startsWith('frs_test_') ? { cache: 'no-store' } : { next: { revalidate: 60 } }
+// A test key (frs_test_…, before the store opens) reads drafts too. On your computer it is never cached, so an edit
+// shows at once; deployed (a preview), its reads are kept 15 s so a busy preview stays inside the key's limit.
+const DEPLOYED = !!process.env.VERCEL // Vercel sets it at build and at run; nothing sets it on your computer
+const READ: RequestInit = KEY.startsWith('frs_test_') ? (DEPLOYED ? { next: { revalidate: 15 } } : { cache: 'no-store' }) : { next: { revalidate: 60 } }
 export const PREVIEW_COOKIE = '__Host-frrata-preview'
 
 export type Image = { sizes: { width: number; url: string }[]; width: number; height: number; alt: string; colour: string | null }

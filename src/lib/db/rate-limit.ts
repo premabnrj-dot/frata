@@ -143,10 +143,16 @@ export const LIMITS = {
   brandSvg: { action: 'brand_svg:shop', max: 20, windowSeconds: 600 },
   contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 },
   // The Storefront API (V1 SA0, security and unit-economics reviews 2026-11-15), all failing closed. Unknown keys per
-  // network (counted after a lookup misses, on the dynamic tree); test keys at 60 a minute per network; a test key's
-  // search; keys made per shop (each is a new set of cached copies).
+  // network and per key hash (counted after a lookup misses, on the dynamic tree); test keys per key (G·1); a live
+  // key's search per network; keys made per shop (each is a new set of cached copies).
   apiMissIp: { action: 'api_miss:ip', max: 300, windowSeconds: 600 },
-  apiTestIp: { action: 'api_test:ip', max: 60, windowSeconds: 60 },
+  // G·1 (Studio plan G-a, G27; spec docs/specs/2026-11-16-studio-agent.md § 5): one key hash that keeps missing (a
+  // deleted or expired key on a stale preview) is refused on its own before its misses can fill its network's count,
+  // so one stale site never blocks every site leaving the same addresses.
+  apiMissKey: { action: 'api_miss:key', max: 30, windowSeconds: 600 },
+  // G·1: test and build keys are limited per key only (previews and sessions share their host's outbound addresses, so a
+  // per-network limit throttled every partner at once): 300 reads a minute a key, search included.
+  apiTestKey: { action: 'api_test:key', max: 300, windowSeconds: 60 },
   apiSearchIp: { action: 'api_search:ip', max: 300, windowSeconds: 600 },
   // SA1b D·4: a preview (a token-bound draft), per key: sites share their host's outbound addresses, so one store's
   // previews never spend another's (security review 2026-11-16, LOW-2). Fails closed like every API limit.

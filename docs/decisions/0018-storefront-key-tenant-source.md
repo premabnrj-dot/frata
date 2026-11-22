@@ -125,7 +125,10 @@ Proposed:
 - § 5: handlers read through the shop's cached loaders keyed by `ctx.tenantId` (each opens its own `withTenant`), never a
   `withTenant` around a loader. § 7: the lookup is tagged `skey:<hex>`, not `skey:<id>` (a tag must be known before the
   call); a delete purges that tag. § 9: limits per network fail closed (`apiMissIp`, `apiTestIp`, `apiSearchIp`,
-  `apiKeyCreateShop`); the WAF path and rate rules are on the API host.
+  `apiKeyCreateShop`); the WAF path and rate rules are on the API host. **G·1 (2026-11-22, the build-key amendment's
+  point 6):** test and build keys are limited per key only (`apiTestKey`, 300 a minute a key, search included), never
+  per network; misses count per network (`apiMissIp`) and per key hash (`apiMissKey`, 30 in 10 minutes); `apiTestIp`
+  is gone. Live keys keep their per-network search limit.
 - § 2 "logs carry the key id": our logs do; a key is in the URL path, so Vercel's request logs hold it. A live key is
   public by design; a test key is visible to anyone who sees the developer's browser.
 
