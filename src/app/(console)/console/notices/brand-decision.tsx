@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import { decideBrandAction, undoBrandAction } from '../brand/actions'
+import { decideBrandAction, undoBrandAction, undoCheckoutAction } from '../brand/actions'
 
 /** Approve change and Decline on a partner's waiting brand change (one-address P1, mockup screen 5). The server decides
  *  who may answer (decideBrand); this only draws the two buttons for the owner and a Manager. */
-export function BrandDecision({ id }: { id: string }) {
+export function BrandDecision({ id, kind = 'brand' }: { id: string
+  /** One-address P2·6: a checkout design change is undone on the design, not the record. */
+  kind?: 'brand' | 'checkout' }) {
   const router = useRouter()
   const toast = useToast()
   const [pending, setPending] = useState<'approve' | 'decline' | null>(null)
@@ -19,7 +21,7 @@ export function BrandDecision({ id }: { id: string }) {
     if (!r.ok) { toast.error(r.error, { action: { label: 'Reload', run: () => window.location.reload() } }); return }
     if (decision === 'approve' && r.version) {
       const v = r.version
-      toast.ok('Approved. It’s live.', { undo: async () => { const u = await undoBrandAction({ version: v }); if (u.ok) router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
+      toast.ok('Approved. It’s live.', { undo: async () => { const u = await (kind === 'checkout' ? undoCheckoutAction : undoBrandAction)({ version: v }); if (u.ok) router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
     } else toast.ok('Declined. Nothing changed.')
     router.refresh()
   }

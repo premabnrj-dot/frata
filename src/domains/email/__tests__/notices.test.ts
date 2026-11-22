@@ -30,6 +30,7 @@ describe('notice words', () => {
   })
   it('a partner’s waiting brand change (one-address P1): its own line, kept with it', () => {
     expect(noticeWords({ kind: 'brand', summary: '4 logo files and 2 fonts.' }, 'S')).toEqual({ title: 'Your partner changed your brand', body: '4 logo files and 2 fonts.' })
+    expect(noticeWords({ kind: 'brand', area: 'checkout', summary: 'The checkout heading.' }, 'S')).toEqual({ title: 'Your partner changed your checkout', body: 'The checkout heading.' })
     expect(noticeFallback({ sourceKind: 'brand', type: 'needs_you', title: null, body: null })).toEqual({ title: 'Your partner changed your brand', body: 'See it in Brand.' })
   })
   it('required types and defaults', () => {

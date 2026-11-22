@@ -38,7 +38,9 @@ const STATE: Record<ShopperState, string> = {
  * The shopper's receipt at /orders#t=<token>. The token stays in the #fragment (browsers never send it, so no
  * log or cache holds it) and is POSTed in a body. Address and phone are masked (owner call 4).
  */
-export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref: string }) {
+export function OrderView({ prefix, returnsHref, thanks }: { prefix: string; returnsHref: string
+  /** A code-site store's thank-you line (one-address P2·3), shown only once the order is placed. */
+  thanks?: string }) {
   const [v, setV] = useState<View | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -124,9 +126,10 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   const link = () => { const r = tokenRef.current!; return `${location.origin}${location.pathname}#${'token' in r ? `t=${r.token}` : `o=${r.o}&e=${r.e}`}` }
   const copy = () => navigator.clipboard?.writeText(link()).then(() => setCopied(true), () => setCopied(false))
   return (
-    <article className="mx-auto max-w-lg space-y-4 px-4 py-8">
-      {placed && v.state !== 'cancelled' && <p className="font-medium text-store-good">✓ Order placed</p>}
-      <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{placed ? `Thank you${v.firstName ? `, ${v.firstName}` : ''}` : 'Your order'}</h1>
+    <article className="ck-col mx-auto max-w-lg space-y-4 px-4 py-8">
+      {placed && v.state !== 'cancelled' && <p className="flex items-center gap-2 font-medium text-store-good"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>Order placed</p>}
+      <h1 className="ck-h1 text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{placed ? `Thank you${v.firstName ? `, ${v.firstName}` : ''}` : 'Your order'}</h1>
+      {placed && thanks && <p className="ck-thanks">{thanks}</p>}
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between gap-4"><dt>Order</dt><dd className="font-mono font-medium">{num}</dd></div>
         <div className="flex justify-between gap-4"><dt>Status</dt><dd className="text-right">{v.paymentWaiting ? 'Payment received · confirming your order' : STATE[v.state]}</dd></div>

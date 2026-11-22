@@ -17,7 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ChatFeed, Composer } from './chat'
 import { DesignTab } from './design-tab'
-import { BUILDING, TO_FIX, type Part } from './fixtures'
+import { BUILDING, NO_FLAGS, TO_FIX, type Part, type ShellFlags } from './fixtures'
 import { KeyList } from './key-list'
 import { PanelError } from './panel-error'
 import { Preview } from './preview'
@@ -42,7 +42,7 @@ const NAMES: Record<Side, string> = { chat: 'Chat', inspector: 'Inspector' }
 const TAB_WORDS: Record<InspectorTab, string> = { design: 'Design', code: 'Code', checks: 'Checks', versions: 'Versions' }
 const PHONE_WORDS: Record<PhoneTab, string> = { chat: 'Chat', website: 'Website', design: 'More' }
 
-export function Workbench() {
+export function Workbench({ flags = NO_FLAGS }: { flags?: ShellFlags }) {
   const phone = usePhone()
   const [layout, setLayout] = useState<Layout>(() => defaultLayout(1280))
   const [tab, setTab] = useState<InspectorTab>('design')
@@ -150,7 +150,7 @@ export function Workbench() {
                   {phone ? null : <button type="button" aria-label="Hide inspector" aria-expanded="true" aria-controls={`${base}-inspector`} onClick={() => fold('inspector')} className={cn(ICON_BUTTON, 'mb-1.5 self-center')}><Icon name={STUDIO_ICONS.inspector} className="size-4" /></button>}
                 </div>
                 <div className="min-h-0 overflow-auto p-3">
-                  <TabPanel base={base} id="design" value={shownTab}><DesignTab key={picked} picked={picked} /></TabPanel>
+                  <TabPanel base={base} id="design" value={shownTab}><DesignTab key={picked} picked={picked} flags={flags} /></TabPanel>
                   {tabs.includes('code') ? <TabPanel base={base} id="code" value={shownTab}>{seen.has('code') ? <PanelError><CodeTab say={say} /></PanelError> : null}</TabPanel> : null}
                   <TabPanel base={base} id="checks" value={shownTab}>{seen.has('checks') ? <PanelError><ChecksTab /></PanelError> : null}</TabPanel>
                   <TabPanel base={base} id="versions" value={shownTab}>{seen.has('versions') ? <PanelError><VersionsTab /></PanelError> : null}</TabPanel>

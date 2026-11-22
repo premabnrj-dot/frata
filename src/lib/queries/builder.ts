@@ -2,7 +2,7 @@ import 'server-only'
 import type { ListQuery } from '@/domains/catalogue/list-query'
 import { withActor, type BuilderActor } from '@/lib/db/actor'
 import { listCollectionsWith, listProductsWith } from './catalogue'
-import { builderBrandWith } from './brand'
+import { builderBrandWith, builderCheckoutWith } from './brand'
 import { urlFor } from '@/domains/media/sizes'
 
 // =============================================================================
@@ -32,4 +32,13 @@ export async function builderBrandSample(actor: BuilderActor) {
   const list = await withActor(actor, 'catalogue.read', (tx, tenantId) => listProductsWith(tx, tenantId, { filter: 'active', sort: 'edited', q: '', page: 1 }))
   const p = list.rows.find((r) => r.minPrice !== null && r.cover) ?? list.rows.find((r) => r.minPrice !== null)
   return p ? { title: p.title, price: p.minPrice!, mrp: null, photo: p.cover ? urlFor(p.cover.base, 400) : null } : null
+}
+
+/** Console › Brand › Checkout, preview only (one-address P2·6, O9): the live record and design, and the store's public
+ *  delivery, returns and Pay on delivery facts the trust blocks name, as the Builder's grant allows (drizzle/0161). */
+export function builderCheckout(actor: BuilderActor) {
+  return withActor(actor, 'preview.read', async (tx, tenantId) => {
+    const [record, c] = await Promise.all([builderBrandWith(tx, tenantId), builderCheckoutWith(tx, tenantId)])
+    return { record, ...c }
+  })
 }

@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { contrast, luminance } from '@/domains/themes/contrast'
-import { COLOUR_ROLES, DENSITIES, FONTS, isHex, LOGO_SLOTS, PAIRS, RADII, ROLE_NAMES, type BrandRecord, type ColourRole, type Palette } from './record'
+import { COLOUR_ROLES, DENSITIES, FONTS, emptyRecord, isHex, LOGO_SLOTS, PAIRS, RADII, ROLE_NAMES, type BrandRecord, type ColourRole, type Palette } from './record'
 
 /** A pair's ratio, as the chip shows it ("16.05"). */
 export const ratio = (a: string, b: string) => contrast(a, b).toFixed(2)
@@ -78,4 +78,13 @@ export function logoFileProblem(f: { kind: LogoKind | null; bytes: number; width
   if (f.bytes > (f.kind === 'svg' ? SVG_MAX_BYTES : LOGO_MAX_BYTES)) return f.kind === 'svg' ? 'This SVG is over 200 kB. Upload a smaller one.' : 'This file is over 2 MB. Upload a smaller one.'
   if (f.kind !== 'svg' && (f.width ?? 0) < LOGO_MIN_WIDTH) return `This logo is ${f.width ?? 0} px wide. Upload one at least ${LOGO_MIN_WIDTH} px wide.`
   return null
+}
+
+/**
+ * The record a page draws (spec § 3, "the check"): the record with today's season, or, when that fails a rule made after
+ * it was saved (a pair now under contrast, a season's accent on a background changed since), Frrata's default palette,
+ * type, corners and spacing, keeping the store's logo files. Pure; the live pages and the console preview call it.
+ */
+export function renderRecord(r: BrandRecord, fallback: Palette): BrandRecord {
+  return brandProblems(r).length ? { ...emptyRecord(fallback), logos: r.logos } : r
 }

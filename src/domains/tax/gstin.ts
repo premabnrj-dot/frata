@@ -52,5 +52,6 @@ export const stateName = (code: string | null) => (code ? STATES.find((s) => STA
 /** What checkout shows about GST: the state a shop without a regular GSTIN delivers within, and whether businesses may ask for a GST invoice. */
 export function checkoutGst(s: { gstin: string | null; gstScheme: string; homeState: string | null; b2bInvoices: boolean; turnoverBand: string }) {
   const regular = !!s.gstin && s.gstScheme === 'regular'
-  return { deliversWithin: regular ? null : stateName(s.gstin ? s.gstin.slice(0, 2) : s.homeState), b2b: regular && s.b2bInvoices && s.turnoverBand === 'under_5cr' }
+  // `invoice`: a regular GSTIN issues a GST invoice on every order (checkout's trust block, one-address P2·2).
+  return { deliversWithin: regular ? null : stateName(s.gstin ? s.gstin.slice(0, 2) : s.homeState), b2b: regular && s.b2bInvoices && s.turnoverBand === 'under_5cr', invoice: regular }
 }

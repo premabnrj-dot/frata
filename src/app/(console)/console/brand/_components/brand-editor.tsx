@@ -38,11 +38,13 @@ import { ColoursCard, LogoCard, ShapeCard, TypeCard, type SlotState } from './br
 export type Mode = 'edit' | 'waits' | 'preview'
 export type Waiting = { id: string; record: BrandRecord; proposedAt: string; proposer: string | null }
 
-export function BrandEditor({ tenantId, mode, live, version: startVersion, waiting, decides, sample, tagline }: {
+export function BrandEditor({ tenantId, mode, live, version: startVersion, waiting, decides, sample, tagline, tabs }: {
   tenantId: string; mode: Mode; live: BrandRecord; version: number | null
   /** The waiting change: the partner's form starts from it; the owner and a Manager answer it. */
   waiting: Waiting | null; decides: boolean
   sample: Sample; tagline: string
+  /** Brand's two tabs (one-address P2 mockup screen 8): Logo, colours and type · Checkout. */
+  tabs?: React.ReactNode
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -167,6 +169,7 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
   return (
     <div className={`${STORE_FONT_VARS} ${BRAND_FONT_VARS}`}>
       <PageHeader title="Brand" badges={chip} />
+      {tabs}
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_340px]">
         <div className="lg:hidden"><PreviewCard b={draft} s={sample} phone /></div>
         <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}

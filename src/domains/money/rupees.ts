@@ -43,3 +43,7 @@ export function rupeesText(paise: number | null): string {
   const r = Math.floor(paise / 100), p = paise % 100
   return p ? `${r}.${String(p).padStart(2, '0')}` : String(r)
 }
+
+/** Whole rupees as a shopper reads them: 300000 → "₹3,000" (Indian grouping). Pure, for words a domain writes (a
+ *  checkout trust block); the UI's money is `formatInr` (src/lib/format.ts). */
+export const rupeesWords = (paise: number): string => '₹' + Math.round(paise / 100).toLocaleString('en-IN')
