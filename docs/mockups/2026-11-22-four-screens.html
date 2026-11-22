@@ -231,7 +231,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <div class="doc">
 <div class="head">
   <h1>Credits, developer sign-in, Brand book, the owner’s review</h1>
-  <p>Four screens that were still to draw. 22 Nov 2026 · Draft for the owner. Nothing here is built, except the server side of developer sign-in, live today.</p>
+  <p>Four screens that were still to draw. 22 Nov 2026 · Draft for the owner. Nothing here is built, except the part of developer sign-in that checks codes, live today. Words and security reviews are folded in.</p>
 </div>
 <nav aria-label="Sections">
   <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#credits">1 · Credits and billing</a><a href="#panel">Credits in Studio</a>
@@ -241,21 +241,21 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <section id="in-short">
   <h2>In short</h2>
   <div class="answers">
-    <div class="card"><h3>Credits and billing</h3><p>The page you approved on 13 Nov, at the prices you approved on 16 Nov. A pack is ₹1,999 for 100. Studio is ₹2,999 a month with 150. New partners get 20 free. Two things leave the page: the WhatsApp alert marked “Coming”, and Your share, which is a later phase.</p></div>
-    <div class="card"><h3>Developer sign-in</h3><p>A developer runs one command and gets an 8-letter code. An owner or Manager types it on Settings › Developer and confirms with a passkey. The page names the store before anything is confirmed. The server side went live today.</p></div>
-    <div class="card"><h3>Brand book in Studio</h3><p>It opens from a Brand row on the Design tab and reads the same eight rows you approved. It stays read-only. A fifth tab would not fit the inspector at its narrowest.</p></div>
+    <div class="card"><h3>Credits and billing</h3><p>The page you approved on 13 Nov, at the prices you approved on 16 Nov. A pack is ₹1,999 for 100. Studio is ₹2,999 a month with 150. New partners get 20 free. Two things leave the page. One is the WhatsApp alert marked “Coming”. The other is Your share, a later phase.</p></div>
+    <div class="card"><h3>Developer sign-in</h3><p>A partner’s developer runs one command and gets an 8-character code. They type it in the partner workspace and confirm with their own passkey. Nobody approves a code for someone else. The security review changed this from my first drawing.</p></div>
+    <div class="card"><h3>Brand book in Studio</h3><p>It opens from a Brand row on the Design tab. It shows the same eight rows you approved. It stays read-only. A fifth tab would not fit the inspector at its narrowest.</p></div>
     <div class="card"><h3>The owner’s review on Brand › Checkout</h3><p>The same card Brand already shows for a partner’s change, with checkout’s own facts. A Live and Waiting switch on the preview lets the owner compare before approving.</p></div>
   </div>
 </section>
 
 <section id="audit">
-  <h2>Audit: what is approved or built today</h2>
+  <h2>Audit of what is approved or built today</h2>
   <div class="tw"><table>
     <tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr>
-    <tr><td>Credits and billing, approved 13 Nov at ₹1,900 a pack, ₹19 a credit and 10 free credits.</td><td>Prices changed on 16 Nov. The page was never redrawn.</td><td>The same page at the new prices (screen 1).</td></tr>
+    <tr><td>Approved 13 Nov at ₹1,900 a pack, ₹19 a credit, 10 free credits.</td><td>Prices changed on 16 Nov. The page was never redrawn.</td><td>The same page at the new prices (screen 1).</td></tr>
     <tr><td>The page’s alerts card lists WhatsApp with a “Coming” badge.</td><td>The console never shows what is not built.</td><td>The row leaves until WhatsApp alerts exist.</td></tr>
-    <tr><td>Two credit panels in Studio: the 13 Nov wallet with four tabs, and the 16 Nov panel with one view.</td><td>No record says which one is built.</td><td>The 16 Nov panel. Detail lives on the page (call 2).</td></tr>
-    <tr><td>Developer sign-in’s server side, live today. It names the store only to its owner or Manager.</td><td>No page exists to type the code into.</td><td>Settings › Developer (screen 2).</td></tr>
+    <tr><td>Studio has two credit panels. The 13 Nov wallet has four tabs. The 16 Nov panel has one view.</td><td>No record says which one is built.</td><td>The 16 Nov panel. Detail lives on the page (call 2).</td></tr>
+    <tr><td>The part of developer sign-in that checks codes, live today.</td><td>No page exists to type the code into. Store owners have no passkey, so they cannot be the ones to confirm.</td><td>Partner workspace › Developer (screen 2).</td></tr>
     <tr><td>Brand book was a drawer over the preview. The workbench docks drawers.</td><td>You approved docking it. I drew no way to open it.</td><td>A Brand row on the Design tab (screen 3).</td></tr>
     <tr><td>Brand › Checkout shows “Waiting for the owner” to the partner. The owner reviews in Notices.</td><td>An owner looking at the page sees no way to decide there.</td><td>The review card on the page (screen 4).</td></tr>
   </table></div>
@@ -263,7 +263,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
 <section id="credits">
   <h2>1 · Credits and billing</h2>
-  <p class="lede">Partner workspace › Credits and billing. The owner of the partner sees money. A Lead sees only the budgets of clients they are assigned.</p>
+  <p class="lede">Partner workspace › Credits and billing. Partner owners see all of it. A Lead sees only their own clients’ budgets.</p>
   <div class="screens" style="grid-template-columns:repeat(auto-fit, minmax(340px, 1fr))">
     <div class="screen"><div class="cap">Overview</div><div class="in">
       <div class="vt"><span class="on">Overview</span><span>Usage</span><span>Client budgets</span><span>Payments and invoices</span><span>Plan</span></div>
@@ -271,7 +271,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
         <div class="bal"><b class="num">142 credits</b><div class="meter"><i style="width:57%"></i></div></div>
         <div class="kv"><span>Available</span><span class="num">142</span><span>Held by 1 running turn</span><span class="num">19</span><span>Used since 1 Nov</span><span class="num">108</span></div>
       </div>
-      <div class="sec"><h4>Where your credits sit</h4>
+      <div class="sec"><h4>Credits by use-by date</h4>
         <div class="kv"><span>November seat · use by 31 Jan</span><span class="num">42 of 150</span><span>Pack bought 3 Oct · use by 3 Oct 2027</span><span class="num">100 of 100</span></div>
       </div>
       <div class="sec"><h4>Plan <span class="tag">Studio</span></h4>
@@ -326,6 +326,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <h3>States</h3>
   <div class="tw"><table>
     <tr><th>State</th><th>What shows</th></tr>
+    <tr><td>Credits added</td><td>Shown only once Razorpay confirms the payment. Until then the dialog waits.</td></tr>
     <tr><td>Low balance</td><td>A warn banner: “8 credits left. Turns that need more will wait.” with Buy credits.</td></tr>
     <tr><td>First visit, 20 free credits</td><td>Balance reads “20 free credits”. Plan reads Partner. No invoices yet.</td></tr>
     <tr><td>A renewal failed</td><td>A warn banner: “The 1 Dec payment didn’t go through. Your credits still work.” with Pay ₹3,538.82. After 7 days the plan becomes Partner.</td></tr>
@@ -341,7 +342,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
 <section id="panel">
   <h2>Credits in Studio</h2>
-  <p class="lede">The panel the top bar’s credits pill opens, as approved on 16 Nov, with one link added to the page above.</p>
+  <p class="lede">The credits pill opens this panel, as approved on 16 Nov. One link to the page is new.</p>
   <div class="screens">
     <div class="screen"><div class="cap">The pill opens this</div><div class="in">
       <div class="sec"><h4>Credits <span class="num">142</span></h4>
@@ -357,9 +358,18 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
         <div><button class="btn pri sm">Raise by 50</button></div>
       </div>
     </div></div>
+    <div class="screen"><div class="cap">A Lead · a Builder</div><div class="in">
+      <div class="sec"><h4>Credits <span class="chip bad">Budget used up</span></h4>
+        <div class="row"><span>House of Ayuda’s budget</span><span class="num">300 of 300</span></div>
+        <div class="row"><span>Ask Kabir to raise it.</span></div>
+      </div>
+      <div class="sec"><h4>Credits <span class="num">142</span></h4>
+        <div class="row"><span>House of Ayuda’s budget</span><span class="num">214 of 300</span></div>
+      </div>
+    </div></div>
     <div class="screen"><div class="cap">Low credits</div><div class="in">
       <div class="sec"><h4>Credits <span class="chip warn num">8</span></h4>
-        <div class="row"><span>This page needs about 19</span><button class="btn pri sm">Buy 100 credits</button></div>
+        <div class="row"><span>This page needs about 19 credits</span><button class="btn pri sm">Buy 100 credits</button></div>
       </div>
     </div></div>
   </div>
@@ -367,53 +377,78 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
 <section id="developer">
   <h2>2 · Developer sign-in</h2>
-  <p class="lede">What the developer sees in the terminal, then Console › Settings › Developer for the store’s owner or Manager.</p>
+  <p class="lede">First the developer’s terminal. Then Partner workspace › Developer, where the same person confirms their own code.</p>
   <div class="screens" style="grid-template-columns:repeat(auto-fit, minmax(340px, 1fr))">
     <div class="screen"><div class="cap">The developer’s terminal</div><div class="in">
 <div class="term">$ npx frrata dev house-of-ayuda
 
-Open  frata.vercel.app/console/settings/developer
+Open  frata.vercel.app/partner/developer
 Code  <span class="a">HXKT-7P2M</span>   <span class="d">ends in 10 minutes</span>
 
-<span class="d">Waiting for the store to confirm…</span>
+<span class="d">Waiting for you to confirm…</span>
 <span class="a">Signed in.</span> This computer has a key for 24 hours.</div>
     </div></div>
-    <div class="screen"><div class="cap">Settings › Developer · type the code</div><div class="in">
-      <div class="sec"><h4>Sign in a developer’s computer</h4>
-        <label><span class="lbl">Code from the terminal</span><div class="codebox">HXKT-7P2M</div></label>
+    <div class="screen"><div class="cap">Partner workspace › Developer</div><div class="in">
+      <div class="sec"><h4>Sign in this computer</h4>
+        <label><span class="lbl">Code from your terminal</span><div class="codebox">HXKT-7P2M</div></label>
         <div><button class="btn pri sm">Check code</button></div>
       </div>
-      <div class="sec"><h4>Computers signed in</h4>
-        <div class="row"><span>Kabir’s computer · ends in 21 hours</span><button class="btn sm">Delete key</button></div>
+      <div class="sec"><h4>Your computers</h4>
+        <div class="krow"><div class="l1"><b>House of Ayuda</b><span class="tag">Build</span></div>
+          <div class="l2"><span class="lbl">Confirmed Today, 4:12 pm · ends in 21 hours</span><button class="btn sm">Delete key</button></div></div>
       </div>
     </div></div>
     <div class="screen"><div class="cap">Confirm</div><div class="in">
-      <div class="dlg"><h4>Give this computer a key?</h4>
-        <div class="facts"><span>Store</span><span><b>House of Ayuda</b></span><span>Code</span><span class="mono">HXKT-7P2M</span><span>You</span><span>Anita · Owner</span><span>The key</span><span>Reads products, also ones not yet published. Ends in 24 hours.</span></div>
-        <p>Confirm only a code from a terminal you can see.</p>
-        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm">Not now</button><button class="btn pri sm">Use passkey</button></div></div>
-      <div class="toast"><span>Signed in. Kabir’s computer has a key for 24 hours.</span></div>
+      <div class="dlg"><h4>Give this computer a Build key?</h4>
+        <div class="facts"><span>Store</span><span><b>House of Ayuda</b></span><span>Code</span><span class="mono">HXKT-7P2M</span><span>Started</span><span>2 minutes ago <span class="chip ok">Your network</span></span><span>The key</span><span>Reads the store’s products, drafts too. Ends in 24 hours.</span></div>
+        <p>Frrata never asks you for a code. Type only one from your own screen.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm">Don’t give key</button><button class="btn pri sm">Give key</button></div></div>
+      <div class="toast"><span>Signed in. This computer has a key for 24 hours.</span></div>
+    </div></div>
+    <div class="screen"><div class="cap">Started somewhere else</div><div class="in">
+      <div class="dlg"><h4>Give this computer a Build key?</h4>
+        <div class="facts"><span>Store</span><span><b>House of Ayuda</b></span><span>Code</span><span class="mono">HXKT-7P2M</span><span>Started</span><span>2 minutes ago <span class="chip warn">Another network</span></span></div>
+        <p>This code was not started from your network. Frrata never asks you for a code.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn pri sm">Don’t give key</button><button class="btn sm">Give key</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Delete key · confirm</div><div class="in">
+      <div class="dlg"><h4>Delete this computer’s key?</h4><p>That computer is signed out at once.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sm">Keep key</button><button class="btn pri sm">Delete key</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">The store’s owner · Settings › Website, as built</div><div class="in">
+      <div class="sec"><h4>Keys</h4>
+        <div class="krow"><div class="l1"><b>kabir@neelstudio.in’s computer</b><span class="tag">Build</span></div>
+          <div class="l2"><span class="lbl">Made by kabir@neelstudio.in, Neel Studio · ends in 21 hours</span><button class="btn sm">Delete key</button></div></div>
+      </div>
     </div></div>
   </div>
   <h3>States</h3>
   <div class="tw"><table>
     <tr><th>State</th><th>What shows</th></tr>
-    <tr><td>The code ended, was used, or is not for a store of yours</td><td>At the field: “This code has ended. Run the command again for a new one.” One line for all three, so the page never says whether a store exists.</td></tr>
-    <tr><td>The code is not 8 letters and numbers</td><td>At the field: “Type the 8 characters from the terminal.”</td></tr>
-    <tr><td>Staff, an Accountant or a Builder</td><td>The page reads “Only the owner or a Manager can sign in a computer.” with Ask the owner.</td></tr>
-    <tr><td>The passkey check is older than 5 minutes</td><td>Use passkey asks again. Nothing is confirmed until it passes.</td></tr>
-    <tr><td>Too many tries</td><td>An error toast: “Too many tries. Wait a minute.”</td></tr>
-    <tr><td>The store already holds its limit of keys</td><td>An error toast: “Delete a key to make another.” The code stays good until it ends.</td></tr>
+    <tr><td>The code ended, was used, or is not for a client of yours</td><td>At the field: “This code has ended. Run the command again for a new one.” One message covers all three. The page never says whether a store exists.</td></tr>
+    <tr><td>The code is not 8 characters</td><td>At the field: “Type the 8 characters from your terminal.”</td></tr>
+    <tr><td>A Builder</td><td>The page reads “Only a Partner owner or a Lead can sign in a computer.”</td></tr>
+    <tr><td>Give key</td><td>Asks for the passkey there and then, for this one key. An earlier check does not count.</td></tr>
+    <tr><td>Passkeys are switched off for staff</td><td>This step still asks for one.</td></tr>
+    <tr><td>Too many tries, at Check code or Give key</td><td>At the field: “Too many tries. Wait a minute.”</td></tr>
+    <tr><td>The store holds its limit of keys</td><td>In the dialog, before any key is given: “House of Ayuda has its limit of keys. Delete one first.” Give key is off.</td></tr>
     <tr><td>No computers signed in</td><td>“No computers signed in”.</td></tr>
-    <tr><td>A support visit</td><td>Reads the list. Cannot check a code or delete a key.</td></tr>
-    <tr><td>Phone</td><td>The same card. The code field takes the phone’s keyboard in capitals.</td></tr>
+    <tr><td>Phone</td><td>The same cards, stacked. The code field opens the keyboard in capitals.</td></tr>
   </table></div>
   <div class="tw"><table>
     <tr><th>What keeps a stranger from getting a key</th><th>How</th></tr>
-    <tr><td>The link in the terminal carries no code</td><td>The code is typed by hand, so a link sent by someone else confirms nothing.</td></tr>
-    <tr><td>The dialog names the store and repeats the code</td><td>The owner sees what they are approving before the passkey.</td></tr>
-    <tr><td>A passkey, in the last 5 minutes</td><td>A stolen session alone cannot confirm.</td></tr>
-    <tr><td>The key lasts 24 hours and is listed</td><td>Delete key ends it within a minute.</td></tr>
+    <tr><td>You confirm only your own code</td><td>The person at the terminal is the person at the page. Nobody approves a code for someone else.</td></tr>
+    <tr><td>The link in the terminal carries no code</td><td>The code is typed by hand. A link from someone else confirms nothing.</td></tr>
+    <tr><td>The dialog says where the code was started</td><td>A code started on another network is marked, and Don’t give key becomes the main button.</td></tr>
+    <tr><td>A passkey for this one key</td><td>A stolen session alone cannot confirm.</td></tr>
+    <tr><td>The key lasts 24 hours and both sides list it</td><td>The partner and the store’s owner can each delete it. It stops at once.</td></tr>
+  </table></div>
+  <div class="tw"><table>
+    <tr><th>What the part live today still needs before this page is built</th><th>Why</th></tr>
+    <tr><td>Keep the network and the time a code was started</td><td>The dialog’s Started row. Kept at most a day.</td></tr>
+    <tr><td>Check the store’s key limit before confirming</td><td>Today the page would say Signed in while the terminal says Too many tries.</td></tr>
+    <tr><td>A passkey check tied to this confirmation, also while passkeys are switched off</td><td>Today any check in the last 5 minutes counts, and signing in counts while the switch is off.</td></tr>
+    <tr><td>A limit on Check code, and a refusal during a support visit</td><td>Check code has no limit today.</td></tr>
   </table></div>
 </section>
 
@@ -443,7 +478,7 @@ Code  <span class="a">HXKT-7P2M</span>   <span class="d">ends in 10 minutes</spa
       <div><button class="btn sm">Change in Brand</button></div>
     </div></div>
     <div class="screen"><div class="cap">No logo yet</div><div class="in">
-      <div class="bb"><div><div class="k">Logo</div><div class="v">Not chosen</div></div></div>
+      <div class="bb"><div><div class="k">Logo</div><div class="v">None yet</div></div></div>
       <div><button class="btn sm">Add a logo in Brand</button></div>
     </div></div>
   </div>
@@ -462,7 +497,7 @@ Code  <span class="a">HXKT-7P2M</span>   <span class="d">ends in 10 minutes</spa
   <div class="screens" style="grid-template-columns:repeat(auto-fit, minmax(340px, 1fr))">
     <div class="screen"><div class="cap">The owner or a Manager</div><div class="in">
       <div class="rev"><h4>Your partner’s change <span class="chip warn">Needs you</span></h4>
-        <div class="facts"><span>Sent</span><span>Neel Studio · today, 10:42 am</span><span>Logo</span><span>Left → Centred</span><span>Trust blocks</span><span>“Pay on delivery” added</span><span>Thank-you line</span><span>“Thank you.” → “Thank you. Packed with care in Jaipur.”</span></div>
+        <div class="facts"><span>Sent</span><span>Neel Studio · Today, 10:42 am</span><span>Logo</span><span>Left → Centred</span><span>Trust blocks</span><span>“Pay on delivery” added</span><span>Thank-you line</span><span>“Thank you.” → “Thank you. Packed with care in Jaipur.”</span></div>
         <div style="display:flex;gap:8px"><button class="btn pri sm">Approve change</button><button class="btn sm">Decline</button></div>
       </div>
       <div class="row"><span>Preview</span><div class="seg" role="group" aria-label="Preview"><button aria-pressed="false">Live</button><button aria-pressed="true">Waiting</button></div></div>
@@ -480,9 +515,9 @@ Code  <span class="a">HXKT-7P2M</span>   <span class="d">ends in 10 minutes</spa
   </div>
   <div class="tw"><table>
     <tr><th>State</th><th>What shows</th></tr>
-    <tr><td>The partner saves again while one waits</td><td>The card shows the newer change. The older Notices row reads Replaced.</td></tr>
+    <tr><td>The partner saves again while one waits</td><td>The card shows the newer change. The older Notices row reads Replaced. An Approve tapped on the older card answers “Your partner sent a newer change.” with Reload.</td></tr>
     <tr><td>Staff or an Accountant</td><td>The card without buttons, and the chip “Waiting for the owner”.</td></tr>
-    <tr><td>Decided in Notices meanwhile</td><td>Approve or Decline answers “Already approved by Anita at 10:44 am” with Reload.</td></tr>
+    <tr><td>Decided in Notices meanwhile</td><td>Approve or Decline answers “Already approved by Anita, Today, 10:44 am” with Reload.</td></tr>
     <tr><td>A support visit</td><td>Reads the card. No buttons.</td></tr>
     <tr><td>Nothing waiting</td><td>No card and no switch. The page is the editor as built.</td></tr>
     <tr><td>Phone</td><td>The card first, then the switch and preview, then the editor.</td></tr>
@@ -493,12 +528,13 @@ Code  <span class="a">HXKT-7P2M</span>   <span class="d">ends in 10 minutes</spa
   <h2>Your calls</h2>
   <div class="tw"><table>
     <tr><th>#</th><th>Call</th><th>Recommendation</th></tr>
-    <tr><td>1</td><td>Credits and billing as on 13 Nov, at the 16 Nov prices, without the WhatsApp alert and Your share</td><td>Yes. Your share returns with payouts. The alert returns when WhatsApp alerts exist.</td></tr>
+    <tr><td>1</td><td>Credits and billing as on 13 Nov, at 16 Nov prices. No WhatsApp alert, no Your share.</td><td>Yes. Your share returns with payouts. The alert returns when WhatsApp alerts exist.</td></tr>
     <tr><td>2</td><td>Studio’s credits panel is the small 16 Nov one, with a link to the page</td><td>Yes. The four-tab wallet of 13 Nov is dropped.</td></tr>
-    <tr><td>3</td><td>The partner’s owner raises a client’s budget. A Lead asks.</td><td>Yes, as you approved in the redraw’s calls.</td></tr>
+    <tr><td>3</td><td>A Partner owner raises a client’s budget. A Lead asks.</td><td>Yes, as you approved in the redraw’s calls.</td></tr>
     <tr><td>4</td><td>A monthly cap for each person on the team</td><td>Not in this phase. Client budgets and the 300-a-day limit cover it. Add it when a partner asks.</td></tr>
     <tr><td>5</td><td>Studio Plus’s AutoPay limit</td><td>Up to ₹12,000 a debit, against Studio’s ₹3,600. It follows the plan.</td></tr>
-    <tr><td>6</td><td>Developer sign-in lives at Settings › Developer, for the owner and Managers</td><td>Yes. Builders get no key, as you said today.</td></tr>
+    <tr><td>6</td><td>Developer sign-in lives in the partner workspace. The person at the terminal confirms their own code.</td><td>Yes. Builders get no key, as you said today. A store’s own developer waits until store owners have passkeys.</td></tr>
+    <tr><td>9</td><td>Four changes to the part live today, listed under screen 2</td><td>Yes. They are built with the page, each with the security reviewer on its diff.</td></tr>
     <tr><td>7</td><td>Brand book opens from a Brand row on the Design tab, read-only</td><td>Yes. A fifth tab would not fit the inspector at 320 px.</td></tr>
     <tr><td>8</td><td>The review card on Brand › Checkout, with a Live and Waiting switch on the preview</td><td>Yes. The switch is new. It also shows on Brand’s own page for the same reason.</td></tr>
   </table></div>

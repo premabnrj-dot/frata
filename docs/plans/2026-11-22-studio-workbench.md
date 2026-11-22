@@ -218,3 +218,16 @@ Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, compo
 | A developer key for a partner's Builder | "let be things as it is for now. no need to offer access to builders for now." |
 | Lane E's nine Deviations and its migration | "approved" |
 | An owner's review card on Brand › Checkout for a partner's waiting change | "Add one in a later phase … but not now." Until then Notices is the review. It joins the list of mockups still to draw |
+
+## Four screens drawn for the owner (2026-11-22; awaiting approval)
+Mockup: https://claude.ai/artifact/Aqry9YgUuEfcMHEvh9VVmz (`docs/mockups/2026-11-22-four-screens.html`): C1's Credits and
+billing at the 16 Nov prices; G·3's developer sign-in page; Brand book in the workbench's Design tab; the owner's review
+card on Brand › Checkout. Reviews on the draft, folded in: `words-reviewer` (25 rows), `security-reviewer` FIX BEFORE
+APPROVAL (3 high, 5 medium, 4 low).
+**What the security review changed in G·3's page:** store owners and Managers hold no passkey (`require-member.ts`), a
+key they confirm stops answering once the store opens (0157), and an owner approving another person's code is the
+device-code phishing flow. So the person at the terminal confirms their own code in the **partner workspace** with a
+passkey check made for that confirmation; a store's own developer waits until owners have passkeys. Before the page is
+built the live server part gains: the start's /64 network and time kept (at most a day) and shown; the store's key
+limit checked before approving (today only the poll refuses); a real passkey also while `passkeys_off` is live; a
+limit on Check code; a refusal during a support visit; Approve on the review card names the exact version it showed.
