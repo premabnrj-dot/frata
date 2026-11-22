@@ -108,8 +108,8 @@ invoice serial, outbox row or analytics; erased at opening; no EkCode), and is r
 ## Owner steps and open questions (none blocks wave 2)
 | Item | State | Blocks |
 |---|---|---|
-| **Where partner websites are hosted** | Owner, 2026-11-22: asks for one Vercel account, or Cloudflare for hosting and images. ADR-0017 is "accepted as revised: Vercel only", with Cloudflare kept as the second adapter and a one-week measured test drawn as V2's first step. Not decided here | V2a; S22 is not acted on until it is decided |
-| S22 Vercel teams | On hold behind the row above | V2a |
+| **Where partner websites are hosted** | **Decided: Vercel teams** (owner, 2026-11-22: "vercel teams it is for now"), as ADR-0017 stands. Cloudflare for hosting and R2 for images are revisited on P5·0's 30-day usage read (§ Unit economics) | — |
+| S22 Vercel teams | Open: the owner creates `frrata-sites`, `frrata-fleet`, `frrata-sites-staging` (`docs/setup.md` item 5) and adds this session's access | V2a |
 | O6 preview domain | Open | V2a previews |
 | O4 `frrata.shop` to 3 years | Open | P4b only |
 | Frrata's Razorpay, live | Owner, 2026-11-22: "razorpay is live". Seen in Vercel (names and dates only, never values): `RAZORPAY_BILLING_KEY_ID` and `_SECRET` replaced 2026-11-20; `FRRATA_GSTIN`, `_LEGAL_NAME`, `_ADDRESS`, `_SAC` added the same day; `RAZORPAY_BILLING_WEBHOOK_SECRET` unchanged since 2026-11-15. Production: 5 invoices, all test mode; no billing webhook ever stored | C1 taking real money: the live webhook must be confirmed first |
