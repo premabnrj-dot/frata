@@ -1,8 +1,7 @@
 'use client'
 
-import { ChevronDown } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import { useId, useRef } from 'react'
-import { Icon } from '@/components/icons/icon'
 import { cn } from '@/lib/utils'
 import { placeUnder } from './anchor'
 import { button } from './button'
@@ -71,7 +70,7 @@ export function Menu({ label = 'More', items, align = 'end', size, variant = 'se
           : <button key={it.label} type="button" role="menuitem" tabIndex={-1} className={itemClass(it.danger)} // Focus to More FIRST (the menu is still open, so this cannot race a dialog the item opens): a dialog
             // opened next returns focus to More when it closes.
             onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}
-            aria-current={it.checked ? 'true' : undefined}><span className="flex-1">{it.label}</span>{it.checked ? <Icon name="tick" className="size-4 text-muted-foreground" /> : null}</button>])}
+            aria-current={it.checked ? 'true' : undefined}><span className="flex-1">{it.label}</span>{it.checked ? <Check aria-hidden className="size-4 text-muted-foreground" /> : null}</button>])}
       </div>
     </>
   )
