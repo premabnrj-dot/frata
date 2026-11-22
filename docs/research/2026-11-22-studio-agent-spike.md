@@ -49,13 +49,15 @@ Rules the script keeps:
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.04** of the $25 cap (list cost, 3 runs).
+Measured spend so far: **$0.10** of the $25 cap (list cost, 5 runs).
 
 | Probe | Ran | Status | Answer | List cost |
 |---|---|---|---|---|
 | `models` | 2026-11-22 19:32 UTC | answered | claude-opus-5-5 answers on this key (context 1000000, output 128000) | $0.00 |
 | `geo` | 2026-11-22 19:32 UTC | answered | default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only "global" and "us" (no India) | $0.00 |
 | `session` | 2026-11-22 19:33 UTC | answered | a session ran a command; create 890 ms, first event 550 ms, turn 5198 ms | $0.04 |
+| `network` | 2026-11-22 19:33 UTC | answered | see evidence: resolver, proxy variables, what resolves, allowed vs refused codes | $0.02 |
+| `network-ip` | 2026-11-22 19:34 UTC | answered | see evidence: raw-IP reach, pinned-address reach, direct DNS, non-HTTP port | $0.04 |
 
 <!-- spike:results:end -->
 
@@ -68,6 +70,7 @@ Each probe's measured answer, set against what the documentation said. "Same" me
 | `models` (the key) | — | The `studio-eval` key answers; `claude-opus-5-5` reports a 1,000,000-token context and 128,000 output. $0.00 | **passed** |
 | `geo` (12) | `inference_geo` is `us` or `global`; the workspace's default decides when the agent doesn't pin one | One Haiku 5.5 call with no geo was served in **`global`**: the workspace default is `global`, not `us`. An agent pinned to `us` was accepted. $0.0000035 | **passed**; same, and it settles that the agent file must pin `us` (otherwise inference may run anywhere) |
 | `session` (1, 9 in part) | Ubuntu 24.04, x86_64, up to 8 GB memory and 10 GB disk, Node 22 default; CPU count not stated | A session on a closed `limited` environment ran one bash command. Create 890 ms, first stream event 550 ms after the message, whole turn 5.2 s, 4.9 s active. Ubuntu 24.04.5, x86_64, Node v22.23.5, **4 CPUs** (`nproc`), `free` shows **16 GB**, `df` shows 30 GB free on `/`. 6 input + 297 output tokens, 7,017 read from cache and 7,347 written on the session's **first** turn (the harness's own prompt). **$0.04** list cost (the API's own `list_cost`) | **passed**. Differs: memory and disk read higher than the documented limits, but `free` and `df` may show the host, not the sandbox's cap, so plan on 8 GB and 10 GB until `build` measures a real peak |
+| `network` + `network-ip` (5) | Under `limited` only `allowed_hosts` are reachable; a refused request on 80/443 gets a 403 naming the host; DNS not described | Environment allowing only `postman-echo.com`. **DNS is filtered:** `/etc/resolv.conf` names 8.8.8.8 and 8.8.4.4, but only allowed names resolve. `example.com` and `registry.npmjs.org` return nothing, and a raw UDP query straight to 8.8.8.8 gets NXDOMAIN (rcode 3). So a refused *name* fails as `curl: (6) Could not resolve host`, not as a 403. **By address**, traffic reaches Anthropic's egress gateway (TLS certificate `CN=default.domain`, issuer `Anthropic, Egress Gateway SDS Issuing CA (production)`). It answers `https://1.1.1.1` and `http://1.1.1.1` with `403`, `x-deny-reason: host_not_allowed`, "Host not in allowlist: 1.1.1.1". A refused name pinned to its real address (`--resolve`) gets 403. An allowed name pinned to a foreign address still gets 200 from the real host: the gateway routes by name, not by address. TCP 22 to GitHub: connection refused. No `HTTP(S)_PROXY` variables in the sandbox (the gateway is transparent). Allowed host: 200. $0.02 + $0.04 | **passed**. Differs: a refused name is a DNS failure, not a 403. Studio's tool errors must read "could not resolve host" as "host not in the policy". No bypass by IP, by pinned address or by direct DNS was found; whether the filtered resolver forwards refused names upstream (a DNS side channel) can't be seen from inside |
 
 ## Item by item
 Sources are tagged [V] when they are vendor documentation or SDK types read on the date shown, and [U] when no current

@@ -17,6 +17,17 @@
         "allow_package_managers": false,
         "allow_mcp_servers": false
       }
+    },
+    "env-echo": {
+      "id": "env_01Vi9K3k9eA5oG3jzUNo3Pig",
+      "networking": {
+        "type": "limited",
+        "allowed_hosts": [
+          "postman-echo.com"
+        ],
+        "allow_package_managers": false,
+        "allow_mcp_servers": false
+      }
     }
   },
   "runs": [
@@ -72,6 +83,66 @@
             "ephemeral_5m_input_tokens": 7347
           },
           "active_seconds": 4.86,
+          "list_cost_usd": 0.04
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "network",
+      "item": "`limited` hosts and DNS: what resolves, what is refused and how",
+      "ran_at": "2026-11-22T19:33:46.437Z",
+      "session_ids": [
+        "sesn_01V3XSDpc4Js4os79bzQebuE"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "see evidence: resolver, proxy variables, what resolves, allowed vs refused codes",
+      "evidence": {
+        "output": "nameserver 8.8.8.8\nnameserver 8.8.4.4\noptions timeout:2 attempts:3\n---\n---\n162.159.142.41  postman-echo.com\ngetent example.com: none\ngetent registry.npmjs.org: none\n---\nallowed postman-echo.com: 200\n\nexample.com: 000\nregistry.npmjs.org: 000\nraw ip 1.1.1.1: 000\nraw ip: refused\n\ncurl: (6) Could not resolve host: example.com\ncurl: (6) Could not resolve host: registry.npmjs.org\ncurl: (60) SSL: no alternative certificate subject name matches target host name '1.1.1.1'\nMore details here: https://curl.se/docs/sslcerts.html\n\ncurl failed to verify the legitimacy of the server and therefore could not\nestablish a secure connection to it. To learn more about this situation and\nhow to fix it, please visit the web page mentioned above.\n"
+      },
+      "active_seconds": 12.45,
+      "usage": [
+        {
+          "session": "sesn_01V3XSDpc4Js4os79bzQebuE",
+          "input": 6,
+          "output": 759,
+          "cache_read": 14173,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 1291
+          },
+          "active_seconds": 12.45,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "network-ip",
+      "item": "`limited` by address: raw IPs, a refused name pinned to its address, direct DNS, port 22",
+      "ran_at": "2026-11-22T19:34:26.522Z",
+      "session_ids": [
+        "sesn_01Ga9voZhhSFNLRct5VPJdFK"
+      ],
+      "list_cost_usd": 0.04,
+      "status": "answered",
+      "answer": "see evidence: raw-IP reach, pinned-address reach, direct DNS, non-HTTP port",
+      "evidence": {
+        "output": "== https raw ip, -k\nHTTP/2 403 \r\nx-deny-reason: host_not_allowed\r\ncontent-length: 94\r\ncontent-type: text/plain\r\ndate: Sun, 22 Nov 2026 19:34:34 GMT\r\n\r\nHost not in allowlist: 1.1.1.1. Add this host to your network egress settings to allow access.== tls cert at 1.1.1.1\nsubject=CN = default.domain\nissuer=O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)\n== http raw ip\nHTTP/1.1 403 Forbidden\r\nx-deny-reason: host_not_allowed\r\ncontent-length: 94\r\ncontent-type: text/plain\r\ndate: Sun, 22 Nov 2026 19:34:34 GMT\r\n\r\nHost not in allowlist: 1.1.1.1. Add this host to your network egress settings to allow access.== refused name pinned to its ip\n403\n== allowed name pinned to a foreign ip\n200\n== dns straight to 8.8.8.8 for a refused name\nanswers: 0 rcode: 3\n== tcp 22 to github\ntcp 22 refused\n\nbash: connect: Connection refused\nbash: line 1: /dev/tcp/140.82.112.3/22: Connection refused\n"
+      },
+      "active_seconds": 11.974,
+      "usage": [
+        {
+          "session": "sesn_01Ga9voZhhSFNLRct5VPJdFK",
+          "input": 6,
+          "output": 1165,
+          "cache_read": 14461,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 2027
+          },
+          "active_seconds": 11.974,
           "list_cost_usd": 0.04
         }
       ],

@@ -62,6 +62,7 @@ const PROBES = {
   geo: { item: 'inference_geo: the workspace default, and whether an agent may pin `us`', needs: [], est: 0.01, run: probeGeo },
   session: { item: 'A Managed Agents session starts; the container (Node, CPUs, memory, disk); time to first event', needs: [], est: 0.5, run: probeSession },
   network: { item: '`limited` hosts and DNS: what resolves, what is refused and how', needs: [], est: 0.5, run: probeNetwork },
+  'network-ip': { item: '`limited` by address: raw IPs, a refused name pinned to its address, direct DNS, port 22', needs: [], est: 0.25, run: probeNetworkIp },
   vault: { item: 'A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL', needs: [], est: 0.5, run: probeVault },
   'custom-tools': { item: 'Does each custom tool call idle the session (so raise `session.status_idled`)?', needs: [], est: 0.5, run: probeCustomTools },
   cache: { item: 'Cache shares: does a second session of one agent version read the first one\'s cache?', needs: [], est: 1, run: probeCache },
@@ -258,6 +259,27 @@ async function probeNetwork(r, run) {
   const t = await turn(s.id, `Run: ${cmd}`)
   const out = t.toolOutputs.join('\n')
   return { status: out ? 'answered' : 'failed', answer: out ? 'see evidence: resolver, proxy variables, what resolves, allowed vs refused codes' : 'no output', evidence: { output: out.slice(0, 3000) } }
+}
+
+// The follow-up to `network`: a refused name fails at DNS, so can the sandbox reach a refused host by its address?
+// IPs are public anycast addresses (Cloudflare 1.1.1.1, and registry.npmjs.org's published addresses at run time).
+async function probeNetworkIp(r, run) {
+  const agent = await spikeAgent(r)
+  const env = await spikeEnv(r, 'env-echo', { type: 'limited', allowed_hosts: [ECHO_HOST], allow_package_managers: false, allow_mcp_servers: false })
+  const s = await newSession(r, run, { agent, env, cap: PROBES['network-ip'].est, title: 'network-ip' })
+  const ip = '104.16.0.35' // one of registry.npmjs.org's Cloudflare addresses
+  const cmd = [
+    'echo "== https raw ip, -k"', 'curl -k -sS -i --max-time 10 https://1.1.1.1/ 2>&1 | head -12',
+    'echo "== tls cert at 1.1.1.1"', 'echo | timeout 10 openssl s_client -connect 1.1.1.1:443 2>/dev/null | openssl x509 -noout -subject -issuer 2>&1 | head -2',
+    'echo "== http raw ip"', 'curl -sS -i --max-time 10 http://1.1.1.1/ 2>&1 | head -8',
+    `echo "== refused name pinned to its ip"`, `curl -sS -o /dev/null -w "%{http_code}\\n" --max-time 10 --resolve registry.npmjs.org:443:${ip} https://registry.npmjs.org/ 2>&1 | tail -2`,
+    'echo "== allowed name pinned to a foreign ip"', `curl -sS -o /dev/null -w "%{http_code}\\n" --max-time 10 --resolve ${ECHO_HOST}:443:${ip} https://${ECHO_HOST}/get 2>&1 | tail -2`,
+    'echo "== dns straight to 8.8.8.8 for a refused name"', 'timeout 8 python3 -c "import socket,struct;q=b\'\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01\';s=socket.socket(2,2);s.settimeout(5);s.sendto(q,(\'8.8.8.8\',53));d=s.recv(512);print(\'answers:\',struct.unpack(\'>H\',d[6:8])[0],\'rcode:\',d[3]&15)" 2>&1 | tail -1',
+    'echo "== tcp 22 to github"', 'timeout 8 bash -c "</dev/tcp/140.82.112.3/22" && echo "tcp 22 open" || echo "tcp 22 refused"',
+  ].join('; ')
+  const t = await turn(s.id, `Run: ${cmd}`)
+  const out = t.toolOutputs.join('\n')
+  return { status: out ? 'answered' : 'failed', answer: out ? 'see evidence: raw-IP reach, pinned-address reach, direct DNS, non-HTTP port' : 'no output', evidence: { output: out.slice(0, 3500) } }
 }
 
 async function probeVault(r, run, { keep }) {
