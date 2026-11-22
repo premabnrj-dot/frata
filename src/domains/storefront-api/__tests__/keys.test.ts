@@ -94,6 +94,15 @@ describe('who manages keys, and what a key shows', async () => {
     expect(keyAnswers(keyState(b, store, now, { live: true, leftAt: null }))).toBe(true)
     expect(keyAnswers(keyState(b, store, now, { live: false, leftAt: null }))).toBe(false)
   })
+  it('D0·2: a Test key’s days left, from day 7 down', async () => {
+    const { daysLeft } = await import('../keys')
+    const at = (h: number) => new Date(now.getTime() + h * 3_600_000).toISOString()
+    expect(daysLeft(at(24 * 8), now)).toBeNull()
+    expect(daysLeft(at(24 * 7), now)).toBe(7)
+    expect(daysLeft(at(24 * 6 - 1), now)).toBe(6)
+    expect(daysLeft(at(2), now)).toBe(1)
+    expect(daysLeft(at(-1), now)).toBeNull()
+  })
   it('says when a key was last used in India’s days', () => {
     const dm = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
     expect(lastUsed(null, now, dm)).toBe('Never used')

@@ -152,6 +152,14 @@ export const LIMITS = {
   apiMissKey: { action: 'api_miss:key', max: 30, windowSeconds: 600 },
   // G·1: test and build keys are limited per key only (previews and sessions share their host's outbound addresses, so a
   // per-network limit throttled every partner at once): 300 reads a minute a key, search included.
+  // The arithmetic (orchestrator ruling C7, 2026-11-22): shoppers never read through these keys (a Test key stops when the
+  // store opens; a festive day's pilot traffic, ~7.5k orders, is on its Live key: cached copies, never this limit). A
+  // key's readers are people checking a build. The starter keeps a deployed Test key's reads 15 s per address, so one
+  // server instance asks each address at most 4 times a minute; a page reads ~3 addresses (shop, content, the page's
+  // own). 300 a minute = 25 distinct pages a minute per instance, or 5 people each opening a new page every 12 s. 10× a
+  // usual review (one person, ~2 new pages a minute, 6 addresses, 24 reads) is 240, under 300. A Studio session's
+  // agent reads uncached (the build key's header tree) and is held by its own turn rate, well under 5 reads a second.
+  // Past it: 429 with Retry-After 60, never a 500.
   apiTestKey: { action: 'api_test:key', max: 300, windowSeconds: 60 },
   apiSearchIp: { action: 'api_search:ip', max: 300, windowSeconds: 600 },
   // SA1b D·4: a preview (a token-bound draft), per key: sites share their host's outbound addresses, so one store's

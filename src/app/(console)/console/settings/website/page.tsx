@@ -3,7 +3,8 @@ import { Badge } from '@/components/ui/badge'
 import { requireMember } from '@/lib/auth/require-member'
 import { websitePage } from '@/lib/queries/website'
 import { pageRoles } from '@/domains/settings/groups'
-import { keyAnswers, keyState, lastUsed, mayManageApi, MAX_LIVE_KEYS } from '@/domains/storefront-api/keys'
+import { daysLeft, keyAnswers, keyState, lastUsed, mayManageApi, MAX_LIVE_KEYS } from '@/domains/storefront-api/keys'
+import { websiteBlocksOpening } from '@/domains/setup/checklist'
 import { dayMonthIN } from '@/lib/format-date'
 import { API_HOST, shopHost } from '@/lib/public-env'
 import { CURRENT_API_VERSION } from '@/domains/storefront-api/versions'
@@ -54,11 +55,13 @@ export default async function WebsitePageRoute() {
       if (maker) line.push({ text: `Made by ${maker}`, phone: k.kind === 'build' ? `Made by ${maker}` : null })
       line.push({ text: u, phone: k.kind === 'build' && maker ? null : u })
     }
-    const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? `Test · ends ${dayMonthIN(new Date(s.endsAt))}` : s.kind === 'build' ? `Build · ends ${dayMonthIN(new Date(s.endsAt))}`
+    // D0·2: from day 7 down a Test key's end reads as days left, in the warn tone (workbench mockup screen 2).
+    const left = s.kind === 'test' ? daysLeft(s.endsAt, now) : null
+    const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? (left ? `Test · ${left} ${left === 1 ? 'day' : 'days'} left` : `Test · ends ${dayMonthIN(new Date(s.endsAt))}`) : s.kind === 'build' ? `Build · ends ${dayMonthIN(new Date(s.endsAt))}`
       : s.kind === 'ended' ? (s.key === 'build' ? 'Build · ended' : 'Test · ended') : s.kind === 'maker_gone' ? 'Build · ended' : 'Deleted'
     // What Delete says it stops (§ 4's dialog): a partner's build key names the partner's work.
     const stops = k.kind === 'build' ? (builder?.partnerName ? `${builder.partnerName}’s work with it stops within a minute.` : 'Work with it stops within a minute.') : 'Websites using it stop working within a minute.'
-    return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, live: keyAnswers(s), isPublic: k.kind === 'public', line, stops }
+    return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, warn: left !== null, live: keyAnswers(s), isPublic: k.kind === 'public', line, stops }
   })
   const site = page.siteOrigin ? page.domains.find((d) => d.id === page.siteDomainId) ?? null : null
   const main = page.domains.find((d) => d.main) ?? null
@@ -76,6 +79,8 @@ export default async function WebsitePageRoute() {
         keys={keys}
         liveCount={page.keys.filter((k, i) => k.kind !== 'build' && keys[i]!.live).length}
         testAllowed={!page.firstOpenedAt}
+        frrataName={shopHost(page.slug)}
+        building={!page.firstOpenedAt && websiteBlocksOpening({ siteOrigin: page.siteOrigin, buildingKeys: page.keys.filter((k, i) => k.kind !== 'public' && keys[i]!.live).length })}
         openapi={API_HOST ? `https://${API_HOST}/${CURRENT_API_VERSION}/openapi.json` : null}
         docs={`https://${API_HOST || 'api.frrata.shop'}/docs`}
       />

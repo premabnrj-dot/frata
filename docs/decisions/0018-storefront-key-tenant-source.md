@@ -191,6 +191,10 @@ or a body, never a URL path. So a third key kind.
    is set, its maker is live (`app_pm_live`), still holds a `members` row on that store and, for a Lead or a Builder, is
    assigned to it. Unassigning or removing the person ends their keys at once. Before opening a build key answers as a
    test key does (the test-key amendment above).
+   *As built (G·2, 2026-11-22, orchestrator's ruling):* the maker check holds before opening too (stricter than written):
+   a partner person's build key answers only while that person is live, a member and, for a Lead or a Builder, assigned,
+   whatever the store's state. A build key the store's own people made answers before opening only. Build keys are never
+   listed on the Accept screen or Admin's API page and never make a store a code site (0157).
 8. **The owner sees and deletes them.** Settings › Website lists every build key with its maker and its end; the owner
    or a Manager deletes one there. A kill switch, removing a partner or a person (ADR-0014 amendment 6), and a stopped
    session delete their build keys.

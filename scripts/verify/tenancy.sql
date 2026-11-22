@@ -4380,6 +4380,27 @@ do $$ begin
   if (select count(*) from storefront_keys where tenant_id in ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-000000000002')) <> 8 then raise exception 'FAIL: the daily delete took a live key'; end if;
   if not exists (select 1 from storefront_keys where id = 'c8100000-0000-0000-0000-00000000000e') then raise exception 'FAIL: the daily delete took an ended test key'; end if;
 end $$;
+-- D0·3 (0158): the opening check counts the caller's own store's keys that still answer before an opening, never
+-- another store's, 0 with no store set and 0 once the store ever opened
+begin; set local role frata_app;
+select set_config('app.tenant_id', 'e8100000-0000-0000-0000-000000000001', true);
+do $$ begin
+  -- E (never opened): its own build key and the Lead's still answer; the Builder lost its members row above
+  if app_store_building_keys() <> 2 then raise exception 'FAIL: E''s building keys are not its two that answer (got %)', app_store_building_keys(); end if;
+end $$;
+select set_config('app.tenant_id', 'e8100000-0000-0000-0000-000000000002', true);
+do $$ begin if app_store_building_keys() <> 0 then raise exception 'FAIL: an opened store counts building keys'; end if; end $$;
+select set_config('app.tenant_id', '', true);
+do $$ begin if app_store_building_keys() <> 0 then raise exception 'FAIL: the opening check counts with no store set'; end if; end $$;
+commit;
+do $$ begin
+  if not (select prosecdef from pg_proc where oid = 'app_store_building_keys()'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_store_building_keys()'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r where has_function_privilege(r, 'app_store_building_keys()', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_store_building_keys()'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_store_building_keys()', 'execute')
+  then raise exception 'FAIL: app_store_building_keys is not a pinned definer for frata_app alone'; end if;
+end $$;
 -- the two readers that list keys leave build keys out: Admin's API page (E has build keys only, no Website) and the
 -- Accept screen's list
 do $$ begin

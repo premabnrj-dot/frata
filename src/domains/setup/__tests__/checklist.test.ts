@@ -37,3 +37,13 @@ describe('setupSteps', () => {
     expect(done(officer)).toBe(true)
   })
 })
+
+describe('websiteBlocksOpening (D0·3)', async () => {
+  const { websiteBlocksOpening } = await import('../checklist')
+  it('refuses while a Test key builds a website with no proved address, and only then', () => {
+    expect(websiteBlocksOpening({ siteOrigin: null, buildingKeys: 1 })).toBe(true)
+    expect(websiteBlocksOpening({ siteOrigin: 'https://kesarstudio.in', buildingKeys: 1 })).toBe(false)
+    expect(websiteBlocksOpening({ siteOrigin: null, buildingKeys: 0 })).toBe(false)
+    expect(websiteBlocksOpening({ siteOrigin: 'https://kesarstudio.in', buildingKeys: 0 })).toBe(false)
+  })
+})

@@ -28,6 +28,7 @@ export const GUIDES: Guide[] = [
     { p: 'The starter is a working site. Its `CLAUDE.md` gives Claude Code the rules, and `npm run check` enforces them.' },
     { code: `git clone ${STARTER_URL} my-shop && cd my-shop\nnpm install\necho 'FRRATA_KEY=frs_test_…' > .env.local\nnpm run dev` },
     { p: 'Use a test key from Settings › Website. It reads drafts too and works from localhost until the store opens.' },
+    { p: 'On a preview address, read the store on your site’s server. A browser there gets no answer.' },
     { p: 'Open Claude Code in the folder and ask for the change. Work on a branch. Your host builds a preview of each branch.' },
     { p: 'Merge to publish. Put the live key in the host’s production settings, never in the code.' },
   ] },

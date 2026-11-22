@@ -36,11 +36,12 @@ export default {
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const p = await owner.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message))
     try {
-      await t.step('no connected domain: the page says to connect one', async () => {
+      await t.step('no connected domain: the frrata name and Connect my domain (D0·1)', async () => {
         await p.goto(`${CONSOLE}/console/settings/website`)
         await p.getByRole('heading', { level: 1, name: 'Website' }).waitFor()
         await p.getByRole('radio', { name: /Your own website/ }).click()
-        await p.getByRole('link', { name: 'Connect domain' }).waitFor()
+        await p.getByRole('link', { name: 'Connect my domain' }).waitFor()
+        await p.getByText(/^kesar-studio\./).first().waitFor()
       })
 
       await db`insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values (${domain}, ${T}, ${'shop.' + OWN_DOMAIN}, ${OWN_DOMAIN}, false, ${'cccccccc-0000-0000-0000-000000000001'}, now(), now())`
@@ -177,6 +178,67 @@ export default {
           assert.equal((await get('/2026-12/shop', H)).status, 404, 'a deleted build key still answers')
           await row.getByText('Deleted', { exact: true }).waitFor()
         })
+
+        // D0 (Studio workbench plan; mockup docs/mockups/2026-11-22-studio-workbench.html screen 2): no domain is asked for
+        // (the frrata name and Connect my domain), a Test key's last week shows as days left, and Open my store refuses
+        // while a Test key builds a website with no proved address, then opens once the domain is the Website.
+        const [{ published_at: pub }] = await db`select published_at from shop_settings where tenant_id = ${T}`
+        try {
+          await t.step('D0: the frrata name, days left, and Open my store refuses until the domain is the Website', async () => {
+            const k4 = testKey(); await addTest(k4)
+            await db`update storefront_keys set created_at = now() - interval '24 days', expires_at = now() + interval '6 days' - interval '1 hour'
+              where hash = ${createHash('sha256').update(k4).digest('hex')}`
+            await db`update shop_settings set published_at = null, site_origin = null, site_domain_id = null where tenant_id = ${T}`
+            await db`delete from shop_domains where id = ${domain}` // no domain connected yet: the case D0·1 draws
+            await p.goto(`${CONSOLE}/console/settings/website`)
+            await p.getByRole('heading', { name: 'Website Building' }).waitFor()
+            assert.equal(await p.getByRole('radio', { name: /Your own website/ }).getAttribute('aria-checked'), 'true')
+            await p.getByText(/^kesar-studio\./).first().waitFor()
+            await p.getByRole('link', { name: 'Connect my domain' }).waitFor()
+            assert.equal(await p.getByText('Connect a domain first').count(), 0, 'the disabled select is gone')
+            assert.equal(await p.getByLabel('Unsaved changes').count(), 0, 'nothing to save with no domain')
+            await p.getByRole('listitem').filter({ hasText: k4.slice(0, 14) }).getByText('Test · 6 days left').waitFor()
+            await p.getByRole('button', { name: 'Create key' }).click()
+            const create = p.getByRole('dialog', { name: 'Create key' })
+            await create.getByRole('radio', { name: /^Test/ }).click()
+            await create.getByText('A Test key also reads products not yet published.').waitFor()
+            await create.getByRole('button', { name: 'Not now' }).click()
+            await p.screenshot({ path: t.out('website-d0-1280'), fullPage: true })
+            const v = await audit(p); assert.deepEqual(v, [], `axe: ${v.join('; ')}`)
+
+            await p.goto(`${CONSOLE}/console/setup`)
+            await p.getByRole('button', { name: 'Open my store' }).click()
+            await p.getByRole('button', { name: 'Open it' }).click()
+            const dlg = p.getByRole('dialog', { name: 'Your store is still closed.' })
+            await dlg.getByText('Your website runs on a Test key. Test keys stop when the store opens.').waitFor()
+            await dlg.getByRole('link', { name: 'Connect my domain' }).waitFor()
+            await p.screenshot({ path: t.out('open-refused-1280') })
+            await dlg.getByRole('button', { name: 'Keep it closed' }).click()
+            const [s1] = await db`select published_at from shop_settings where tenant_id = ${T}`
+            assert.equal(s1.published_at, null, 'the store opened with its website on a Test key')
+
+            // Connect my domain, then pick it as the Website (as the second step above does): the store opens.
+            await db`insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values (${domain}, ${T}, ${'shop.' + OWN_DOMAIN}, ${OWN_DOMAIN}, false, ${'cccccccc-0000-0000-0000-000000000001'}, now(), now())`
+            await db`update shop_settings set site_origin = ${'https://' + OWN_DOMAIN}, site_domain_id = ${domain} where tenant_id = ${T}`
+            await p.reload()
+            await p.getByRole('button', { name: 'Open my store' }).click()
+            await p.getByRole('button', { name: 'Open it' }).click()
+            let opened = null
+            for (let i = 0; i < 20 && !opened; i++) { opened = (await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at; if (!opened) await new Promise((r) => setTimeout(r, 250)) }
+            assert.ok(opened, 'the store did not open once its domain was the Website')
+            // Closed again with its Website gone: its Test keys ended at the first opening, so opening again is never refused.
+            await db`update shop_settings set published_at = null, site_origin = null, site_domain_id = null where tenant_id = ${T}`
+            await p.reload()
+            await p.getByRole('button', { name: 'Open my store' }).click()
+            await p.getByRole('button', { name: 'Open it' }).click()
+            let again = null
+            for (let i = 0; i < 20 && !again; i++) { again = (await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at; if (!again) await new Promise((r) => setTimeout(r, 250)) }
+            assert.ok(again, 'a store that opened once was refused when opened again')
+            assert.equal(await p.getByRole('dialog', { name: 'Your store is still closed.' }).count(), 0)
+          })
+        } finally {
+          await db`update shop_settings set published_at = ${pub} where tenant_id = ${T}`
+        }
       } finally {
         await db`update tenants set first_opened_at = ${opened} where id = ${T}`
       }

@@ -146,6 +146,14 @@ export function keyState(k: { kind: KeyKind; expiresAt: string | null; revokedAt
   return { kind: 'live' }
 }
 
+/** D0·2: a Test key's days left, warned from day 7 down (Studio workbench plan; mockup screen 2). Derived from the row
+ *  already read, never stored: whole days, rounded up, so the last day reads "1 day left". Null before day 7. */
+export const TEST_WARN_DAYS = 7
+export function daysLeft(endsAt: string, now: Date): number | null {
+  const n = Math.ceil((Date.parse(endsAt) - now.getTime()) / 86_400_000)
+  return n > 0 && n <= TEST_WARN_DAYS ? n : null
+}
+
 /** A key still answers (shown first, with Delete). */
 export const keyAnswers = (s: KeyState) => s.kind === 'live' || s.kind === 'test' || s.kind === 'build'
 

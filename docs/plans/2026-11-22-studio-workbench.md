@@ -158,6 +158,11 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | Screen 2: the Live key's chip "Starts when the store opens" | No chip; the approved key list's row (one-address § 4) | A fact the mockup got wrong: a Live key answers once the Website is on a proved domain, opened or not (0149). Mockup corrected 2026-11-22 | told 2026-11-22 |
 | Screen 2: the refusal names the address the Test key is used from | "Your website runs on a Test key. Test keys stop when the store opens." | A fact the mockup got wrong: Frrata never learns where a Test key is used from. Mockup corrected 2026-11-22 | told 2026-11-22 |
 | Screen 2: "New key", and key rows without prefix, maker, last used or Delete | The approved key list and "Create key" (one-address § 4), plus the days-left chip | Screen 2 was a sketch beside an approved, fuller drawing of the same list | told 2026-11-22 |
+| Screen 2: the days-left chip as a "Test" tag beside a warn chip "6 days left" | One warn chip "Test · 6 days left" in the key list's own chip (from day 7 down; "Test · ends 22 Dec" before) | The approved list (one-address § 4) carries the kind inside the chip; one chip, as drawn there | no |
+| Screen 2: the refusal as a raised card on the page | The console's Dialog primitive, title, body and the two buttons as ruled | A refusal that stops an action is a dialog in the design language; words and buttons as drawn | no |
+| One-address § 4: a build key's maker "Made by Kabir Shah, Neel Studio" | "Made by kabir@…, Neel Studio" (the person's email) | Frrata stores no name for a partner's Lead or Builder, only their email | told 2026-11-22 |
+| One-address § 4: "Used 10:06 am" on a build key | "Used today" | A key's last use is stored as a day, not a time (last_seen_on) | told 2026-11-22 |
+| One-address § 4: "Kabir Shah’s access ended · 16 Nov" | "<email>’s access ended · 16 Nov"; the date only when the person left the partner (an unassignment has no date) | As the maker row above; an assignment's removal is not dated | no |
 
 ## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 | Item | Ruling |

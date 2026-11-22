@@ -81,7 +81,9 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `site_domain_id` row is not live; a build key after opening unless a partner's, and a partner person's build key once
    that person leaves the partner, loses the store's members row or (a Lead or a Builder) its assignment
    (`app_build_key_maker_live`, called only inside the definers; Settings › Website reads the same answer through
-   `app_build_key_makers`). Proof: `scripts/verify/tenancy.sql` § 81.
+   `app_build_key_makers`). Open my store refuses while a store never opened has a Test or Build key that still answers and no Website
+   (D0·3: `app_store_building_keys`, the same rules, in `openShop`'s first select; `websiteBlocksOpening` beside
+   `setupSteps`). Proof: `scripts/verify/tenancy.sql` § 81.
 9. **Keys are never stored, shown twice or logged by us.** Stored is the sha256 hex; the key is in the create action's
    reply once; our logs carry the key id. (Vercel's request logs hold the path: a live key is public by design.)
 

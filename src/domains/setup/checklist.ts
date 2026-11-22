@@ -73,3 +73,20 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
 
 /** Every step before "Open your shop" is done: the button may be pressed (the action checks again on the server). */
 export const readyToOpen = (steps: SetupStep[]) => steps.filter((s) => s.key !== 'publish').every((s) => s.done)
+
+/**
+ * D0·3 (Studio workbench plan; mockup docs/mockups/2026-11-22-studio-workbench.html screen 2): Open my store refuses
+ * while the brand's own website is being built with no proved address. Its Test keys stop the moment the store opens
+ * (ADR-0018 decision 4), and a Live key answers only on a proved, live domain, so opening now would leave the website
+ * blank. "Building elsewhere" is derived, never stored: the store holds a Test or Build key that still answers (not
+ * deleted, not past its end; orchestrator ruling C3, 2026-11-22) and has no Website on a live connected domain.
+ * Connecting the domain and naming it the Website clears it; so does deleting those keys. After one address ships, the
+ * frrata name counts as proved.
+ */
+export type WebsiteFacts = {
+  /** The Website's address, set only on a live connected domain of this store (the database holds that). */
+  siteOrigin: string | null
+  /** Test and Build keys of this store not deleted and not past their end. */
+  buildingKeys: number
+}
+export const websiteBlocksOpening = (f: WebsiteFacts): boolean => f.siteOrigin === null && f.buildingKeys > 0
