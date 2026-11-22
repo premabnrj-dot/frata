@@ -76,13 +76,15 @@ function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; a
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   // Another network, or one Frrata can't tell: marked, and Give key waits for "This is my computer" (owner, 2026-11-22).
-  const elsewhere = look.sameNetwork !== true
+  // The server can still say so (the network changed since Check code): then the box shows too (security LOW-3).
+  const [askMine, setAskMine] = useState(false)
+  const elsewhere = look.sameNetwork !== true || askMine
   const [mine, setMine] = useState(false)
   const off = look.full ? fullFor(look.store) : !look.hasPasskey ? SAY.no_passkey : elsewhere && !mine ? SAY.not_mine : undefined
   const give = async () => {
     setBusy(true); setError(null)
     const o = await giveOptionsAction(look.code, mine).catch(() => ({ ok: false as const, why: 'busy' as const }))
-    if (!o.ok) { setBusy(false); return setError(o.why === 'full' ? fullFor(look.store) : SAY[o.why]) }
+    if (!o.ok) { setBusy(false); if (o.why === 'not_mine') { setAskMine(true); setMine(false) } return setError(o.why === 'full' ? fullFor(look.store) : SAY[o.why]) }
     let response
     try { response = await startAuthentication({ optionsJSON: o.value as Parameters<typeof startAuthentication>[0]['optionsJSON'] }) } catch (e) {
       setBusy(false); return setError((e as Error)?.name === 'NotAllowedError' ? NO_PASSKEY_HERE : SAY.not_confirmed)

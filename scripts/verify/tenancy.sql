@@ -4425,7 +4425,7 @@ do $$ begin
              where has_table_privilege(r, 'build_key_device_codes', p))
   then raise exception 'FAIL: a role reaches build_key_device_codes'; end if;
   if exists (select 1 from unnest(array['app_device_code_start(text, text, text, text)', 'app_device_code_look(uuid, uuid, text, text, text)',
-               'app_device_code_challenge(uuid, uuid, text, text, text)', 'app_device_code_take(uuid, uuid, text, text, text)',
+               'app_device_code_challenge(uuid, uuid, text, text, text, text, boolean)', 'app_device_code_take(uuid, uuid, text, text, text)',
                'app_device_code_give(uuid, uuid, text, text, text, uuid, bigint)', 'app_device_code_claim(text)', 'app_device_code_unclaim(text)',
                'app_partner_developer_keys(uuid, uuid, text)', 'app_partner_developer_key_delete(uuid, uuid, text, uuid)']) f
              where not (select prosecdef from pg_proc where oid = f::regprocedure)
@@ -4486,16 +4486,24 @@ begin
   if app_device_code_look(f2, d2, 'stepup-f2', repeat('b', 63) || '2', net)->>'sameNetwork' is not null then raise exception 'FAIL: a code with no network compared'; end if;
   if app_device_code_look(f1, d1, 'stepup-f1', repeat('b', 63) || '3', net) is not null then raise exception 'FAIL: a code for an unknown store looked at'; end if;
   -- Give key: a challenge for THIS code; a Builder gets none; taken once, only by its asker, only with their own passkey
-  begin perform app_device_code_challenge(f3, d3, 'stepup-f3', code1, ch); raise exception 'FAIL: a Builder got a challenge';
+  begin perform app_device_code_challenge(f3, d3, 'stepup-f3', code1, ch, null, true); raise exception 'FAIL: a Builder got a challenge';
   exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
   begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 1); raise exception 'FAIL: a key given with no challenge';
   exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
-  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch);
+  -- (owner, 2026-11-22, MED-1) unticked, a challenge only from the network the code started on: another one, or none at
+  -- all, is not_mine; the same network, or "This is my computer" ticked, is a challenge
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, repeat('8', 64), false); raise exception 'FAIL: a challenge from another network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, null, false); raise exception 'FAIL: a challenge from an unknown network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', repeat('b', 63) || '2', ch, net, false); raise exception 'FAIL: a challenge for a code with no network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, net, false);
   if app_device_code_take(f2, d2, code1, ch, 'cred-f2') is not null then raise exception 'FAIL: another person took the challenge'; end if;
   if app_device_code_take(f1, d1, code1, repeat('R', 43), 'cred-f1') is not null then raise exception 'FAIL: another challenge taken'; end if;
   if app_device_code_take(f1, d1, code1, ch, 'cred-f2') is not null then raise exception 'FAIL: someone else''s passkey answered the challenge'; end if;
   -- (that try spent the challenge, as a failed check does): ask again
-  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch);
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, null, true);
   j := app_device_code_take(f1, d1, code1, ch, 'cred-f1');
   if j->>'passkeyId' is distinct from 'e8100000-0000-0000-0000-0000000000c1' then raise exception 'FAIL: the asker''s own passkey not given back (got %)', j; end if;
   if app_device_code_take(f1, d1, code1, ch, 'cred-f1') is not null then raise exception 'FAIL: a challenge taken twice'; end if;
@@ -4554,10 +4562,10 @@ do $$ declare codeE text := repeat('b', 63) || '7'; codeF text := repeat('b', 63
   perform app_device_code_start(repeat('a', 63) || '7', codeE, 'proof-e81');
   perform app_device_code_start(repeat('a', 63) || '8', codeF, 'proof-f81');
   if app_device_code_look('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, null) is not null then raise exception 'FAIL: another partner''s owner looked at E''s code'; end if;
-  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, repeat('W', 43)); raise exception 'FAIL: another partner''s owner got a challenge for E';
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, repeat('W', 43), null, true); raise exception 'FAIL: another partner''s owner got a challenge for E';
   exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
   if app_device_code_look('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, null) is not null then raise exception 'FAIL: a Lead unassigned from F looked at F''s code'; end if;
-  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, repeat('W', 43)); raise exception 'FAIL: an unassigned Lead got a challenge for F';
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, repeat('W', 43), null, true); raise exception 'FAIL: an unassigned Lead got a challenge for F';
   exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
 end $$;
 commit;
@@ -4568,11 +4576,11 @@ update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000
 begin; set local role frata_app;
 do $$ declare code9 text := repeat('b', 63) || '9'; ch text := repeat('X', 43); begin
   perform app_device_code_start(repeat('a', 63) || '9', code9, 'proof-e81');
-  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', code9, ch); raise exception 'FAIL: passkeys off gave a challenge to a person with no passkey';
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', code9, ch, null, true); raise exception 'FAIL: passkeys off gave a challenge to a person with no passkey';
   exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
   begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20); raise exception 'FAIL: passkeys off gave a key with no challenge';
   exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
-  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch);
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, null, true);
   perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code9, ch, 'cred-f1');
   if app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20) is distinct from 'Proof E81'
   then raise exception 'FAIL: the Partner owner could not give a key with passkeys off'; end if;
@@ -4585,7 +4593,7 @@ insert into support_sessions (id, tenant_id, staff_user_id, staff_email, reason,
 begin; set local role frata_app;
 do $$ begin
   if app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', null) is not null then raise exception 'FAIL: a person on a support visit looked at a code'; end if;
-  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', repeat('W', 43)); raise exception 'FAIL: a person on a support visit got a challenge';
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', repeat('W', 43), null, true); raise exception 'FAIL: a person on a support visit got a challenge';
   exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
   if (select count(*) from app_device_code_claim(repeat('a', 63) || '9')) <> 0 then raise exception 'FAIL: a code given before a support visit minted at the poll'; end if;
 end $$;
@@ -4598,7 +4606,7 @@ begin; set local role frata_app;
 do $$ declare code2 text := repeat('b', 63) || '2'; ch text := repeat('S', 43); begin
   if not (app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, null)->>'full')::boolean
   then raise exception 'FAIL: a store at its ceiling not shown full'; end if;
-  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch);
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, null, true);
   perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code2, ch, 'cred-f1');
   begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, 'e8100000-0000-0000-0000-0000000000c1', 30);
     raise exception 'FAIL: a key given past the ceiling';
@@ -4624,9 +4632,9 @@ do $$ declare code4 text := repeat('b', 63) || '6'; ch text := repeat('T', 43);
   f2 uuid := 'e8100000-0000-0000-0000-0000000000f2'; d2 uuid := 'e8100000-0000-0000-0000-0000000000d2'; begin
   perform app_device_code_start(repeat('a', 63) || '6', code4, 'proof-e81');
   if (app_device_code_look(f2, d2, 'stepup-f2', code4, null)->>'hasPasskey')::boolean then raise exception 'FAIL: a person with no passkey shown one'; end if;
-  begin perform app_device_code_challenge(f2, d2, 'stepup-f2', code4, ch); raise exception 'FAIL: a challenge for a person with no passkey';
+  begin perform app_device_code_challenge(f2, d2, 'stepup-f2', code4, ch, null, true); raise exception 'FAIL: a challenge for a person with no passkey';
   exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
-  perform app_device_code_challenge(f1, d1, 'stepup-f1', code4, ch);
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code4, ch, null, true);
   perform app_device_code_take(f1, d1, code4, ch, 'cred-f1');
   begin perform app_device_code_give(f1, d1, 'stepup-f1', code4, ch, 'e8100000-0000-0000-0000-0000000000c1', 1); raise exception 'FAIL: a counter that did not rise gave a key';
   exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
@@ -4634,14 +4642,14 @@ end $$;
 commit;
 update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' where id = 'e8100000-0000-0000-0000-0000000000c2';
 begin; set local role frata_app;
-do $$ begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('U', 43)); end $$;
+do $$ begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('U', 43), null, true); end $$;
 commit;
 update build_key_device_codes set challenge_at = now() - interval '6 minutes' where device_hash = repeat('a', 63) || '6';
 begin; set local role frata_app;
 do $$ begin
   if app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', repeat('b', 63) || '6', repeat('U', 43), 'cred-f1') is not null
   then raise exception 'FAIL: a challenge older than 5 minutes taken'; end if;
-  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('V', 43));
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('V', 43), null, true);
   perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', repeat('b', 63) || '6', repeat('V', 43), 'cred-f1');
 end $$;
 commit;

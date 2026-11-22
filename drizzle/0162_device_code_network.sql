@@ -66,18 +66,21 @@ begin
     'hasPasskey', exists (select 1 from public.partner_passkeys k join public.app_pm_live(p_uid) me on me.member_id = k.partner_member_id));
 end $$;
 --> statement-breakpoint
--- Give key, step 1: the challenge the browser signs for THIS code (replacing any earlier one on it).
-create or replace function app_device_code_challenge(p_uid uuid, p_session uuid, p_stepup text, p_code_hash text, p_challenge text) returns void
+-- Give key, step 1: the challenge the browser signs for THIS code (replacing any earlier one on it). From another network,
+-- or one Frrata can't tell, only once the person ticked "This is my computer" (p_mine; security review MED-1, owner
+-- 2026-11-22): the network is compared here, from the caller's own request, so no caller can skip it.
+create or replace function app_device_code_challenge(p_uid uuid, p_session uuid, p_stepup text, p_code_hash text, p_challenge text, p_net text, p_mine boolean) returns void
   language plpgsql volatile security definer set search_path = '' as $$
 declare c record;
 begin
   perform public.app_partner_need(p_uid, p_session, p_stepup, false);
   if p_challenge is null or length(p_challenge) < 40 or length(p_challenge) > 200 then raise exception 'bad_input' using errcode = 'P0001'; end if;
-  select x.id, t.id as tenant_id into c
+  select x.id, t.id as tenant_id, x.start_net into c
     from public.build_key_device_codes x join public.tenants t on t.slug = x.store_slug
    where x.code_hash = p_code_hash and x.expires_at > now() and x.approved_at is null and x.claimed_at is null
    for update of x;
   if c.id is null or not public.app_device_partner_ok(p_uid, c.tenant_id) then raise exception 'not_found' using errcode = 'P0001'; end if;
+  if p_mine is not true and (c.start_net is null or p_net is null or c.start_net <> p_net) then raise exception 'not_mine' using errcode = 'P0001'; end if;
   if not exists (select 1 from public.partner_passkeys k join public.app_pm_live(p_uid) me on me.member_id = k.partner_member_id) then
     raise exception 'no_passkey' using errcode = 'P0001';
   end if;
@@ -195,13 +198,13 @@ create or replace function app_delete_ended_build_keys() returns integer
 $$;
 --> statement-breakpoint
 revoke all on function app_device_code_start(text, text, text, text), app_device_partner_ok(uuid, uuid), app_device_store_full(uuid),
-  app_device_code_look(uuid, uuid, text, text, text), app_device_code_challenge(uuid, uuid, text, text, text),
+  app_device_code_look(uuid, uuid, text, text, text), app_device_code_challenge(uuid, uuid, text, text, text, text, boolean),
   app_device_code_take(uuid, uuid, text, text, text), app_device_code_give(uuid, uuid, text, text, text, uuid, bigint),
   app_partner_developer_keys(uuid, uuid, text), app_partner_developer_key_delete(uuid, uuid, text, uuid), app_delete_ended_build_keys(),
   app_device_code_claim(text)
   from public, anon, authenticated, service_role, frata_admin, frata_builder, frata_app;
 --> statement-breakpoint
 grant execute on function app_device_code_start(text, text, text, text), app_device_code_look(uuid, uuid, text, text, text),
-  app_device_code_challenge(uuid, uuid, text, text, text), app_device_code_take(uuid, uuid, text, text, text),
+  app_device_code_challenge(uuid, uuid, text, text, text, text, boolean), app_device_code_take(uuid, uuid, text, text, text),
   app_device_code_give(uuid, uuid, text, text, text, uuid, bigint), app_partner_developer_keys(uuid, uuid, text),
   app_partner_developer_key_delete(uuid, uuid, text, uuid), app_delete_ended_build_keys(), app_device_code_claim(text) to frata_app;

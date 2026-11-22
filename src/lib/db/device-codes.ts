@@ -27,8 +27,8 @@ export async function deviceCredentials(userId: string): Promise<{ id: string; t
   return rows[0]?.r ?? []
 }
 /** Give key, the passkey challenge made for this one code. */
-export async function deviceCodeChallenge(p: PartnerSession, codeHash: string, challenge: string): Promise<void> {
-  await db().execute(sql`select app_device_code_challenge(${p.userId}::uuid, ${p.sessionId}::uuid, ${p.stepup}, ${codeHash}, ${challenge})`)
+export async function deviceCodeChallenge(p: PartnerSession, codeHash: string, challenge: string, netHash: string | null, mine: boolean): Promise<void> {
+  await db().execute(sql`select app_device_code_challenge(${p.userId}::uuid, ${p.sessionId}::uuid, ${p.stepup}, ${codeHash}, ${challenge}, ${netHash}, ${mine})`)
 }
 /** Marks the challenge taken (once) and gives back this person's key for the credential; null otherwise. */
 export async function deviceCodeTake(p: PartnerSession, codeHash: string, challenge: string, credential: string): Promise<StoredKey | null> {

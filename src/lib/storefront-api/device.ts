@@ -63,7 +63,7 @@ export async function checkDeviceCode(p: PartnerSession, typed: string, ip: stri
 // The definers' refusal codes (P0001), as the page's reasons. Anything else is logged and reads as "ended" (it reveals
 // nothing and asks for a new code).
 const CODES: Record<string, DeviceRefusal> = {
-  not_found: 'ended', no_challenge: 'not_confirmed', replay: 'not_confirmed', full: 'full', no_passkey: 'no_passkey',
+  not_found: 'ended', no_challenge: 'not_confirmed', replay: 'not_confirmed', full: 'full', no_passkey: 'no_passkey', not_mine: 'not_mine',
   confirm_first: 'sign_in_again', confirm_again: 'sign_in_again', bad_input: 'not_confirmed',
 }
 function refusalOf(err: unknown): DeviceRefusal {
@@ -75,10 +75,10 @@ function refusalOf(err: unknown): DeviceRefusal {
 
 /** The ceremony for one code: the shared one (src/lib/auth/webauthn.ts) over the device-code definers, so its challenge
  *  is THIS code's and its "confirm" is the approval itself (no step-up is made). */
-function codeCeremony(p: PartnerSession, codeHash: string, given: { store?: string }) {
+function codeCeremony(p: PartnerSession, codeHash: string, given: { store?: string }, mine: { net: string | null; mine: boolean } = { net: null, mine: false }) {
   const store: PasskeyStore = {
     credentials: (w) => deviceCredentials(w.userId),
-    challenge: (_w, _purpose, _stepup, challenge) => deviceCodeChallenge(p, codeHash, challenge),
+    challenge: (_w, _purpose, _stepup, challenge) => deviceCodeChallenge(p, codeHash, challenge, mine.net, mine.mine),
     take: (_w, _purpose, challenge, credential) => deviceCodeTake(p, codeHash, challenge, credential),
     confirm: async (_w, challenge, passkeyId, counter) => { given.store = await deviceCodeGive(p, codeHash, challenge, passkeyId, counter) },
     add: async () => { throw Object.assign(new Error('not_allowed'), { cause: { message: 'not_allowed' } }) },
@@ -91,18 +91,13 @@ const asRefusal = (error: string): DeviceRefusal => CODES[error] ?? 'not_confirm
 
 /** Give key, step 1: the options the browser signs, a challenge for this code alone. */
 /** `mine`: the person ticked "This is my computer". Without it a code started from another or an unknown network gets no
- *  challenge (security review MED-1, owner 2026-11-22: "yes, this is my computer"); the network is read again here,
- *  never taken from the page. */
+ *  challenge (security review MED-1, owner 2026-11-22: "yes, this is my computer"); the challenge definer compares the
+ *  network from this request, never the page's. */
 export async function giveOptions(p: PartnerSession, typed: string, site: PasskeySite, ip: string, mine: boolean): Promise<{ ok: true; options: unknown } | { ok: false; why: DeviceRefusal }> {
   const code = deviceCodeOf(typed)
   if (!code) return { ok: false, why: 'bad_code' }
   if (!(await withinLimit(LIMITS.deviceGivePerson, p.userId, new Date(), true))) return { ok: false, why: 'busy' }
-  if (!mine) {
-    const look = await deviceCodeLook(p, sha(code), netHash(ip)).catch((err) => { refusalOf(err); return null })
-    if (!look) return { ok: false, why: 'ended' }
-    if (look.sameNetwork !== true) return { ok: false, why: 'not_mine' }
-  }
-  const r = await codeCeremony(p, sha(code), {}).confirmOptions({ userId: p.userId, sessionId: p.sessionId }, site)
+  const r = await codeCeremony(p, sha(code), {}, { net: netHash(ip), mine }).confirmOptions({ userId: p.userId, sessionId: p.sessionId }, site)
   return r.ok ? { ok: true, options: r.value } : { ok: false, why: asRefusal(r.error) }
 }
 
