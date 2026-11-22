@@ -274,3 +274,20 @@ the 30-day session sweep is ours; data is stored in the US.
 Frrata staff only, under a hard spend cap and no credits. Lane D builds V3a's runtime against a stand-in for hosting
 (`claude/lane-d-agent-runtime`), plan check first. The first test still needs from the owner: GitHub Team and the two
 Apps, one new Vercel Pro team for hosted websites, the preview domain, and a yes to one 24-hour build key.
+
+## C1: lane C's mockup and six questions (owner, 2026-11-22: "mockup approved. 1. tax on anthropic - no, all your recommendations apart from this.")
+Mockup of the screens neither earlier mockup drew: https://claude.ai/artifact/L2v5cVhiaaQMH7NhNhm5YB
+(`docs/mockups/2026-11-22-c1-undrawn.html` on `claude/lane-c-credits`), approved with its six calls as recommended.
+| # | Question | Answer |
+|---|---|---|
+| 1 | A ₹1,999 pack is 2.99× after Razorpay's fee | Keep ₹1,999; Amex, Diners and international cards off |
+| 2 | Withholding tax on Anthropic's invoice | **No** (owner): none is assumed, and no CA step gates C1 |
+| 3 | Seat credits against pack credits | Seat credits last 12 months too (replaces answer c above); the 20 free credits end after 90 days, once per PAN or GSTIN |
+| 4 | Any amount | Capped at 4,000 credits |
+| 5 | A Lead's and a Builder's view of Studio's panel | The client's used and budget only |
+| 6 | The rupee rate | The RBI reference rate, daily |
+Lane C has the go to build (plan `docs/plans/2026-11-22-c1-credits.md` on its branch; reviews: architecture CHANGES
+NEEDED, tenancy FIX BEFORE BUILD, security FIX BEFORE BUILD, speed OVER BUDGET as drafted, unit economics HELPS Frrata;
+all taken into its plan). **Outside C1, open:** merchant billing's `debit.ts` creates orders without a notification
+object, so Razorpay sends its own pre-debit notice and retries a failed UPI debit three times itself, against Frrata's
+own notice and its never-resent rule; its own fix before the first real monthly debit.
