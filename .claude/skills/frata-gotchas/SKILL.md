@@ -2,9 +2,9 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.25.1
+  version: 1.26.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-22
 ---
 
 # Frata gotchas
@@ -73,6 +73,7 @@ metadata:
 | A sender's `row.tenantId` (or any camelCase field) is `undefined`; `withTenant` fails with Postgres 42601 | `db().execute(sql…)` returns rows as Postgres names the columns (`tenant_id`), whatever type it is cast to | Map raw rows explicitly: `claimDue` returns `fromRaw(r)` (`src/lib/outbox/index.ts`; found by e2e 66-video, 2026-11-09 — every outbox sender had it) |
 | `permission denied for table` on an insert the role should be allowed | A column-level grant (`grant insert (a, b, c)`), and drizzle's insert names EVERY column, as `DEFAULT` — Postgres checks those too | Insert with `sql` naming only the granted columns (`startVideo`, `src/lib/queries/videos.ts`) |
 | A muted loop never plays in e2e | The suite's contexts use `reducedMotion: 'reduce'`, and the loop player rightly stays still then | Open that flow's context with `reducedMotion: 'no-preference'` (`e2e/flows/66-video.mjs`) |
+| `signup › TR1·7` fails: "Take 7 more days" never detaches, banner still says "6 days left" (`app_trial_extend`, `takeMoreDays`) | Open (release-agent, 2026-11-22): reproduced 4/5 isolated reruns against plain `main` (no drizzle change nearby); not this session's e2e Postgres holding a lock (checked `pg_stat_activity`) — root cause not yet found | Owner accepted it for now (2026-11-22) and this release went ahead with it unresolved; before trusting `signup` green again, rerun `npm run e2e -- --only signup` a few more times and, if it keeps failing, read `app_trial_extend` (`drizzle/0063_trials_access.sql`) and `takeMoreDays`'s caller against current `main` |
 
 ## A cached page's redirect loses the shopper's query (SA1b, 2026-11-16)
 A shop page is an ISR copy (`force-static`): it never sees the URL's query, so a `redirect()` in it would send
