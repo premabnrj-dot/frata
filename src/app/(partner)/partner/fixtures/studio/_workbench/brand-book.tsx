@@ -12,7 +12,7 @@ import { BOOK, SERIF, type ShellFlags } from './fixtures'
 // reads it with no way to Brand. Fixture only: Change in Brand goes nowhere in the shell (V3b's data).
 
 function Swatches({ colours }: { colours: readonly string[] }) {
-  return <span className="flex gap-1.5">{colours.map((c) => <i key={c} aria-hidden="true" style={{ background: c }} className="size-5.5 rounded-sm border border-border" />)}<span className="sr-only">{colours.join(', ')}</span></span>
+  return <span className="flex gap-1.5">{colours.map((c) => <i key={c} aria-hidden="true" style={{ background: c }} className="size-5.5 rounded-sm border border-border" />)}</span>
 }
 
 export function BrandBook({ flags, onBack }: { flags: ShellFlags; onBack: () => void }) {
