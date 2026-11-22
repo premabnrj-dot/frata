@@ -10,6 +10,8 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Models, prices and caching
 - Managed Agents
 - Vercel Sandbox (the second runtime)
+- Answered from documentation (2026-11-22)
+- Measured on `studio-eval` (2026-11-22)
 - Not yet confirmed (the V3a·1 spike)
 
 ## Account and terms — checked 2026-11-16
@@ -37,7 +39,7 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Anthropic runs the agent loop; a container per session runs the code [V].
 - `limited` networking with `allowed_hosts` [V].
 - Vault credentials are substituted at egress in headers and body (`injection_location`), **never the URL path**, and only
-  to the credential's allowed hosts. Hence the build key in a header (ADR-0018's build-key amendment) [V].
+  to the credential's allowed hosts (headers and the URL measured 2026-11-22, see below; body documented only). Hence the build key in a header (ADR-0018's build-key amendment) [V].
 - A mounted GitHub repository's token never enters the container; the mount takes a branch or a commit; the repository's
   `.claude/skills` load into the session [V].
 - Custom tools are run by our server. Session budgets are hard USD caps checked before each model request [V].
@@ -52,10 +54,66 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Pro: active CPU $0.128 an hour, memory $0.0212 a GB-hour (iad1; other regions differ), 24 h sessions, 10,000 at once;
   network policy by domain; open ports [V, vercel.com/docs/sandbox/pricing, last updated 2026-09-10]. bom1's rates [U].
 
-## Not yet confirmed (the V3a·1 spike answers each, dated here)
+## Answered from documentation — checked 2026-11-22 (spike report `docs/research/2026-11-22-studio-agent-spike.md`)
 
-No current source found, 2026-11-16 [U]: whether Managed Agents loads a repository's `CLAUDE.md`, `AGENTS.md`,
-`.mcp.json` or hooks as instructions; whether `github_repository` takes a GitHub App installation token where the docs say
-"Personal Access Token"; whether each custom tool call raises a webhook; DNS under `limited` networking; session
-retention and `inference_geo` for Frrata's organisation; whether a sandbox can expose a port; Workload Identity
-Federation from Vercel's OIDC token; an Indian bank's forex margin on a USD payment.
+- Rate limits per organisation: create endpoints 300 a minute, read endpoints (retrieve, list, stream) 1,200 a minute;
+  organisation spend and usage-tier limits also apply; no documented cap on concurrent sessions [V,
+  platform.claude.com/docs/en/managed-agents/reference]. (The cached skill bundle's "600 other, environments 60 and 5 at
+  once" is older: the live page wins.)
+- Sessions are kept until deleted ("transcripts persist until you delete them"); not ZDR-eligible (self-hosted excepted)
+  and not HIPAA. Deleting a session removes its events, container and checkpoints; uploaded files are deleted apart. So
+  the 30-day delete is Frrata's own sweep [V, managed-agents/overview, github].
+- `inference_geo` lives inside the agent's `model`: `us` or `global` only; a workspace stores data in `us` only; no India
+  [V, SDK 1.12.0 types `BetaAllowedInferenceGeo`, `workspace_geo`; skill bundle `managed-agents-core.md`].
+- Mount by commit: `checkout: {type: "commit", sha}`. The token field is "the GitHub token used to clone … and to push";
+  the page recommends fine-grained personal access tokens and does not mention App installation tokens; tokens rotate on
+  a running session [V, managed-agents/github].
+- `limited`: a refused request on 80/443 gets a 403 naming the host; attached repositories stay reachable with no hosts
+  listed; **`allow_package_managers: true` also opens `github.com`, `api.github.com`, `raw.githubusercontent.com`**, npm,
+  PyPI and Docker hosts, so Studio's policy keeps it `false` [V, managed-agents/environments].
+- Vault `environment_variable` credentials: made through the API with `injection_location` left out, header **and** body
+  are on (Console-made ones are header-only); send `{header: true}` [V, skill bundle `managed-agents-tools.md`].
+- No webhook per tool call: `session.status_idled` fires on each move to idle (a custom tool waiting included);
+  deliveries are unordered, retried up to 3 times and then dropped silently [V, skill bundle `managed-agents-webhooks.md`].
+- Sandbox: Ubuntu 24.04, x86_64, up to 8 GB memory and 10 GB disk, Node 22 by default [V, managed-agents/cloud-sandboxes-reference].
+- WIF takes any standards-compliant OIDC issuer; service account, issuer and rule are made in the Console; the SDK takes
+  a per-request token through `oidcFederationProvider({ identityTokenProvider, federationRuleId })`, which fits Vercel's
+  per-request `x-vercel-oidc-token` [V, manage-claude/authentication; SDK 1.12.0 types; vercel.com/docs/oidc/reference].
+- Branding: "{Name} Powered by Claude" allowed; never "Claude Code" or look-alike art [V, managed-agents/reference].
+
+## Measured on `studio-eval` — 2026-11-22 (spike probes in `scripts/studio/spike.mjs`; results and evidence in `docs/research/2026-11-22-studio-agent-spike.md`)
+
+Each is our own measurement on the live API [V, probe named], on Opus 5.5 at effort `low` with one-command turns. The
+plumbing carries over to any model; the timings and cents are not prices (credits use spec § 7's model on real tasks).
+Probes now run on Haiku 5.5 (owner, 2026-11-22).
+- The workspace's default inference geo is **`global`** (a Haiku call with no geo was served there); an agent pinned to
+  `us` is accepted. So the agent file pins `us` [`geo`].
+- A session: create about 0.9 s, first stream event about 0.5 s after the message, a one-command turn 3–5 s. The sandbox
+  is a small VM: 4 vCPUs, 16 GB, 30 GB free on `/`, no cgroup limits inside, runs as root (the documentation's 8 GB and
+  10 GB read as a floor) [`session`, `limits`].
+- `limited`: **DNS is filtered.** A name not on the list doesn't resolve, even by a raw query to 8.8.8.8 (NXDOMAIN), so
+  a refused name fails as "could not resolve host", not as a 403. By address, Anthropic's transparent egress gateway
+  answers `403`, `x-deny-reason: host_not_allowed`, "Host not in allowlist: <host>". It routes by name, not address: a
+  refused name pinned to its real address gets 403. No proxy variables in the sandbox; TCP 22 refused [`network`,
+  `network-ip`].
+- Vault header credential: the sandbox holds a longer placeholder, the host receives the real value in a header, a URL
+  query carries the placeholder unsubstituted, and an echoing host hands the real value back into the sandbox. The
+  harness tells the model to use credential variables only for their intended purpose: it refused to send one to an echo
+  host until that was stated as the credential's purpose [`vault`].
+- Custom tools: each round of calls idles the session once (`requires_action`) when every pending result goes back in one
+  send. Answering parallel calls one by one adds an idle per partial answer. Every turn ends with one more idle (`end_turn`)
+  [`custom-tools`, `custom-tools-batched`].
+- The prompt cache is shared across sessions of one agent version: a second session read all 14,680 cached tokens on its
+  first turn. The harness writes **5-minute** entries only [`cache`].
+- 70 sessions created in one burst in 0.6 s, and 20 parallel command turns: no 429 [`concurrency-70`,
+  `concurrency-active`].
+- Mount by commit works with no hosts allowed: HEAD is detached at the SHA, and the remote URL holds no credential
+  [`mount-sha`, public repository].
+- `usage.list_cost` equals the tokens at list rates plus running time, **in whole cents** (a $0.044 turn reads $0.04)
+  [`session`].
+
+## Not yet confirmed (the V3a·1 spike: blocked on owner set-up, see the report § Blocked)
+
+No current source, 2026-11-22 [U]: whether `CLAUDE.md`, `AGENTS.md`, `.mcp.json` or hooks load as instructions (only
+`.claude/skills` is documented); whether a GitHub App installation token works as the repository token; whether a
+sandbox can expose a port; an Indian bank's forex margin on a USD payment.

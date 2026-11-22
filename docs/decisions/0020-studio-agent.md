@@ -78,7 +78,9 @@ Run against this record too (CLAUDE.md: a gate must not match its own documentat
   know.
 - Each unconfirmed runtime fact (instruction files loaded from a repository, a GitHub App token as the repository token,
   a webhook per tool call, DNS under `limited`, retention and region) is a V3a·1 spike item, dated in
-  `frata-integrations` § Anthropic when answered.
+  `frata-integrations` § Anthropic when answered. Answered 2026-11-22 (`docs/research/2026-11-22-studio-agent-spike.md`):
+  no webhook per tool call (one per round), DNS filtered to the allowed names, sessions kept until deleted, default
+  inference geo `global` (so the agent pins `us`). Instruction files and the App token wait on the owner's set-up.
 
 ## Owner decisions
 The source spec's § Owner decisions 2, 3, 4, 5, 13, 15, 17, 25 and 27 (all yes, 2026-11-16).

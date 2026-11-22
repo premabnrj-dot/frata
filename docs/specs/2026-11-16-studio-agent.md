@@ -80,11 +80,14 @@ moves sites into the Vercel team `frrata-sites` and the GitHub organisation `frr
 | The pilot, `mokobara/docs/design/api-gaps.md` and `deviations.md` (2026-11-16) | A test key reads uncached and is limited per network (429 → 500 pages); Home's editorial has no placement; About, FAQ and Contact templates are too fixed; the console's page editor is the only safe way to write About and FAQ | § 4, plan G-a |
 **No current source found (each a V3a or V2a spike item, § 9):** whether Managed Agents loads a repository's
 `CLAUDE.md`, `AGENTS.md`, `.mcp.json` or hooks as instructions; whether its `github_repository` takes a GitHub App
-installation token where the docs say "Personal Access Token"; whether each custom tool call raises a webhook; DNS under
-`limited` networking; its session retention and `inference_geo` for this organisation; whether a sandbox can expose a
+installation token where the docs say "Personal Access Token"; whether a sandbox can expose a
 port; whether a ruleset bypass can name one GitHub App; whether Vercel verifies a host on a zone the team owns without a
 TXT record; how a brand's link passes Vercel's Deployment Protection (share links); Vercel Sandbox's bom1 rates; an
 Indian bank's forex margin on a USD payment.
+*(Answered 2026-11-22 by the V3a·1 spike, `docs/research/2026-11-22-studio-agent-spike.md`: no webhook per custom tool
+call, one idle per round of calls plus one at the turn's end; under `limited` a name off the list doesn't resolve and an
+address gets the gateway's 403; sessions are kept until deleted, and this workspace's default inference geo is `global`,
+so the agent pins `us`.)*
 
 ## Design
 
@@ -382,7 +385,8 @@ Seats and credits stay outside the partner share (amendment 1).
 
 ### 9. Evaluation: the spike, then the 20-task proof
 **The spike (one week, before the rest of V3a):** every "no current source" line in § Research, each answered with a dated
-note in `frata-integrations`, plus: whether each custom tool call raises a webhook (**fallback:** while the partner's
+note in `frata-integrations`, plus: whether each custom tool call raises a webhook (answered 2026-11-22: no, one per round of calls, and deliveries
+can drop, so the cron below is the main path, not a fallback: while the partner's
 screen polls, it may trigger one read of its own session's events at most every 5 seconds; `/api/cron/studio` sweeps
 every minute; the shared 5-minute drain is never the path); whether the share link's cookie survives in a cross-site
 iframe in Safari; `next build` time and memory in the sandbox; concurrency and rate limits per workspace.
