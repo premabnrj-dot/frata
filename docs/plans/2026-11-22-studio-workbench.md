@@ -7,7 +7,7 @@ Status: draft (the spec is approved; three plan reviews still pending below; no 
 **Review:** security-reviewer FIX BEFORE MERGE (3 high, 4 medium, 3 low), all folded in, 2026-11-22
 **Review:** api-contract-reviewer 3 blockers, 4 majors, all folded in, 2026-11-22
 **Review:** words-reviewer 40 rows on the mockup, all rewritten, 2026-11-22
-**Review:** tenancy-auditor pending
+**Review:** tenancy-auditor FIX BEFORE MERGE (3 high, 3 medium, 1 low), all folded in (§ Tenancy audit), 2026-11-22
 **Review:** speed-reviewer pending
 **Review:** unit-economics-reviewer pending (AP2's Mux minutes; the hosting question below)
 
@@ -84,6 +84,17 @@ invoice serial, outbox row or analytics; erased at opening; no EkCode), and is r
 | WB·6 | Code tab: a version's changed files through the session App by `fetchWithTimeout`; path allowlist, size caps, text only; loaded on first open | `npx vitest run src/lib/studio`; first-load JS of the partner layout unchanged (`npm run build`) |
 | WB·7 | Access: landmarks, `aria-expanded`, one polite region for progress, reduced motion; axe in the flow | `npm run e2e -- --only studio` |
 - **Reviews:** V3b's own list, plus `design-system-reviewer` on screen 1 before the lane opens.
+
+## Tenancy audit, folded in (2026-11-22; these override the task text above)
+| Finding | Task | What is built |
+|---|---|---|
+| H the repository read names no source | WB·6 | Repository and SHA only from `sites`/`site_deployments` matched on `tenant_id` = `requireCapability`'s store and the version id together; the token minted for that one repository; `cache: 'no-store'`; the client sends a version id and a path, never a repository or ref |
+| H Builders hold no grant on the site tables; check results have no store | WB·5, WB·6; V2a·1, V2a·6 | V2a·1 gains `frata_builder` select on named columns with `builder_rows`/`builder_only`, the `check:tenant` allow-list entry, proof § 82 and § 90; check results are a named column or table with grant, RLS and policy in that migration; reads in `src/lib/queries/sites.ts` |
+| H one CDN copy for every store on the header-keyed tree | AP2·1 | `delivery/check` on `h/` and `t/` is `private, no-store`; the 60 s copy exists on `k/` only; a test asserts it |
+| M Admin's pause names no stores to purge | AP1·5 | An ids-only, paged `frata_admin` read of stores with the app on, in `src/lib/admin/modules.ts`. `app_shops_with_boundary` keeps its signature, `search_path = ''`, `setof uuid`, grants re-run; it gains `tenant_plans.starts_at` and `trial_ends_at`; `scripts/verify/tenancy.sql` gains an in-window and an out-of-window row |
+| M the "is this app usable" read is unnamed | AP1·4 | Through a `shopCached` loader in `src/lib/queries/modules.ts`, keyed by `ctx.tenantId`, tagged `shop:<t>` |
+| M limits keyed by network alone | AP2·1 | The limit key is `<keyId>:<network /64>`: websites on one fleet share egress |
+| L Renew | D0·2 | Deletes by `id` + `tenant_id` + `kind = 'test'` in the same `asMember` transaction; the new row's `partner_id` follows `createKeyAction`'s rule; purge `skey:<old hash>` |
 
 ## Owner steps and open questions (none blocks wave 2)
 | Item | State | Blocks |
