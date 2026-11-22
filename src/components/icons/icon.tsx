@@ -98,6 +98,10 @@ const ICONS = {
   device: ['M7 3h10v18H7z', 'M10.5 18h3'],
   copy: ['M9 9h11v11H9z', 'M15 9V4H4v11h5'],
   people: ['M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5 M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M15 12.5a2.7 2.7 0 1 0 0-5.4 M16.5 15c2 .4 3.6 2 4.5 5'],
+  // Autopay (billing rework R1, 2026-11-22): a phone, approved — UPI's own way to pay, never NPCI's mark.
+  upi: ['M7 3h10v18H7z M12 18.5h.01', 'M9.5 11.5l2 2 3-3'],
+  // A bank mandate (eNACH): a façade, its columns the tinge.
+  bank: ['M3 10 12 4 21 10 M4 10v9h16v-9', 'M3 20h18 M7.5 12v6 M12 12v6 M16.5 12v6'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type IconName = keyof typeof ICONS
