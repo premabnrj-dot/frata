@@ -15,6 +15,7 @@ import { previewPages } from '@/lib/queries/pages'
 import { POLICY_TITLE } from './policy'
 import { ProductView } from './product-view'
 import type { Href } from './shell'
+import { STATE_OPTIONS } from './state-options'
 
 /** One shop page for the merchant's previews (drafts and unlisted pieces included, never cached), and a note on what
  *  shoppers see instead. Shared by /console/preview and the customizer's look preview. */
@@ -59,7 +60,7 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   // The bag and the checkout (Look v4: page-aware editing opens them), for their look: the bag here is the console's
   // own (empty), and the shop APIs answer only on the shop's host, so nothing is priced or placed from a preview.
   if (a === 'bag' && !b) return { body: <BagPage />, note: null }
-  if (a === 'checkout' && !b) return { body: <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={href('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} />, note: null }
+  if (a === 'checkout' && !b) return { body: <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={href('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} states={STATE_OPTIONS} />, note: null }
   // TS1a: a page as its draft stands (hidden and unpublished too; the customizer marks examples, /console/preview not).
   if (a === 'pages' && b) {
     const p = (await previewPages(tenantId)).find((x) => x.handle === b)

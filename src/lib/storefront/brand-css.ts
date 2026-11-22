@@ -36,9 +36,9 @@ export const BRAND_CSS = `
 [data-brand] .ck-form,[data-brand] .ck-col{max-width:560px}
 [data-brand] .ck-h1{font:400 32px/38px var(--store-display);letter-spacing:-.008em}
 [data-brand] .ck-h1-sm{font:400 28px/34px var(--store-display)}
-[data-brand] .ck-sect{font-size:13px;line-height:16px;letter-spacing:.08em;margin:28px 0 12px}
-[data-brand] .ck-label{font-size:14px;line-height:20px;font-weight:600}
-[data-brand] .ck-help{font-size:14px;line-height:20px}
+[data-brand] .ck-sect,[data-brand] .ck-form h2{font-size:13px;line-height:16px;letter-spacing:.08em;margin:28px 0 12px}
+[data-brand] .ck-label,[data-brand] .ck-form label[for]:not([for=biz]){font-size:14px;line-height:20px;font-weight:600}
+[data-brand] .ck-help,[data-brand] .ck-form [id$=-help]{font-size:14px;line-height:20px}
 [data-brand] .ck-thanks{margin-top:-8px;font:italic 400 20px/28px var(--store-display)}
 [data-brand] .store-field{height:var(--store-field);border-color:var(--store-edge)}
 [data-brand] .store-pay{border-color:var(--store-edge);padding:14px}

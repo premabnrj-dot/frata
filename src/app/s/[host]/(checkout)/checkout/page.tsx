@@ -6,6 +6,7 @@ import { Slot } from '@/components/modules/slots'
 import { shopFor, shopHref } from '../../_shop'
 import { brandLookFor, checkoutWords } from '../../_brand'
 import { TrustBlocks } from '@/components/storefront/trust-blocks'
+import { STATE_OPTIONS } from '@/components/storefront/state-options'
 
 export const revalidate = 60
 export const metadata: Metadata = { title: 'Checkout', robots: { index: false, follow: false } }
@@ -27,5 +28,5 @@ export default async function CheckoutPage({ params }: { params: Promise<{ host:
   // A module above the form (EkCode's button; checkout.identity). Cached with the page; nothing per shopper here.
   const identity = m ? <Slot name="checkout.identity" ctx={{ tenantId: shop.id }} access={m.access} /> : null
   // The marker tells the visit beacon a checkout began (src/beacon/fe.ts).
-  return <><i hidden data-fe="begin_checkout" /><Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={shopHref('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} waOptIn={wa} identity={identity} brand={b ? brandWords(shop, b.design) : undefined} /></>
+  return <><i hidden data-fe="begin_checkout" /><Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={shopHref('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} waOptIn={wa} identity={identity} brand={b ? brandWords(shop, b.design) : undefined} states={STATE_OPTIONS} /></>
 }
