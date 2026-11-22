@@ -55,9 +55,7 @@ html:has([data-site]) { scroll-padding-top: 5rem; }
 [data-site] .s-chip-peacock { background: var(--site-peacock-soft); color: var(--site-peacock-text); }
 [data-site] .s-chip-marigold { background: var(--site-marigold); color: var(--site-ink); }
 [data-site] .s-ic { width: 28px; height: 28px; flex: none; }
-[data-site] .s-ic .f { fill: currentColor; opacity: 0.18; }
-[data-site] .s-ic .s { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-[data-site] .s-wa { display: inline-flex; align-items: center; min-height: 24px; font-size: 14px; color: var(--site-muted); }
+[data-site] .s-wa { display: inline-flex; align-items: center; gap: 0.3em; min-height: 24px; font-size: 14px; color: var(--site-muted); }
 [data-site] .s-wa b { font-family: var(--site-mono); color: var(--site-ink); }
 [data-site] .s-wa a { text-decoration: none; }
 
@@ -105,7 +103,7 @@ html:has([data-site]) { scroll-padding-top: 5rem; }
 [data-site] .s-toast .s-mk { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--site-peacock); }
 [data-site] .s-toast .s-mk svg { width: 14px; height: 14px; }
 [data-site] .s-toast small { display: block; color: var(--site-on-neel-2); font-size: 12.5px; }
-[data-site] .s-terms { display: flex; flex-wrap: wrap; gap: 10px 28px; padding-block: 0 52px; margin: 0; padding-left: 0; list-style: none; position: relative; }
+[data-site] .s-terms { display: flex; flex-wrap: wrap; gap: 10px 28px; padding-block: 0 52px; margin-block: 0; list-style: none; position: relative; }
 [data-site] .s-terms li { display: flex; align-items: baseline; gap: 8px; font-size: 14.5px; color: var(--site-ink-2); }
 [data-site] .s-terms b { font-family: var(--site-mono); font-size: 20px; color: var(--site-ink); }
 [data-site] .s-terms .s-dot { width: 8px; height: 8px; border-radius: 50%; align-self: center; }
@@ -209,6 +207,7 @@ html:has([data-site]) { scroll-padding-top: 5rem; }
 [data-site] .s-qa summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; font-weight: 700; font-size: 17px; }
 [data-site] .s-qa summary::-webkit-details-marker { display: none; }
 [data-site] .s-qa .s-pm { width: 28px; height: 28px; border-radius: 50%; background: var(--site-rani-soft); color: var(--site-rani); display: grid; place-items: center; flex: none; transition: transform var(--transition-duration-base) var(--ease-standard); }
+[data-site] .s-qa .s-pm svg { width: 16px; height: 16px; }
 [data-site] .s-qa p { padding: 0 0 20px; color: var(--site-ink-2); max-width: 56ch; }
 
 /* 8 · commit */
