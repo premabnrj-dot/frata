@@ -24,6 +24,9 @@ stay in its own plan; this file holds only the order, the lanes, what each wave 
 4. **The Studio files' address scheme** is the one-address plan's (edits below, Wave 0).
 
 ## What each wave waits on
+**Changed 2026-11-22 (owner: "go with your recommendation"): `docs/plans/2026-11-22-studio-workbench.md` § Order moves
+P3 straight after P2 and adds D0, T1, AP1, AP2 and V3b as the workbench; hosting teams by stage are ADR-0017 § The
+decision as it stands. Lanes E (P2) and B (G·1–G·4, D0) opened 2026-11-22.**
 A wave starts when what it waits on is done; phases in one wave run at once in separate lanes. Lanes as
 `docs/plans/2026-11-15-parallel-lanes.md`: **A** hosting, **B** API and data, **C** money, **D** the agent, **E** checkout.
 Each lane is its own worker branch; the orchestrator (this session) releases one lane at a time to `main` and applies

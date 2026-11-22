@@ -35,9 +35,10 @@ Rules as `docs/plans/2026-11-15-parallel-lanes.md` § The rules every worker fol
 |---|---|---|---|
 | E | P2 checkout and order pages in the brand's design (one-address plan § P2), with P3·1's spike report prepared for the owner's phones | `claude/lane-e-p2-checkout` | approved 2026-11-16 |
 | B | G·1–G·4 (Studio plan § G-a), then D0 (below) | `claude/lane-b-ga-d0` | G·2's key list: approved (website-one-address § 4); D0: screen 2, approved 2026-11-22 |
+| D | Studio workbench shell on fixtures: WB·1, WB·2, WB·3 (shell only, a test-only route), WB·7. No data, agent, hosting or credits (owner, 2026-11-22: "when will you take up studio work"; brought forward because the layout is approved whatever the agent's proof says) | `claude/lane-d-workbench-shell` | workbench screen 1 (approved 2026-11-22) and the redraw's chat (approved 2026-11-16) |
 | — | W0 and T1's spec: the orchestrator | this branch | — |
 
-## W0 · Stale text (documents only)
+## W0 · Stale text (documents only) — done 2026-11-22
 | # | Task | Verify |
 |---|---|---|
 | W0·1 | V0·1 as written: ADR-0017's Decision, "What the owner sets up" and Consequences rewritten to its accepted status (or to the hosting decision below, once taken) | `npm run check:docs`; the ADR read |
@@ -154,3 +155,29 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 ## Deviations (BUILT AS DRAWN; for the owner before a phase ships)
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
+| Screen 2: the Live key's chip "Starts when the store opens" | No chip; the approved key list's row (one-address § 4) | A fact the mockup got wrong: a Live key answers once the Website is on a proved domain, opened or not (0149). Mockup corrected 2026-11-22 | told 2026-11-22 |
+| Screen 2: the refusal names the address the Test key is used from | "Your website runs on a Test key. Test keys stop when the store opens." | A fact the mockup got wrong: Frrata never learns where a Test key is used from. Mockup corrected 2026-11-22 | told 2026-11-22 |
+| Screen 2: "New key", and key rows without prefix, maker, last used or Delete | The approved key list and "Create key" (one-address § 4), plus the days-left chip | Screen 2 was a sketch beside an approved, fuller drawing of the same list | told 2026-11-22 |
+
+## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
+| Item | Ruling |
+|---|---|
+| G·3 the page where a person confirms the device code (Settings › Developer) | Drawn in no approved mockup. The server parts are built; the page waits for a mockup. **Owner** |
+| D0·2 a Renew button on a Test key | Not drawn. The chip is built; the button waits. **Owner** |
+| D0·3 what "no proved address" means before `app_website_of` exists | Open my store refuses when the store holds a Test or Build key that still answers and has no Website on a proved, live domain |
+| G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |
+| G·4 `jsonLd` URLs | `site_origin` when set, else the store's frrata.shop host: one pure function P5·2 moves behind the predicate |
+| G·1 the per-key limit | 300 a minute a key for Test and Build, failing closed; judged by `speed-reviewer` and `security-reviewer` on the diff |
+
+## Lane D's mockup check (2026-11-22; the orchestrator's rulings, for the owner where marked)
+Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, composer and build status follow the redraw
+(approved for the chat) and the layout follows the workbench.
+| Item | Ruling |
+|---|---|
+| Phone bar | Chat · Website · More (the mockup's Phone card corrected) |
+| Proposal card, composer while building, the preview bar's build status | the redraw's |
+| Cases | the three drawn plus a sold-out product |
+| The branch button | "Hand branch to the agent" |
+| Brand book's place in the inspector | Not drawn. Not built in the shell; a drawing goes to the owner. **Owner** |
+| The resize edge, the `?` key list with its off switch, the rail dot's count | Not drawn. Built to defaults (a 4 px separator; a Dialog listing the keys with the switch; a dot with a hidden count) and shown to the owner on the built screen. **Owner** |
+| Ctrl/⌘+K find; the credits drawer | Not in the shell |
