@@ -19,7 +19,8 @@ import { goneOf, lineRows, type GoneLine } from '@/domains/checkout/line-rows'
 export type Gone = GoneLine
 
 function Alert() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true" className="ck-ic-sm"><path d="M12 3.5 21 19.5H3Z" /><path d="M12 10v4.5M12 17v.2" /></svg>
+  // The frame's own drawing (note-marks.tsx, sent once by BrandFrame): the stepper mounts only inside it.
+  return <svg aria-hidden="true" className="ck-ic-sm"><use href="#ck-a" /></svg>
 }
 
 export default function CheckoutStepper({ lines, gone, setGone }: { lines: readonly PublicQuoteLine[]; gone: readonly Gone[]; setGone: (f: (g: Gone[]) => Gone[]) => void }) {

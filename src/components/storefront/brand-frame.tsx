@@ -8,6 +8,7 @@ import { CaptureAttribution } from './capture'
 import { StoreToaster } from './store-toaster'
 import { BRAND_CSS } from '@/lib/storefront/brand-css'
 import { BrandFooter, BrandHeader, brandStyle, type BrandFacts } from './brand-parts'
+import { NOTE_MARKS } from './note-marks'
 export type { BrandFacts } from './brand-parts'
 
 // =============================================================================
@@ -28,9 +29,10 @@ export function BrandFrame({ record, design, facts, home, lang, children, footer
   record: BrandRecord; design: CheckoutDesign; facts: BrandFacts; home: string; lang?: 'hi' | 'en'; children: React.ReactNode
   footer?: boolean; link?: boolean; capture?: boolean }) {
   return (
-    <div data-store-theme="" data-brand="" lang={lang === 'hi' ? 'hi' : undefined} className={`${STORE_FONT_VARS} ${BRAND_FONT_VARS} flex min-h-dvh flex-col`} style={brandStyle(record)}>
+    <div data-store-theme="" data-brand="" lang={lang === 'hi' ? 'hi' : undefined} className={`${STORE_FONT_VARS} ${BRAND_FONT_VARS} flex min-h-dvh flex-col bg-store-paper text-store-ink`} style={brandStyle(record)}>
       {/* A constant (brand-css.ts): nothing typed by a merchant or a shopper reaches it. */}
       <style dangerouslySetInnerHTML={{ __html: BRAND_CSS }} />
+      {NOTE_MARKS}
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-store-paper focus:px-3 focus:py-2 focus:text-sm focus:font-medium">Skip to content</a>
       <BrandHeader record={record} design={design} name={facts.shopName} home={home} link={link} />
       <main id="main" tabIndex={-1} className="bf-main">{children}</main>

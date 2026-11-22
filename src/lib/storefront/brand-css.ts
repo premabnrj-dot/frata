@@ -61,8 +61,10 @@ export const BRAND_CSS = `
 [data-brand] .ck-gone .ck-link{min-height:24px}
 [data-brand] .ck-err{display:flex;gap:6px;margin:0;font-size:14px;line-height:20px;color:var(--store-bad)}
 [data-brand] .ck-note{grid-column:2/-1;margin:0;font-size:14px;line-height:20px;color:var(--store-warn)}
-[data-brand] .ck-ic-sm{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-[data-brand] .ck-err .ck-ic-sm{margin-top:2px}
+[data-brand] .ck-ic-sm{display:block;width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+[data-brand] .ck-err .ck-ic-sm,[data-brand] .ck-fe .ck-ic-sm{margin-top:2px}
+[data-brand] .ck-fe{display:flex;gap:6px}
+[data-brand] .ck-msg{display:flex;gap:10px;font-size:15px;line-height:22px}[data-brand] .ck-msg .ck-ic-sm{width:20px;height:20px;margin-top:1px}
 @container brand (min-width:640px){
 [data-brand] .bf-hw{height:72px;padding:0 40px}[data-brand] .bf-hw.c .bf-back{left:40px}[data-brand] .bf-hw.c .bf-back span{display:inline}[data-brand] .bf-logo{height:40px}
 [data-brand] .bf-fw{padding:28px 40px 32px}[data-brand] .bf-ft dl{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}

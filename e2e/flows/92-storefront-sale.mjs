@@ -118,6 +118,13 @@ export default {
         assert.equal(await s.getByRole('navigation', { name: 'Policies' }).getByRole('link').count(), 5)
         assert.ok(await s.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scroll')
         await s.screenshot({ path: t.out('brand-checkout-390'), fullPage: true })
+        // A mistake: the field's error with the drawn alert mark before its words (P2 mockup screen 5, .s-err).
+        await s.getByText('Pay on delivery', { exact: true }).click()
+        await s.getByRole('button', { name: /Place order/ }).click()
+        const err = s.locator('#phone-err'); await err.waitFor()
+        const mark = await err.locator('svg.ck-ic-sm').boundingBox()
+        assert.ok(mark && Math.round(mark.width) === 16, 'the error’s mark is drawn at 16 px')
+        await s.screenshot({ path: t.out('brand-checkout-errors-390'), fullPage: true })
         // A policy page: the same header and legal block.
         await s.goto(`${SHOP}/policies/returns`)
         await s.getByRole('heading', { level: 1, name: 'Returns and exchanges' }).waitFor()

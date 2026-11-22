@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { BrandFooter, BrandHeader, brandStyle, type BrandFacts } from '@/components/storefront/brand-parts'
 import { BRAND_CSS } from '@/lib/storefront/brand-css'
 import { TrustBlocks } from '@/components/storefront/trust-blocks'
+import { NoteMark } from '@/components/storefront/note-mark'
 import { dayRange, inr } from '@/components/storefront/shop-client'
 import { headingOf, type CheckoutDesign, type TrustBlock } from '@/domains/brand/checkout'
 import { SAMPLE_SHOPPER as S, sampleCheckout, type PreviewPage, type PreviewState, type SampleItem, type SampleRules } from '@/domains/brand/checkout-sample'
 import type { BrandRecord } from '@/domains/brand/record'
+import { NOTE_MARKS } from '@/components/storefront/note-marks'
 
 // =============================================================================
 // FILE: src/components/shop-preview/checkout-preview.tsx — THE CHECKOUT, ORDER, BAG-LINK AND POLICY PAGES ON SAMPLE DATA
@@ -53,8 +55,8 @@ function Checkout({ d, data, trust, state }: { d: CheckoutDesign; data: PreviewD
     <>
       <main className="ck-form mx-auto max-w-lg px-4 pb-6 pt-4">
         <h1 className="ck-h1 text-2xl">{headingOf(d)}</h1>
-        {c.changed && <p className="mt-4 border-l-2 border-store-accent bg-store-chip px-3 py-2 text-sm">{c.changed}</p>}
-        {c.failed && <p className="mt-4 border-l-2 border-store-bad bg-store-chip px-3 py-2 text-sm">Payment did not go through. Nothing was charged. Try again, or pay on delivery instead: your details are kept.</p>}
+        {c.changed && <p className="ck-msg mt-4 border-l-2 border-store-accent bg-store-chip px-3 py-2 text-sm"><NoteMark info /><span>{c.changed}</span></p>}
+        {c.failed && <p className="ck-msg mt-4 border-l-2 border-store-bad bg-store-chip px-3 py-2 text-sm"><NoteMark bad /><span>Payment did not go through. Nothing was charged. Try again, or pay on delivery instead: your details are kept.</span></p>}
         <div className={c.failed ? 'opacity-60' : undefined}>
           <h2 className={sect}>Contact</h2>
           <Field label="Mobile number" value={S.phone} pre help="The courier calls this number to deliver." />
@@ -158,6 +160,7 @@ export function CheckoutPreview({ record, design, data, trust, page, state }: { 
       {/* Inert: a picture of the store's pages, nothing in it is a control. Every colour, face and corner is the record's. */}
       <div inert data-store-theme="" data-brand="" className="flex min-h-[640px] flex-col bg-store-paper text-store-ink" style={brandStyle(record)} data-pv={page}>
         <style dangerouslySetInnerHTML={{ __html: BRAND_CSS }} />
+        {NOTE_MARKS}
         <BrandHeader record={record} design={design} name={data.facts.shopName} home="#" link={page !== 'baglink'} />
         <div className="flex flex-1 flex-col">{body}</div>
         {page !== 'baglink' && <BrandFooter facts={data.facts} rows={design.rows} />}

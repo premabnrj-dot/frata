@@ -13,6 +13,7 @@ import { api, dayRange, inr, type Pay, type PublicQuote } from './shop-client'
 import { PayBar, useQuoteToast } from './checkout-feedback'
 import { useStoreToast } from './store-toast'
 import { chunk } from './chunk'
+import { NoteMark } from './note-mark'
 import type { Gone } from './checkout-stepper'
 
 // =============================================================================
@@ -267,7 +268,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
 
   const field = 'store-field h-11 w-full rounded-[var(--store-radius)] border border-store-sub/45 bg-store-paper px-3 text-base aria-invalid:border-store-bad'
   // feedback-ok: shop field line (§ Feedback 3), shop colours
-  const Err = ({ k }: { k: string }) => (errors[k] ? <p id={`${k}-err`} className="mt-1 text-sm text-store-bad">{errors[k]}</p> : null)
+  const Err = ({ k }: { k: string }) => (errors[k] ? <p id={`${k}-err`} className="ck-fe mt-1 text-sm text-store-bad"><NoteMark />{errors[k]}</p> : null)
   const label = 'ck-label mb-1 block text-sm font-medium'
   const sect = 'ck-sect mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-store-sub'
   const button = useMemo(() => {
@@ -284,7 +285,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       <h1 className="ck-h1 text-2xl" style={{ fontFamily: 'var(--store-display)' }}>{brand?.heading || 'Checkout'}</h1>
       {tries.n > 0 && <Suspense fallback={null}><CheckoutSummary toast={toast} errors={errors} attempt={tries.n} sub={tries.sub} scope={formRef} /></Suspense>}
       {/* feedback-ok: rule 5 — a failed payment's line with its filled form, a refused placement (nothing charged), a changed price */}
-      {msg && <p role="alert" className={`mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}>{msg.text}</p>}
+      {msg && <p role="alert" className={`ck-msg mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}><NoteMark info={msg.tone === 'changed'} bad={msg.tone !== 'changed'} /><span>{msg.text}</span></p>}
       {/* feedback-ok: no price at all is the page's state (Pay waits on it), so it stays; with an older price it is a toast */}
       {quoteError && !q && <p role="alert" className="mt-4 text-sm text-store-bad">{quoteError}</p>}
       {identity && <div className="mt-4 grid gap-3">{identity}</div>}
@@ -372,7 +373,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
           {method === 'cod' && q.cod?.charge ? <p className="flex justify-between"><span>Pay on delivery fee</span><span>{inr(q.cod.charge)}</span></p> : null}
           {q.arrives && q.deliverable && <p className="flex justify-between text-store-sub"><span>Arrives</span><span>{dayRange(q.arrives)}</span></p>}
           {/* feedback-ok: the address's answer beside the total it stops (a state of this PIN code, not a failure after a button) */}
-          {!q.deliverable && <p role="alert" className="text-sm text-store-bad">This shop does not deliver to this PIN code yet.</p>}
+          {!q.deliverable && <p role="alert" className="ck-fe text-sm text-store-bad"><NoteMark />This shop does not deliver to this PIN code yet.</p>}
           {returnLine && <p className="flex justify-between text-store-sub"><span>Returns</span><span>{returnLine}</span></p>}
         </div>
       )}
