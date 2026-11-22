@@ -1,6 +1,7 @@
 'use client'
 
 import { Money } from '@/components/data/numeric'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { Button } from '@/components/ui/button'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -83,7 +84,7 @@ export function EditLine({ row, onPick, onQty, onRemove, onBack, asking, onAsk }
                   {EDIT_REASONS.map((r) => <button key={r} type="button" className={chip} onClick={() => onRemove(r)}>{REASON_LABEL[r]}</button>)}
                   <Button variant="ghost" onClick={() => onAsk(false)}>Keep it</Button>
                 </span>
-              ) : <Button variant="ghost" onClick={() => (row.added ? onRemove('other') : onAsk(true))}>Remove</Button>}
+              ) : <RemoveButton label="Remove item" onClick={() => (row.added ? onRemove('other') : onAsk(true))} />}
             </span>
           </>
         )}

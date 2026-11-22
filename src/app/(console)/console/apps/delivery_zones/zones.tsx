@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Money, Numeric } from '@/components/data/numeric'
@@ -99,7 +100,7 @@ function Zones({ zones, canEdit }: { zones: Row[]; floor: Floor; canEdit: boolea
                   <Button variant="ghost" aria-label={`Move ${z.name} up`} disabled={i === 0 || !!busy} onClick={() => act(z.id, () => moveZoneAction({ id: z.id, up: true }))}>↑</Button>
                   <Button variant="ghost" aria-label={`Move ${z.name} down`} disabled={i === zones.length - 1 || !!busy} onClick={() => act(z.id, () => moveZoneAction({ id: z.id, up: false }))}>↓</Button>
                   <Button variant="secondary" onClick={() => setEditing(z)}>Edit</Button>
-                  {z.preset !== 'rest' && <Button variant="ghost" onClick={() => setRemoving(z)}>Remove</Button>}
+                  {z.preset !== 'rest' && <RemoveButton label="Remove zone" onClick={() => setRemoving(z)} />}
                 </Td>
               )}
             </DataTableRow>
