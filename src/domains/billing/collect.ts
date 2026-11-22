@@ -16,6 +16,15 @@ export const NOTICE_LEAD_MS = 25 * HOUR
 export const MAX_ATTEMPTS = 4
 export const ACKNOWLEDGE_AFTER_DAYS = 14
 
+/** The rules every Frrata debit shares (merchant bills here, Studio seats in src/domains/studio/credits.ts): */
+/** a debit needs a notice of its own: none yet, or the last one went before the last failure. */
+export const needsFreshNotice = (noticeAt: Date | null, lastFailedAt: Date | null) =>
+  !noticeAt || (lastFailedAt !== null && noticeAt.getTime() < lastFailedAt.getTime())
+/** the notice has stood its lead (25 h by default) by `now`. */
+export const noticeStood = (noticeAt: Date, now: Date, leadMs = NOTICE_LEAD_MS) => now.getTime() >= noticeAt.getTime() + leadMs
+/** test money only with test keys, real money only with live keys. */
+export const keysMatch = (testMode: boolean, gatewayIsTest: boolean) => testMode === gatewayIsTest
+
 export type DueInvoice = { due: number; testMode: boolean; issuedAt: Date; mandate: boolean; mandateMax: number | null; noticeAt: Date | null; attempts: number; pending: number; lastFailedAt: Date | null; acknowledged: boolean; trialEndsAt: Date | null }
 export type Step = { kind: 'notice'; debitAt: Date } | { kind: 'attempt'; attempt: number } | { kind: 'acknowledge' } | { kind: 'wait'; why: string }
 
@@ -24,16 +33,15 @@ export function nextStep(d: DueInvoice, now: Date, gatewayIsTest: boolean): Step
   const spent = !d.mandate || d.attempts >= MAX_ATTEMPTS
   const from = Math.max(d.issuedAt.getTime(), d.trialEndsAt?.getTime() ?? 0)
   if (spent && !d.acknowledged && t - from >= ACKNOWLEDGE_AFTER_DAYS * DAY) return { kind: 'acknowledge' }
-  if (d.testMode !== gatewayIsTest) return { kind: 'wait', why: d.testMode ? 'a test invoice is never collected with live keys' : 'a real invoice is never collected with test keys' }
+  if (!keysMatch(d.testMode, gatewayIsTest)) return { kind: 'wait', why: d.testMode ? 'a test invoice is never collected with live keys' : 'a real invoice is never collected with test keys' }
   if (!d.mandate) return { kind: 'wait', why: 'no autopay' }
   if (d.pending > 0) return { kind: 'wait', why: 'an attempt is not settled yet' }
   if (d.attempts >= MAX_ATTEMPTS) return { kind: 'wait', why: 'retries spent' }
   if (d.mandateMax !== null && d.due > d.mandateMax) return { kind: 'wait', why: 'above the autopay limit' }
   if (d.trialEndsAt && t + NOTICE_LEAD_MS < d.trialEndsAt.getTime()) return { kind: 'wait', why: 'in a trial, collected after it ends' }
   // A failed attempt needs a fresh notice before the next debit, and a day's rest.
-  const needsNotice = !d.noticeAt || (d.lastFailedAt !== null && d.noticeAt.getTime() < d.lastFailedAt.getTime())
   // After a failure the next notice goes at once, so the retry lands ≥ 25 h later: a day apart (T+1), as the rules ask.
-  if (needsNotice) return { kind: 'notice', debitAt: new Date(t + NOTICE_LEAD_MS) }
-  if (t >= d.noticeAt!.getTime() + NOTICE_LEAD_MS) return { kind: 'attempt', attempt: d.attempts + 1 }
+  if (needsFreshNotice(d.noticeAt, d.lastFailedAt)) return { kind: 'notice', debitAt: new Date(t + NOTICE_LEAD_MS) }
+  if (noticeStood(d.noticeAt!, now)) return { kind: 'attempt', attempt: d.attempts + 1 }
   return { kind: 'wait', why: 'the notice must stand 25 hours' }
 }

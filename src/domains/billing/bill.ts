@@ -223,9 +223,19 @@ export function computeBill(i: BillInput): Bill {
   if (sum < ROLL_BELOW && !i.rolledLastMonth) return { lines, fees, credited, taxable: sum as Paise, cgst: 0 as Paise, sgst: 0 as Paise, igst: 0 as Paise, total: 0 as Paise, rolled: true, carryOut: sum, usage }
   // Each head on the taxable value (plan finding 20), not one derived from another; the kind from supplyKind (gst.ts).
   // Not gstHeads (which splits one GST amount): finding 20 asks for each head on the taxable value.
-  const intra = supplyKind(i.frrataGstin, i.shopState) === 'intra'
-  const cgst = intra ? applyBps(sum as Paise, GST_BPS / 2) : (0 as Paise)
-  const sgst = intra ? applyBps(sum as Paise, GST_BPS / 2) : (0 as Paise)
-  const igst = intra ? (0 as Paise) : applyBps(sum as Paise, GST_BPS)
+  const { cgst, sgst, igst } = frrataGstHeads(sum as Paise, i.frrataGstin, i.shopState)
   return { lines, fees, credited, taxable: sum as Paise, cgst, sgst, igst, total: (sum + cgst + sgst + igst) as Paise, rolled: false, carryOut: 0, usage }
+}
+
+/**
+ * GST on one of Frrata's own invoices: each head on the taxable value (plan finding 20), CGST + SGST when the buyer's
+ * state is Frrata's own, IGST otherwise. Read by the monthly bill and by Studio credits (src/domains/studio/prices.ts).
+ */
+export function frrataGstHeads(taxable: Paise, frrataGstin: string | null, buyerState: string | null): { cgst: Paise; sgst: Paise; igst: Paise } {
+  const intra = supplyKind(frrataGstin, buyerState) === 'intra'
+  return {
+    cgst: intra ? applyBps(taxable, GST_BPS / 2) : (0 as Paise),
+    sgst: intra ? applyBps(taxable, GST_BPS / 2) : (0 as Paise),
+    igst: intra ? (0 as Paise) : applyBps(taxable, GST_BPS),
+  }
 }

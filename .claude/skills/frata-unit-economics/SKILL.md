@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.18.0
+  version: 2.19.0
   owner: owner
   verified: 2026-11-16
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
@@ -235,7 +235,9 @@ higher caps, review of big sends, export/API.
   turn, never above its reserve; the rate is stored with each turn (in the partner's ledger, never a tenant row).
 - **Prices:** pack ₹1,999 for 100; Studio ₹2,999 a month with 150; Studio Plus ₹9,999 a month with 500; typed top-ups ₹20
   a credit. Every credit sells at ₹19.99–20.00: **3.16×** before payment fees (₹1,900 for 100 was 2.92× after a card fee).
-  20 free credits once per verified partner (₹126.60 of cost): the first preview needs 11 warm, 16 cold. Seats and credits
+  20 free credits once per verified partner (₹126.60 of cost): the first preview needs 11 warm, 16 cold. Owner 2026-11-22:
+  the free 20 end after 90 days, once per PAN or GSTIN; every bought credit (seat, pack, typed) lasts 12 months; Any amount
+  20–4,000; ₹1,999 kept at 2.99× after a 2% fee with Amex, Diners and international cards off. Seats and credits
   stay outside the partner share.
 - **Costs are net of GST.** Frrata claims the GST input credit on every bill it pays (Anthropic, Vercel, GitHub and
   the rest; owner, 2026-11-16), so list cost is the cost.
