@@ -2,7 +2,7 @@ import 'server-only'
 import { apiBrand, previewBrand } from '@/lib/queries/brand'
 import { rasterLogoMade } from '@/lib/media/brand-files'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
-import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
+import { collectionOut, collectionPageOut, fromOurStore, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
 import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, draftCatalogue, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
 import { BadParam, type ApiCtx } from './request'
 import { facetsOut, filterPageOut, parseFilter, type FilterQuery } from '@/domains/storefront-api/2026-12/filter'
@@ -10,6 +10,9 @@ import { visibility, type Status } from '@/domains/catalogue/availability'
 import { storeHost } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { contentOut, faqOut, storePageOut } from '@/domains/storefront-api/2026-12/content-map'
+import { collectionLd, homeCollection, productLd, shopLd, type LdShop } from '@/domains/storefront-api/2026-12/structured'
+import { websiteOrigin } from '@/domains/storefront-api/origin'
+import { collectionCover } from '@/domains/storefront/sources'
 import { resolvePage } from '@/domains/pages/page'
 import { HANDLE as PAGE_HANDLE } from '@/domains/pages/templates'
 import { apiContent, previewContent } from '@/lib/queries/content'
@@ -50,6 +53,13 @@ async function pageNodes(ctx: ApiCtx, p: Pick<ShopPage, 'template' | 'fill'>) {
   return s ? resolvePage(p.template, p.fill, 'shop', { facts: s, overrides: s.overrides, inr: (n) => formatInr(paise(n)) }) : null
 }
 
+/** G15: what the structured data reads of the shop entry, by name (never the entry spread), and the website's origin. */
+type ShopEntry = NonNullable<Awaited<ReturnType<typeof apiShop>>>
+const ldShop = (s: ShopEntry, logo: string | null): LdShop => ({ shopName: s.shopName, logo, instagram: s.instagram, codOn: s.codOn, returnDays: s.returnDays,
+  returnKind: s.returnKind, shippingFlat: s.shippingFlat, freeShippingAbove: s.freeShippingAbove, metroDays: s.metroDays, restDays: s.restDays,
+  dispatchDays: s.dispatchDays, zones: s.zones ?? null })
+const originOf = (s: ShopEntry) => websiteOrigin(s.siteOrigin, `https://${s.host}`)
+
 /** The mappers' context: the shop from the key, and Frrata's one media store (photos from anywhere else are dropped). */
 const mapCtx = (ctx: ApiCtx) => ({ tenantId: ctx.tenantId, mediaHost: storeHost(BLOB_STORE_ID) })
 
@@ -85,7 +95,9 @@ export const RESOURCES = {
     if (!s) return null
     const logoUrl = await rasterLogoMade(ctx.tenantId, s.logoUrl)
     // M7: shop.logo stays raster; an SVG main logo is answered there as its PNG rendition (brand.logos carries the SVG).
-    return shopOut(mapCtx(ctx), { ...s, logoUrl }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand)
+    const m = mapCtx(ctx)
+    const logo = logoUrl && fromOurStore(m, logoUrl) ? logoUrl : null
+    return shopOut(m, { ...s, logoUrl }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand, shopLd(ldShop(s, logo), originOf(s)))
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
     pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },
@@ -95,18 +107,26 @@ export const RESOURCES = {
     // A moved product answers with its current handle (spec § 3, architecture 8): one more read, never a redirect.
     if (found.kind === 'moved' && HANDLE.test(found.to)) found = await read(ctx.tenantId, found.to)
     if (found.kind !== 'current') return null
-    const out = productOut(mapCtx(ctx), found.product, ctx.now)
     // Under a live key, only what the shop's own product page would open now (its rule, not a copy): no draft, and no
     // scheduled product before its moment (security of the drop; impact review 2026-11-15 BLOCKER).
     const got = found.product
-    return ctx.keyKind === 'public' && !visibility(got.status as Status, got.publishAt ? new Date(got.publishAt) : null, ctx.now).reachable ? null : out
+    if (ctx.keyKind === 'public' && !visibility(got.status as Status, got.publishAt ? new Date(got.publishAt) : null, ctx.now).reachable) return null
+    // G6 and G15 (contract review M10), only for a product that answers: the home collection reads the catalogue's
+    // collections, the JSON-LD the shop's settings, so this copy carries their tags too (a Website move re-addresses it).
+    const [shop, cat] = await Promise.all([loaders(ctx).shop(ctx.tenantId), loaders(ctx).catalogue(ctx.tenantId)])
+    const m = mapCtx(ctx)
+    return { ...productOut(m, got, ctx.now), collection: homeCollection(got, cat.collections, ctx.now),
+      ...(shop ? { jsonLd: productLd(m, got, ldShop(shop, shop.logoUrl && fromOurStore(m, shop.logoUrl) ? shop.logoUrl : null), originOf(shop), ctx.now) } : {}) }
   } },
-  collections: { schema: S.Collections, run: async (ctx: ApiCtx) =>
-    ({ collections: (await loaders(ctx).catalogue(ctx.tenantId)).collections.slice(0, 500).map(collectionOut) }) },
-  collection: { schema: S.CollectionPage, run: async (ctx: ApiCtx, p: { handle: string; page: number }) => {
+  collections: { schema: S.Collections, run: async (ctx: ApiCtx) => {
     const cat = await loaders(ctx).catalogue(ctx.tenantId)
+    const m = mapCtx(ctx)
+    return { collections: cat.collections.slice(0, 500).map((c) => collectionOut(c, { m, first: collectionCover(c, cat.products, ctx.now) })) }
+  } },
+  collection: { schema: S.CollectionPage, run: async (ctx: ApiCtx, p: { handle: string; page: number }) => {
+    const [cat, shop] = await Promise.all([loaders(ctx).catalogue(ctx.tenantId), loaders(ctx).shop(ctx.tenantId)])
     const c = cat.collections.find((x) => x.handle === p.handle) ?? cat.collections.find((x) => x.handle === cat.movedCollections?.[p.handle])
-    return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now) : null
+    return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now, shop ? collectionLd(c, cat.products, shop.shopName, originOf(shop), ctx.now) : undefined) : null
   } },
   offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await (ctx.keyKind === 'public' ? apiAnnouncement : shopAnnouncement)(ctx.tenantId), ctx.now) },
   content: { schema: S.Content, run: async (ctx: ApiCtx) => {

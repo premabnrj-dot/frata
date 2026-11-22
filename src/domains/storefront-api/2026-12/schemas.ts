@@ -19,6 +19,10 @@ const text = (max: number) => z.string().max(max)
 const handle = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100)
 const https = z.string().max(500).regex(/^https:\/\/[a-z0-9.-]+(?:\/[^\s"<>]*)?$/)
 const moment = z.string().datetime({ offset: true })
+/** G15: schema.org structured data, as the store's own pages give it (src/domains/seo/defaults.ts), serialised with
+ *  every `<` escaped, so it goes as it is inside <script type="application/ld+json">. Its addresses are the website's. */
+// Sized for a product at its 300 sizes (about 1 kB each in the markup), not a round number (impact review 2026-11-22).
+const jsonLd = z.string().max(400_000).describe('Structured data (schema.org) as JSON text, every < already escaped. Put it as it is inside <script type="application/ld+json">. Its addresses are on siteOrigin when set.')
 
 export const POLICY_KINDS = ['returns', 'shipping', 'privacy', 'terms', 'contact'] as const
 export const AVAILABILITY_KINDS = ['in_stock', 'low_stock', 'sold_out', 'preorder', 'made_to_order'] as const
@@ -79,16 +83,20 @@ export const Product = z.strictObject({
   sizeChart: SizeChart.nullable(),
   offers: z.array(OfferLine).max(4),
   seo: Seo,
+  collection: z.strictObject({ handle, title: text(200) }).nullable().optional()
+    .describe('The product’s home collection, for a breadcrumb. It is the first collection holding it, in the store’s order. Null when none does.'),
+  jsonLd: jsonLd.optional(),
 })
 
-export const Collection = z.strictObject({ handle: handle.describe('/collections/<handle>.'), title: text(200), description: text(2000), seo: Seo })
+export const Collection = z.strictObject({ handle: handle.describe('/collections/<handle>.'), title: text(200), description: text(2000), seo: Seo,
+  image: Image.nullable().optional().describe('The collection’s picture, as the store’s own tiles show it. It is the first photo of its first listed product. Null when there is none.') })
 export const Collections = z.strictObject({ collections: z.array(Collection).max(500) })
 export const Page = z.strictObject({
   products: z.array(Card).max(48), page: z.number().int().positive(), pages: z.number().int().positive(),
   total: z.number().int().nonnegative(),
   truncated: z.boolean().describe('True when the catalogue has more than 600 listed products. Later ones are in no page yet.'),
 })
-export const CollectionPage = z.strictObject({ collection: Collection, ...Page.shape })
+export const CollectionPage = z.strictObject({ collection: Collection, ...Page.shape, jsonLd: jsonLd.optional() })
 // D2 (SA1b): a filtered list and its menu. A value is sent exactly as `facets` gives it; an id or value may grow.
 export const FilterPage = z.strictObject({
   products: z.array(Card).max(48), page: z.number().int().positive(), pages: z.number().int().positive(),
@@ -152,6 +160,8 @@ export const Shop = z.strictObject({
   seo: Seo,
   siteOrigin: https.nullable().describe('The brand’s own address for the store, as set in Frrata. Null when it runs on Frrata.'),
   checkoutOrigin: https.describe('Where checkout, orders and policies live. The bag link starts here: <checkoutOrigin>/cart?l=<size id>:<qty>,….'),
+  mediaOrigin: https.nullable().optional().describe('Where the store’s photos and logo files are served from. Allow it in your image settings. Null when the store has none.'),
+  jsonLd: jsonLd.optional(),
   cart: z.strictObject({ url: https.describe('<checkoutOrigin>/cart. Add ?l=<size id>:<qty>,… and, if you like, code= and the shopper’s utm_ tags.'), maxLines: z.number().int().positive(), maxQty: z.number().int().positive().describe('A larger quantity is lowered to this.') })
     .optional().describe('The bag link. It sends your shopper’s bag to the store’s checkout in one URL.'),
   brand: Brand.nullable().optional().describe('The store’s logo files, colours, fonts, corners and spacing. Draw your site from them, never from copies in code. Frrata’s neutral defaults until the brand saves its own. May be null.'),

@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.3.0
+  version: 2.4.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -111,6 +111,14 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    or a waiting change; a test pins its keys. Logo files only from the shop's folder, described "through `<img>` only";
    `shop.logo` stays raster (an SVG main logo answers its PNG rendition). A season still to come is never answered; a
    live one is applied to `colours` and carries `until`; its start and end purge `settings` through the boundary sweep.
+
+15. **G·4 (2026-11-22), additive on `2026-12`:** `shop.mediaOrigin` (Frrata's media store); `collection.image` (the
+   store tiles' own cover rule, `collectionCover` in `src/domains/storefront/sources.ts`); `product.collection` (the
+   first collection, in the store's order, holding it); `jsonLd` on shop, product and a collection page: the store
+   pages' own builders (`src/domains/seo/defaults.ts`) on `websiteOrigin(site, checkout)`
+   (`src/domains/storefront-api/origin.ts`, the one rule P5·2 moves behind `app_website_of`), serialised with every `<`
+   escaped (`structured.ts`). The product and collection routes read `apiShop` too, so their copies carry `settings`.
+   G14 (a compliance certificate as a policy kind) waits: Frrata holds no such record.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run
