@@ -3764,7 +3764,8 @@ do $$ declare r record; allowed jsonb := '{
   "collection_products": ["tenant_id","collection_id","product_id"],
   "product_attributes": ["tenant_id","product_id","attribute","values"],
   "brand_tokens": ["tenant_id","logo_mark_url","logo_stacked_url","logo_reversed_url","color_bg","color_panel","color_text","color_muted","color_accent","color_on","color_edge","color_line","color_good","color_warn","color_bad","font_display","font_body","radius","density"],
-  "shop_settings": ["tenant_id","logo_url"]}'; begin
+  "checkout_design": ["tenant_id","header","back_link","policy_rows","trust","heading","thanks"],
+  "shop_settings": ["tenant_id","logo_url","dispatch_days","metro_days","rest_days","return_kind","return_days","cod_on","cod_max"]}'; begin
   for r in select c.oid as rel, n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where c.relkind in ('r','v','m','p','f') and n.nspname not in ('pg_catalog','information_schema') loop
     if has_table_privilege('frata_builder', r.rel, 'insert') or has_table_privilege('frata_builder', r.rel, 'update')
@@ -3796,7 +3797,7 @@ do $$ declare r record; allowed jsonb := '{
                  where ro.rolname = 'frata_builder' and not (mem.rolname = 'postgres' and m.admin_option))
   then raise exception 'FAIL: frata_builder is in a role, or a role is in it'; end if;
   if exists (select 1 from pg_policies where 'frata_builder' = any(roles) and policyname not in ('builder_rows','builder_only'))
-     or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 20
+     or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 22
   then raise exception 'FAIL: frata_builder''s policies'; end if;
 end $$;
 -- Billing rework R2: the system issuer (0139) never issues test invoices, never alongside a staff member, and its
@@ -5142,6 +5143,93 @@ do $$ declare r text; t text; begin
   end loop;
   if exists (select 1 from pg_proc where proname = 'app_brand_notice' and (not prosecdef or not ('search_path=""' = any (proconfig))))
     then raise exception 'FAIL: 98 app_brand_notice is not a definer with an empty search_path'; end if;
+end $$;
+-- § 99 · Checkout design (one-address plan P2·1, drizzle/0161; spec § 3). Each store reads and writes only its own
+-- checkout_design; the closed sets and the lines' lengths hold; a Builder reads the live design's named columns only
+-- (never `previous` or `updated_by`); a checkout change waits beside a brand change (one open of each kind a store),
+-- and the owner's line for it points at the Checkout tab; no API role and no frata_admin grant; frata_app never deletes.
+begin;
+insert into tenants (id, slug, name) values
+  ('c9900000-0000-0000-0000-000000000001', 'proof-99-a', 'Proof 99 A'), ('c9900000-0000-0000-0000-000000000002', 'proof-99-b', 'Proof 99 B');
+insert into shop_settings (tenant_id) values ('c9900000-0000-0000-0000-000000000001'), ('c9900000-0000-0000-0000-000000000002');
+insert into members (tenant_id, user_id, role) values
+  ('c9900000-0000-0000-0000-000000000001', 'a9900000-0000-0000-0000-0000000000b1', 'owner'), ('c9900000-0000-0000-0000-000000000001', 'a9900000-0000-0000-0000-0000000000b2', 'staff');
+insert into checkout_design (tenant_id, header, back_link, policy_rows, trust, heading, thanks, previous) values
+  ('c9900000-0000-0000-0000-000000000001', 'left', true, 1, array['delivery','returns','cod','secure'], 'Almost yours', 'For the days you will keep.', '{"x":1}'),
+  ('c9900000-0000-0000-0000-000000000002', 'centre', false, 2, array['gst'], 'B heading', '', null);
+set local role frata_app;
+do $$ declare a constant uuid := 'c9900000-0000-0000-0000-000000000001'; b constant uuid := 'c9900000-0000-0000-0000-000000000002'; n int; p uuid; q uuid; nid uuid;
+begin
+  if exists (select 1 from checkout_design) then raise exception 'FAIL: 99 a design with no store set'; end if;
+  perform set_config('app.tenant_id', a::text, true);
+  select count(*) into n from checkout_design; if n <> 1 then raise exception 'FAIL: 99 A sees % designs', n; end if;
+  update checkout_design set heading = 'x' where tenant_id = b; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: 99 A changed B''s design'; end if;
+  begin insert into checkout_design (tenant_id) values (b); raise exception 'FAIL: 99 A wrote a design into B'; exception when insufficient_privilege then null; end;
+  begin update checkout_design set tenant_id = b where tenant_id = a; raise exception 'FAIL: 99 a design moved stores'; exception when insufficient_privilege then null; end;
+  begin delete from checkout_design; raise exception 'FAIL: 99 frata_app deleted a design'; exception when insufficient_privilege then null; end;
+  -- The closed sets and the lengths.
+  begin update checkout_design set header = 'right' where tenant_id = a; raise exception 'FAIL: 99 a header off the set'; exception when check_violation then null; end;
+  begin update checkout_design set policy_rows = 3 where tenant_id = a; raise exception 'FAIL: 99 three rows'; exception when check_violation then null; end;
+  begin update checkout_design set trust = array['delivery','returns','cod','secure','gst'] where tenant_id = a; raise exception 'FAIL: 99 five trust blocks'; exception when check_violation then null; end;
+  begin update checkout_design set trust = array['tweets'] where tenant_id = a; raise exception 'FAIL: 99 a block off the set'; exception when check_violation then null; end;
+  begin update checkout_design set trust = array['cod', null] where tenant_id = a; raise exception 'FAIL: 99 a null block'; exception when check_violation then null; end;
+  begin update checkout_design set heading = repeat('a', 25) where tenant_id = a; raise exception 'FAIL: 99 a heading over 24'; exception when check_violation then null; end;
+  begin update checkout_design set thanks = repeat('a', 121) where tenant_id = a; raise exception 'FAIL: 99 a thank-you line over 120'; exception when check_violation then null; end;
+  update checkout_design set heading = repeat('a', 24), thanks = repeat('b', 120), trust = '{}' where tenant_id = a;
+  -- A checkout change waits beside a brand change: one open of each kind.
+  insert into brand_proposals (tenant_id, record, summary, base_version, proposed_by) values (a, '{}', '1 font.', 1, 'a9900000-0000-0000-0000-0000000000a1') returning id into p;
+  insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (a, 'checkout', '{}', 'The checkout heading.', 1, 'a9900000-0000-0000-0000-0000000000a1') returning id into q;
+  begin insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (a, 'checkout', '{}', 'x', 1, gen_random_uuid());
+    raise exception 'FAIL: 99 two open checkout changes'; exception when unique_violation then null; end;
+  begin update brand_proposals set kind = 'brand' where id = q; raise exception 'FAIL: 99 a change changed kind'; exception when insufficient_privilege then null; end;
+  begin insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (a, 'footer', '{}', 'x', 1, gen_random_uuid());
+    raise exception 'FAIL: 99 a change of no known kind'; exception when check_violation then null; end;
+  if (select kind from brand_proposals where id = p) <> 'brand' then raise exception 'FAIL: 99 a brand change lost its kind'; end if;
+  nid := app_brand_notice(q);
+  if nid is null or not exists (select 1 from notices where id = nid and href = '/console/brand/checkout' and source_kind = 'brand' and source_id = q)
+    then raise exception 'FAIL: 99 the checkout line points elsewhere'; end if;
+  nid := app_brand_notice(p);
+  if nid is null or not exists (select 1 from notices where id = nid and href = '/console/brand') then raise exception 'FAIL: 99 the brand line moved'; end if;
+  if (select array_agg(role order by role) from app_notice_members(nid)) is distinct from array['owner'] then raise exception 'FAIL: 99 a design line reaches %', (select array_agg(role) from app_notice_members(nid)); end if;
+  perform set_config('app.tenant_id', b::text, true);
+  if (select heading from checkout_design) <> 'B heading' then raise exception 'FAIL: 99 B lost its own design'; end if;
+  if exists (select 1 from brand_proposals) then raise exception 'FAIL: 99 B sees A''s changes'; end if;
+end $$;
+reset role;
+-- The Builder: named columns of its store's live design, only with its role set.
+set local role frata_builder;
+do $$ declare n int; begin
+  perform set_config('app.tenant_id', 'c9900000-0000-0000-0000-000000000001', true);
+  select count(*) into n from (select tenant_id, header, back_link, policy_rows, trust, heading, thanks from checkout_design) x;
+  if n <> 0 then raise exception 'FAIL: 99 a Builder read with no role set'; end if;
+  perform set_config('app.member_role', 'builder', true);
+  select count(*) into n from (select tenant_id, header, back_link, policy_rows, trust, heading, thanks from checkout_design) x;
+  if n <> 1 then raise exception 'FAIL: 99 the Builder sees % designs', n; end if;
+  begin perform previous from checkout_design; raise exception 'FAIL: 99 the Builder read previous'; exception when insufficient_privilege then null; end;
+  begin perform updated_by from checkout_design; raise exception 'FAIL: 99 the Builder read updated_by'; exception when insufficient_privilege then null; end;
+  begin update checkout_design set heading = 'x'; raise exception 'FAIL: 99 the Builder wrote'; exception when insufficient_privilege then null; end;
+  select count(*) into n from (select dispatch_days, metro_days, rest_days, return_kind, return_days, cod_on, cod_max from shop_settings) x;
+  if n <> 1 then raise exception 'FAIL: 99 the Builder can''t read the trust facts'; end if;
+  begin perform gstin from shop_settings; raise exception 'FAIL: 99 the Builder read the GSTIN'; exception when insufficient_privilege then null; end;
+  begin perform cod_charge from shop_settings; raise exception 'FAIL: 99 the Builder read a setting past the trust facts'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ declare r text; begin
+  if not (select relrowsecurity from pg_class where oid = 'public.checkout_design'::regclass) then raise exception 'FAIL: 99 checkout_design has no RLS'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin'] loop
+    if has_table_privilege(r, 'public.checkout_design', 'select') or has_table_privilege(r, 'public.checkout_design', 'insert') or has_table_privilege(r, 'public.checkout_design', 'update')
+       or has_table_privilege(r, 'public.checkout_design', 'delete') or has_any_column_privilege(r, 'public.checkout_design', 'select')
+      then raise exception 'FAIL: 99 % holds a grant on checkout_design', r; end if;
+  end loop;
+  if exists (select 1 from pg_policies where tablename = 'checkout_design' and roles @> array['frata_app']::name[] and (qual ~ 'is null' or with_check ~ 'is null'))
+    then raise exception 'FAIL: 99 checkout_design has a null-store branch'; end if;
+  if has_table_privilege('frata_app', 'checkout_design', 'delete') then raise exception 'FAIL: 99 frata_app may delete a design'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_function_privilege(r, 'app_brand_notice(uuid)', 'execute') then raise exception 'FAIL: 99 % can run app_brand_notice', r; end if;
+  end loop;
+  if exists (select 1 from pg_proc where proname = 'app_brand_notice' and (not prosecdef or not ('search_path=""' = any (proconfig))))
+    then raise exception 'FAIL: 99 app_brand_notice is not a definer with an empty search_path'; end if;
 end $$;
 -- § 101 · EkCode on by default (drizzle/0154; docs/specs/2026-11-16-ekcode-default-on.md E3). The SQL mirror of
 -- `switchedOnNow` agrees with it on every case (no row, closed only, closed then open, each with and without the

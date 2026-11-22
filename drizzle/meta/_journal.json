@@ -1128,6 +1128,13 @@
       "when": 1795358816035,
       "tag": "0160_device_codes_access",
       "breakpoints": true
+    },
+    {
+      "idx": 161,
+      "version": "7",
+      "when": 1795364760428,
+      "tag": "0161_checkout_design",
+      "breakpoints": true
     }
   ]
 }
