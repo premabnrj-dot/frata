@@ -76,7 +76,7 @@ export function InviteButton({ stores }: { stores: Store[] }) {
 }
 
 /** A Lead's or a Builder's role, changed in place (owner only; a fresh passkey check through `freshly`). */
-export function RoleSelect({ memberId, label, role }: { memberId: string; label: string; role: Given }) {
+export function RoleSelect({ memberId, role }: { memberId: string; role: Given }) {
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
