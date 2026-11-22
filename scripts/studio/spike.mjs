@@ -69,7 +69,7 @@ const PROBES = {
   'custom-tools-batched': { item: 'As custom-tools, answering every pending call in one send at each idle (as a webhook-driven server would)', needs: [], est: 0.5, run: probeCustomToolsBatched },
   cache: { item: 'Cache shares: does a second session of one agent version read the first one\'s cache?', needs: [], est: 1, run: probeCache },
   concurrency: { item: 'Concurrency and rate limits: 10 sessions created at once (no model call)', needs: [], est: 0.1, run: probeConcurrency },
-  'concurrency-70': { item: 'Decision 29\'s 70 sessions at once: 70 created in one burst (no model call)', needs: [], est: 0.1, run: probeConcurrency70 },
+  'concurrency-70': { item: 'Decision 29\'s 70 sessions at once: 70 created in one burst (no model call)', needs: [], est: 0.7, run: probeConcurrency70 },
   'concurrency-active': { item: '20 sessions each running one short command turn at the same moment', needs: [], est: 1, run: probeConcurrencyActive },
   'mount-sha': { item: 'Mount by commit SHA', needs: ['SPIKE_REPO_URL', 'SPIKE_REPO_SHA'], est: 0.5, run: probeMountSha },
   instructions: { item: 'Whether CLAUDE.md, AGENTS.md, .mcp.json or hooks load as instructions', needs: ['SPIKE_FIXTURE_REPO_URL', 'SPIKE_FIXTURE_REPO_SHA'], est: 0.75, run: probeInstructions },
@@ -287,7 +287,7 @@ async function probeNetwork(r, run) {
 }
 
 // The follow-up to `network`: a refused name fails at DNS, so can the sandbox reach a refused host by its address?
-// IPs are public anycast addresses (Cloudflare 1.1.1.1, and registry.npmjs.org's published addresses at run time).
+// IPs are public anycast addresses (Cloudflare 1.1.1.1, and 104.16.0.35, one of registry.npmjs.org's Cloudflare addresses on 2026-11-22).
 async function probeNetworkIp(r, run) {
   const agent = await spikeAgent(r)
   const env = await spikeEnv(r, 'env-echo', { type: 'limited', allowed_hosts: [ECHO_HOST], allow_package_managers: false, allow_mcp_servers: false })
@@ -332,7 +332,7 @@ async function probeVault(r, run, { keep }) {
     const t = await turn(s.id, `${why}\nRun: ${cmd}`)
     const out = t.toolOutputs.join('\n')
     // The sandbox hashes its own copy of the variable: equal to the real value's hash means the value entered the sandbox.
-    const sandboxSawValue = out.includes(`sha256 ${createHash('sha256').update(secret).digest('hex')}`) // see h below
+    const sandboxSawValue = out.includes(`sha256 ${createHash('sha256').update(secret).digest('hex')}`)
     const h = createHash('sha256').update(secret).digest('hex')
     const headerSubstituted = out.includes(`header seen by host: ${secret.length} ${h}`)
     const urlSubstituted = out.includes(`query seen by host: ${secret.length} ${h}`)

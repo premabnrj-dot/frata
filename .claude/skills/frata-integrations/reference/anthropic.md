@@ -39,7 +39,7 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Anthropic runs the agent loop; a container per session runs the code [V].
 - `limited` networking with `allowed_hosts` [V].
 - Vault credentials are substituted at egress in headers and body (`injection_location`), **never the URL path**, and only
-  to the credential's allowed hosts. Hence the build key in a header (ADR-0018's build-key amendment) [V].
+  to the credential's allowed hosts (headers and the URL measured 2026-11-22, see below; body documented only). Hence the build key in a header (ADR-0018's build-key amendment) [V].
 - A mounted GitHub repository's token never enters the container; the mount takes a branch or a commit; the repository's
   `.claude/skills` load into the session [V].
 - Custom tools are run by our server. Session budgets are hard USD caps checked before each model request [V].
