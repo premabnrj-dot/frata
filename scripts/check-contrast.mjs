@@ -41,6 +41,13 @@ const DECORATIVE = {
   'illo-indigo-soft': 'illustration second accent, pale',
   // Brand-surface companions (brand spec 2026-11-07): sign-in, the website, drawings. Never text, never a control.
   haldi: 'brand-surface highlight (and the illustration accent); never text or a control',
+  // The website (Rani Mela): shapes and rules that carry no words.
+  'site-rani-tint': 'website: a soft rani circle behind the hero; never text',
+  'site-line': 'website: separates content (cards, order lines); never the only sign of a control',
+  'site-edge': "website: a ghost button's edge; the button is known by its words",
+  'site-peacock': 'website: the tick mark in a toast and the plan list; the words beside say the same',
+  'site-rani-press': 'website: the pressed rani button; its words stay white (checked against --site-rani)',
+  'site-neel-deep': 'website: the shape inside the neel band; nothing is read on it',
 }
 
 export function pairs() {
@@ -71,6 +78,13 @@ export function pairs() {
   // Neel N1b: words on a heat or a tile map cell (a cohort's %, a state's code), dark on the light half, white on the dark.
   for (const i of [0, 1, 2, 3]) p.push(['foreground', `heat-${i}`, TEXT], ['risk-text', `risk-${i}`, TEXT])
   for (const i of [4, 5]) p.push(['heat-on', `heat-${i}`, TEXT], ['risk-on', `risk-${i}`, TEXT])
+  // The website (Rani Mela): every word on every surface it sits on.
+  for (const bg of ['site-paper', 'site-paper-2']) p.push(['site-ink', bg, TEXT], ['site-ink-2', bg, TEXT], ['site-muted', bg, TEXT], ['site-rani', bg, TEXT], ['site-neel', bg, TEXT], ['site-peacock-text', bg, TEXT])
+  p.push(['site-on-strong', 'site-rani', TEXT], ['site-on-strong', 'site-rani-press', TEXT], ['site-on-strong', 'site-neel', TEXT], ['site-on-strong', 'site-neel-night', TEXT], ['site-on-strong', 'site-peacock-text', TEXT],
+    ['site-on-neel-2', 'site-neel', TEXT], ['site-on-neel-2', 'site-neel-night', TEXT], ['site-rani-deep', 'site-on-strong', TEXT],
+    ['site-rani-deep', 'site-rani-soft', TEXT], ['site-ink-2', 'site-rani-soft', TEXT], ['site-neel', 'site-neel-soft', TEXT], ['site-ink-2', 'site-neel-soft', TEXT],
+    ['site-peacock-text', 'site-peacock-soft', TEXT], ['site-marigold-text', 'site-marigold-soft', TEXT], ['site-ink', 'site-marigold', TEXT],
+    ['site-on-strong', 'site-neel-deep', TEXT])
   return p
 }
 

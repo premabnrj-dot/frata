@@ -18,12 +18,12 @@ export const EXAMPLE_COSTS = { cogs: paise(99_000), forwardShipping: paise(7_000
 /** The order without its GST (clothing under the slab: the low rate), through the tax engine. */
 const NET = paise(split(EXAMPLE_COLLECT, LOW_BPS, true).taxable)
 
-export type ExampleOrder = { collect: Paise; fee: Paise; ifDelivered: Paise; ifReturned: Paise }
+export type ExampleOrder = { collect: Paise; gst: Paise; fee: Paise; ifDelivered: Paise; ifReturned: Paise }
 
 export function exampleOrder(feeBps: number): ExampleOrder {
   const fee = deliveredFee(NET, feeBps)
   // The example's return is put back in stock (the usual case), so its cost is not lost.
   const c: OrderCosts = { netRevenue: NET, gatewayFee: paise(0), platformFee: fee, restocked: true, ...EXAMPLE_COSTS }
   const p = orderProfit(c, 1)
-  return { collect: EXAMPLE_COLLECT, fee, ifDelivered: p.ifDelivered, ifReturned: p.ifRto }
+  return { collect: EXAMPLE_COLLECT, gst: paise(EXAMPLE_COLLECT - NET), fee, ifDelivered: p.ifDelivered, ifReturned: p.ifRto }
 }
