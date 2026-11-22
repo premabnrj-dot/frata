@@ -235,3 +235,22 @@ limit on Check code; a refusal during a support visit; Approve on the review car
 **Built from it (lanes, 2026-11-22):** G·3's page and its four server changes: lane B (`claude/lane-b-g3-page`). Brand
 book in the workbench shell: lane D (`claude/lane-d-brand-book`). C1 Credits and billing: lane C
 (`claude/lane-c-credits`), plan check first. The review card on Brand › Checkout: lane E, after P2 is released.
+
+## C1 Credits: lane C's plan check and the owner's nine answers (2026-11-22: "yes, go with recommendations")
+| # | Decision | Answer |
+|---|---|---|
+| a | Frrata's seller on partner invoices | Set in production 2026-11-20 (`FRRATA_GSTIN`, `_LEGAL_NAME`, `_ADDRESS`, `_SAC`) |
+| b | The 20 free credits | At Admin approval; partners approved before C1 get them once, at release |
+| c | Seat credits' end | The close of the second month after the grant month (November's by 31 Jan); words "Use by <date>" |
+| d | Studio ↔ Studio Plus | At the next renewal; a pack covers the gap |
+| e | How a seat is paid | UPI AutoPay or a card mandate |
+| f | A failed renewal | Retries on days 1, 3 and 5; Partner on day 7 |
+| g | A partner with no GSTIN | Can buy; invoiced by state |
+| h | Low balance | Banner below 20 credits; email below 50 |
+| i | Any amount | 20–5,000 credits, kept 12 months |
+Lane C's findings folded into its task plan: partners' billing identity and `partner_invoices` are new; one webhook route
+decides by order (a shared money route: `security-reviewer`, `tenancy-auditor`); nothing spends credits until V2a and
+V3, so reserve and settle ship with tests only; per-person caps and Leads setting budgets are dropped (calls 3, 4); the
+pill's panel is built by lane C and mounted by lane D at V3b; about a dozen undrawn screens and five emails (the RBI
+pre-debit notice among them) are drawn as one small mockup for the owner before they are built. Open: the live billing
+webhook is unconfirmed (production has stored none).
