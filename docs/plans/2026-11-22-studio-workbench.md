@@ -1,5 +1,5 @@
 # Studio workbench, the road to one address, apps for websites: the build
-Status: draft (the spec is approved; three plan reviews still pending below; no lane opens before they are dated)
+Status: active (owner approved 2026-11-22; all seven plan reviews dated and folded in; T1 and AP2 still wait on their own mockups)
 · Date: 2026-11-22 · Spec: `docs/specs/2026-11-22-studio-workbench.md` (active)
 **Mockup:** https://claude.ai/artifact/7nJMbpWCz2z4EBXmNeyj2n (`docs/mockups/2026-11-22-studio-workbench.html`); T1 and AP2's two blocks still to draw
 **Approved:** owner, 2026-11-22 ("go with your recommendation"; "Yes, test orders before opening")
@@ -8,7 +8,7 @@ Status: draft (the spec is approved; three plan reviews still pending below; no 
 **Review:** api-contract-reviewer 3 blockers, 4 majors, all folded in, 2026-11-22
 **Review:** words-reviewer 40 rows on the mockup, all rewritten, 2026-11-22
 **Review:** tenancy-auditor FIX BEFORE MERGE (3 high, 3 medium, 1 low), all folded in (§ Tenancy audit), 2026-11-22
-**Review:** speed-reviewer pending
+**Review:** speed-reviewer OVER BUDGET as written (2 high, 3 medium, 3 low), all folded in (§ Speed review), 2026-11-22
 **Review:** unit-economics-reviewer NEUTRAL for merchants, HURTS Frrata until the video budget is enforced; no second host now; folded in (§ Unit economics), 2026-11-22
 
 This plan adds to `docs/plans/2026-11-16-execution.md`; that file keeps the order of everything else. Each phase runs
@@ -105,6 +105,19 @@ invoice serial, outbox row or analytics; erased at opening; no EkCode), and is r
 | One read settles hosting and images | P5·0 | P5·0 gains: 30 days of the `frata` team's Vercel usage (Blob transfer GB, Fast Data Transfer GB, requests a page view) and whether Flat Rate is on (decision 23) |
 | Three exchange rates in the records (₹88, ₹94, ₹103.40) | W0 | W0·1 restates ADR-0017's tables at the skill's rate, dated |
 
+## Speed review, folded in (2026-11-22; these override the task text and the two tables above where they differ)
+| Finding | Task | What is built |
+|---|---|---|
+| H a purge storm: `shop:<t>` is on every entry, so pausing one app for 500 stores drops 500 whole stores (catalogues up to 880 kB, every product page, every `k/` copy) | AP1·3, AP1·5, AP2·2 | A new scope `apps` (`shop:<t>:apps`) on the usable loader. `shop.apps` and `product.video`'s null are derived from that loader at map time, never stored in the shop or product entry; an app route's answer (its `not_available` included) carries the `apps` tag. Admin pause, trial end, plan change and the sweep purge `apps` only, after commit, 500 ids a page. **No app stop purges `shop:<t>`.** This replaces the contract review's "purge `shop:<t>`": `api-contract-reviewer` confirms on AP1's diff that no cached copy outlives the `apps` purge (`PERIOD=1 node scripts/verify/api-isr.mjs`) |
+| H the usable loader as planned never hits and can deadlock the pool | AP1·4, AP2·1 | The loader takes the tenant only and caches facts; `moduleAccess(facts, ctx.now)` runs per request. It is read in `apiRequest` before `run`, never inside a `withTenant`; `deliveryFor` takes the access as an argument (4 fewer statements) |
+| M the delivery check's limit is unnamed; a website's server shares its fleet's egress, so the key is one bucket a store, and today's 120 per 600 s is a tenth of a 7.5k-order day | AP2·1, AP2·3 | The limit and the per-key ceiling written with their 10× arithmetic; a 429 is never `s-maxage`; on a 429 `<PinCheck>` says to check at checkout |
+| M the Code tab's GitHub read | WB·6 | The sites row is read and its transaction closed before any fetch. One compare call per open (the installation token reused until expiry), file bodies on click, 5 s timeout, at most 50 files and 200 kB |
+| M "first load unchanged" cannot be checked for a page that does not exist | WB·3, WB·6 | The Studio page is pinned in `scripts/lib/app-budget.mjs` at ≤ 150 kB (partner shared is 103 kB today); Code, Checks and Versions load with `next/dynamic`; no diff or highlight library |
+| L three reads in series in `openShop` already | D0·3 | The refusal's facts join the first select; never `websitePage()` inside `asMember` |
+| L video's place | AP2·2 | `video` is on `Product` only, never `Card` or the catalogue entry; the minutes budget flips by a purge of `apps`, never a Mux call per request |
+| L check results' size | WB·5 | Capped at 64 kB a version and not selected by the Versions list |
+Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` under RLS at a 10× seed; about 19 statements on a CDN miss.
+
 ## Owner steps and open questions (none blocks wave 2)
 | Item | State | Blocks |
 |---|---|---|
@@ -118,7 +131,7 @@ invoice serial, outbox row or analytics; erased at opening; no EkCode), and is r
 ## Practices recorded in skills (landed with the phase that builds each; versions bumped in that commit)
 | Skill | Practice |
 |---|---|
-| `frata-storefront-api` | An app's website part is declared in the registry; one route table; `not_available`; every app stop purges `shop:<t>`; `check:api-docs` |
+| `frata-storefront-api` | An app's website part is declared in the registry; one route table; `not_available`; every app stop purges the `apps` scope only; `check:api-docs` |
 | `frata-design-language` | The workbench: three regions, the rail, the resize edge, the key map, a panel never opens by itself |
 | `frata-architecture` | Test orders (T1's rules, once approved) |
 | `frata-planning` | A proposal that re-orders an approved security decision is reviewed before it is shown (2026-11-22: P5a) |
