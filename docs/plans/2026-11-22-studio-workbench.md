@@ -219,7 +219,7 @@ Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, compo
 | Lane E's nine Deviations and its migration | "approved" |
 | An owner's review card on Brand › Checkout for a partner's waiting change | "Add one in a later phase … but not now." Until then Notices is the review. It joins the list of mockups still to draw |
 
-## Four screens drawn for the owner (2026-11-22; awaiting approval)
+## Four screens drawn for the owner (2026-11-22; approved: owner, 2026-11-22, "go ahead with mockup. it's approved.", all nine calls as recommended)
 Mockup: https://claude.ai/artifact/Aqry9YgUuEfcMHEvh9VVmz (`docs/mockups/2026-11-22-four-screens.html`): C1's Credits and
 billing at the 16 Nov prices; G·3's developer sign-in page; Brand book in the workbench's Design tab; the owner's review
 card on Brand › Checkout. Reviews on the draft, folded in: `words-reviewer` (25 rows), `security-reviewer` FIX BEFORE
@@ -231,3 +231,7 @@ passkey check made for that confirmation; a store's own developer waits until ow
 built the live server part gains: the start's /64 network and time kept (at most a day) and shown; the store's key
 limit checked before approving (today only the poll refuses); a real passkey also while `passkeys_off` is live; a
 limit on Check code; a refusal during a support visit; Approve on the review card names the exact version it showed.
+
+**Built from it (lanes, 2026-11-22):** G·3's page and its four server changes: lane B (`claude/lane-b-g3-page`). Brand
+book in the workbench shell: lane D (`claude/lane-d-brand-book`). C1 Credits and billing: lane C
+(`claude/lane-c-credits`), plan check first. The review card on Brand › Checkout: lane E, after P2 is released.
