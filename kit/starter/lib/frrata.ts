@@ -10,10 +10,17 @@ const VERSION = '2026-12'
 // shows at once; deployed (a preview), its reads are kept 15 s so a busy preview stays inside the key's limit.
 const DEPLOYED = !!process.env.VERCEL // Vercel sets it at build and at run; nothing sets it on your computer
 // FRRATA_KEY_MODE=header: a build key (Studio, a preview, your computer through `npx frrata dev`) travels in the
-// Frrata-Key header, never the address. It reads drafts and hidden pages too, is never cached, and works from a server only.
+// Frrata-Key header, never the address. It reads drafts and hidden pages too and works from a server only; like a test
+// key, it is never cached on your computer and kept 15 s when deployed (the cache is keyed by the header too).
 const HEADER = process.env.FRRATA_KEY_MODE === 'header'
-const READ: RequestInit = HEADER ? { cache: 'no-store', headers: { 'Frrata-Key': KEY } }
-  : KEY.startsWith('frs_test_') ? (DEPLOYED ? { next: { revalidate: 15 } } : { cache: 'no-store' }) : { next: { revalidate: 60 } }
+const DRAFTS = HEADER || KEY.startsWith('frs_test_')
+const READ: RequestInit = {
+  ...(DRAFTS ? (DEPLOYED ? { next: { revalidate: 15 } } : { cache: 'no-store' as const }) : { next: { revalidate: 60 } }),
+  ...(HEADER ? { headers: { 'Frrata-Key': KEY } } : {}),
+}
+// A test or build key is limited to 300 reads a minute. Past it (429) a read gives this server's last good answer for
+// the same address, while it has one, rather than failing the page.
+const lastGood = new Map<string, unknown>()
 const at = (path: string) => (HEADER ? `${ORIGIN}/${VERSION}/${path}` : `${ORIGIN}/${VERSION}/k/${KEY}/${path}`)
 export const PREVIEW_COOKIE = '__Host-frrata-preview'
 
@@ -50,8 +57,14 @@ export async function api<T>(path: string): Promise<T | null> {
   if (!KEY) throw new Error('FRRATA_KEY is not set')
   const res = await fetch(at(path), READ)
   if (res.status === 404) return null
+  if (res.status === 429 && lastGood.has(path)) return lastGood.get(path) as T
   if (!res.ok) throw new Error(`Frrata ${res.status}`)
-  return res.json() as Promise<T>
+  const body = (await res.json()) as T
+  if (DRAFTS) {
+    if (lastGood.size >= 500) lastGood.delete(lastGood.keys().next().value as string) // a bound: the oldest goes first
+    lastGood.set(path, body)
+  }
+  return body
 }
 
 /** A hidden page while the brand previews it (/frrata-preview set the cookie): never cached, the token in a header. */

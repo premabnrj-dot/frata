@@ -32,13 +32,15 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
 6. **The legal block on every page.** `shop.legal` (legal name, address, customer care, grievance officer) and the
    policy links, from the API at runtime (the layout's footer). Never copy it into code.
 7. **Caching.** Read with `next: { revalidate: 60 }`. Frrata purges its own copies when the store changes. A Test key
-   is never cached on your computer. On a deployed preview it is kept 15 s. Each Test key allows 300 reads a minute.
+   is never cached on your computer. On a deployed preview it is kept 15 s. Each Test key allows 300 reads a minute;
+   past it (429), `api()` gives that server's last good answer for the address while it has one.
    Header and footer links don't prefetch. Filters and
    search are dynamic: send filter parameters in their fixed order (collection, size, colour, price, stock, sort),
    values exactly as `facets` gives them, defaults left out.
 8. **A build key** works from Studio, a preview deployment, or your computer through `npx frrata dev`. Set
    `FRRATA_KEY_MODE=header`. `lib/frrata.ts` then sends the key in the `Frrata-Key` header to `/2026-12/<resource>`,
-   never in the address. It reads drafts and hidden pages. It is never cached and answers no browser (no CORS). Read it
+   never in the address. It reads drafts and hidden pages. Frrata never caches it and it answers no browser (no CORS);
+   `lib/frrata.ts` keeps it as a Test key's (never on your computer, 15 s deployed, the header in the cache key). Read it
    on the server only. It ends after 24 hours, a preview's with the preview.
 9. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps
    the token in an HttpOnly cookie for 10 minutes and `previewOr()` sends it as the `Frrata-Preview` header. Accept
