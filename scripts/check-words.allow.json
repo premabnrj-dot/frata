@@ -244,5 +244,23 @@
     "rule": "W4",
     "text": "website",
     "why": "Drawn verbatim in the approved Studio workbench mockup screen 2 (owner, 2026-11-22): Website names the brand's own site built as code on the Storefront API, never the store itself (glossary § Surfaces)"
+  },
+  {
+    "file": "src/app/(partner)/partner/fixtures/studio/_workbench/fixtures.ts",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-22: the Studio step is named Website, not Site (the brand's own site built as code, glossary § Surfaces); the Studio workbench shell (WB·3)"
+  },
+  {
+    "file": "src/app/(partner)/partner/fixtures/studio/_workbench/workbench.tsx",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-22: the Studio step is named Website, not Site (the brand's own site built as code, glossary § Surfaces); the Studio workbench shell (WB·3)"
+  },
+  {
+    "file": "src/app/(partner)/partner/fixtures/studio/_workbench/fixtures.ts",
+    "rule": "W2",
+    "text": "Bust or chest: around the fullest part, tape level.",
+    "why": "A store's own Size help words the agent proposes, as drawn in the approved Studio redraw (16 Nov); store content, not Frrata's words; a test-only fixture"
   }
 ]

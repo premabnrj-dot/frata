@@ -19,6 +19,9 @@ export const APP_PINNED = {
   '/(console)/console/collections/new/page': 151.6,
   '/(console)/console/offers/new/page': 151.3,
   '/(console)/console/preview/[[...path]]/page': 150.6,
+  // The Studio workbench (plan 2026-11-22 WB·3, speed review M: at most 150): what the shell loaded on 2026-11-22
+  // (131.4 kB) + 2, so growth is a finding. Code, Checks and Versions load with next/dynamic; no diff or highlight library.
+  '/(partner)/partner/fixtures/studio/page': 133.4,
 }
 // build: app-build-manifest's pages; gz: (file) => gzipped bytes. Pure, so a test can hand it a manifest.
 /** @param {Record<string, number>} [pinned] */

@@ -205,6 +205,8 @@
   --color-text-3: var(--text-3, var(--muted-foreground));
   --color-off: var(--off, var(--input));
   --color-neutral-mark: var(--neutral-mark, var(--muted-foreground));
+  --color-code-add: var(--code-add, var(--background));
+  --color-code-cut: var(--code-cut, var(--background));
   --color-chart: var(--chart, var(--primary));
   --color-chart-now: var(--chart-now, var(--muted));
   --color-heat-0: var(--heat-0, var(--muted));

@@ -52,6 +52,8 @@
   --text-3: #8F8A84;              /* g500 icons and placeholders' hint colour, never a sentence */
   --off: #8F8A84;                 /* g500 a switch that is off */
   --neutral-mark: #8F8A84;
+  --code-add: #7FD3A6;            /* a line a version adds, on the ink code block (Studio Code tab, WB·3; mockup 2026-11-22) */
+  --code-cut: #F59A9C;            /* a line it takes out, on the same ink */
   --chart: #3A44C2;               /* neel 600, as drawn: lines, sparklines, share bars, Paid online */
   --chart-now: #C3C9F6;           /* neel 200: the period still running */
   /* A heat or a tile map, light to dark (Neel N1b, kit § When orders come, § By state): nothing, then neel 50 → 800;

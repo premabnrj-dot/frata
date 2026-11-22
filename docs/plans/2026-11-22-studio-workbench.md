@@ -163,6 +163,25 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | One-address § 4: a build key's maker "Made by Kabir Shah, Neel Studio" | "Made by kabir@…, Neel Studio" (the person's email) | Frrata stores no name for a partner's Lead or Builder, only their email | told 2026-11-22 |
 | One-address § 4: "Used 10:06 am" on a build key | "Used today" | A key's last use is stored as a day, not a time (last_seen_on) | told 2026-11-22 |
 | One-address § 4: "Kabir Shah’s access ended · 16 Nov" | "<email>’s access ended · 16 Nov"; the date only when the person left the partner (an unassignment has no date) | As the maker row above; an assignment's removal is not dated | no |
+| Screen 1: the step "Site" | "Website" | Owner, 2026-11-22 | yes, 2026-11-22 |
+| Screen 1, phone bar: "Chat · Site · More" | "Chat · Website · More" (its icon the console's More, not the brush) | Owner's step name; the orchestrator's ruling on More (2026-11-22) | yes, 2026-11-22 |
+| Screen 1, chat: one bare proposal, Apply and Not this | The 16 Nov redraw's "Words for Content" card: 3 proposals, "3 to apply", Apply all 3 | The approved chat cards stay as drawn 16 Nov (plan § V3b); orchestrator ruling 2 | yes, 2026-11-22 |
+| Screen 1, composer while v8 builds: Send, "Ask for a change" | Stop (named "Stop the agent"), "Working · you can still type" | The redraw's working state; orchestrator ruling 3 | yes, 2026-11-22 |
+| Screen 1, preview bar | Adds what is building before "Preview · v7": its spinner and words when the bar has room (46 rem), else the spinner with the words for a screen reader (so at 1280 with both panels open); absent on a phone | Screen 1 § States: "the preview keeps v7 and says so"; orchestrator ruling 4 | yes, 2026-11-22 |
+| Screen 1, cases: Normal, No products, Longest heading | Adds Sold out | Spec § 1 lists it; orchestrator ruling 5 | yes, 2026-11-22 |
+| Screen 1: Brand book's place | Not built in the shell | Undrawn; the orchestrator draws it for the owner (ruling 7) | yes, 2026-11-22 |
+| Undrawn: the resize edge, the `?` list, the keys switch, the rail dot's count | Edge: a 12 px separator over the panel's line, a 2 px neel line on hover and focus. `?`: the console's key sheet (Neel Dialog) with Shift+F6 and the one switch. Dot: drawn, its words in the button's name | Spec § 1 asks for them; orchestrator ruling 8 | yes, 2026-11-22 |
+| Screen 1 Keys card: Ctrl/⌘ K find | Not built | Find is not built anywhere yet (design language § Neel layout, "Not yet: ⌘K"); ruling 9 | yes, 2026-11-22 |
+| Screen 1: selects, segments, Apply, Not this and the suggestion chips 30 px | Neel's controls: 36 px (buttons 30) from 768, 44 on a phone | Design language § UX foundation 19 (controls' heights and phone targets); the bar scrolls on a phone as drawn | yes, 2026-11-22 |
+| Screen 1: steps not current, the agent's name, Design's labels and check details in text 3 | Text 2 | Text 3 on the side colour and on white is 3.3:1, under WCAG 1.4.3 (axe failed it) | yes, 2026-11-22 |
+| Screen 1: panels and the preview's width slide (200 ms) | They change at once | check:motion forbids animating a grid's columns or a width (UX foundation 22) | yes, 2026-11-22 |
+| Screen 1: the store drawn at 300 / 460 / 640 px | The store at its true 390 / 768 / 1280, scaled down to fit (never up) | A preview at a shopper's width; the mockup's widths were stand-ins | yes, 2026-11-22 |
+| Screen 1: the store's serif (Cormorant Garamond) | Georgia | Fixture only; the real preview draws the store's own faces (WB·4) | yes, 2026-11-22 |
+| Screen 1 § States: Publish reads "Fix 1 check" while a check fails | "Publish v8", as the screen draws it | The screen and its States table disagreed. Owner, 2026-11-22: "It should read publish v8"; the States table's "Fix 1 check" is dropped | yes, 2026-11-22 |
+| Screen 1: the device frame 14 px radius, the user's bubble 12/12/4/12, the box 10 px | 12 px (card role), 12 with a 4 px corner, 8 px (field role) | Radius by role (design language § Tokens) | yes, 2026-11-22 |
+| Screen 1: a folded panel's widths under 640 px (chat folds too) | Under 768 px is the phone layout, so that case never shows | The console's phone width (UX foundation 10) | yes, 2026-11-22 |
+| Screen 1 § States: someone else building ("Kabir is building v8"), a Builder (no Publish, Design a proposal), no code yet (no Code or Checks tab) | Not drawn in the shell | Each needs the session's data (who builds, the person's role, whether a build exists): WB·4. `inspectorTabs(phone, built)` already answers the third | yes, 2026-11-22 |
+| Screen 1's "Who" switch (Designer, Developer, Partner, chat only) | Not built | The mockup's own demo control, not part of the screen | yes, 2026-11-22 |
 
 ## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 | Item | Ruling |
