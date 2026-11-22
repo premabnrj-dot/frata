@@ -182,11 +182,26 @@ async function newSession(r, run, { agent, env, resources, vault_ids, cap, title
   return s
 }
 
+// Opus 5.5 list rates (frata-integrations reference/anthropic.md, 2026-11-22): $4 in, $20 out, $0.20 cache read,
+// $5 5-minute and $8 1-hour cache writes per million tokens; session running time $0.08 an hour of active time.
+// Used only when the API has no list_cost for a session yet, so the ledger never records a spending session as $0.
+function estimateUsd(u) {
+  const m = 1e6, cc = u.cache_creation || {}
+  return ((u.input_tokens || 0) * 4 + (u.output_tokens || 0) * 20 + (u.cache_read_input_tokens || 0) * 0.2
+    + (cc.ephemeral_5m_input_tokens || 0) * 5 + (cc.ephemeral_1h_input_tokens || 0) * 8) / m + (u.active_seconds || 0) / 3600 * 0.08
+}
+
 async function settle(run, keep) {
   const c = await anthropic()
   for (const id of run.session_ids) {
     const s = await c.beta.sessions.retrieve(id).catch(() => null)
-    if (s?.usage) { run.list_cost_usd = (run.list_cost_usd || 0) + usd(s.usage.list_cost); run.active_seconds = (run.active_seconds || 0) + (s.usage.active_seconds || 0) }
+    if (s?.usage) {
+      const listed = s.usage.list_cost?.amount != null
+      run.list_cost_usd = (run.list_cost_usd || 0) + (listed ? usd(s.usage.list_cost) : estimateUsd(s.usage))
+      if (!listed) run.cost_estimated = true
+      run.active_seconds = (run.active_seconds || 0) + (s.usage.active_seconds || 0)
+      ;(run.usage ||= []).push({ session: id, input: s.usage.input_tokens ?? 0, output: s.usage.output_tokens ?? 0, cache_read: s.usage.cache_read_input_tokens ?? 0, cache_creation: s.usage.cache_creation ?? null, active_seconds: s.usage.active_seconds ?? 0, list_cost_usd: listed ? usd(s.usage.list_cost) : null })
+    }
     if (!keep) await c.beta.sessions.delete(id).catch((e) => say(`  could not delete ${id}: ${e.status ?? e.message}`))
   }
   if (!keep) run.deleted = true

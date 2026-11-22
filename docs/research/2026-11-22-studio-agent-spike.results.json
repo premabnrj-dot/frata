@@ -1,0 +1,34 @@
+{
+  "resources": {
+    "agent-geo-us": {
+      "id": "agent_01EMEi6UiiQ1t5GSJT2bJUut",
+      "version": 1
+    }
+  },
+  "runs": [
+    {
+      "probe": "models",
+      "item": "The key and the workspace answer",
+      "ran_at": "2026-11-22T19:32:21.754Z",
+      "session_ids": [],
+      "list_cost_usd": 0,
+      "status": "answered",
+      "answer": "claude-opus-5-5 answers on this key (context 1000000, output 128000)",
+      "evidence": {
+        "id": "claude-opus-5-5"
+      }
+    },
+    {
+      "probe": "geo",
+      "item": "inference_geo: the workspace default, and whether an agent may pin `us`",
+      "ran_at": "2026-11-22T19:32:22.044Z",
+      "session_ids": [],
+      "list_cost_usd": 0.0000035,
+      "status": "answered",
+      "answer": "default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only \"global\" and \"us\" (no India)",
+      "evidence": {
+        "inference_geo": "global"
+      }
+    }
+  ]
+}

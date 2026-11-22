@@ -1,5 +1,5 @@
 # Studio agent spike (V3a·1): what Managed Agents does, measured or read, item by item
-Status: **in progress** (2026-11-22). Documentation answers are in; no probe has run yet, because the `studio-eval` key
+Status: **in progress** (2026-11-22). Documentation answers are in; probes are running on the `studio-eval` key
 is not in this environment. Lane D, branch `claude/lane-d-agent-spike`. Plan: `docs/plans/2026-11-12-studio-build.md`
 § V3a (V3a·1) · Spec: `docs/specs/2026-11-16-studio-agent.md` § 9 · Decision: ADR-0020 · Script:
 `scripts/studio/spike.mjs` (results: `docs/research/2026-11-22-studio-agent-spike.results.json`).
@@ -50,13 +50,23 @@ Rules the script keeps:
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.00** of the $25 cap (list cost, 0 runs).
+Measured spend so far: **$0.00** of the $25 cap (list cost, 2 runs).
 
 | Probe | Ran | Status | Answer | List cost |
 |---|---|---|---|---|
-| — | — | not run yet | — | — |
+| `models` | 2026-11-22 19:32 UTC | answered | claude-opus-5-5 answers on this key (context 1000000, output 128000) | $0.00 |
+| `geo` | 2026-11-22 19:32 UTC | answered | default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only "global" and "us" (no India) | $0.00 |
 
 <!-- spike:results:end -->
+
+## Measured beside documented (2026-11-22, workspace `studio-eval`)
+Each probe's measured answer, set against what the documentation said. "Same" means the measurement confirms it;
+"differs" says how.
+
+| Probe (item) | Documentation said | Measured | Verdict |
+|---|---|---|---|
+| `models` (the key) | — | The `studio-eval` key answers; `claude-opus-5-5` reports a 1,000,000-token context and 128,000 output. $0.00 | **passed** |
+| `geo` (12) | `inference_geo` is `us` or `global`; the workspace's default decides when the agent doesn't pin one | One Haiku 5.5 call with no geo was served in **`global`**: the workspace default is `global`, not `us`. An agent pinned to `us` was accepted. $0.0000035 | **passed**; same, and it settles that the agent file must pin `us` (otherwise inference may run anywhere) |
 
 ## Item by item
 Sources are tagged [V] when they are vendor documentation or SDK types read on the date shown, and [U] when no current
