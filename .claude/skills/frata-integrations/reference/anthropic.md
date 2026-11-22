@@ -83,7 +83,9 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 
 ## Measured on `studio-eval` — 2026-11-22 (spike probes in `scripts/studio/spike.mjs`; results and evidence in `docs/research/2026-11-22-studio-agent-spike.md`)
 
-Each is our own measurement on the live API [V, probe named].
+Each is our own measurement on the live API [V, probe named], on Opus 5.5 at effort `low` with one-command turns. The
+plumbing carries over to any model; the timings and cents are not prices (credits use spec § 7's model on real tasks).
+Probes now run on Haiku 5.5 (owner, 2026-11-22).
 - The workspace's default inference geo is **`global`** (a Haiku call with no geo was served there); an agent pinned to
   `us` is accepted. So the agent file pins `us` [`geo`].
 - A session: create about 0.9 s, first stream event about 0.5 s after the message, a one-command turn 3–5 s. The sandbox

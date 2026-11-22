@@ -40,8 +40,17 @@ const END = '<!-- spike:results:end -->'
 const HARD_CAP_USD = 25
 const TOTAL_CAP_USD = Math.min(HARD_CAP_USD, Number(process.env.SPIKE_TOTAL_CAP_USD || HARD_CAP_USD))
 const ASK_ABOVE_USD = 3
-const MODEL = 'claude-opus-5-5' // the agent's pinned model (spec § 7); one model per session
-const SMALL_MODEL = 'claude-haiku-5-5' // the no-tool extractor's model; used only for the geo probe's one call
+// THE ONE MODEL every probe runs (owner, 2026-11-22, via the orchestrator: "just use haiku model for now for the agent
+// for testing"). Id from the claude-api skill's models table. Never a larger model without the orchestrator's word.
+// Figures measured on it price nothing: credits and the 20-task proof use the spec's own model (§ 7, § 8).
+// (The runs of 2026-11-22 19:32–19:40 UTC were on claude-opus-5-5: that instruction reached this lane after them.)
+const MODEL = 'claude-haiku-5-5'
+// List rates per million tokens (claude-api skill, cached 2026-11-03; frata-integrations reference/anthropic.md):
+// input, output, cache read (0.1×), 5-minute write (1.25×), 1-hour write (2×). Haiku 5.5's are for prompts ≤ 100K.
+const RATES = {
+  'claude-haiku-5-5': { in: 0.10, out: 0.50, read: 0.01, w5m: 0.125, w1h: 0.20 },
+  'claude-opus-5-5': { in: 4, out: 20, read: 0.20, w5m: 5, w1h: 8 },
+}
 const PROBE_TIMEOUT_MS = 10 * 60_000
 const ECHO_HOST = 'postman-echo.com' // a public echo service: it sees only a random throwaway value, never a real key
 
@@ -85,9 +94,9 @@ function renderResults(r) {
   const latest = new Map()
   for (const x of r.runs) latest.set(x.probe, x)
   const rows = [...latest.values()].map((x) =>
-    `| \`${x.probe}\` | ${x.ran_at.slice(0, 16).replace('T', ' ')} UTC | ${x.status} | ${String(x.answer).replace(/\|/g, '\\|').replace(/\n/g, ' ')} | $${(x.list_cost_usd || 0).toFixed(2)} |`)
+    `| \`${x.probe}\` | ${x.ran_at.slice(0, 16).replace('T', ' ')} UTC | ${x.model ?? '?'} | ${x.status} | ${String(x.answer).replace(/\|/g, '\\|').replace(/\n/g, ' ')} | $${(x.list_cost_usd || 0).toFixed(2)} |`)
   return [START, '', `Measured spend so far: **$${spentUsd(r).toFixed(2)}** of the $${HARD_CAP_USD} cap (list cost, ${r.runs.length} runs).`, '',
-    '| Probe | Ran | Status | Answer | List cost |', '|---|---|---|---|---|', ...(rows.length ? rows : ['| — | — | not run yet | — | — |']), '', END].join('\n')
+    '| Probe | Ran | Model | Status | Answer | List cost |', '|---|---|---|---|---|---|', ...(rows.length ? rows : ['| — | — | — | not run yet | — | — |']), '', END].join('\n')
 }
 
 function writeReport(r) {
@@ -124,7 +133,10 @@ const SPIKE_SYSTEM = [
 /** The one spike agent, made once and reused (persistent; recorded in the results file). */
 async function spikeAgent(r, key = 'agent', extra = {}) {
   const c = await anthropic()
-  if (r.resources[key]) return r.resources[key]
+  // Agents are reused only on the same model: a model change makes a new one (recorded under its own key).
+  const rkey = r.resources[key]?.model && r.resources[key].model !== MODEL ? `${key}@${MODEL}` : key
+  if (r.resources[rkey]?.model === MODEL) return r.resources[rkey]
+  key = rkey
   const a = await c.beta.agents.create({
     name: `frrata-spike-${key}`, model: { id: MODEL, effort: 'low' }, system: extra.system ?? SPIKE_SYSTEM,
     tools: extra.tools ?? [toolset()],
@@ -196,13 +208,12 @@ async function newSession(r, run, { agent, env, resources, vault_ids, cap, title
   return s
 }
 
-// Opus 5.5 list rates (frata-integrations reference/anthropic.md, 2026-11-22): $4 in, $20 out, $0.20 cache read,
-// $5 5-minute and $8 1-hour cache writes per million tokens; session running time $0.08 an hour of active time.
-// Used only when the API has no list_cost for a session yet, so the ledger never records a spending session as $0.
+// Used only when the API has no list_cost for a session yet, so the ledger never records a spending session as $0:
+// tokens at MODEL's list rates plus session running time at $0.08 an hour of active time.
 function estimateUsd(u) {
-  const m = 1e6, cc = u.cache_creation || {}
-  return ((u.input_tokens || 0) * 4 + (u.output_tokens || 0) * 20 + (u.cache_read_input_tokens || 0) * 0.2
-    + (cc.ephemeral_5m_input_tokens || 0) * 5 + (cc.ephemeral_1h_input_tokens || 0) * 8) / m + (u.active_seconds || 0) / 3600 * 0.08
+  const R = RATES[MODEL], cc = u.cache_creation || {}
+  return ((u.input_tokens || 0) * R.in + (u.output_tokens || 0) * R.out + (u.cache_read_input_tokens || 0) * R.read
+    + (cc.ephemeral_5m_input_tokens || 0) * R.w5m + (cc.ephemeral_1h_input_tokens || 0) * R.w1h) / 1e6 + (u.active_seconds || 0) / 3600 * 0.08
 }
 
 async function settle(run, keep) {
@@ -230,8 +241,8 @@ async function probeModels() {
 
 async function probeGeo(r, run) {
   const c = await anthropic()
-  const msg = await c.messages.create({ model: SMALL_MODEL, max_tokens: 16, messages: [{ role: 'user', content: 'Reply with OK.' }] })
-  run.list_cost_usd = ((msg.usage.input_tokens || 0) * 0.10 + (msg.usage.output_tokens || 0) * 0.50) / 1e6
+  const msg = await c.messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: 'user', content: 'Reply with OK.' }] })
+  run.list_cost_usd = ((msg.usage.input_tokens || 0) * RATES[MODEL].in + (msg.usage.output_tokens || 0) * RATES[MODEL].out) / 1e6
   const geo = msg.usage.inference_geo ?? '(not reported)'
   let pin
   try {
@@ -526,7 +537,7 @@ async function runProbes(names, { yes, keep }) {
   if (spent + est > TOTAL_CAP_USD) fail(`refused: $${spent.toFixed(2)} spent + up to $${est.toFixed(2)} would pass the $${TOTAL_CAP_USD} cap. The orchestrator's word raises it, not this script.`)
   if (est > ASK_ABOVE_USD && !yes) fail(`these probes may spend up to $${est.toFixed(2)}: say so to the orchestrator, then add --yes`)
   for (const n of chosen) {
-    const run = { probe: n, item: PROBES[n].item, ran_at: new Date().toISOString(), session_ids: [], list_cost_usd: 0 }
+    const run = { probe: n, model: MODEL, item: PROBES[n].item, ran_at: new Date().toISOString(), session_ids: [], list_cost_usd: 0 }
     say(`\n▶ ${n} (≤ $${PROBES[n].est.toFixed(2)}): ${PROBES[n].item}`)
     try {
       Object.assign(run, await PROBES[n].run(r, run, { keep }))

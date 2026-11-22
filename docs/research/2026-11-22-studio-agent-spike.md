@@ -5,7 +5,15 @@ Plan: `docs/plans/2026-11-12-studio-build.md`
 `scripts/studio/spike.mjs` (results: `docs/research/2026-11-22-studio-agent-spike.results.json`).
 
 ## In short (for the owner, 2026-11-22)
-**Measured on the `studio-eval` workspace:** 17 probe runs, **$0.45** of list cost of the $25 cap, nothing failed.
+**Which model ran (read this before any figure).** The probes of 19:32–19:40 UTC ran on **Opus 5.5** at effort `low`.
+The owner's instruction to test on Haiku ("just use haiku model for now for the agent for testing", relayed by the
+orchestrator) reached this lane only after them. The script now runs every probe on one constant, `claude-haiku-5-5`,
+and no run since has used a larger model. Plumbing answers carry over to any model: what loads, network policy, vault
+headers, idles and webhooks, rate limits, mounts, retention. **Speed, cost and cache figures here price nothing.** They
+come from one-command turns at effort `low`, and credits and the 20-task proof use spec § 7's model at `medium` on real
+tasks.
+
+**Measured on the `studio-eval` workspace:** 18 probe runs, **$0.45** of list cost of the $25 cap, nothing failed.
 Every session and throwaway vault the probes made is deleted (the workspace lists 0 of each). Four agents and two
 environments are kept for re-runs, their ids in the results file. The key was never printed, logged or committed.
 
@@ -50,7 +58,7 @@ environments are kept for re-runs, their ids in the results file. The key was ne
   - `list_cost` comes in whole cents: a turn's credits are computed from the cumulative cost's delta, at most 1¢
     (0.15 credit) off.
 
-### What a turn costs, measured
+### What a turn costs, measured (Opus 5.5 at effort `low`, one-command turns: not a credit price)
 - `usage.list_cost` equals tokens at list rates plus running time: $4 in, $20 out, $0.20 cache read, $5 5-minute write,
   $0.08 an hour of active time. These are spec § 8's inputs, so its arithmetic stands on the right prices.
 - **A one-command turn:**
@@ -93,34 +101,34 @@ Rules the script keeps:
   measured list cost, and a run that could pass $25 refuses. A run over $3 needs `--yes`.
 - **Cleanup:** a probe deletes its own sessions, throwaway vault and uploaded file when it ends. One agent per shape and
   one environment per network shape are reused, and their ids are recorded.
-- **Verified:** with a dummy key the script got `401 authentication_error` and spent nothing. With the real key, 17 runs
+- **Verified:** with a dummy key the script got `401 authentication_error` and spent nothing. With the real key, 18 runs
   spent $0.45, and the workspace was left with no session and no vault (2026-11-22).
 
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.45** of the $25 cap (list cost, 17 runs).
+Measured spend so far: **$0.45** of the $25 cap (list cost, 18 runs).
 
-| Probe | Ran | Status | Answer | List cost |
-|---|---|---|---|---|
-| `models` | 2026-11-22 19:32 UTC | answered | claude-opus-5-5 answers on this key (context 1000000, output 128000) | $0.00 |
-| `geo` | 2026-11-22 19:32 UTC | answered | default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only "global" and "us" (no India) | $0.00 |
-| `session` | 2026-11-22 19:33 UTC | answered | a session ran a command; create 890 ms, first event 550 ms, turn 5198 ms | $0.04 |
-| `network` | 2026-11-22 19:33 UTC | answered | see evidence: resolver, proxy variables, what resolves, allowed vs refused codes | $0.02 |
-| `network-ip` | 2026-11-22 19:34 UTC | answered | see evidence: raw-IP reach, pinned-address reach, direct DNS, non-HTTP port | $0.04 |
-| `vault` | 2026-11-22 19:36 UTC | answered | value in the sandbox's variable: false; header substituted at egress: true; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the real value back into the sandbox: true | $0.02 |
-| `custom-tools` | 2026-11-22 19:37 UTC | answered | 4 custom tool calls idled the session 4 times (requires_action), results sent one by one as each call arrived. Each idle raises one session.status_idled webhook (docs) | $0.02 |
-| `custom-tools-batched` | 2026-11-22 19:37 UTC | answered | 4 custom tool calls idled the session 3 times (requires_action), results sent together per idle. Each idle raises one session.status_idled webhook (docs) | $0.01 |
-| `cache` | 2026-11-22 19:38 UTC | answered | second session read 14680 cached tokens against the first's 0: cache shared across sessions: true | $0.07 |
-| `concurrency` | 2026-11-22 19:38 UTC | answered | 10/10 sessions created at once in 502 ms; errors: none | $0.00 |
-| `concurrency-70` | 2026-11-22 19:38 UTC | answered | 70/70 sessions created at once in 569 ms; errors: none | $0.00 |
-| `concurrency-active` | 2026-11-22 19:39 UTC | answered | 20/20 turns ran a command at once in 6920 ms wall; turn p50 2688 ms, p90 3737 ms, max 6475 ms; errors: none | $0.14 |
-| `mount-sha` | 2026-11-22 19:40 UTC | answered | HEAD equals the requested SHA: true; token used: false | $0.02 |
-| `limits` | 2026-11-22 19:40 UTC | answered | see evidence: cgroup memory, cpu and pid limits, disk, user | $0.01 |
+| Probe | Ran | Model | Status | Answer | List cost |
+|---|---|---|---|---|---|
+| `models` | 2026-11-22 19:48 UTC | claude-haiku-5-5 | answered | claude-haiku-5-5 answers on this key (context 1000000, output 128000) | $0.00 |
+| `geo` | 2026-11-22 19:32 UTC | claude-haiku-5-5 (the Messages call); claude-opus-5-5 (the agent pin check) | answered | default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only "global" and "us" (no India) | $0.00 |
+| `session` | 2026-11-22 19:33 UTC | claude-opus-5-5 | answered | a session ran a command; create 890 ms, first event 550 ms, turn 5198 ms | $0.04 |
+| `network` | 2026-11-22 19:33 UTC | claude-opus-5-5 | answered | see evidence: resolver, proxy variables, what resolves, allowed vs refused codes | $0.02 |
+| `network-ip` | 2026-11-22 19:34 UTC | claude-opus-5-5 | answered | see evidence: raw-IP reach, pinned-address reach, direct DNS, non-HTTP port | $0.04 |
+| `vault` | 2026-11-22 19:36 UTC | claude-opus-5-5 | answered | value in the sandbox's variable: false; header substituted at egress: true; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the real value back into the sandbox: true | $0.02 |
+| `custom-tools` | 2026-11-22 19:37 UTC | claude-opus-5-5 | answered | 4 custom tool calls idled the session 4 times (requires_action), results sent one by one as each call arrived. Each idle raises one session.status_idled webhook (docs) | $0.02 |
+| `custom-tools-batched` | 2026-11-22 19:37 UTC | claude-opus-5-5 | answered | 4 custom tool calls idled the session 3 times (requires_action), results sent together per idle. Each idle raises one session.status_idled webhook (docs) | $0.01 |
+| `cache` | 2026-11-22 19:38 UTC | claude-opus-5-5 | answered | second session read 14680 cached tokens against the first's 0: cache shared across sessions: true | $0.07 |
+| `concurrency` | 2026-11-22 19:38 UTC | claude-opus-5-5 | answered | 10/10 sessions created at once in 502 ms; errors: none | $0.00 |
+| `concurrency-70` | 2026-11-22 19:38 UTC | claude-opus-5-5 | answered | 70/70 sessions created at once in 569 ms; errors: none | $0.00 |
+| `concurrency-active` | 2026-11-22 19:39 UTC | claude-opus-5-5 | answered | 20/20 turns ran a command at once in 6920 ms wall; turn p50 2688 ms, p90 3737 ms, max 6475 ms; errors: none | $0.14 |
+| `mount-sha` | 2026-11-22 19:40 UTC | claude-opus-5-5 | answered | HEAD equals the requested SHA: true; token used: false | $0.02 |
+| `limits` | 2026-11-22 19:40 UTC | claude-opus-5-5 | answered | see evidence: cgroup memory, cpu and pid limits, disk, user | $0.01 |
 
 <!-- spike:results:end -->
 
-## Measured beside documented (2026-11-22, workspace `studio-eval`)
+## Measured beside documented (2026-11-22, workspace `studio-eval`; Opus 5.5 at effort `low` unless a row says otherwise)
 Each probe's measured answer, set against what the documentation said. "Same" means the measurement confirms it;
 "differs" says how.
 

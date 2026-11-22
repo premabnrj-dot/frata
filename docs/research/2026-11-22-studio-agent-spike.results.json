@@ -2,7 +2,8 @@
   "resources": {
     "agent-geo-us": {
       "id": "agent_01EMEi6UiiQ1t5GSJT2bJUut",
-      "version": 1
+      "version": 1,
+      "model": "claude-opus-5-5"
     },
     "agent": {
       "id": "agent_01LmfZhNLsm4pekXYMAsnFyx",
@@ -51,19 +52,21 @@
       "answer": "claude-opus-5-5 answers on this key (context 1000000, output 128000)",
       "evidence": {
         "id": "claude-opus-5-5"
-      }
+      },
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "geo",
       "item": "inference_geo: the workspace default, and whether an agent may pin `us`",
       "ran_at": "2026-11-22T19:32:22.044Z",
       "session_ids": [],
-      "list_cost_usd": 3.5e-06,
+      "list_cost_usd": 0.0000035,
       "status": "answered",
       "answer": "default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only \"global\" and \"us\" (no India)",
       "evidence": {
         "inference_geo": "global"
-      }
+      },
+      "model": "claude-haiku-5-5 (the Messages call); claude-opus-5-5 (the agent pin check)"
     },
     {
       "probe": "session",
@@ -96,7 +99,8 @@
           "list_cost_usd": 0.04
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "network",
@@ -126,7 +130,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "network-ip",
@@ -156,7 +161,8 @@
           "list_cost_usd": 0.04
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "vault",
@@ -191,7 +197,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "vault",
@@ -247,7 +254,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "vault",
@@ -303,7 +311,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "vault",
@@ -358,7 +367,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "custom-tools",
@@ -429,7 +439,8 @@
         }
       ],
       "deleted": true,
-      "answer_note": "answer text corrected after the run: the script first claimed parallel calls share one idle, which this run disproved"
+      "answer_note": "answer text corrected after the run: the script first claimed parallel calls share one idle, which this run disproved",
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "custom-tools-batched",
@@ -496,7 +507,8 @@
           "list_cost_usd": 0.01
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "cache",
@@ -560,7 +572,8 @@
           "list_cost_usd": 0
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "concurrency",
@@ -705,7 +718,8 @@
           "list_cost_usd": 0
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "concurrency-70",
@@ -1630,7 +1644,8 @@
           "list_cost_usd": 0
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "concurrency-active",
@@ -2009,7 +2024,8 @@
           "list_cost_usd": 0.01
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "mount-sha",
@@ -2039,7 +2055,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
     },
     {
       "probe": "limits",
@@ -2069,7 +2086,21 @@
           "list_cost_usd": 0.01
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "model": "claude-opus-5-5"
+    },
+    {
+      "probe": "models",
+      "model": "claude-haiku-5-5",
+      "item": "The key and the workspace answer",
+      "ran_at": "2026-11-22T19:48:14.455Z",
+      "session_ids": [],
+      "list_cost_usd": 0,
+      "status": "answered",
+      "answer": "claude-haiku-5-5 answers on this key (context 1000000, output 128000)",
+      "evidence": {
+        "id": "claude-haiku-5-5"
+      }
     }
   ]
 }
