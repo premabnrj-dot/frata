@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import Link from 'next/link'
 import { Icon } from '@/components/icons/icon'
 import { Badge } from '@/components/ui/badge'
@@ -185,7 +186,7 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
             </div>
             <div className="flex flex-wrap gap-2">
               {!blocked && <Button variant="secondary" disabled={busy} onClick={() => setAsk('replace')}>Replace</Button>}
-              <Button variant="secondary" disabled={busy} onClick={() => setAsk('remove')}>Remove</Button>
+              <RemoveButton label="Remove video" disabled={busy} onClick={() => setAsk('remove')} />
             </div>
           </div>
         </div>

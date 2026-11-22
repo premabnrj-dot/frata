@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
 import { settle } from '@/lib/settle'
 import { Section } from '@/components/layout/section'
@@ -103,7 +104,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
               {canManage && !n.added && main && !needsRzp && <Button size="wrap" variant="secondary" disabled={busy === 'name'} onClick={() => act('name', () => undoMainAction(), `${nameHost} is your main address`)}>Make main</Button>}
               {canManage && n.added && !needsRzp && <Button size="wrap" variant="secondary" onClick={() => setConfirm({ kind: 'name', host: n.host, name: n.name })}>Make main</Button>}
               {!n.added && <CopyOpen host={n.host} />}
-              {canManage && n.added && <Button size="wrap" variant="ghost" disabled={busy === n.name} onClick={() => act(n.name, () => dropAddedNameAction(), 'Removed')}>Remove</Button>}
+              {canManage && n.added && <RemoveButton label={`Remove ${n.name}`} disabled={busy === n.name} onClick={() => act(n.name, () => dropAddedNameAction(), 'Removed')} />}
             </Row>
           )
         })}
@@ -120,7 +121,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
               {canManage && needsRzp && <Button size="wrap" variant="secondary" disabled={busy === d.id} onClick={() => act(d.id, () => razorpayOkAction(d.id, true), 'Saved')}>Razorpay approved it</Button>}
               {canManage && d.canMain && <Button size="wrap" variant="secondary" onClick={() => setConfirm({ kind: 'domain', host: d.host, d })}>Make main</Button>}
               {(d.state === 'main' || d.state === 'connected') && <CopyOpen host={d.host} />}
-              {canManage && d.state !== 'moved' && d.state !== 'disconnected' && <Button size="wrap" variant="ghost" onClick={() => setRemove(d)}>Remove</Button>}
+              {canManage && d.state !== 'moved' && d.state !== 'disconnected' && <RemoveButton label="Remove domain" onClick={() => setRemove(d)} />}
             </Row>
             {d.www && (d.state === 'main' || d.state === 'connected' || d.state === 'not_working') && <Row host={d.www} chip={{ tone: 'neutral', words: `Goes to ${d.host}` }} />}
             </Fragment>

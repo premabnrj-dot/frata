@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
@@ -128,7 +129,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
                       <span className="w-6 font-num text-xs text-muted-foreground">{i + 1}</span><span className="min-w-0 flex-1 truncate">{p.title}</span>
                       <button type="button" aria-label={`Move ${p.title} up`} disabled={i === 0} className="px-1 disabled:opacity-30" onClick={() => { const a = [...d.productIds]; [a[i - 1], a[i]] = [a[i]!, a[i - 1]!]; set({ productIds: a }) }}>↑</button>
                       <button type="button" aria-label={`Move ${p.title} down`} disabled={i === picked.length - 1} className="px-1 disabled:opacity-30" onClick={() => { const a = [...d.productIds]; [a[i + 1], a[i]] = [a[i]!, a[i + 1]!]; set({ productIds: a }) }}>↓</button>
-                      <button type="button" className="inline-flex min-h-6 items-center text-xs text-muted-foreground underline" onClick={() => set({ productIds: d.productIds.filter((x) => x !== p.id) })}>Remove</button>
+                      <RemoveButton label="Remove product" onClick={() => set({ productIds: d.productIds.filter((x) => x !== p.id) })} />
                     </li>
                   ))}
                 </ol>

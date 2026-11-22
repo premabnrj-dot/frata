@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import type { OfferValues } from '@/domains/checkout/offer-form'
 import { InfoTip } from '@/components/ui/info-tip'
 import { FieldError, errorId, fieldProps } from '@/components/ui/field-error'
@@ -77,7 +78,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
                 <input id={`o-tmin-${i}`} inputMode="decimal" value={t.min} {...(i === 0 && errors.tiers && !errors[`tier${i}`] ? fp('tiers') : fp(`tier${i}`))} onChange={(e) => set({ tiers: tiers.map((x, j) => (j === i ? { ...x, min: e.target.value } : x)) })} className={field} /></div>
               <div className="space-y-1"><label htmlFor={`o-tval-${i}`} className="text-xs">{v.kind === 'percent' ? '% off' : '₹ off'}</label>
                 <input id={`o-tval-${i}`} inputMode="decimal" value={t.value} {...fp(`tier${i}`)} onChange={(e) => set({ tiers: tiers.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} className={field} /></div>
-              <button type="button" className="min-h-9 px-2 text-sm underline" onClick={() => set({ tiers: tiers.filter((_, j) => j !== i) })}>Remove</button>
+              <RemoveButton label="Remove tier" onClick={() => set({ tiers: tiers.filter((_, j) => j !== i) })} />
               <FieldError name={`o-tier${i}`} message={errors[`tier${i}`]} className="col-span-3" />
             </div>
           ))}

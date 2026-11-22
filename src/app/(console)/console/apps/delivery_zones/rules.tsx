@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { RemoveButton } from '@/components/ui/remove-button'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
@@ -74,7 +75,7 @@ function Rules({ rules, count, q, page, pages, fromSettings, canEdit }: Props) {
                 <Td cell="c">{r.place ?? '—'}</Td>
                 <Td cell="b">{WORDS[r.rule]}{r.rule === 'cod_max' && r.codMax ? <span className="font-num"> ₹{(r.codMax / 100).toLocaleString('en-IN')}</span> : null}</Td>
                 <Td cell="e" className="text-muted-foreground">{r.note ?? '—'}</Td>
-                {canEdit && <Td cell="f" className="text-right"><Button variant="ghost" disabled={busy === r.pincode} onClick={() => remove(r.pincode)}>Remove</Button></Td>}
+                {canEdit && <Td cell="f" className="text-right"><RemoveButton label={`Remove ${r.pincode}`} disabled={busy === r.pincode} onClick={() => remove(r.pincode)} /></Td>}
               </DataTableRow>
             ))}
             {page === 1 && blocked.map((p) => (
