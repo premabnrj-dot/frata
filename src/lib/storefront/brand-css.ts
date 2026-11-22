@@ -11,6 +11,7 @@
 
 export const BRAND_CSS = `
 [data-brand]{font-family:var(--store-body);container:brand/inline-size}
+[data-brand] :focus-visible{outline:2px solid var(--store-ink);outline-offset:2px}
 .bf-hd{border-bottom:1px solid var(--store-line);background:var(--store-paper)}
 .bf-hw{position:relative;margin:0 auto;display:flex;height:56px;max-width:1200px;align-items:center;gap:12px;padding:0 16px}
 .bf-hw.c{justify-content:center}

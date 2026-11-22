@@ -4938,6 +4938,7 @@ begin
   insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (a, 'checkout', '{}', 'The checkout heading.', 1, 'a9900000-0000-0000-0000-0000000000a1') returning id into q;
   begin insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (a, 'checkout', '{}', 'x', 1, gen_random_uuid());
     raise exception 'FAIL: 99 two open checkout changes'; exception when unique_violation then null; end;
+  begin update brand_proposals set kind = 'brand' where id = q; raise exception 'FAIL: 99 a change changed kind'; exception when insufficient_privilege then null; end;
   begin insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (a, 'footer', '{}', 'x', 1, gen_random_uuid());
     raise exception 'FAIL: 99 a change of no known kind'; exception when check_violation then null; end;
   if (select kind from brand_proposals where id = p) <> 'brand' then raise exception 'FAIL: 99 a brand change lost its kind'; end if;

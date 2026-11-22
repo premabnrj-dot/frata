@@ -87,7 +87,7 @@ shoppers' names, phones and addresses, or a merchant's costs, with nothing to ca
   wait for the pages that need them (default deny).
 - **Postgres, by grant:** `frata_builder` is its own LOGIN (owner question 7; `DATABASE_URL_BUILDER`), not a role
   `frata_app` sets, so a Builder transaction has no way back to `frata_app`'s rights. Column grants on eight catalogue
-  tables, and (one-address P1·2, 2026-11-16) the live brand record and `shop_settings.logo_url` for Console › Brand's preview; `builder_rows` and restrictive `builder_only` policies (`app.member_role = 'builder'`).
+  tables, and (one-address P1·2, 2026-11-16) the live brand record and `shop_settings.logo_url` for Console › Brand's preview, and (one-address P2, 2026-11-22, drizzle/0156) the live checkout design's six columns and `shop_settings`' seven public delivery, returns and Pay on delivery facts for Brand › Checkout's preview (never the GSTIN, the legal details or a cost); `builder_rows` and restrictive `builder_only` policies (`app.member_role = 'builder'`).
 - **Departures from § 3 and § 5, approved by the owner (2026-11-15):** (1) the legacy `withTenant(tenantId)` calls stay
   for every non-Builder actor: a Builder can never hold a tenant id, because its stores arrive in a separate list that
   `requireMember` never carries, and its Actor keeps the id private. (2) Definers: frata_builder may execute none (every

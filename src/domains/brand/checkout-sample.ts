@@ -6,6 +6,8 @@
 // =============================================================================
 
 import { rupeesWords } from '@/domains/money/rupees'
+import { codFor, shippingFor, type DeliveryRules } from '@/domains/checkout/delivery'
+import { codWhyNot } from '@/domains/checkout/cod-words'
 
 export const PREVIEW_PAGES = [['checkout', 'Checkout'], ['order', 'Order page'], ['baglink', 'Bag link'], ['policy', 'Policy']] as const
 export type PreviewPage = (typeof PREVIEW_PAGES)[number][0]
@@ -17,8 +19,8 @@ export const SAMPLE_SHOPPER = { phone: '98000 00000', email: 'priya@example.com'
 
 /** One of the store's own products: its title, the first size's words, its price in paise and a 400 px photo. */
 export type SampleItem = { title: string; size: string; price: number; photo: string | null }
-/** The store's own rules the preview prices with. */
-export type SampleRules = { shippingFlat: number; freeShippingAbove: number; codOn: boolean; codMax: number }
+/** The store's own rules the preview prices with: checkout's (src/domains/checkout/delivery.ts), never a copy. */
+export type SampleRules = Pick<DeliveryRules, 'shippingFlat' | 'freeShippingAbove' | 'codOn' | 'codMin' | 'codMax' | 'codCharge'>
 
 export type SampleLine = { item: SampleItem; qty: number; soldOut: boolean }
 export type SampleCheckout = {
@@ -44,12 +46,13 @@ export function sampleCheckout(items: readonly SampleItem[], r: SampleRules, sta
     changed = `Something changed since you looked: ${a.title}: ${rupeesWords(a.price)} → ${rupeesWords(up.price)}. Check the total and place the order again.`
   }
   const subtotal = lines.filter((l) => !l.soldOut).reduce((s, l) => s + l.item.price * l.qty, 0)
-  const shipping = !r.shippingFlat || (r.freeShippingAbove && subtotal >= r.freeShippingAbove) ? 0 : r.shippingFlat
-  const total = subtotal + shipping
-  // "Not offered" is the state's point: the bag goes over the limit, or Pay on delivery is shown off whatever the rules.
-  const overLimit = r.codMax > 0 && total > r.codMax
-  const cod = r.codOn && !overLimit && state !== 'nocod'
-  const codWhy = cod ? null : r.codMax > 0 ? `Pay on delivery is for orders up to ${rupeesWords(r.codMax)}. Pay online for this bag.` : 'Pay on delivery is not offered for this bag. Pay online.'
+  const shipping = shippingFor(subtotal, r)
+  // "Not offered" is the state's point: the store's own reason when the bag meets one, else its limit (or "off").
+  const real = codFor(subtotal + shipping, r)
+  const c = state === 'nocod' && real.offered ? (r.codMax > 0 ? { offered: false as const, reason: 'above_max' as const, max: r.codMax } : { offered: false as const, reason: 'off' as const }) : real
+  const cod = c.offered
+  const codWhy = codWhyNot(c, rupeesWords)
   const method = state === 'nocod' || state === 'failed' || !cod ? 'prepaid' : 'cod'
+  const total = subtotal + shipping + (method === 'cod' ? r.codCharge : 0)
   return { lines, subtotal, shipping, total, cod, codWhy, method, failed: state === 'failed', changed }
 }

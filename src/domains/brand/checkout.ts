@@ -22,7 +22,7 @@ export const TRUST_KEYS = ['delivery', 'returns', 'cod', 'secure', 'gst'] as con
 export type TrustKey = (typeof TRUST_KEYS)[number]
 export const MAX_TRUST = 4
 /** A block's name where the store's settings give it no words (its fact is off): the console lists it, a page never draws it. */
-export const TRUST_NAMES: Record<TrustKey, string> = { delivery: 'Delivery days', returns: 'Returns window', cod: 'Pay on delivery limit', secure: 'Secure payment by Razorpay', gst: 'GST invoice on every order' }
+export const TRUST_NAMES: Record<TrustKey, string> = { delivery: 'Delivery days', returns: 'Returns', cod: 'Pay on delivery', secure: 'Secure payment by Razorpay', gst: 'GST invoice on every order' }
 export const HEADING_MAX = 24
 export const THANKS_MAX = 120
 
@@ -111,13 +111,19 @@ export function returnsWords(kind: string, days: number, form: 'line' | 'block')
   return w && days ? `${days}-day ${w[form === 'line' ? 0 : 1]}` : null
 }
 
+/** Days from order to delivery by the store's settings: dispatch plus metro (soonest) to dispatch plus elsewhere. */
+export function deliveryWindow(f: Pick<TrustFacts, 'dispatchDays' | 'metroDays' | 'restDays'>): { lo: number; hi: number } | null {
+  if (!f.restDays) return null
+  return { lo: f.dispatchDays + Math.min(f.metroDays || f.restDays, f.restDays), hi: f.dispatchDays + f.restDays }
+}
+
 /** A block's words from the store's facts, or null when the fact isn't there (the block is then not drawn). */
 export function trustWords(k: TrustKey, f: TrustFacts): string | null {
   switch (k) {
     case 'delivery': {
-      if (!f.restDays) return null
-      const lo = f.dispatchDays + Math.min(f.metroDays || f.restDays, f.restDays), hi = f.dispatchDays + f.restDays
-      return lo === hi ? `Delivered in ${hi} days` : `Delivered in ${lo}–${hi} days`
+      const w = deliveryWindow(f)
+      if (!w) return null
+      return w.lo === w.hi ? `Delivered in ${w.hi} days` : `Delivered in ${w.lo}–${w.hi} days`
     }
     case 'returns':
       return returnsWords(f.returnKind, f.returnDays, 'block')
@@ -140,7 +146,7 @@ export function trustBlocks(keys: readonly TrustKey[], f: TrustFacts): TrustBloc
 export const trustOrder = (on: readonly TrustKey[]): TrustKey[] => [...on, ...TRUST_KEYS.filter((k) => !on.includes(k))]
 
 /** Which parts of a design changed, as the owner's Notices line names them ("The checkout heading."). */
-const PART_NAMES: Record<DesignField, string> = { header: 'the logo’s place', back: 'the back link', rows: 'the policy links', trust: 'the trust blocks', heading: 'the checkout heading', thanks: 'the thank-you line' }
+const PART_NAMES: Record<DesignField, string> = { header: 'the logo side', back: 'the back link', rows: 'the policy links', trust: 'the trust blocks', heading: 'the checkout heading', thanks: 'the thank-you line' }
 export function designChanges(a: CheckoutDesign, b: CheckoutDesign): DesignField[] {
   const out: DesignField[] = []
   if (a.header !== b.header) out.push('header')
@@ -153,6 +159,7 @@ export function designChanges(a: CheckoutDesign, b: CheckoutDesign): DesignField
 }
 /** "The checkout heading." · "The checkout heading and the thank-you line." · "The back link, the trust blocks and the checkout heading." */
 export function designSummary(fields: readonly DesignField[]): string {
+  if (fields.length > 3) return `${fields.length} parts of your checkout.`
   const names = fields.map((f) => PART_NAMES[f])
   const joined = names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
   return joined ? `${joined[0]!.toUpperCase()}${joined.slice(1)}.` : ''

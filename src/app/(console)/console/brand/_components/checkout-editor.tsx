@@ -21,6 +21,7 @@ import { designChanges, designProblems, HEADING_MAX, MAX_TRUST, THANKS_MAX, trus
 import { PREVIEW_PAGES, PREVIEW_STATES, type PreviewPage, type PreviewState } from '@/domains/brand/checkout-sample'
 import type { BrandRecord } from '@/domains/brand/record'
 import { cn } from '@/lib/utils'
+import { announce } from '@/components/shell/announce'
 import { saveCheckoutAction, undoCheckoutAction } from '../actions'
 
 // =============================================================================
@@ -126,7 +127,7 @@ export function CheckoutEditor({ mode, live, version: startVersion, waiting, rec
   </> : <>
     <Section title="Header"><Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={[['Logo', draft.header === 'centre' ? 'Centred' : 'Left'], [back, draft.back ? 'On' : 'Off']]} /></Section>
     <Section title="Footer"><Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={[['Policy links', draft.rows === 2 ? 'Two rows' : 'One row'], ['Legal block', 'Always shown']]} /></Section>
-    <Section title="Trust blocks"><Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={trustBlocks(draft.trust, facts).map((b, n) => [<span key={b.key} className="font-num">{n + 1}</span>, b.words])} /></Section>
+    <Section title="Trust blocks"><Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={trustBlocks(draft.trust, facts).map((b, n) => [<span key={b.key} className="tabular-nums">{n + 1}</span>, b.words])} /></Section>
     <Section title="Your words"><Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={[['Checkout heading', draft.heading || 'Checkout'], ['Thank-you line', draft.thanks || '—']]} /></Section>
   </>
   return (
@@ -140,28 +141,45 @@ export function CheckoutEditor({ mode, live, version: startVersion, waiting, rec
         </form>
         <aside className="sticky top-4 hidden min-w-0 lg:block"><PreviewCard record={record} design={draft} facts={facts} data={data} /></aside>
       </div>
-      <LeaveDialog open={!!guard.leaveTo} what="Checkout" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(draft))} />
+      <LeaveDialog open={!!guard.leaveTo} what="the checkout" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(draft))} />
     </div>
+  )
+}
+
+function MoveBtn({ dir, words, disabled, onMove }: { dir: 'up' | 'down'; words: string; disabled: boolean; onMove: () => void }) {
+  return (
+    <button type="button" id={`move-${dir}-${words}`} aria-label={dir === 'up' ? 'Move up' : 'Move down'} aria-disabled={disabled || undefined} onClick={onMove}
+      className="grid size-11 place-items-center rounded-md border border-border text-muted-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-40 md:size-7">
+      <svg viewBox="0 0 24 24" className="size-3.5 fill-none stroke-current stroke-[1.8]" aria-hidden="true"><path d={dir === 'up' ? 'm6 14.5 6-6 6 6' : 'm6 9.5 6 6 6-6'} /></svg>
+    </button>
   )
 }
 
 function TrustCard({ draft, facts, onTrust, error }: { draft: CheckoutDesign; facts: TrustFacts; onTrust: (t: TrustKey[]) => void; error?: string }) {
   const on = draft.trust, full = on.length >= MAX_TRUST
-  const move = (k: TrustKey, by: -1 | 1) => { const i = on.indexOf(k), j = i + by; if (j < 0 || j >= on.length) return; const n = [...on]; n.splice(i, 1); n.splice(j, 0, k); onTrust(n) }
+  const words = (k: TrustKey) => trustWords(k, facts) ?? TRUST_NAMES[k]
+  // Sortable's pattern (src/components/ui/sortable.ts): say where it went, and keep focus on the button pressed.
+  const move = (k: TrustKey, dir: 'up' | 'down') => {
+    const i = on.indexOf(k), j = i + (dir === 'up' ? -1 : 1)
+    if (j < 0 || j >= on.length) { announce(`${words(k)} is already ${dir === 'up' ? 'first' : 'last'}.`); return }
+    const n = [...on]; n.splice(i, 1); n.splice(j, 0, k); onTrust(n)
+    announce(`${words(k)} moved to ${j + 1} of ${on.length}.`)
+    requestAnimationFrame(() => document.getElementById(`move-${dir}-${k}`)?.focus())
+  }
   return (
     <Section title={<span className="flex items-center gap-1">Trust blocks<InfoTip about="trust blocks">Words from your delivery, returns and payment settings.</InfoTip></span>}>
-      <p className="-mt-2.5 text-label text-muted-foreground">Up to {MAX_TRUST}.</p>
+      <p id="trust-limit" className="-mt-2.5 text-label text-muted-foreground">Up to {MAX_TRUST}.</p>
       <ul className="divide-y divide-line-soft">
         {trustOrder(on).map((k) => {
-          const at = on.indexOf(k), checked = at >= 0, words = trustWords(k, facts) ?? TRUST_NAMES[k]
+          const at = on.indexOf(k), checked = at >= 0
           return (
             <li key={k} className={cn('flex min-h-12 items-center gap-3', !checked && 'text-muted-foreground')}>
-              <input id={`trust-${k}`} type="checkbox" checked={checked} aria-disabled={!checked && full ? true : undefined}
-                onChange={(e) => { if (e.target.checked) { if (!full) onTrust([...on, k]) } else onTrust(on.filter((x) => x !== k)) }} />
-              <label htmlFor={`trust-${k}`} className="flex-1 text-sm">{words}</label>
+              <input id={`trust-${k}`} type="checkbox" className="size-6 shrink-0 accent-primary" checked={checked} aria-disabled={!checked && full ? true : undefined} aria-describedby="trust-limit"
+                onChange={(e) => { if (e.target.checked) { if (full) announce(`Up to ${MAX_TRUST} blocks. Turn one off first.`); else onTrust([...on, k]) } else onTrust(on.filter((x) => x !== k)) }} />
+              <label htmlFor={`trust-${k}`} className="flex-1 text-sm">{words(k)}</label>
               {checked && <span className="flex gap-1">
-                <button type="button" aria-label="Move up" aria-disabled={at === 0 || undefined} onClick={() => move(k, -1)} className="grid size-11 place-items-center rounded-md border border-border text-muted-foreground aria-disabled:opacity-40 md:size-7"><svg viewBox="0 0 24 24" className="size-3.5 fill-none stroke-current stroke-[1.8]" aria-hidden="true"><path d="m6 14.5 6-6 6 6" /></svg></button>
-                <button type="button" aria-label="Move down" aria-disabled={at === on.length - 1 || undefined} onClick={() => move(k, 1)} className="grid size-11 place-items-center rounded-md border border-border text-muted-foreground aria-disabled:opacity-40 md:size-7"><svg viewBox="0 0 24 24" className="size-3.5 fill-none stroke-current stroke-[1.8]" aria-hidden="true"><path d="m6 9.5 6 6 6-6" /></svg></button>
+                <MoveBtn dir="up" words={k} disabled={at === 0} onMove={() => move(k, 'up')} />
+                <MoveBtn dir="down" words={k} disabled={at === on.length - 1} onMove={() => move(k, 'down')} />
               </span>}
             </li>
           )
@@ -177,7 +195,7 @@ function LineField({ name, label, value, max, error, area = false, onChange }: {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3"><label htmlFor={`line-${name}`} className="text-label font-medium">{label}</label>
-        <span id={`line-${name}-count`} className={cn('font-num text-small', n > max ? 'font-medium text-danger-text' : 'text-muted-foreground')}>{n}/{max}</span></div>
+        <span id={`line-${name}-count`} className={cn('tabular-nums text-small', n > max ? 'font-medium text-danger-text' : 'text-muted-foreground')}>{n}/{max}</span></div>
       {area ? <textarea id={`line-${name}`} rows={3} maxLength={max * 5} value={value} onChange={(e) => onChange(e.target.value)} className={cn(FIELD_BOX, 'py-2')} {...fieldProps(name, error)} aria-describedby={cn(error && `${name}-error`, `line-${name}-count`)} />
         : <input id={`line-${name}`} maxLength={max * 5} value={value} onChange={(e) => onChange(e.target.value)} className={FIELD} {...fieldProps(name, error)} aria-describedby={cn(error && `${name}-error`, `line-${name}-count`)} />}
       <FieldError name={name} message={error} />

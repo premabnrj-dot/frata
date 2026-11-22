@@ -286,7 +286,7 @@ export async function undoBrand(input: unknown): Promise<BrandResult> {
 // and a support visit never save. The lines are checked as the page checks them (designProblems); the record before the
 // save is kept for Undo; one audit row with the parts' names only; after the commit `shop:<t>:settings` only.
 
-const STALE_DESIGN = 'The checkout design changed since you opened it. Reload to see it.'
+const STALE_DESIGN = 'Checkout changed since you opened it. Reload to see it.'
 const DesignInput = z.strictObject({
   version: z.number().int().positive().nullable(),
   design: z.strictObject({
@@ -322,6 +322,9 @@ export async function saveCheckout(input: unknown): Promise<BrandResult> {
   const parsed = DesignInput.safeParse(input)
   const version = parsed.success ? parsed.data.version : null
   const next: CheckoutDesign | null = parsed.success ? { ...parsed.data.design, heading: cleanLine(parsed.data.design.heading), thanks: cleanLine(parsed.data.design.thanks) } : null
+  // A support visit is refused before any transaction opens (as saveBrand: asMember would audit the visit first).
+  const me = await requireMember(CAN_BUILD)
+  if (me.ok && me.membership.supportSessionId) return { ok: false, error: BRAND_REFUSAL.support }
   return write({ action: 'brand.checkout.save', roles: CAN_BUILD, limit: LIMITS.brandSave }, async (tx, auth) => {
     if (!next) return { error: NOTHING }
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
@@ -355,6 +358,8 @@ export async function saveCheckout(input: unknown): Promise<BrandResult> {
 /** Undo the last checkout-design save (or Approve), by whoever made it, within a minute: the design before it, once. */
 export async function undoCheckout(input: unknown): Promise<BrandResult> {
   const parsed = UndoInput.safeParse(input)
+  const me = await requireMember(CAN_BUILD)
+  if (me.ok && me.membership.supportSessionId) return { ok: false, error: BRAND_REFUSAL.support }
   return write({ action: 'brand.checkout.undo', roles: CAN_BUILD, limit: LIMITS.brandUndo }, async (tx, auth) => {
     const t = auth.membership.tenantId, now = new Date()
     if (auth.membership.supportSessionId) return { error: BRAND_REFUSAL.support }

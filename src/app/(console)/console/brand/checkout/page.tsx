@@ -8,10 +8,10 @@ import { requireCapability } from '@/lib/auth/require-capability'
 import { checkoutPage, checkoutSamples } from '@/lib/queries/brand'
 import { shopSettingsFor } from '@/lib/queries/storefront'
 import { brandSaver } from '@/domains/brand/who'
-import { trustFactsOf } from '@/domains/brand/checkout'
+import { deliveryWindow, trustFactsOf } from '@/domains/brand/checkout'
 import { orderPrefix } from '@/domains/signup/slug'
 import { holds } from '@/domains/tenancy/roles'
-import { formatPhone } from '@/lib/format'
+import { brandFactsOf } from '@/lib/storefront/brand-facts'
 import { CheckoutEditor } from '../_components/checkout-editor'
 import { BrandTabs } from '../_components/brand-tabs'
 import { BuilderCheckout } from '../_builder/checkout'
@@ -20,9 +20,10 @@ export const metadata = { title: 'Brand · Checkout' }
 
 /** The sample order's arrival, from the store's own delivery days (the preview only; dates as yyyy-mm-dd). */
 const arrivesFrom = (now: Date, f: { dispatchDays: number; metroDays: number; restDays: number }) => {
-  if (!f.restDays) return null
+  const w = deliveryWindow(f)
+  if (!w) return null
   const day = (n: number) => new Date(now.getTime() + n * 86_400_000).toISOString().slice(0, 10)
-  return { from: day(f.dispatchDays + Math.min(f.metroDays || f.restDays, f.restDays)), to: day(f.dispatchDays + f.restDays) }
+  return { from: day(w.lo), to: day(w.hi) }
 }
 
 /**
@@ -49,9 +50,8 @@ export default async function BrandCheckoutPage() {
   const saver = brandSaver(role, supportSessionId, page.open)
   const mode = saver === 'live' ? 'edit' : saver === 'waits' ? 'waits' : 'preview'
   const data = {
-    items: [...items], rules: { shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMax: shop.codMax },
-    facts: { shopName: shop.shopName, legalName: shop.legalName, address: shop.address, supportEmail: shop.supportEmail, supportPhone: shop.supportPhone ? formatPhone(shop.supportPhone) : '',
-      grievanceName: shop.grievanceName, grievanceEmail: shop.grievanceEmail, returnLine: checkoutReturnLine(shop.returnKind, shop.returnDays) },
+    items: [...items], rules: { shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge },
+    facts: { ...brandFactsOf(shop), returnLine: checkoutReturnLine(shop.returnKind, shop.returnDays) },
     home: '#', orderCode: `${orderPrefix(shop.orderPrefix, shop.shopName)}-1042`, arrives: arrivesFrom(now, shop),
     policy: <PolicyBody page="returns" facts={shop} override={Object.hasOwn(shop.overrides, 'returns') ? shop.overrides.returns : null} shopper />,
   }

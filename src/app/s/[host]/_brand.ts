@@ -1,5 +1,5 @@
 import 'server-only'
-import { formatPhone } from '@/lib/format'
+import { brandFactsOf } from '@/lib/storefront/brand-facts'
 import { checkoutLook } from '@/lib/queries/brand'
 import type { StoreShop } from '@/lib/queries/storefront'
 import { renderDesign, trustBlocks, trustFactsOf, type CheckoutDesign, type TrustBlock } from '@/domains/brand/checkout'
@@ -22,7 +22,7 @@ export async function brandLookFor(shop: StoreShop, now: Date): Promise<BrandLoo
   return {
     record: withSeason(look.record, liveSeason(look.seasons, now)),
     design: renderDesign(look.design),
-    facts: { shopName: shop.shopName, legalName: shop.legalName, address: shop.address, supportEmail: shop.supportEmail, supportPhone: shop.supportPhone ? formatPhone(shop.supportPhone) : '', grievanceName: shop.grievanceName, grievanceEmail: shop.grievanceEmail },
+    facts: brandFactsOf(shop),
     // The logo and "Back to <store>" lead to the store's own website; while it is being built, its Frrata home.
     home: shop.siteOrigin ?? '/',
   }

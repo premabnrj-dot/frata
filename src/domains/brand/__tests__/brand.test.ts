@@ -100,6 +100,12 @@ describe('lineProblem', () => {
     ['Thank you. See our new edit at houseofayuda.com', LINE_WORDS.link],
     ['Thank you. Your loyalty code is 4471 9021.', LINE_WORDS.number], ['account 1234 5678', LINE_WORDS.number],
   ])('names what to take out: %j', (s, words) => { expect(lineProblem(s, 120)).toBe(words) })
+  // Security review 2026-11-22 (MED-1): no separator splits a number past the rule, and a UPI ID may carry spaces.
+  it.each([
+    ['Call (98450)12345', LINE_WORDS.phone], ['Call 98450,12345', LINE_WORDS.phone], ['Call 98450_12345', LINE_WORDS.phone],
+    ['Call 98450—12345', LINE_WORDS.phone], ['Call 98450 or 12345', LINE_WORDS.phone], ['Pay shop @ ybl', LINE_WORDS.upi],
+    ['example。com', LINE_WORDS.link], ['code 12, 34, 56', LINE_WORDS.number],
+  ])('refuses the spelling %j', (s, words) => { expect(lineProblem(s, 120)).toBe(words) })
   it('refuses a date in figures (write it in words)', () => { expect(lineProblem('sale till 10-11-2026', 80)).toBe(LINE_WORDS.number) })
   it('keeps M.R.P. and a price', () => { expect(lineProblem('M.R.P. ₹2,790 inclusive of all taxes', 80)).toBeNull() })
   it('allows a short number (a size, a year)', () => { expect(lineProblem('Ships in 2 days, since 2019', 80)).toBeNull() })

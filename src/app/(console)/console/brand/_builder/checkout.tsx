@@ -21,7 +21,7 @@ export async function BuilderCheckout({ actor, shopName, at, tabs }: { actor: Bu
   const facts = trustFactsOf({ ...c.facts, gst: { invoice: false } })
   const data = {
     items: product ? [{ title: product.title, size: '', price: product.price, photo: product.photo }] : [],
-    rules: { shippingFlat: 0, freeShippingAbove: 0, codOn: c.facts.codOn, codMax: c.facts.codMax },
+    rules: { shippingFlat: 0, freeShippingAbove: 0, codOn: c.facts.codOn, codMin: 0, codMax: c.facts.codMax, codCharge: 0 },
     facts: { shopName, legalName: '', address: '', supportEmail: '', supportPhone: '', grievanceName: '', grievanceEmail: '', returnLine: null },
     home: '#', orderCode: 'ORD-1042', arrives: null, policy: null,
   }

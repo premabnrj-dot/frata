@@ -2,7 +2,7 @@
 // FILE: src/domains/brand/lines.ts — A SHORT LINE A PARTNER MAY SET where shoppers pay (one-address plan P1·1, used by
 // P2's checkout heading and thank-you line; spec § 3, owner decision 14). Plain text (the content layer's one rule),
 // within its length, and never a way to send a shopper's money or messages elsewhere: no UPI ID or email address, no
-// link or web address, no phone number or run of six or more digits in any script (Devanagari and full-width digits
+// link or web address, no phone number and no six or more digits anywhere in the line, in any script (Devanagari and full-width digits
 // included). A date written in figures ("10-11-2026") is refused too: write it in words ("10 Nov"). Pure.
 // The words are the P2 mockup's (screen 9, owner-approved 2026-11-16; frata-design-language § Checkout and order
 // pages): each refusal names what to take out, at the field; the money rules are checked before the length, so a line
@@ -11,16 +11,17 @@
 
 import { PLAIN_WORDS, refusedChar } from '@/domains/content/plain-rule'
 
-const UPI = /[\p{L}\p{N}._-]{2,}@[\p{L}]{2,}/u
+/** A UPI ID or an email, with or without spaces around the @ ("pay shop @ ybl"). */
+const UPI = /[\p{L}\p{N}._-]{2,}\s*@\s*[\p{L}]{2,}/u
 /** A scheme, a www., or any word.word ending in two or more letters (a closed list of endings missed .online, .site). */
 const URL_LIKE = /(https?:|www\.|[\p{L}\p{N}-]+\.\p{L}{2,}(?![\p{L}\p{N}]))/iu
-/** Six or more digits of any script, with spaces, dots, dashes or slashes between them ("98450 12345", "१२३४ ५६७८"). */
-const DIGIT_RUN = /\p{Nd}(?:[\s./\-–]*\p{Nd}){5,}/u
-/** An Indian mobile number once its digits are plain: +91, 91 or 0 before it at most, then 6–9 and nine more. */
-const PHONE = /(?<!\d)(?:\+?91[\s./-]*|0)?[6-9](?:[\s./-]*\d){9}(?!\d)/
+/** An Indian mobile number in a line's digits once everything else is taken out: 6–9 and nine more. */
+const PHONE = /[6-9]\d{9}/
 
-/** Devanagari digits as plain ones (NFKC has already folded full-width digits). */
-const plainDigits = (s: string) => s.replace(/[०-९]/g, (d) => String(d.charCodeAt(0) - 0x0966))
+/** The line's digits alone, in plain figures (NFKC has already folded full-width ones; Devanagari ones are mapped). The
+ *  money rules count digits across the whole line, so no separator — brackets, commas, underscores, dashes, words —
+ *  splits a phone number or an account number past them (security review 2026-11-22, MED-1). */
+const digitsOf = (s: string) => s.replace(/[\u0966-\u096F]/g, (d) => String(d.charCodeAt(0) - 0x0966)).replace(/\D/g, '')
 
 export const LINE_WORDS = {
   upi: 'This line has a UPI ID. Remove it to save.',
@@ -34,12 +35,13 @@ export const LINE_WORDS = {
 export function lineProblem(raw: string, max: number): string | null {
   const s = raw.normalize('NFC').trim()
   if (refusedChar(s) !== null) return PLAIN_WORDS
-  // NFKC folds full-width letters and digits to their plain forms before the money rules look.
-  const folded = s.normalize('NFKC')
+  // NFKC folds full-width letters and digits; the ideographic and half-width full stops are made plain dots too.
+  const folded = s.normalize('NFKC').replace(/[\u3002\uFF61\uFF0E]/g, '.')
   if (UPI.test(folded)) return LINE_WORDS.upi
   if (URL_LIKE.test(folded)) return LINE_WORDS.link
-  if (PHONE.test(plainDigits(folded))) return LINE_WORDS.phone
-  if (DIGIT_RUN.test(folded)) return LINE_WORDS.number
+  const digits = digitsOf(folded)
+  if (PHONE.test(digits)) return LINE_WORDS.phone
+  if ((folded.match(/\p{Nd}/gu) ?? []).length >= 6) return LINE_WORDS.number
   if (s.length > max) return LINE_WORDS.long(max)
   return null
 }
