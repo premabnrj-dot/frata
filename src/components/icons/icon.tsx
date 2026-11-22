@@ -29,6 +29,7 @@ const ICONS = {
   look: ['M5 10v10h14V10 M10 20v-5h4v5', 'M4 10l1.5-5h13L20 10c0 1.4-1.1 2.5-2.5 2.5S15 11.4 15 10c0 1.4-1.1 2.5-2.5 2.5S10 11.4 10 10c0 1.4-1.1 2.5-2.5 2.5S5 11.4 5 10'],
   reviews: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z', 'M10 12.2l1.5 1.5 2.7-2.7'],
   menu: ['M4 7h16 M4 17h16', 'M4 12h16'],
+  trash: ['M6 7l1 13h10l1-13 M9 7V4h6v3', 'M4 7h16 M10 11v5 M14 11v5'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
   // Yes / no in a matrix (T1c's Roles card): a tick and a dash, each beside words for a screen reader.
   tick: ['M5 12.5l4.5 4.5L19 7', ''],

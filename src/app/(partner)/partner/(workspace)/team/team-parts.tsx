@@ -9,9 +9,11 @@ import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
 import { settle } from '@/lib/settle'
 import { assignTeamAction, inviteTeamAction, removeTeamAction, resendTeamInviteAction, setTeamRoleAction } from './actions'
+import { RemoveButton } from '@/components/ui/remove-button'
+import { Menu } from '@/components/ui/menu'
 import { Segmented } from '@/components/ui/segmented'
 import { Icon } from '@/components/icons/icon'
-import { FIELD, FIELD_BOX } from '@/components/ui/field'
+import { FIELD } from '@/components/ui/field'
 import { freshly } from '@/components/passkeys/fresh'
 
 type Store = { tenantId: string; name: string }
@@ -86,12 +88,9 @@ export function RoleSelect({ memberId, label, role }: { memberId: string; label:
     toast.ok(r.text)
     settle(router)
   }
+  const names: Record<Given, string> = { lead: 'Lead', builder: 'Builder' }
   return (
-    <select aria-label={`Role for ${label}`} value={role} disabled={busy} onChange={(e) => change(e.target.value as Given)}
-      className={`${FIELD_BOX} h-11 md:h-8`}>
-      <option value="lead">Lead</option>
-      <option value="builder">Builder</option>
-    </select>
+    <Menu label={names[role]} size="sm" items={(['lead', 'builder'] as const).map((r) => ({ label: names[r], checked: r === role, onSelect: () => void change(r) }))} />
   )
 }
 
@@ -139,7 +138,7 @@ export function RemovePerson({ memberId, label, invited }: { memberId: string; l
   }
   return (
     <>
-      <Button variant="ghost" onClick={() => { setError(null); setOpen(true) }}>{invited ? 'Withdraw invite' : 'Remove'}</Button>
+      <RemoveButton label={invited ? `Withdraw invite to ${label}` : `Remove ${label}`} onClick={() => { setError(null); setOpen(true) }} />
       <Dialog open={open} onClose={() => setOpen(false)} error={error} title={invited ? `Withdraw the invite to ${label}?` : `Remove ${label}?`}
         description={invited ? undefined : <ul className="list-disc space-y-1 pl-5"><li>Their access to every store ends now.</li><li>Store invites they sent are cancelled.</li><li>Your stores and their work stay.</li></ul>}
         actions={<>
