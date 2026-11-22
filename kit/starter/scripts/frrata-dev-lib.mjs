@@ -29,6 +29,19 @@ export function plain(text) {
 }
 
 /**
+ * The terminal block as drawn (four screens § 2): "Open" and "Code" aligned with two spaces, the code and "Signed in."
+ * in the accent, "ends in 10 minutes" and "Waiting…" dim. `color` false (NO_COLOR, or not a terminal): words only.
+ */
+export function terminal(line, color) {
+  const paint = (code, s) => (color ? `\u001b[${code}m${s}\u001b[0m` : s)
+  return plain(line)
+    .replace(/^(Open|Code) /, '$1  ')
+    .replace(/^(Code  )([A-Z2-9]{4}-[A-Z2-9]{4}) (ends in .+)$/, (_, a, c, e) => `${a}${paint('36', c)}   ${paint('2', e)}`)
+    .replace(/^(Waiting for you to confirm…)$/, (_, w) => paint('2', w))
+    .replace(/^(Signed in\.)/, (_, s) => paint('36', s))
+}
+
+/**
  * One poll's answer as the next step: keep waiting (`wait`, after `seconds`), the key (`key`), or stop with Frrata's
  * own words (`stop`). A limit (429) waits longer and says so once; anything else Frrata refuses stops.
  */

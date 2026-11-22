@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
-import { consoleOf, envFile, plain, pollStep, storeOf } from './frrata-dev-lib.mjs'
+import { consoleOf, envFile, plain, pollStep, storeOf, terminal } from './frrata-dev-lib.mjs'
 import { DONE, WAITING } from './frrata-words.mjs'
 
 const env = { ...(existsSync('.env.local') ? envFile(readFileSync('.env.local', 'utf8')) : {}), ...process.env }
@@ -18,6 +18,8 @@ const origin = consoleOf(env)
 // Not Frrata's own address: say where this signs in, so a changed .env.local can't pass for Frrata (security LOW-3).
 if (origin !== 'https://frata.vercel.app') console.log(`Signing in through ${origin}`)
 const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000))
+const color = !!process.stdout.isTTY && !('NO_COLOR' in process.env)
+const say = (text) => console.log(String(text).split('\n').map((l) => terminal(l, color)).join('\n'))
 
 // A start is not retried (a lost answer would leave a second code behind); a poll is, three times.
 async function post(path, body, retries = 3) {
@@ -35,7 +37,10 @@ async function post(path, body, retries = 3) {
 const started = await post('/api/dev/device/start', { store }, 0)
 if (started.status !== 200 || !started.body.device) { console.error(plain(started.body.message ?? 'Frrata could not answer. Try again in a minute.')); process.exit(1) }
 const { device, interval = 5, message } = started.body
-console.log(`\n${plain(message)}\n\n${WAITING}`)
+console.log('')
+say(message)
+console.log('')
+say(WAITING)
 
 let key = null, said = null
 while (!key) {
@@ -50,7 +55,8 @@ while (!key) {
     if (step.seconds > interval) await sleep(step.seconds - interval)
   }
 }
-console.log(`${DONE}\n`)
+say(DONE)
+console.log('')
 
 // The key goes to `next dev` in its environment only (Next keeps a variable already set over .env.local's). Next's own
 // bin through this node, so no shell is involved on any system.

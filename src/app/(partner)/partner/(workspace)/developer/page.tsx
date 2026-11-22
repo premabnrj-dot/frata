@@ -35,14 +35,15 @@ export default async function DeveloperPage() {
             : computers.length === 0 ? <p className="px-4 py-3 text-sm text-muted-foreground">No computers signed in</p> : (
             <ul data-list className="divide-y divide-border">
               {computers.map((c) => (
-                <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 px-4 py-3 text-sm">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2"><span className="truncate font-medium">{c.store}</span><Tag>Build</Tag></p>
+                <li key={c.id} className="grid gap-1.5 px-4 py-3 text-sm">
+                  <p className="flex min-w-0 items-center gap-2"><span className="truncate font-medium">{c.store}</span><Tag>Build</Tag></p>
+                  {/* As drawn: Delete key on the second line, after when it was confirmed and when it ends. */}
+                  <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1">
                     <p className="text-small text-muted-foreground">
                       Confirmed <time dateTime={c.createdAt} className="font-num">{momentIN(c.createdAt, now)}</time> · {endsInWords(new Date(c.expiresAt), now)}
                     </p>
+                    <DeleteComputer id={c.id} />
                   </div>
-                  <DeleteComputer id={c.id} />
                 </li>
               ))}
             </ul>

@@ -277,6 +277,7 @@ Check code 10 and Give key 5 a minute a person, failing closed. Any live support
 | Delete key · confirm: "Delete key" as the primary button | The destructive button (red), "Keep key" secondary with focus | A delete is the destructive variant everywhere in the console and workspace (design language § Neel primitives: Button) | no |
 | Your computers: the row's "Delete key" as a plain secondary button | The danger button (red text), as Passkeys' Delete | A row action that loses something is the danger variant in the workspace (design language § Neel primitives: Button; design-system review) | no |
 | Undrawn: where Give key's reason sits when it is off | Beside the button, wrapping under it in a narrow dialog (Button's `reason`) | The primitive ties the reason to the button for a screen reader; no drawing for the off state | no |
+| Four screens § 2, "The store’s owner · Settings › Website, as built": the key row with a plain Build tag, "Made by …, Neel Studio · ends in 21 hours" and a secondary Delete key | The row as built from the one-address mockup § 4 (approved earlier): a chip "Build · ends 23 Nov", the "Made by …" line, a "Used …" line and the red Delete | The two approved mockups draw the same row differently; the later one labels its drawing "as built", so the earlier, fuller drawing governs (mockup-parity, 2026-11-22) | no |
 
 Proposed for `docs/decisions/accepted-findings.md` (the owner's words go in its Ruling column; not added until then):
 | Finding | Ruling and the condition it rests on | Source |

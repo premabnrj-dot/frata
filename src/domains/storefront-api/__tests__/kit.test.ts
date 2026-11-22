@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { starterCartLink, starterFrrataWords } from '../../../../scripts/kit-sync.mjs'
-import { consoleOf, envFile, plain, pollStep, storeOf } from '../../../../kit/starter/scripts/frrata-dev-lib.mjs'
+import { consoleOf, envFile, plain, pollStep, storeOf, terminal } from '../../../../kit/starter/scripts/frrata-dev-lib.mjs'
 import { Brand } from '../2026-12/schemas'
 
 describe('the partner kit (SA1b D·9)', () => {
@@ -21,6 +21,10 @@ describe('the partner kit (SA1b D·9)', () => {
     expect(storeOf(['--x', '../etc'], {})).toBeNull()
     expect(consoleOf({})).toBe('https://frata.vercel.app')
     expect(plain('Code \u001b[2JHXKT\u0007')).toBe('Code [2JHXKT')
+    expect(terminal('Open frata.vercel.app/partner/developer', false)).toBe('Open  frata.vercel.app/partner/developer')
+    expect(terminal('Code HXKT-7P2M ends in 10 minutes', false)).toBe('Code  HXKT-7P2M   ends in 10 minutes')
+    expect(terminal('Code HXKT-7P2M ends in 10 minutes', true)).toBe('Code  \u001b[36mHXKT-7P2M\u001b[0m   \u001b[2mends in 10 minutes\u001b[0m')
+    expect(terminal('Signed in. This computer has a key for 24 hours.', true)).toBe('\u001b[36mSigned in.\u001b[0m This computer has a key for 24 hours.')
     expect(consoleOf({ FRRATA_CONSOLE_ORIGIN: 'http://localhost:3077/' })).toBe('http://localhost:3077')
     expect(consoleOf({ FRRATA_CONSOLE_ORIGIN: 'http://evil.test' })).toBe('https://frata.vercel.app')
     expect(pollStep(202, {}, 5)).toEqual({ next: 'wait', seconds: 5 })
@@ -58,7 +62,7 @@ describe('the partner kit (SA1b D·9)', () => {
         c.stdout.on('data', (d) => (text += d)); c.stderr.on('data', (d) => (text += d))
         c.on('exit', (code) => (code === 0 ? resolve(text) : reject(new Error(text))))
       })
-      expect(out).toContain('Code HXKT-7P2M ends in 10 minutes')
+      expect(out).toContain('Code  HXKT-7P2M   ends in 10 minutes')
       expect(out).toContain('Waiting for you to confirm…')
       expect(out).toContain('Signed in. This computer has a key for 24 hours.')
       expect(out).toContain('args=next dev')

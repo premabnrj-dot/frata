@@ -59,7 +59,7 @@ export function SignInComputer() {
       <label className="grid gap-1.5">
         <span className="text-label">Code from your terminal</span>
         <input ref={input} id="code" value={code} onChange={(e) => { setCode(e.target.value); if (error) setError(null) }}
-          className={`${FIELD} font-mono uppercase tracking-wider`} maxLength={12} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+          className={`${FIELD} h-12 text-center font-mono text-title uppercase tracking-[0.14em] md:h-12`} maxLength={12} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false}
           inputMode="text" {...fieldProps('code', error)} />
       </label>
       <FieldError name="code" message={error} className="-mt-1.5" />
