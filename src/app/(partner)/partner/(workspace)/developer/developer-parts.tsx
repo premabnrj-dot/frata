@@ -53,10 +53,12 @@ export function SignInComputer() {
     input.current?.focus() // the dialog is gone: back to the field, the toast says what happened
   }
   return (
-    <form onSubmit={check} noValidate className="grid gap-3">
+    // method="post" and no name on the field: pressed before the page is live, the form never puts the code in an
+    // address (security review LOW-1).
+    <form onSubmit={check} method="post" noValidate className="grid gap-3">
       <label className="grid gap-1.5">
         <span className="text-label">Code from your terminal</span>
-        <input ref={input} name="code" value={code} onChange={(e) => { setCode(e.target.value); if (error) setError(null) }}
+        <input ref={input} id="code" value={code} onChange={(e) => { setCode(e.target.value); if (error) setError(null) }}
           className={`${FIELD} font-mono uppercase tracking-wider`} maxLength={12} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false}
           inputMode="text" {...fieldProps('code', error)} />
       </label>

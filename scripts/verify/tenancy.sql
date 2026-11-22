@@ -4561,6 +4561,25 @@ do $$ declare codeE text := repeat('b', 63) || '7'; codeF text := repeat('b', 63
   exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
 end $$;
 commit;
+-- (security LOW-4) with passkeys switched off, Give key still needs a passkey made for that code: no passkey stays
+-- no_passkey, no challenge stays no_challenge. And a code given before a support visit mints nothing at the poll.
+insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 hour', 'proof', 'proof § 81');
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b1' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ declare code9 text := repeat('b', 63) || '9'; ch text := repeat('X', 43); begin
+  perform app_device_code_start(repeat('a', 63) || '9', code9, 'proof-e81');
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', code9, ch); raise exception 'FAIL: passkeys off gave a challenge to a person with no passkey';
+  exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20); raise exception 'FAIL: passkeys off gave a key with no challenge';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code9, ch, 'cred-f1');
+  if app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20) is distinct from 'Proof E81'
+  then raise exception 'FAIL: the Partner owner could not give a key with passkeys off'; end if;
+end $$;
+commit;
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' where id = 'e8100000-0000-0000-0000-0000000000c2';
+delete from platform_switches where key = 'passkeys_off';
 insert into support_sessions (id, tenant_id, staff_user_id, staff_email, reason, expires_at) values
   ('e8100000-0000-0000-0000-0000000000e9', 'e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000f1', 'owner@studio81.test', 'setup_help', now() + interval '1 hour');
 begin; set local role frata_app;
@@ -4568,6 +4587,7 @@ do $$ begin
   if app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', null) is not null then raise exception 'FAIL: a person on a support visit looked at a code'; end if;
   begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', repeat('W', 43)); raise exception 'FAIL: a person on a support visit got a challenge';
   exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  if (select count(*) from app_device_code_claim(repeat('a', 63) || '9')) <> 0 then raise exception 'FAIL: a code given before a support visit minted at the poll'; end if;
 end $$;
 commit;
 delete from support_sessions where id = 'e8100000-0000-0000-0000-0000000000e9';
@@ -4580,7 +4600,7 @@ do $$ declare code2 text := repeat('b', 63) || '2'; ch text := repeat('S', 43); 
   then raise exception 'FAIL: a store at its ceiling not shown full'; end if;
   perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch);
   perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code2, ch, 'cred-f1');
-  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, 'e8100000-0000-0000-0000-0000000000c1', 2);
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, 'e8100000-0000-0000-0000-0000000000c1', 30);
     raise exception 'FAIL: a key given past the ceiling';
   exception when raise_exception then if sqlerrm <> 'full' then raise; end if; end;
 end $$;

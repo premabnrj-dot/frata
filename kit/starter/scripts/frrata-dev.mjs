@@ -15,6 +15,8 @@ const env = { ...(existsSync('.env.local') ? envFile(readFileSync('.env.local', 
 const store = storeOf(process.argv.slice(2), env)
 if (!store) { console.error('Name your store. Run `npm run frrata <store>`, or set FRRATA_STORE in .env.local.'); process.exit(1) }
 const origin = consoleOf(env)
+// Not Frrata's own address: say where this signs in, so a changed .env.local can't pass for Frrata (security LOW-3).
+if (origin !== 'https://frata.vercel.app') console.log(`Signing in through ${origin}`)
 const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000))
 
 // A start is not retried (a lost answer would leave a second code behind); a poll is, three times.
