@@ -4,7 +4,7 @@ import { deviceCodeApprove, deviceCodeClaim, deviceCodePeek, deviceCodeStart, de
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
 import { CONSOLE_HOST } from '@/lib/public-env'
-import { buildKeyLimitOk, mintBuildKey } from './build-keys'
+import { buildKeyLimitOk, buildKeyUncount, mintBuildKey } from './build-keys'
 import { holds } from '@/domains/tenancy/roles'
 import { DEVICE_CONFIRM_FRESH_MS, DEVICE_POLL_SECONDS, deviceCodeOf, deviceKeyName, newDeviceCode, newDeviceSecret } from '@/domains/storefront-api/device'
 import { errName } from '@/lib/log'
@@ -73,14 +73,16 @@ export async function pollDeviceSignIn(device: string, ip: string): Promise<Poll
   if (!claim) return null
   if (claim.state === 'pending') return { status: 'pending' }
   let minted: Awaited<ReturnType<typeof mintBuildKey>> | null = null
+  let limited = false
   try {
-    const limited = await buildKeyLimitOk(claim.tenantId)
+    limited = await buildKeyLimitOk(claim.tenantId)
     minted = await withTenant(claim.tenantId, (tx) => mintBuildKey(tx, { tenantId: claim.tenantId, userId: claim.userId, email: claim.email, role: claim.role, support: false },
       { purpose: 'developer', name: deviceKeyName(claim.email), limited }))
   } catch (err) {
     console.error('[device] mint', errName(err))
   }
   if (minted?.ok) return { status: 'ok', key: minted.key, expiresAt: minted.expiresAt }
+  if (limited) await buildKeyUncount(claim.tenantId) // counted, but no key came of it (impact review)
   // Refused for good (the person may not make keys there): the claim stays spent (security LOW-8). Anything else (the
   // store's limit or ceiling, a failure): given back while live, so the CLI's next poll tries again (impact review).
   if (minted && minted.why === 'not_allowed') return { status: 'refused' }

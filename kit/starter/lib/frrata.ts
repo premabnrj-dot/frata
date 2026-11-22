@@ -19,8 +19,9 @@ const READ: RequestInit = {
   ...(HEADER ? { headers: { 'Frrata-Key': KEY } } : {}),
 }
 // A test or build key is limited to 300 reads a minute. Past it (429) a read gives this server's last good answer for
-// the same address, while it has one, rather than failing the page.
-const lastGood = new Map<string, unknown>()
+// the same address, up to 5 minutes old, rather than failing the page.
+const lastGood = new Map<string, { at: number; body: unknown }>()
+const KEEP_MS = 5 * 60_000
 const at = (path: string) => (HEADER ? `${ORIGIN}/${VERSION}/${path}` : `${ORIGIN}/${VERSION}/k/${KEY}/${path}`)
 export const PREVIEW_COOKIE = '__Host-frrata-preview'
 
@@ -57,12 +58,14 @@ export async function api<T>(path: string): Promise<T | null> {
   if (!KEY) throw new Error('FRRATA_KEY is not set')
   const res = await fetch(at(path), READ)
   if (res.status === 404) return null
-  if (res.status === 429 && lastGood.has(path)) return lastGood.get(path) as T
+  const kept = res.status === 429 ? lastGood.get(path) : undefined
+  if (kept && Date.now() - kept.at < KEEP_MS) return kept.body as T
   if (!res.ok) throw new Error(`Frrata ${res.status}`)
   const body = (await res.json()) as T
   if (DRAFTS) {
     if (lastGood.size >= 500) lastGood.delete(lastGood.keys().next().value as string) // a bound: the oldest goes first
-    lastGood.set(path, body)
+    lastGood.delete(path) // re-set at the end, so the oldest stays first
+    lastGood.set(path, { at: Date.now(), body })
   }
   return body
 }

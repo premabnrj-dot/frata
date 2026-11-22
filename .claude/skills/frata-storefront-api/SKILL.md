@@ -26,7 +26,7 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `/docs`) are the keyless entry points.
 2. **Two trees, never mixed.** next.config's `apiRewrites` (never the middleware: a middleware rewrite uncaches a route,
    and the matcher skips versioned paths so a CDN hit costs no middleware run) send `frs_test_` keys to `t/` (dynamic:
-   drafts through the preview loaders, the catalogue from the shared 15 s draft entry (`draftCatalogue`), `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
+   drafts through the preview loaders (the shop through its purged 60 s settings entry), the catalogue from the shared 15 s draft entry (`draftCatalogue`), `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
    and `frs_pub_` keys to `k/` (cached copies, `revalidate = 3600`, `generateStaticParams = () => []`). **A cached route
    never reads the request** (a header read is a runtime error, and anything per caller would be served to everyone):
    CORS there is a static `*`. Search is the one dynamic live route (varies by `q`; `public, s-maxage=60`). `check:api`

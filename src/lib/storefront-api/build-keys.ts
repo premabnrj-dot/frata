@@ -5,7 +5,7 @@ import type { Tx } from '@/lib/db'
 import { auditEvents, members, shopSettings } from '@/lib/db/schema'
 import { partnerLinks } from '@/lib/db/schema-partners'
 import { storefrontKeys } from '@/lib/db/schema-storefront-api'
-import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { LIMITS, uncount, withinLimit } from '@/lib/db/rate-limit'
 import { keyHash } from '@/lib/queries/storefront-keys'
 import { BUILD_KEY_HOURS, KEY_NAME_MAX, MAX_LIVE_BUILD_KEYS, newKey, shownPrefix, type BuildPurpose } from '@/domains/storefront-api/keys'
 import { holds } from '@/domains/tenancy/roles'
@@ -28,14 +28,16 @@ export type BuildMaker = { tenantId: string; userId: string; email: string; role
 export type Minted = { ok: true; id: string; key: string; expiresAt: string } | { ok: false; why: 'not_allowed' | 'busy' | 'full' | 'name' }
 
 /** The store's hourly mint limit, counted BEFORE the caller opens its transaction (speed review LOW-4: never a second
- *  pool connection while the transaction holds the settings row). mintBuildKey asks for the answer as `limited`. */
+ *  pool connection while the transaction holds the settings row). mintBuildKey asks for the answer as `limited`; a
+ *  caller whose mint then fails for another reason gives the count back (`buildKeyUncount`), so only a key counts. */
 export const buildKeyLimitOk = (tenantId: string) => withinLimit(LIMITS.apiBuildKeyShop, tenantId, new Date(), true)
+export const buildKeyUncount = (tenantId: string) => uncount(LIMITS.apiBuildKeyShop, tenantId)
 
 export async function mintBuildKey(tx: Tx, maker: BuildMaker, input: { purpose: BuildPurpose; name: string; hours?: number; limited: boolean }): Promise<Minted> {
-  if (!input.limited) return { ok: false, why: 'busy' }
   if (maker.support || !holds(maker.role, 'api.manage')) return { ok: false, why: 'not_allowed' }
   const name = input.name.trim()
   if (!name || name.length > KEY_NAME_MAX) return { ok: false, why: 'name' }
+  if (!input.limited) return { ok: false, why: 'busy' }
   const t = maker.tenantId
   const [m] = await tx.select({ pm: members.partnerMemberId }).from(members).where(and(eq(members.tenantId, t), eq(members.userId, maker.userId)))
   if (!m) return { ok: false, why: 'not_allowed' }

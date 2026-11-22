@@ -64,7 +64,7 @@ describe('G·4: new fields on 2026-12', () => {
     const cs: CollectionIn[] = ['manual', 'newest', 'price_low', 'price_high', 'title'].flatMap((sort) => [
       { ...coll(`m-${sort}`, [ps[3]!.id, ps[0]!.id, ps[2]!.id, ps[1]!.id]), sort },
       { id: `a-${sort}`, handle: `a-${sort}`, title: 'Cotton', description: '', kind: 'auto' as const, matchAll: true, rules: [{ field: 'tag', op: 'equals', value: 'cotton' }], sort, productIds: [] },
-    ])
+    ]).concat([coll('empty', [])]) // cards 1 and 2 tie on price: the first as listed goes first, as sortProducts keeps it
     const all = collectionCovers(cs, ps, now)
     for (const c of cs) expect(all.get(c)?.handle ?? null, c.handle).toBe(collectionCover(c, ps, now)?.handle ?? null)
   })

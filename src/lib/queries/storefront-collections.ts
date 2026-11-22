@@ -14,7 +14,8 @@ import { shopCached } from './storefront'
 
 export type StoreCollectionRef = ListCollection & { id: string; handle: string; title: string; description: string }
 
-async function coreCollections(tenantId: string): Promise<StoreCollectionRef[]> {
+/** Uncached (the int test's size and parity check); pages read apiCollections. */
+export async function coreCollections(tenantId: string): Promise<StoreCollectionRef[]> {
   return withTenant(tenantId, async (tx) => {
     const [colls, members] = await Promise.all([
       tx.select({ id: collections.id, handle: collections.handle, title: collections.title, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort })

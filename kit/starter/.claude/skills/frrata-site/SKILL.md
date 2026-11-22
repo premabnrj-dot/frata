@@ -33,7 +33,7 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    policy links, from the API at runtime (the layout's footer). Never copy it into code.
 7. **Caching.** Read with `next: { revalidate: 60 }`. Frrata purges its own copies when the store changes. A Test key
    is never cached on your computer. On a deployed preview it is kept 15 s. Each Test key allows 300 reads a minute;
-   past it (429), `api()` gives that server's last good answer for the address while it has one.
+   past it (429), `api()` gives that server's last good answer for the address, up to 5 minutes old.
    Header and footer links don't prefetch. Filters and
    search are dynamic: send filter parameters in their fixed order (collection, size, colour, price, stock, sort),
    values exactly as `facets` gives them, defaults left out.

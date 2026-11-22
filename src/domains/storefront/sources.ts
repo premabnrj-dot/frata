@@ -1,4 +1,4 @@
-import { inCollection, isListed, priceOf, ruleFacts, type ListCollection, type ListProduct } from './listing'
+import { compareBy, inCollection, isListed, priceOf, ruleFacts, type ListCollection, type ListProduct } from './listing'
 import { cleanRules, matches } from '../catalogue/collection-rules'
 
 // =============================================================================
@@ -65,17 +65,14 @@ export const collectionCover = <P extends ListProduct>(c: ListCollection, produc
 export function collectionCovers<P extends ListProduct, C extends ListCollection>(collections: readonly C[], products: P[], now: Date): Map<C, P | null> {
   const live = products.filter((p) => isListed(p, now))
   const facts = new Map(live.map((p) => [p, ruleFacts(p, now)]))
-  const price = (p: P) => priceOf(p)?.min ?? Number.MAX_SAFE_INTEGER
   const out = new Map<C, P | null>()
   for (const c of collections) {
     const rules = c.kind === 'manual' ? null : cleanRules(c.rules)
-    const before = (a: P, b: P) => c.sort === 'manual' ? c.productIds.indexOf(a.id) < c.productIds.indexOf(b.id)
-      : c.sort === 'price_low' ? price(a) < price(b) : c.sort === 'price_high' ? price(a) > price(b)
-      : c.sort === 'title' ? a.title.localeCompare(b.title) < 0 : a.since.localeCompare(b.since) > 0
+    const cmp = compareBy<P>(c.sort, c.productIds) // sortProducts' own order
     let first: P | null = null
     for (const p of live) {
       if (rules ? !matches(rules, c.matchAll, facts.get(p)!) : !c.productIds.includes(p.id)) continue
-      if (!first || before(p, first)) first = p
+      if (!first || cmp(p, first) < 0) first = p
     }
     out.set(c, first)
   }
