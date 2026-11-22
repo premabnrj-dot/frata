@@ -230,7 +230,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <div class="doc">
 <div class="head">
   <h1>Studio workbench, one address and apps for websites</h1>
-  <p>Final review of the Studio and one-address plans. Five changes are proposed before they run. 22 Nov 2026 · Spec <span class="mono">docs/specs/2026-11-22-studio-workbench.md</span> · Draft for the owner. Nothing here is built.</p>
+  <p>Final review of the Studio and one-address plans. Four reviews ran on this draft. Their findings are folded in. 22 Nov 2026 · Spec <span class="mono">docs/specs/2026-11-22-studio-workbench.md</span> · Draft for the owner. Nothing here is built.</p>
 </div>
 <nav aria-label="Sections">
   <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#take">What to take</a><a href="#workbench">1 · Workbench</a>
@@ -241,12 +241,12 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <section id="in-short">
   <h2>In short</h2>
   <div class="answers">
-    <div class="card"><h3>Why does a key need a domain first?</h3><p>It no longer does. Since 16 Nov a Test key works with no domain. The Website page still shows a disabled “Connect a domain first” box. It reads as required. A Live key does need a proved address. Screen 2 removes the box and lets <span class="mono">name.frrata.shop</span> count as that address.</p></div>
-    <div class="card"><h3>Checkout on a second address</h3><p>One address is already approved (ADR-0019) but sits in wave 4, behind the secure frame. A store that has not opened holds no real shopper data. So it can move to one address as soon as hosting ships, one wave earlier. Screen 3.</p></div>
+    <div class="card"><h3>Why does a key need a domain first?</h3><p>It no longer does. Since 16 Nov a Test key works with no domain. The Website page still shows a disabled “Connect a domain first” box. It reads as required. Screen 2 removes the box. A Live key does need a proved address, as Razorpay’s live keys do.</p></div>
+    <div class="card"><h3>Checkout on a second address</h3><p>One address is approved (ADR-0019). It waits for the secure frame, and the reviews confirm it must. So the frame moves to the front of the queue. The reviews also found a gap. A store that has not opened takes no orders, so nobody can test checkout before opening day. Screen 3 adds test orders.</p></div>
     <div class="card"><h3>Is the Studio screen right for developers and designers?</h3><p>The approved screen suits a partner talking to the agent. It has no code view, no checks list, no page states and nothing collapses. Screen 1 keeps the approved chat and preview and adds a third panel. All three collapse.</p></div>
     <div class="card"><h3>How do developers use apps on a website?</h3><p>Today they mostly cannot. No app gives a website anything to read. Product video never reaches a website. The PIN code check works on theme stores only. A website cannot tell which apps are on. Screen 4 gives every app three parts. Data, a ready block and a Frrata-drawn screen for anything personal.</p></div>
-    <div class="card"><h3>What keeps docs in step, for every app to come?</h3><p>Docs are generated from the API’s own schemas already. Nothing fails when a route or an app is missed. Screen 5 lists eight rules, each held by a gate that fails the build.</p></div>
-    <div class="card"><h3>What it costs and what I need</h3><p>Three small items can start now with no owner account. The rest re-orders work already approved. I need your answers to the nine calls. Three owner steps are open. They are Vercel teams, the preview domain and the <span class="mono">frrata.shop</span> renewal.</p></div>
+    <div class="card"><h3>What keeps docs in step, for every app to come?</h3><p>Docs are generated from the API’s own schemas already. Nothing fails when a route or an app is missed. Screen 5 lists eight rules. A gate that fails the build holds each one.</p></div>
+    <div class="card"><h3>What it costs and what I need</h3><p>Three small items can start now with no owner account. The rest re-orders work already approved. I need your answers to the ten calls. Three owner steps are open. They are Vercel teams, the preview domain and the <span class="mono">frrata.shop</span> renewal.</p></div>
   </div>
 </section>
 
@@ -255,12 +255,12 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <div class="tw"><table>
     <tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr>
     <tr><td>Settings › Website, live. Picking “Your own website” with no domain shows a disabled box “Connect a domain first”.</td><td>Keys sit below it and do work. The box says the opposite.</td><td>The address row shows the store’s frrata name. Connect my domain sits beside it (screen 2).</td></tr>
-    <tr><td>A Test key answers a browser from <span class="mono">localhost</span> or the website’s own address only.</td><td>A designer’s shared preview link loads no products in the browser.</td><td>Up to five preview addresses for each Test key, typed exactly (screen 2).</td></tr>
-    <tr><td>A Test key stops the moment the store opens. A Live key needs a connected domain.</td><td>A website on a preview address goes blank on opening day.</td><td>Open my store checks this first and names the fix (stress row 3).</td></tr>
-    <tr><td>Checkout and the order page live on <span class="mono">name.frrata.shop</span>. The website lives elsewhere.</td><td>Two addresses in testing and in production. The owner raised it on 16 Nov and again today.</td><td>One address for stores not yet open, a wave earlier (screen 3).</td></tr>
+    <tr><td>A Test key stops the moment the store opens. A Live key needs a connected domain.</td><td>A website on a preview address goes blank on opening day.</td><td>Open my store checks this first and names the fix (screen 2).</td></tr>
+    <tr><td>A store that has not opened shows “Opening soon” and refuses every order.</td><td>A developer cannot test checkout before opening day. The pilot tests on an open store.</td><td>Test orders for the store’s own team (screen 3).</td></tr>
+    <tr><td>Checkout and the order page live on <span class="mono">name.frrata.shop</span>. The website lives elsewhere.</td><td>Two addresses in testing and in production. The owner raised it on 16 Nov and again today.</td><td>The secure frame first, so one address lands sooner (screen 3).</td></tr>
     <tr><td>Studio, approved 16 Nov: chat left, preview right, Versions and Brand book as drawers.</td><td>A developer cannot read code or check results. A designer cannot see a page’s states or widths past two. Nothing collapses.</td><td>Three panels that collapse and resize (screen 1).</td></tr>
     <tr><td>Apps: six built. None declares what a website can use.</td><td>A code website loses product video and the PIN check that theme stores have.</td><td>One contract for each app, with <span class="mono">shop.apps</span> (screen 4).</td></tr>
-    <tr><td>API docs: generated from schemas. The path list is typed by hand.</td><td>A new route can ship with no docs page and no test notices.</td><td>Paths generated from the one map, held by a gate (screen 5).</td></tr>
+    <tr><td>API docs: generated from schemas. The path list is typed by hand.</td><td>A new route can ship with no docs page and no test notices.</td><td>Paths generated from one table, held by a gate (screen 5).</td></tr>
     <tr><td>Plan files: ADR-0017 still describes Cloudflare. The kit spec still names <span class="mono">frrata.site</span>. Three deviations read “owner seen: no”.</td><td>A worker reading them builds the wrong thing.</td><td>Cleared in wave 0 before any lane opens (order of work).</td></tr>
   </table></div>
 </section>
@@ -275,7 +275,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
     <div class="card"><h3>VS Code and Figma</h3><p>VS Code folds its side bar with one key and has a mode that hides everything. Figma can minimise the panels or hide them all. The right panel returns when something is picked.</p><span class="src">code.visualstudio.com/docs/getstarted/userinterface · 18 Nov 2026 · help.figma.com · undated</span><span class="take">Take: Preview only; the inspector returns when a part is picked.</span></div>
     <div class="card"><h3>Shopify (Hydrogen)</h3><p>Products and cart read with no key. Browsers use a public key. mock.shop gives demo data. Checkout sits on a subdomain such as <span class="mono">checkout.example.com</span>. Hydrogen does not draw app blocks. A developer reads the app’s data, calls its API or adds its script.</p><span class="src">shopify.dev/docs/storefronts/hydrogen/deploy/go-live, /installed-apps · undated, API 2026-10</span><span class="take">Take: build before any domain; sample data.</span><span class="skip">Skip: the checkout subdomain, and apps left for each developer to wire.</span></div>
     <div class="card"><h3>Stripe and Razorpay</h3><p>Test keys work at once. Razorpay makes them “without adding a website” and asks for one on live keys. Stripe’s embedded checkout mounts on your page with a return address. Monthly versions never break. The API description is public and builds the SDKs.</p><span class="src">docs.stripe.com/keys, /api/versioning · version 2026-11-18 · razorpay.com/docs · undated</span><span class="take">Take: test first, address at go-live; a return address; docs built from the description.</span></div>
-    <div class="card"><h3>BigCommerce</h3><p>Checkout embeds in a frame. In Safari it must be served from the same domain as the storefront. Local tests use a tunnel.</p><span class="src">docs.bigcommerce.com … /embedded-checkout/tutorial · undated</span><span class="take">Take: a frame only once the address is one. This is why the sheet waits for step C.</span></div>
+    <div class="card"><h3>BigCommerce</h3><p>Checkout embeds in a frame. In Safari it must be served from the same domain as the storefront. Local tests use a tunnel.</p><span class="src">docs.bigcommerce.com … /embedded-checkout/tutorial · undated</span><span class="take">Take: a frame only once the address is one. This is why the sheet waits for step B.</span></div>
     <div class="card"><h3>oasdiff and llms.txt</h3><p>A command compares two API descriptions and fails the build on a breaking change. llms.txt is a plain index with a text twin of each page, for agents.</p><span class="src">github.com/oasdiff/oasdiff · undated · llmstxt.org · 10 Aug 2026</span><span class="take">Take: a failing check, not a review habit. Frrata’s snapshot test and llms.txt exist; the gate adds what they miss.</span></div>
   </div>
   <p class="lede">No current source was found for three things. Panel shortcuts in v0, Webflow and Framer. GoKwik’s checkout on code websites. Whether Shopify’s or Stripe’s keys are tied to a domain.</p>
@@ -320,7 +320,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
       <div class="canvas">
         <div class="cbar">
           <select class="sel" id="page" aria-label="Page"><option>Home</option><option>Product</option><option>Collection</option><option>Size help</option><option>Checkout</option></select>
-          <select class="sel" id="state" aria-label="State"><option value="normal">Normal</option><option value="empty">No products</option><option value="long">Long heading</option></select>
+          <select class="sel" id="state" aria-label="State"><option value="normal">Normal</option><option value="empty">No products</option><option value="long">Longest heading</option></select>
           <div class="seg" role="group" aria-label="Width"><button data-w="300" aria-pressed="true">390</button><button data-w="460" aria-pressed="false" class="only-wide">768</button><button data-w="640" aria-pressed="false" class="only-wide">1280</button></div>
           <span class="tag" style="margin-left:auto">Preview · v7</span>
           <button class="ib" aria-label="Open preview in a new tab"><svg class="i"><use href="#i-out"/></svg></button>
@@ -413,7 +413,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <div class="cards">
     <div class="card"><h3>Panels</h3><p>Chat, preview and inspector. Each side panel folds to a 44 px rail and keeps its place. The rail shows a dot when the agent needs you. A panel never opens by itself. Drag an edge to resize, or use the arrow keys on it. Each person’s layout is remembered on their device.</p></div>
     <div class="card"><h3>Keys</h3><p><kbd>[</kbd> chat · <kbd>]</kbd> inspector · <kbd>\</kbd> preview only · <kbd>F6</kbd> next panel · <kbd>1</kbd>–<kbd>4</kbd> inspector tab · <kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd> find a page, file or version · <kbd>?</kbd> lists them. Single keys work only outside a text box. One switch turns them off.</p></div>
-    <div class="card"><h3>A designer’s day</h3><p>Pick a page, a state and a width. Tap a part to change its words, photo, height or block. Leave a note pinned to a part. Compare two versions side by side. Attach a screenshot or a reference to a message. Words and colours show within seconds.</p></div>
+    <div class="card"><h3>A designer’s day</h3><p>Pick a page, a case and a width. A case shows a real product of the store, like its longest name or a sold-out one. Tap a part to change its words, photo, height or block. Leave a note pinned to a part. Compare two versions side by side. Attach a screenshot or a reference to a message. Words and colours show within seconds.</p></div>
     <div class="card"><h3>A developer’s day</h3><p>Read what each version changed. Read the publish checks with file and line before Publish refuses. Copy one command to work on their own computer. Hand the branch back to the agent. Code is read here. It is written on their computer or by the agent.</p></div>
     <div class="card"><h3>Phone</h3><p>One panel at a time from a bar at the foot: Chat, Site, Design. Code is a computer screen. Checks and Versions stay reachable under Design.</p></div>
     <div class="card"><h3>Access</h3><p>WCAG 2.2 AA for Studio itself. A screen reader can jump to each panel by name. Toggles say open or closed. The resize edge is a slider with a value. The agent’s progress is spoken politely, once a step. Nothing moves under reduced motion.</p></div>
@@ -434,7 +434,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
 <section id="start">
   <h2>2 · Start building with no domain</h2>
-  <p class="lede">Settings › Website today, and as proposed until the approved one-address card (V2a) replaces it. The third screen is the opening-day check.</p>
+  <p class="lede">Settings › Website today, and a small fix until the approved one-address card (V2a) replaces it. The third screen is the opening-day check.</p>
   <div class="screens">
     <div class="screen"><div class="cap">Today · live</div><div class="in">
       <div class="sec"><h4>Website</h4>
@@ -450,28 +450,27 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
       </div>
       <div class="sec"><h4>Keys <button class="btn sm">New key</button></h4>
         <div class="krow"><div class="l1"><b>Kabir’s laptop</b><span class="tag">Test</span><span class="chip warn">6 days left</span></div>
-          <div class="l2"><span class="lbl">Works from</span><span class="tag mono">localhost</span><span class="tag mono">ayuda-git-hero.vercel.app</span><button class="btn sm ghost">Add address</button></div></div>
+          </div>
         <div class="krow"><div class="l1"><b>Website</b><span class="tag">Live</span><span class="chip">Starts when the store opens</span></div></div>
       </div>
       <div class="sec"><h4>For developers</h4>
         <div class="row"><span>Docs</span><span class="mono">api.frrata.shop/docs</span></div>
         <div class="row"><span>Starter code</span><span class="mono">github.com/frrata/starter</span></div>
-        <div class="row"><span>Sample products</span><button class="btn sm">Add 12 samples</button></div>
-      </div>
+              </div>
     </div></div>
     <div class="screen"><div class="cap">Proposed · Open my store, website not ready</div><div class="in">
       <div class="sec" style="box-shadow:var(--e2)"><h4>Your store is still closed.</h4>
         <p>Your website runs on a Test key at <span class="mono">ayuda-git-hero.vercel.app</span>. Test keys stop when the store opens.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri sm">Move the website to Frrata</button><button class="btn sm">Connect my domain</button><button class="btn sm ghost">Keep it closed</button></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri sm">Connect my domain</button><button class="btn sm ghost">Keep it closed</button></div>
       </div>
     </div></div>
   </div>
   <div class="tw"><table>
     <tr><th>Step by step</th><th>What changes in the system</th></tr>
     <tr><td>1. A partner makes a client store and a Test key. No domain is asked for.</td><td>Nothing. This works since migration 0149.</td></tr>
-    <tr><td>2. They add a preview address to the key.</td><td>New: up to five exact <span class="mono">https</span> addresses for each Test key. The API answers that browser. No wildcard, and never for a Live key.</td></tr>
-    <tr><td>3. They see days left on the key and renew it once.</td><td>New: the 30-day stop shows as a chip from day 7 down. Renew makes a new key and deletes the old.</td></tr>
-    <tr><td>4. The store opens.</td><td>New: Open my store refuses while the website has no proved address. It names the two fixes.</td></tr>
+    <tr><td>2. They build on their computer or on any preview address.</td><td>Nothing. The starter reads on the server, which a Test key allows from anywhere. The docs say so in one line.</td></tr>
+    <tr><td>3. They see days left on the key and renew it.</td><td>New: the 30-day stop shows as a chip from day 7 down. Renew makes a new key and deletes the old.</td></tr>
+    <tr><td>4. The store opens.</td><td>New: Open my store refuses while the website has no proved address. After one address ships, Move the website to Frrata joins the choices.</td></tr>
   </table></div>
 </section>
 
@@ -480,27 +479,34 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <p class="lede">What the address bar reads at each step. Green is the store’s one address. Amber is a second address.</p>
   <div class="bars">
     <div class="bar hd"><span></span><span>Website</span><span>Checkout</span><span>Order confirmed</span></div>
-    <div class="bar"><b>Today<small>live</small></b><span class="addr other">ayuda.vercel.app</span><span class="addr other">ayuda.frrata.shop/checkout</span><span class="addr other">ayuda.frrata.shop/orders/…</span></div>
-    <div class="bar"><b>Step A · now<small>P2, approved, plus a way back</small></b><span class="addr other">localhost:3000</span><span class="addr other">ayuda.frrata.shop/checkout</span><span class="addr other">ayuda.frrata.shop/orders/…</span></div>
-    <div class="bar"><b>Step B · wave 3<small>new: stores not yet open</small></b><span class="addr same">ayuda.frrata.shop</span><span class="addr same">ayuda.frrata.shop/checkout</span><span class="addr same">ayuda.frrata.shop/orders/…</span></div>
-    <div class="bar"><b>Step C · wave 4<small>P3 + P5, approved: open stores</small></b><span class="addr same">houseofayuda.in</span><span class="addr same">houseofayuda.in/checkout</span><span class="addr same">houseofayuda.in/orders/…</span></div>
-    <div class="bar"><b>Step D · later<small>the checkout sheet, draft</small></b><span class="addr same">houseofayuda.in/kurtas</span><span class="addr same">houseofayuda.in/kurtas</span><span class="addr same">houseofayuda.in/kurtas</span></div>
+    <div class="bar"><b>Today<small>live, open stores only</small></b><span class="addr other">ayuda.vercel.app</span><span class="addr other">ayuda.frrata.shop/checkout</span><span class="addr other">ayuda.frrata.shop/orders/…</span></div>
+    <div class="bar"><b>Step A · now<small>P2 approved, plus test orders</small></b><span class="addr other">localhost:3000</span><span class="addr other">ayuda.frrata.shop/checkout</span><span class="addr other">ayuda.frrata.shop/orders/…</span></div>
+    <div class="bar"><b>Step B · wave 4<small>P3 then P5, approved</small></b><span class="addr same">ayuda.frrata.shop</span><span class="addr same">ayuda.frrata.shop/checkout</span><span class="addr same">ayuda.frrata.shop/orders/…</span></div>
+    <div class="bar"><b>Step B · own domain<small>the same build</small></b><span class="addr same">houseofayuda.in</span><span class="addr same">houseofayuda.in/checkout</span><span class="addr same">houseofayuda.in/orders/…</span></div>
+    <div class="bar"><b>Step C · later<small>the checkout sheet, draft</small></b><span class="addr same">houseofayuda.in/kurtas</span><span class="addr same">houseofayuda.in/kurtas</span><span class="addr same">houseofayuda.in/kurtas</span></div>
   </div>
   <div class="tw"><table>
     <tr><th>Step</th><th>What a person gets</th><th>What it needs</th><th>State</th></tr>
-    <tr><td><b>A</b> Checkout wears the brand, with a way back</td><td>Checkout and the order page in the brand’s look. From a Test key’s address, Back and Continue shopping return to that address. A slim “Test order” line shows on test orders only.</td><td>P2 as approved. New: the bag link carries the test address, matched exactly against the key’s list.</td><td><span class="chip">P2 approved · return new</span></td></tr>
-    <tr><td><b>B</b> One address while building</td><td>The store’s frrata name serves the website, checkout and order pages. Test orders run end to end on one address, on a phone, before any domain.</td><td>V2a hosting (·1, ·5, ·6), the routing spike P5·1, P5·2–P5·8. It does not need the secure frame. No real shopper exists yet. Opening the store stays blocked until the frame ships.</td><td><span class="chip warn">New split of P5</span></td></tr>
-    <tr><td><b>C</b> One address for open stores</td><td>The same for a live store, on its frrata name or its own domain. Personal fields live in Frrata’s frame.</td><td>P3 the secure frame, then P5·9.</td><td><span class="chip ok">Approved</span></td></tr>
-    <tr><td><b>D</b> Checkout as a sheet over the page</td><td>No page change at all.</td><td>C, and the Razorpay-in-a-frame spike passing. Nine owner calls wait in its spec.</td><td><span class="chip">Draft</span></td></tr>
+    <tr><td><b>A</b> Checkout wears the brand. Test orders before opening.</td><td>Checkout and the order page in the brand’s look. The store’s own team places test orders before opening day, from the console or Studio. A “Test order” line shows on each. Still two addresses.</td><td>P2 as approved. New: test orders, with their own spec and mockup. Razorpay test keys only. No stock, invoice number or message. Erased at opening.</td><td><span class="chip warn">Test orders are new</span></td></tr>
+    <tr><td><b>B</b> One address</td><td>The website, checkout and order pages on the store’s frrata name or its own domain. Personal fields live in Frrata’s frame.</td><td>P3 the secure frame, V2a hosting, the two spikes, then P5. The frame and hosting are built side by side so neither waits.</td><td><span class="chip ok">Approved</span></td></tr>
+    <tr><td><b>C</b> Checkout as a sheet over the page</td><td>No page change at all.</td><td>B, and Razorpay working inside the frame. Nine owner calls wait in its spec.</td><td><span class="chip">Draft</span></td></tr>
+  </table></div>
+  <h3>One address before the frame: looked at, not recommended</h3>
+  <div class="tw"><table>
+    <tr><th>What I first proposed</th><th>What the reviews found</th></tr>
+    <tr><td>Move stores that have not opened to one address a wave early, since they hold no shopper data.</td><td>“Not opened” is not “no personal data”. A tester signed in to EkCode would show a real saved address to partner code on the same address.</td></tr>
+    <tr><td>Open the store only once the frame ships.</td><td>It also needs EkCode off there, checkout limited to the team, sessions ended at opening and browser storage cleared. The <span class="mono">secure.</span> record is needed either way.</td></tr>
+    <tr><td>It re-orders approved work.</td><td>It reverses decision 7 of 16 Nov and the rule of a security test before outside partners’ code shares an address with checkout.</td></tr>
+    <tr><td>It saves about one wave.</td><td>Building the frame first saves nearly the same, with nothing to undo. That is the recommendation. Call 4 asks if you want it anyway.</td></tr>
   </table></div>
   <h3>Other ways looked at</h3>
   <div class="tw"><table>
     <tr><th>Way</th><th>Why not</th></tr>
     <tr><td>The website’s own server passes <span class="mono">/checkout</span> through to Frrata</td><td>The partner’s hosting would read every phone number, address and payment step. ADR-0014 rule 3 forbids it. It also breaks checkout’s cookies and origin checks.</td></tr>
-    <tr><td><span class="mono">checkout.brand.in</span> beside <span class="mono">brand.in</span></td><td>Still two addresses, two certificates and two Razorpay approvals. This is today’s rule for own domains and the friction the owner named.</td></tr>
+    <tr><td><span class="mono">checkout.brand.in</span> beside <span class="mono">brand.in</span></td><td>Still two addresses, two certificates and two Razorpay approvals. This is today’s rule for own domains and the friction you named.</td></tr>
     <tr><td>Frrata’s checkout framed inside a website on another address</td><td>Safari and the Instagram browser block a frame from another address. Sign-in and the order would not hold. The sheet does this safely once the address is one.</td></tr>
-    <tr><td>A developer’s own hosting behind the one address</td><td>Possible later. The publish checks, the kill switch and the cost line all assume Frrata’s fleet today. Call 4.</td></tr>
-    <tr><td>One address on <span class="mono">localhost</span></td><td>A laptop cannot be the store’s address. Step A’s way back covers the laptop. Step B covers a real phone.</td></tr>
+    <tr><td>A developer’s own hosting behind the one address</td><td>Possible later. The publish checks, the kill switch and the cost line all assume Frrata’s fleet today. Call 6.</td></tr>
+    <tr><td>One address on <span class="mono">localhost</span></td><td>A laptop cannot be the store’s address. A test order opens on the store’s address and returns to the console or Studio.</td></tr>
   </table></div>
 </section>
 
@@ -510,7 +516,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <div class="tw"><table>
     <tr><th>App</th><th>On theme stores</th><th>On a code website today</th><th>Proposed</th></tr>
     <tr><td><b>Delivery Zones</b></td><td>PIN code check on the product page; fee at checkout</td><td>Zone names in <span class="mono">shop.delivery.zones</span>. No PIN code check.</td><td>Data: <span class="mono">delivery/check</span>. Block: <span class="mono">&lt;PinCheck&gt;</span></td></tr>
-    <tr><td><b>Product video</b></td><td>Video on the product page</td><td>Nothing reaches the API</td><td>Data: <span class="mono">product.video</span>. Block: <span class="mono">&lt;ProductVideo&gt;</span></td></tr>
+    <tr><td><b>Product video</b></td><td>Video on the product page</td><td>Nothing reaches the API</td><td>Data: <span class="mono">product.video</span>, streamed from Mux as today. Block: <span class="mono">&lt;ProductVideo&gt;</span></td></tr>
     <tr><td><b>EkCode</b></td><td>Sign-in at checkout</td><td>Inside Frrata’s checkout</td><td>Frrata-drawn only. Later: a signed-in hint for the header.</td></tr>
     <tr><td><b>Messages</b></td><td>WhatsApp updates</td><td>No website part</td><td>None. Listed as “no website part” so nobody hunts for it.</td></tr>
     <tr><td><b>GST · True Profit</b></td><td>Console only</td><td>Console only</td><td>None. Costs never reach a browser.</td></tr>
@@ -527,11 +533,10 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <pre class="code">shop.apps  <span class="d">// ["delivery_zones", "product_video"]</span></pre>
           <div class="lbl">Data</div>
 <pre class="code">GET /2026-12/k/{key}/delivery/check?pin=560034
-<span class="a">{ "delivers": true, "zone": "Bengaluru", "days": [2, 4] }</span></pre>
+<span class="a">{ "delivers": true, "place": "Bengaluru, Karnataka", "by": "2026-11-26" }</span></pre>
           <div class="lbl">Block</div>
 <pre class="code">&lt;PinCheck product={product} /&gt;</pre>
           <div class="row"><span>When the app is off</span><span class="mono">404 not_available · the block draws nothing</span></div>
-          <div class="row"><span>Sample data with a Test key</span><span class="mono">?sample=1</span></div>
         </main>
       </div>
     </div>
@@ -549,13 +554,13 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <div class="tw"><table>
     <tr><th>#</th><th>Rule</th><th>What fails the build</th></tr>
     <tr><td>1</td><td>An app says what a website gets, in its record: resources, blocks, Frrata-drawn surfaces, or “none” with the reason.</td><td><span class="mono">check:modules</span>: an app with a shopper file and no <span class="mono">site</span> entry.</td></tr>
-    <tr><td>2</td><td>A resource is one entry in one map. Its schema is closed and every field carries a description and an example.</td><td><span class="mono">check:api-docs</span> (new): a field with no description; an example that does not parse against its schema.</td></tr>
-    <tr><td>3</td><td>The path list, the reference page, the app’s docs page and <span class="mono">llms.txt</span> are generated from that map. Nobody types them.</td><td><span class="mono">check:api-docs</span>: a served route missing from the generated description, or the reverse.</td></tr>
-    <tr><td>4</td><td>Every block named in a record exists in the starter, and the starter’s types match the API.</td><td><span class="mono">kit.test</span>: a named block with no file; types out of date.</td></tr>
-    <tr><td>5</td><td><span class="mono">shop.apps</span> lists what is on. Off means <span class="mono">404 not_available</span> and an empty block, never an error on the page.</td><td>A test per app: on, off, not in plan, paused.</td></tr>
+    <tr><td>2</td><td>A resource is one entry in one table. Its fields are closed. Each field has a description and an example.</td><td><span class="mono">check:api-docs</span> (new): a field with no description; an example that does not parse against its schema.</td></tr>
+    <tr><td>3</td><td>The path list, the reference page, the app’s docs page and <span class="mono">llms.txt</span> come from that table. Nobody types them.</td><td><span class="mono">check:api-docs</span>: a served route missing from the generated description, or the reverse.</td></tr>
+    <tr><td>4</td><td>Every block named in a record exists in the starter. The starter’s types match the API.</td><td><span class="mono">kit.test</span>: a named block with no file; types out of date.</td></tr>
+    <tr><td>5</td><td><span class="mono">shop.apps</span> lists what is on. Off means <span class="mono">404 not_available</span> and an empty block. Every way an app stops clears the stored copies at once.</td><td>A test for each app: on, off, not in plan, paused, trial ended.</td></tr>
     <tr><td>6</td><td>A released version only grows. A change that breaks is a new dated version, with the old kept 12 months.</td><td><span class="mono">released-api.test</span> (exists) and <span class="mono">api-contract-reviewer</span>.</td></tr>
-    <tr><td>7</td><td>Every addition writes one line to the API’s “What’s new” page, generated from the difference between snapshots.</td><td><span class="mono">check:api-docs</span>: a snapshot change with no line.</td></tr>
-    <tr><td>8</td><td>No cost, no shopper detail and no draft in any resource. Anything personal is Frrata-drawn.</td><td><span class="mono">check:api</span> and <span class="mono">check:client-bundle</span> (exist), with the app folders added.</td></tr>
+    <tr><td>7</td><td>Every addition writes one line to the API’s “What’s new” page. The line comes from the difference between snapshots.</td><td><span class="mono">check:api-docs</span>: a snapshot change with no line.</td></tr>
+    <tr><td>8</td><td>No cost, no shopper detail and no draft in any resource. Anything personal is Frrata-drawn.</td><td><span class="mono">check:api</span> and the released snapshot, widened to read every app’s fields from the one table.</td></tr>
   </table></div>
 </section>
 
@@ -565,14 +570,17 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
     <tr><th>Severity</th><th>Scenario</th><th>Today or as planned</th><th>Fix</th></tr>
     <tr><td><span class="chip bad">High</span></td><td>The store opens while its website runs on a Test key at a preview address.</td><td>Test keys stop at opening. The Live key has no proved address. The website shows no products.</td><td>Open my store refuses first (screen 2). After step B the frrata name counts as proved.</td></tr>
     <tr><td><span class="chip bad">High</span></td><td>A code website replaces a theme store that used the PIN code check and product video.</td><td>Both vanish. Nothing warns the owner.</td><td>Screen 4’s two resources and blocks ship before the first non-pilot website.</td></tr>
-    <tr><td><span class="chip bad">High</span></td><td>A store moves to one address before the frame, then opens.</td><td>Partner code would share an address with real shopper fields.</td><td>The database allows one address without the frame only before opening. The store cannot open until the frame ships.</td></tr>
+    <tr><td><span class="chip bad">High</span></td><td>A developer wants to place an order before opening day.</td><td>Refused. The store shows “Opening soon”. No test order exists.</td><td>Test orders for the team (screen 3, step A), as their own spec.</td></tr>
+    <tr><td><span class="chip bad">High</span></td><td>Frrata Admin pauses an app, or a trial ends by the clock.</td><td>Nothing clears the stored copies. A website would show the app for up to an hour.</td><td>Rule 5 names a clear-out for each: Admin pause, trial end, plan change.</td></tr>
     <tr><td><span class="chip warn">Medium</span></td><td>A Test key reaches day 30 mid-build.</td><td>The website goes blank with one 404.</td><td>Days left as a chip, renew in one tap (screen 2).</td></tr>
-    <tr><td><span class="chip warn">Medium</span></td><td>A designer sends the brand a preview link.</td><td>The browser’s reads are refused. Only parts drawn before the page loads show.</td><td>Preview addresses on a Test key (screen 2). Build keys (G·2) cover server reads.</td></tr>
-    <tr><td><span class="chip warn">Medium</span></td><td>A preview address is typed loosely, or a key’s list is used to send shoppers elsewhere.</td><td>—</td><td>Exact <span class="mono">https</span> addresses only, five for each key, Test keys only, shown in the keys list. The way back matches the list exactly.</td></tr>
-    <tr><td><span class="chip warn">Medium</span></td><td>An app is turned off after the website was built with its block.</td><td>Not built.</td><td>Rule 5. <span class="mono">shop.apps</span> updates at once when the app is turned off.</td></tr>
+    <tr><td><span class="chip warn">Medium</span></td><td>A designer sends the brand a preview link.</td><td>Parts the starter reads before the page loads show. A part read in the browser shows nothing.</td><td>The docs say to read before the page loads. Preview addresses on a key stay out (call 1).</td></tr>
+    <tr><td><span class="chip warn">Medium</span></td><td>A Test key sits in a public preview’s code.</td><td>A Test key also reads products not yet published.</td><td>The key dialog says so in one line. Build keys (G·2) stay off the browser.</td></tr>
+    <tr><td><span class="chip warn">Medium</span></td><td>Product video plays on every code website.</td><td>Frrata pays Mux for each minute watched. No budget is set.</td><td>A cost check before AP2 ships (call 7).</td></tr>
+    <tr><td><span class="chip warn">Medium</span></td><td>An app is turned off after the website was built with its block.</td><td>Not built.</td><td>Rule 5. The console switch already clears the store’s copies.</td></tr>
     <tr><td><span class="chip warn">Medium</span></td><td>An app is turned on after the website was built.</td><td>Nothing tells the partner.</td><td>Studio suggests “Add a PIN code check to Product” above the composer.</td></tr>
     <tr><td><span class="chip warn">Medium</span></td><td>Two people work in Studio on one website.</td><td>Not written in the spec.</td><td>One agent turn at a time on each website. The second person sees who is building. Word edits still save.</td></tr>
-    <tr><td><span class="chip warn">Medium</span></td><td>A developer builds a reviews block before the brand has a review.</td><td>Empty answers only.</td><td><span class="mono">?sample=1</span> on Test keys answers the docs’ example.</td></tr>
+    <tr><td><span class="chip warn">Medium</span></td><td>The Code and Checks tabs need each version’s changes and check results.</td><td>Hosting stores neither today.</td><td>V2a’s publish check keeps its results. Changes are read from the site’s repository, with a wait limit.</td></tr>
+    <tr><td><span class="chip">Low</span></td><td>A partner starts before the brand has loaded any product.</td><td>Empty pages.</td><td>Left out for now. Sample products come back when a partner asks.</td></tr>
     <tr><td><span class="chip">Low</span></td><td>Chat is folded and the agent needs an answer.</td><td>—</td><td>The rail’s dot and count. The turn waits. Nothing opens by itself.</td></tr>
     <tr><td><span class="chip">Low</span></td><td>A product’s price changes in the console.</td><td>The API’s copy purges by tag. A website’s own cached pages may not.</td><td>To confirm in V2a: one “changed” call to a hosted website when a tag purges.</td></tr>
     <tr><td><span class="chip">Low</span></td><td>A website wants a Purchase event for its own Meta pixel.</td><td>Checkout is Frrata’s. The website hears nothing.</td><td>To decide: Frrata sends the event server-side per store, never a script on checkout. Call 9.</td></tr>
@@ -583,25 +591,24 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 
 <section id="order">
   <h2>Order of work</h2>
-  <p class="lede">The approved schedule with four moves. New items are marked. Everything else keeps its plan, tasks and reviewers.</p>
+  <p class="lede">The approved schedule with one move and four additions, all marked. Everything else keeps its plan, tasks and reviewers.</p>
   <div class="tw"><table>
     <tr><th>Wave</th><th>Work</th><th>Lane</th><th>Waits on</th></tr>
-    <tr><td>0</td><td><span class="chip warn">New</span> Clear the stale plan text: ADR-0017’s body, the kit spec’s domain section, spec headers, the three “owner seen: no” rows</td><td>—</td><td>Nothing</td></tr>
-    <tr><td>2 · now</td><td>P2 checkout in the brand’s look, with <span class="chip warn">New</span> the way back for Test keys</td><td>E</td><td>Nothing</td></tr>
-    <tr><td>2 · now</td><td>G·1–G·4, with <span class="chip warn">New</span> D0: the Website card, preview addresses, days left, the opening check, sample products</td><td>B</td><td>Call 1, 2</td></tr>
-    <tr><td>2 · now</td><td><span class="chip warn">New</span> AP1: <span class="mono">shop.apps</span>, the one resource map, <span class="mono">check:api-docs</span>, the generated app pages</td><td>B</td><td>Call 5, 6</td></tr>
-    <tr><td>2 · now</td><td>P3·1 spike · P5·0 · P4b</td><td>E, A</td><td>Two test phones · the <span class="mono">frrata.shop</span> renewal</td></tr>
-    <tr><td>3</td><td>V2a hosting, then <span class="chip warn">New</span> P5a: one address for stores not yet open</td><td>A</td><td>Vercel teams, the preview domain, P5·1</td></tr>
-    <tr><td>3</td><td><span class="chip warn">New</span> AP2: Delivery Zones and Product video as resources and blocks</td><td>B</td><td>AP1</td></tr>
+    <tr><td>0</td><td>Clear the stale plan text (V0·1’s ADR-0017 rewrite, the kit spec’s domain section, spec headers, three “owner seen: no” rows) · <span class="chip warn">New</span> the test orders spec and mockup</td><td>—</td><td>Nothing</td></tr>
+    <tr><td>2 · now</td><td>P2 checkout in the brand’s look, then <span class="chip warn">Moved up</span> P3 the secure frame straight after. P3·1 spike starts today.</td><td>E</td><td>Two test phones for the spike</td></tr>
+    <tr><td>2 · now</td><td>G·1–G·4, with <span class="chip warn">New</span> D0: the Website card, days left, the opening check</td><td>B</td><td>Call 2</td></tr>
+    <tr><td>2 · now</td><td>P5·0 · P4b</td><td>A</td><td>The <span class="mono">frrata.shop</span> renewal</td></tr>
+    <tr><td>3</td><td>V2a hosting · the routing spike P5·1 · <span class="chip warn">New</span> test orders</td><td>A, E</td><td>Vercel teams, the preview domain, call 5</td></tr>
+    <tr><td>3</td><td><span class="chip warn">New</span> AP1: <span class="mono">shop.apps</span>, the one table, <span class="mono">check:api-docs</span>, the generated app pages</td><td>B</td><td>G·2 (the third key tree), call 7</td></tr>
     <tr><td>3</td><td>C1 credits · V3a·1 agent spike</td><td>C, D</td><td>Razorpay live approval · the credits mockup</td></tr>
-    <tr><td>4</td><td>P3 secure frame, then P5b: open stores · V2b · A1a</td><td>E, A, C</td><td>P3·1 passed</td></tr>
-    <tr><td>5</td><td>P6 one bag · V2c fleet care · V3a the 20-task proof</td><td>B, A, D</td><td>As planned</td></tr>
-    <tr><td>6</td><td>V3b Studio, built as <span class="chip warn">New</span> this workbench · P7 the Checkout page in Studio</td><td>D</td><td>Call 3; the proof passed</td></tr>
+    <tr><td>4</td><td>P5 one address · V2b · A1a · <span class="chip warn">New</span> AP2: Delivery Zones and Product video on websites</td><td>A, C, B</td><td>P3, V2a; the video cost check</td></tr>
+    <tr><td>5</td><td>P6 one bag · V2c fleet care and the security test · V3a the 20-task proof</td><td>B, A, D</td><td>As planned</td></tr>
+    <tr><td>6</td><td>V3b Studio, built as <span class="chip warn">New</span> this workbench · P7 the Checkout page in Studio’s preview</td><td>D</td><td>Call 3; the proof passed</td></tr>
     <tr><td>7</td><td>V3c intake · V3d routines</td><td>D</td><td>Routines mockup</td></tr>
   </table></div>
   <div class="tw"><table>
     <tr><th>Still to draw before its phase</th><th>Owner steps still open</th></tr>
-    <tr><td>G·5 Content page templates · C1 Credits at the new prices · P6 the pilot’s bag · V3d Routines · D0’s key dialog</td><td>S22 Vercel teams · O6 the preview domain’s name · O4 renew <span class="mono">frrata.shop</span> for 3 years · Razorpay live approval · counsel on EkCode and merchant terms</td></tr>
+    <tr><td>G·5 Content page templates · C1 Credits at the new prices · P6 the pilot’s bag · V3d Routines · test orders · AP2’s two blocks</td><td>S22 Vercel teams · O6 the preview domain’s name · O4 renew <span class="mono">frrata.shop</span> for 3 years · Razorpay live approval · counsel on EkCode and merchant terms</td></tr>
   </table></div>
 </section>
 
@@ -609,15 +616,16 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <h2>Your calls</h2>
   <div class="tw"><table>
     <tr><th>#</th><th>Call</th><th>Recommendation</th></tr>
-    <tr><td>1</td><td>Preview addresses on a Test key</td><td>Yes. Five exact addresses for each key, Test only.</td></tr>
-    <tr><td>2</td><td>Open my store refuses while the website has no proved address</td><td>Yes. It names Move to Frrata and Connect my domain.</td></tr>
-    <tr><td>3</td><td>Studio as three collapsible panels, with Versions and Brand book docked instead of drawers</td><td>Yes. This replaces two drawn elements of the 16 Nov screen, so it needs your yes.</td></tr>
-    <tr><td>4</td><td>One address for stores not yet open, before the secure frame</td><td>Yes. ADR-0019 already allows it. Opening stays blocked until the frame ships.</td></tr>
-    <tr><td>5</td><td>A developer’s own hosting behind the one address</td><td>Not now. Bring it back when a partner with their own pipeline asks.</td></tr>
-    <tr><td>6</td><td>Every app declares its website part, and the build fails without docs</td><td>Yes. Eight rules, three gates.</td></tr>
-    <tr><td>7</td><td>Delivery Zones and Product video reach code websites before any second website launches</td><td>Yes. Otherwise a brand loses two things it has today.</td></tr>
-    <tr><td>8</td><td>Code is read in Studio and written on the developer’s computer or by the agent</td><td>Yes. An editor in the browser is a product of its own. Bring it back if developers ask twice.</td></tr>
-    <tr><td>9</td><td>Purchase events for a website’s own pixel</td><td>Server-side from Frrata, a store at a time. No partner script on checkout. Its own short spec.</td></tr>
+    <tr><td>1</td><td>Preview addresses on a Test key, so a browser on a preview can read the store</td><td>Not now. The starter reads before the page loads, which works from anywhere. Bring it back when a partner’s website reads in the browser.</td></tr>
+    <tr><td>2</td><td>Open my store refuses while the website has no proved address</td><td>Yes.</td></tr>
+    <tr><td>3</td><td>Studio as three collapsible panels, with Versions and Brand book docked</td><td>Yes. This replaces two drawers of the 16 Nov screen, so it needs your yes.</td></tr>
+    <tr><td>4</td><td>One address before the secure frame, for stores not yet open</td><td>No. Build the frame first. Say so if you want it anyway, with the limits in screen 3.</td></tr>
+    <tr><td>5</td><td>Test orders before opening, for the store’s own team</td><td>Yes. I draw its mockup and spec next.</td></tr>
+    <tr><td>6</td><td>A developer’s own hosting behind the one address</td><td>Not now. Bring it back when a partner with their own pipeline asks.</td></tr>
+    <tr><td>7</td><td>Every app declares its website part. Delivery Zones and Product video reach websites before a second website launches.</td><td>Yes, after a cost check on video minutes.</td></tr>
+    <tr><td>8</td><td>Code is read in Studio and written on the developer’s computer or by the agent</td><td>Yes. An editor in the browser is a product of its own.</td></tr>
+    <tr><td>9</td><td>Purchase events for a website’s own pixel</td><td>Frrata sends the event itself, a store at a time. No partner script on checkout. Its own short spec.</td></tr>
+    <tr><td>10</td><td>The step is named “Site” in Studio. The glossary says “Website”.</td><td>Rename it “Website” when V3b is built.</td></tr>
   </table></div>
   <h3>Deliberately not built</h3>
   <div class="tw"><table>
@@ -626,7 +634,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
     <tr><td>Figma import</td><td>A designer partner sends a file and asks. Screenshots and references on a message come first.</td></tr>
     <tr><td>Checkout slots for partner code</td><td>Refused in the one-address spec. Unchanged.</td></tr>
     <tr><td>Events sent to a partner’s own server</td><td>An app needs one. Then it goes through the outbox, signed, as its own spec.</td></tr>
-    <tr><td>Wildcard preview addresses</td><td>Never. One wildcard would let any site on that host read a store’s products early.</td></tr>
+    <tr><td>Sample products and sample answers</td><td>A partner starts a website before the brand has loaded products.</td></tr>
   </table></div>
 </section>
 </div>
