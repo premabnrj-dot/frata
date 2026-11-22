@@ -1,0 +1,367 @@
+<title>Studio runtime states</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Cormorant+Garamond:wght@500;600&display=swap">
+<style>
+/* Layout: a sticky section nav over one long proposal page. Each proposal is a real screen in Neel (the console's
+   tokens, docs/mockups/2026-11-13-design-language-neel.html) with its states beside it; the Studio workbench is one
+   interactive screen whose panels collapse. Notes sit outside the screens (Rule 0). */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --sunk:var(--g50); --line:var(--g200); --line-soft:var(--g100);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14);
+  --code-bg:var(--g950); --code-fg:#E8E5E1; --code-dim:#8F8A84; --code-add:#7FD3A6; --code-cut:#F59A9C;
+  --shop-bg:#FAF6EF; --shop-ink:#2B1B14; --shop-accent:#8C1D2C; --shop-soft:#EADFCF;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --serif:'Cormorant Garamond',Georgia,serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --action-text:#0E0F24;
+  --code-bg:#0C0B0B; --code-fg:#E8E5E1; --shop-bg:#FAF6EF; --shop-ink:#2B1B14; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --action-text:#0E0F24;
+  --code-bg:#0C0B0B; --code-fg:#E8E5E1; --shop-bg:#FAF6EF; --shop-ink:#2B1B14; color-scheme:dark }
+* { box-sizing:border-box }
+[hidden] { display:none !important }
+html { scroll-padding-top:64px }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0 64px }
+h1,h2,h3,h4,p { margin:0 } h1,h2,h3 { text-wrap:balance }
+button { font:inherit; color:inherit; cursor:pointer }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.num { font-variant-numeric:tabular-nums } .mono { font-family:var(--mono); font-size:12.5px }
+svg.i { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none }
+.doc { max-width:1320px; margin:0 auto }
+.head { padding:28px 0 14px; display:grid; gap:8px }
+.head h1 { font:600 26px/32px var(--font) } .head p { color:var(--text-2); max-width:72ch }
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--page) }
+nav { position:sticky; top:env(safe-area-inset-top, 0px); z-index:9; background:var(--page); border-bottom:1px solid var(--line); display:flex; gap:4px; overflow-x:auto; padding:8px 0; margin-bottom:8px }
+nav a { color:var(--text-2); text-decoration:none; padding:5px 10px; border-radius:999px; white-space:nowrap; font-size:13px; border:1px solid transparent }
+nav a:hover { background:var(--sunk); color:var(--text) }
+section { padding:28px 0 8px; display:grid; gap:14px; min-width:0 }
+section > h2 { font:600 20px/26px var(--font) }
+section > .lede { color:var(--text-2); max-width:76ch }
+h3 { font:600 15px/22px var(--font) }
+.tw { overflow-x:auto; border:1px solid var(--line); border-radius:12px }
+table { border-collapse:collapse; width:100%; min-width:680px }
+th, td { text-align:left; vertical-align:top; padding:10px 12px; border-bottom:1px solid var(--line-soft) }
+th { background:var(--sunk); font:500 12.5px/18px var(--font); color:var(--text-2) }
+tr:last-child td { border-bottom:0 }
+td b { font-weight:600 }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px }
+.card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:6px; align-content:start; background:var(--surface); min-width:0 }
+.card .src { font-size:12px; color:var(--text-3) }
+.take { color:var(--ok-fg); font-weight:500 } .skip { color:var(--bad-fg); font-weight:500 }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font:500 12px/18px var(--font); white-space:nowrap; background:var(--neu-bg); color:var(--neu-fg) }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.tag { display:inline-flex; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; box-shadow:var(--e1); white-space:nowrap }
+.btn.pri { background:var(--action); border-color:var(--action); color:var(--action-text) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn.ghost { border-color:transparent; box-shadow:none; background:none; color:var(--text-2) }
+.ib { width:32px; height:32px; display:grid; place-items:center; border-radius:8px; border:0; background:none; color:var(--text-2) }
+.ib:hover, .ib[aria-pressed="true"] { background:var(--sunk); color:var(--text) }
+kbd { font:500 11px/16px var(--font); border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; background:var(--surface); color:var(--text-2) }
+.answers { display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)) }
+.answers .card h3 { font-size:14px }
+.answers .card p { color:var(--text-2) }
+
+/* ---- The workbench ---- */
+.ctrl { display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+.ctrl .lab { font-size:12px; color:var(--text-3); margin-right:2px }
+.ctrl button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:4px 11px; font-size:12.5px; min-height:30px }
+.ctrl button[aria-pressed="true"] { background:var(--text); color:var(--page); border-color:var(--text) }
+.app { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--page); box-shadow:var(--e2); display:grid; grid-template-rows:52px minmax(0,1fr); height:720px; min-width:0 }
+.top { display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); background:var(--side); min-width:0 }
+.top .client { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.steps { display:flex; gap:4px; align-items:center; margin:0 auto; min-width:0; overflow:hidden }
+.st { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-3); white-space:nowrap }
+.st i { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--g300); display:grid; place-items:center; font-style:normal; font-size:10.5px; font-weight:600 }
+.st.done i { background:var(--ok-dot); border-color:var(--ok-dot); color:#fff }
+.st.done i::after { content:""; width:7px; height:4px; border-left:1.6px solid #fff; border-bottom:1.6px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.st.now { color:var(--text); font-weight:500 } .st.now i { border-color:var(--action); color:var(--action) }
+.st + .st::before { content:""; width:14px; height:1px; background:var(--g300); margin-right:4px }
+.credits { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:13px; white-space:nowrap; background:var(--surface) }
+.work { display:grid; grid-template-columns:var(--cw, 340px) minmax(0,1fr) var(--iw, 320px); min-height:0; transition:grid-template-columns 200ms cubic-bezier(.2,0,0,1) }
+.app[data-chat="off"] .work { --cw:44px } .app[data-insp="off"] .work { --iw:44px }
+@media (prefers-reduced-motion: reduce) { .work { transition:none } }
+.pane { min-width:0; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr) auto; background:var(--surface) }
+.pane.chat { border-right:1px solid var(--line) } .pane.insp { border-left:1px solid var(--line) }
+.ph { display:flex; align-items:center; gap:6px; padding:0 6px 0 12px; border-bottom:1px solid var(--line-soft); min-width:0 }
+.ph b { font-weight:600; font-size:13px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.rail { display:none; grid-auto-rows:min-content; gap:4px; justify-items:center; padding:6px 0; background:var(--side) }
+.rail .dot { position:relative } .rail .dot::after { content:""; position:absolute; top:5px; right:5px; width:7px; height:7px; border-radius:50%; background:var(--action); border:1.5px solid var(--side) }
+.app:not([data-view="phone"])[data-chat="off"] .pane.chat > :not(.rail), .app:not([data-view="phone"])[data-insp="off"] .pane.insp > :not(.rail) { display:none }
+.app:not([data-view="phone"])[data-chat="off"] .pane.chat, .app:not([data-view="phone"])[data-insp="off"] .pane.insp { display:block; background:var(--side) }
+.app:not([data-view="phone"])[data-chat="off"] .pane.chat .rail, .app:not([data-view="phone"])[data-insp="off"] .pane.insp .rail { display:grid }
+.feed { overflow:auto; padding:12px; display:grid; gap:12px; align-content:start }
+.who { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--text-3) }
+.who i { width:20px; height:20px; border-radius:6px; background:var(--text); color:var(--page); display:grid; place-items:center; font:600 10.5px var(--font); font-style:normal }
+.msg { display:grid; gap:6px }
+.me { justify-self:end; background:var(--select); border-radius:12px 12px 4px 12px; padding:7px 11px; max-width:85% }
+.prog { display:grid; gap:4px; color:var(--text-2); font-size:13px }
+.prog span { display:flex; gap:8px; align-items:center } .prog span::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--ok-dot) }
+.prog span.run::before { background:none; border:1.5px solid var(--action); border-top-color:transparent }
+.prop { border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:grid; gap:8px }
+.prop small { color:var(--text-3); font-size:12px }
+.composer { border-top:1px solid var(--line-soft); padding:10px 12px; display:grid; gap:8px }
+.sugg { display:flex; gap:6px; flex-wrap:wrap }
+.sugg button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:3px 10px; font-size:12.5px; min-height:28px }
+.field { display:flex; gap:6px; align-items:center; border:1px solid var(--g300); border-radius:10px; padding:4px 4px 4px 10px; background:var(--surface) }
+.field input { flex:1; min-width:0; border:0; background:none; font:inherit; color:inherit; outline:none; min-height:32px }
+.field:focus-within { border-color:var(--focus); box-shadow:0 0 0 3px var(--n100) }
+.canvas { min-width:0; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr); background:var(--sunk) }
+.cbar { display:flex; align-items:center; gap:8px; padding:0 8px; border-bottom:1px solid var(--line); background:var(--surface); min-width:0; overflow-x:auto }
+.seg { display:inline-flex; background:var(--sunk); border-radius:10px; padding:2px; gap:2px; flex:none }
+.seg button { border:0; background:none; border-radius:8px; padding:4px 10px; font-size:13px; color:var(--text-2); min-height:28px; white-space:nowrap }
+.seg button[aria-pressed="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1); font-weight:500 }
+.sel { border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:0 8px; min-height:30px; font:inherit; color:inherit; flex:none }
+.stage { overflow:auto; padding:20px; display:grid; justify-items:center; align-content:start }
+.dev { width:var(--dw, 300px); max-width:100%; background:var(--shop-bg); color:var(--shop-ink); border-radius:14px; border:1px solid var(--line); box-shadow:var(--e2); overflow:hidden; font-family:var(--font); transition:width 200ms cubic-bezier(.2,0,0,1) }
+@media (prefers-reduced-motion: reduce) { .dev { transition:none } }
+.dev .strip { background:var(--shop-ink); color:var(--shop-bg); text-align:center; font-size:11px; padding:5px }
+.dev header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; font:600 20px/24px var(--serif); letter-spacing:.04em }
+.dev header span { font:500 12px var(--font); letter-spacing:0 }
+.hero { margin:0 14px; border-radius:6px; min-height:210px; padding:16px; display:grid; align-content:end; background:linear-gradient(160deg,#D9A441,#B5542B 70%,#7A2A1E); color:#FFF8EC; position:relative }
+.hero h4 { font:600 28px/30px var(--serif) }
+.dev h5 { font:600 20px/24px var(--serif); margin:16px 14px 8px }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(86px, 1fr)); gap:8px; padding:0 14px 16px }
+.grid div { font-size:11px; display:grid; gap:3px } .grid div::before { content:""; aspect-ratio:3/4; border-radius:4px; background:var(--sw) }
+.pick { outline:2px solid var(--n500); outline-offset:3px; cursor:pointer }
+[data-el] { cursor:pointer } [data-el]:hover { outline:1px dashed var(--n500); outline-offset:3px }
+.app[data-state="empty"] .grid, .app[data-state="empty"] .dev h5 { display:none }
+.app[data-state="long"] .hero h4::after { content:" and hand on to your daughters" }
+.emptybag { display:none; margin:14px; padding:20px; text-align:center; border:1px dashed var(--shop-soft); border-radius:6px; font-size:13px }
+.app[data-state="empty"] .emptybag { display:block }
+.tabs { display:flex; gap:2px; padding:0 6px; border-bottom:1px solid var(--line-soft); overflow-x:auto; align-items:end }
+.tabs button { border:0; background:none; padding:11px 8px 9px; font-size:13px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap }
+.tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.pane.insp { grid-template-rows:44px minmax(0,1fr) }
+.pbody { overflow:auto; padding:12px; display:grid; gap:14px; align-content:start }
+.row { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:32px }
+.row > span:first-child { color:var(--text-2); font-size:13px }
+.lbl { font:500 12px/16px var(--font); color:var(--text-3) }
+.inp { border:1px solid var(--g300); border-radius:8px; padding:6px 10px; width:100%; font:inherit; color:inherit; background:var(--surface); min-height:36px }
+.sw { display:flex; gap:6px } .sw i { width:22px; height:22px; border-radius:6px; border:1px solid var(--line) }
+.files { display:grid; font-size:13px } .files button { border:0; background:none; text-align:left; padding:5px 8px; border-radius:6px; display:flex; gap:8px; align-items:center; color:var(--text-2) }
+.files button[aria-current="true"] { background:var(--select); color:var(--text) } .files .in { padding-left:26px }
+pre.code { margin:0; background:var(--code-bg); color:var(--code-fg); border-radius:8px; padding:10px 12px; font:500 12px/18px var(--mono); overflow-x:auto }
+pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.code .c { color:var(--code-cut) }
+.copy { display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:8px; padding:4px 4px 4px 10px; background:var(--sunk) }
+.copy code { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:500 12.5px var(--mono) }
+.chk { display:grid; gap:2px; padding:8px 0; border-bottom:1px solid var(--line-soft) } .chk:last-child { border:0 }
+.chk small { color:var(--text-3); font:500 12px var(--mono) }
+.ver { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line-soft) }
+.tabbar { display:none }
+.app[data-view="phone"] { width:390px; max-width:100%; height:700px; margin:0 auto }
+.app[data-view="phone"] .steps .st:not(.now), .app[data-view="phone"] .steps .st::before, .app[data-view="phone"] .top .btn { display:none }
+.app[data-view="phone"] .work { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) 52px }
+.app[data-view="phone"] .pane, .app[data-view="phone"] .canvas { display:none; border:0 }
+.app[data-view="phone"] .ph .ib, .app[data-view="phone"] .cbar .only-wide { display:none }
+.app[data-view="phone"][data-tab="chat"] .pane.chat, .app[data-view="phone"][data-tab="more"] .pane.insp { display:grid }
+.app[data-view="phone"] .rail, .app[data-view="phone"] .tabs [data-tab="code"], .app[data-view="phone"] .tabs .ib { display:none !important }
+.app[data-view="phone"][data-tab="site"] .canvas { display:grid }
+.app[data-view="phone"] .tabbar { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); background:var(--side) }
+.tabbar button { border:0; background:none; display:grid; justify-items:center; gap:2px; font-size:11.5px; color:var(--text-2); padding:6px 0 }
+.tabbar button[aria-pressed="true"] { color:var(--action); font-weight:500 }
+@media (max-width: 900px) { .app:not([data-view="phone"]) .work { --iw:44px !important } .steps { display:none } }
+@media (max-width: 640px) { .app:not([data-view="phone"]) .work { --cw:44px !important } }
+
+/* ---- Small screens: settings, docs ---- */
+.screens { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; align-items:start }
+.screen { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); min-width:0 }
+.screen > .cap { padding:8px 12px; background:var(--sunk); border-bottom:1px solid var(--line); font:500 12.5px/18px var(--font); color:var(--text-2) }
+.screen > .in { padding:14px; display:grid; gap:12px }
+.sec { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:10px }
+.sec h4 { font:600 15px/22px var(--font); display:flex; justify-content:space-between; gap:8px; align-items:center }
+.radio { display:grid; grid-template-columns:1fr 1fr; gap:8px }
+.radio div { border:1px solid var(--line); border-radius:10px; padding:9px 11px; display:grid; gap:1px } .radio div small { color:var(--text-3) }
+.radio div.on { border-color:var(--action); background:var(--select) }
+.krow { display:grid; gap:6px; padding:10px 0; border-top:1px solid var(--line-soft) } .krow:first-of-type { border:0; padding-top:0 }
+.krow .l1 { display:flex; gap:8px; align-items:center; flex-wrap:wrap } .krow .l1 b { font-weight:500 }
+.krow .l2 { display:flex; gap:6px; flex-wrap:wrap; align-items:center }
+.bars { display:grid; gap:10px }
+.bar { display:grid; grid-template-columns:150px repeat(3, minmax(0,1fr)); gap:6px; align-items:center }
+.bar > b { font:500 13px/18px var(--font) } .bar > b small { display:block; color:var(--text-3); font-weight:400 }
+.addr { border:1px solid var(--line); border-radius:8px; padding:6px 8px; font:500 11.5px/16px var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:var(--surface) }
+.addr.same { border-color:var(--ok-dot); background:var(--ok-bg); color:var(--ok-fg) } .addr.other { border-color:var(--warn-dot); background:var(--warn-bg); color:var(--warn-fg) }
+.bar.hd > * { font:500 12px/16px var(--font); color:var(--text-3) }
+@media (max-width: 640px) { .bar { grid-template-columns:1fr } .bar.hd { display:none } }
+.docp { display:grid; grid-template-columns:170px minmax(0,1fr); min-height:330px }
+.docp aside { border-right:1px solid var(--line); background:var(--side); padding:10px; display:grid; gap:2px; align-content:start; font-size:13px }
+.docp aside span { padding:4px 8px; border-radius:6px; color:var(--text-2) } .docp aside span.on { background:var(--select); color:var(--text); font-weight:500 }
+.docp aside small { color:var(--text-3); padding:8px 8px 2px; font-weight:500 }
+.docp main { padding:14px 16px; display:grid; gap:10px; align-content:start; min-width:0 }
+@media (max-width: 560px) { .docp { grid-template-columns:1fr } .docp aside { display:none } }
+</style>
+<style>
+.dlg { border:1px solid var(--line); border-radius:16px; padding:18px; display:grid; gap:10px; box-shadow:var(--e2); background:var(--surface) }
+.dlg h4 { font:600 16px/24px var(--font) } .dlg p { color:var(--text-2) }
+.bal { display:grid; gap:6px } .bal b { font:600 30px/36px var(--font) } .meter { height:8px; border-radius:999px; background:var(--sunk); overflow:hidden } .meter i { display:block; height:100%; background:var(--action) }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px } .kv span:nth-child(odd) { color:var(--text-2) } .kv span:nth-child(even) { text-align:right }
+.vt { display:flex; gap:2px; border-bottom:1px solid var(--line); overflow-x:auto } .vt span { padding:8px 10px; font-size:13px; color:var(--text-2); white-space:nowrap; border-bottom:2px solid transparent } .vt span.on { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.plan3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px } .plan3 > div { border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:grid; gap:3px; align-content:start } .plan3 > div.on { border-color:var(--action); background:var(--select) } .plan3 small { color:var(--text-2) }
+.term { background:var(--code-bg); color:var(--code-fg); border-radius:10px; padding:12px 14px; font:500 12.5px/20px var(--mono); overflow-x:auto; white-space:pre }
+.term .d { color:var(--code-dim) } .term .a { color:var(--code-add) }
+.codebox { font:600 22px/30px var(--mono); letter-spacing:.14em; border:1px solid var(--g300); border-radius:8px; padding:8px 12px; text-align:center; background:var(--surface) }
+.facts { display:grid; grid-template-columns:120px minmax(0,1fr); gap:6px 12px; font-size:13px } .facts span:nth-child(odd) { color:var(--text-2) }
+.rev { border:1px solid var(--warn-dot); border-radius:12px; padding:14px 16px; display:grid; gap:10px; background:var(--surface) }
+.rev h4 { font:600 15px/22px var(--font); display:flex; justify-content:space-between; gap:8px; align-items:center }
+.toast { background:var(--g950); color:var(--g0); border-radius:10px; padding:9px 12px; display:flex; gap:12px; align-items:center; justify-content:space-between; font-size:13px; box-shadow:var(--e2) } .toast u { color:#A3ABF5; text-decoration:none; font-weight:500 }
+.bb { display:grid; gap:12px } .bb .k { font:500 12px/16px var(--font); color:var(--text-3) } .bb .v { font-size:13px }
+.mini { background:var(--shop-bg); color:var(--shop-ink); border-radius:8px; padding:10px; display:grid; gap:6px; font-size:12px } .mini b { font:600 16px/20px var(--serif); text-align:center } .mini i { font-style:normal; border:1px solid #CDBFA9; border-radius:4px; padding:5px 8px; background:#fff }
+</style>
+<style>
+.mini-chat { display:grid; grid-template-rows:auto minmax(0,1fr) auto; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); min-height:300px }
+.mini-chat .ph { height:44px }
+.mini-chat .feed { overflow:visible }
+.line { color:var(--text-2) }
+.err { color:var(--bad-fg); font-size:13px }
+.stop { border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:grid; gap:8px; background:var(--surface) }
+.stop.warn { border-color:var(--warn-dot) } .stop.bad { border-color:var(--bad-dot) }
+.stop b { font-weight:600 }
+.btns { display:flex; gap:6px; flex-wrap:wrap }
+.panel { border:1px solid var(--line); border-radius:12px; padding:24px 20px; display:grid; gap:10px; justify-items:start; background:var(--surface) }
+.panel h4 { font:600 16px/24px var(--font) } .panel p { color:var(--text-2) }
+.store { background:var(--shop-bg); color:var(--shop-ink); border-radius:12px; border:1px solid var(--line); overflow:hidden }
+.store header { display:flex; justify-content:space-between; padding:10px 12px; font:600 18px/22px var(--serif) }
+.store .h { margin:0 12px 12px; border-radius:6px; min-height:120px; padding:12px; display:grid; align-content:end; background:linear-gradient(160deg,#D9A441,#B5542B 70%,#7A2A1E); color:#FFF8EC; font:600 20px/24px var(--serif) }
+.empty { border:1px dashed var(--line); border-radius:10px; padding:18px; display:grid; gap:4px; justify-items:center; text-align:center }
+.empty p { color:var(--text-2) }
+.spin { width:12px; height:12px; border-radius:50%; border:1.5px solid var(--action); border-top-color:transparent; display:inline-block }
+.cbar2 { display:flex; gap:8px; align-items:center; padding:8px; border-bottom:1px solid var(--line); background:var(--surface); flex-wrap:wrap }
+</style>
+<div class="doc">
+<div class="head">
+  <h1>Studio runtime states</h1>
+  <p>What Studio shows while Frrata staff test the agent on one store. 22 Nov 2026 · Draft for the owner. The workbench and the chat cards are approved. These states are the ones neither drawing has.</p>
+</div>
+<nav aria-label="Sections">
+  <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#states">The states</a><a href="#calls">Your calls</a>
+</nav>
+
+<section id="in-short">
+  <h2>In short</h2>
+  <div class="cards">
+    <div class="card"><h3>What this is</h3><p>Studio's agent will run first on one test store, for Frrata staff only. It works under a hard spending limit and sells no credits. Websites are not hosted yet. Nine moments in that test have no drawing. This page draws them.</p></div>
+    <div class="card"><h3>Why now</h3><p>The agent's tables, its limits and its checks are built without a screen. The chat can't be wired until these states are approved.</p></div>
+    <div class="card"><h3>What it costs</h3><p>Nothing extra. Each state reuses an approved part: the chat's agent line, its card, the composer and the console's empty state.</p></div>
+    <div class="card"><h3>What I need</h3><p>Your yes on the nine states and the four calls at the end.</p></div>
+  </div>
+</section>
+
+<section id="audit">
+  <h2>Audit</h2>
+  <div class="tw"><table>
+    <thead><tr><th>What exists</th><th>Where it stops</th><th>Proposed</th></tr></thead>
+    <tbody>
+      <tr><td><b>The workbench</b>, approved 22 Nov, built on sample data</td><td>Its chat never waits, fails or hits a limit</td><td>States 2–6 and 9, in the chat</td></tr>
+      <tr><td><b>The chat cards</b>, approved 16 Nov</td><td>Apply always succeeds</td><td>State 9: Apply refused</td></tr>
+      <tr><td><b>The preview pane</b> frames the website</td><td>No website is hosted yet</td><td>State 7: the store's own preview</td></tr>
+      <tr><td><b>Code and Checks</b>, drawn full</td><td>No repository or publish checks yet</td><td>State 8: one empty state each</td></tr>
+      <tr><td><b>Admin › Agent</b>, approved in the kit drawing</td><td>Not needed for a staff test</td><td>A switch only, no screen (call 4)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="states">
+  <h2>The states</h2>
+  <div class="screens">
+
+    <div class="screen"><div class="cap">1 · Studio isn't open to this person</div><div class="in">
+      <div class="panel"><h4>Studio isn't open yet</h4><p>Frrata is testing it on one store.</p><a class="btn sm" href="#states">Back to Clients</a></div>
+    </div></div>
+
+    <div class="screen"><div class="cap">2 · No request yet</div><div class="in">
+      <div class="mini-chat"><div class="ph"><b>Frrata agent</b></div>
+        <div class="feed"><div class="empty"><b>Ask for your first change</b><p>Kesar · test store</p></div></div>
+        <div class="composer"><label class="field"><input id="s2" placeholder="Ask for a change" aria-label="Ask for a change"><button class="btn sm pri">Send</button></label></div>
+      </div>
+    </div></div>
+
+    <div class="screen"><div class="cap">3 · A slow step</div><div class="in">
+      <div class="mini-chat"><div class="ph"><b>Frrata agent</b></div>
+        <div class="feed">
+          <div class="me">Make the accent warmer</div>
+          <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
+            <div class="prog"><span>Read the brand</span><span class="run">Checking the colours</span></div></div>
+        </div>
+        <div class="composer"><div class="line" style="font-size:13px">Working · you can still type</div><label class="field"><input id="s3" placeholder="Ask for a change" aria-label="Ask for a change"><button class="btn sm">Stop</button></label></div>
+      </div>
+    </div></div>
+
+    <div class="screen"><div class="cap">4 · Paused at a limit</div><div class="in">
+      <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
+        <div class="stop warn"><b>This request reached its limit</b><span class="line">Nothing more was spent. What's done is kept.</span><div class="btns"><button class="btn sm">Continue</button></div></div></div>
+      <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
+        <div class="stop warn"><b>Today's limit for Studio is used</b><span class="line">It opens again at midnight.</span></div></div>
+    </div></div>
+
+    <div class="screen"><div class="cap">5 · Failed on Frrata's side</div><div class="in">
+      <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
+        <div class="stop bad"><b>Something went wrong on our side</b><span class="line">Nothing was changed.</span><div class="btns"><button class="btn sm">Try again</button></div></div></div>
+    </div></div>
+
+    <div class="screen"><div class="cap">6 · Send refused</div><div class="in">
+      <div class="composer" style="border:1px solid var(--line);border-radius:12px">
+        <label class="field"><input id="s6" value="Add a size chart to Product" aria-label="Ask for a change" aria-describedby="s6e"><button class="btn sm pri">Send</button></label>
+        <span class="err" id="s6e">Three requests are running. Send this when one finishes.</span>
+      </div>
+      <div class="composer" style="border:1px solid var(--line);border-radius:12px">
+        <label class="field"><input id="s6b" value="Add a size chart to Product" aria-label="Ask for a change" aria-describedby="s6f"><button class="btn sm pri">Send</button></label>
+        <span class="err" id="s6f">Today's limit for Studio is used. It opens again at midnight.</span>
+      </div>
+    </div></div>
+
+    <div class="screen"><div class="cap">7 · Preview before hosting</div><div class="in">
+      <div class="cbar2"><span class="tag">Store preview</span><span class="chip">Drafts included</span></div>
+      <div class="store"><header>KESAR<span style="font:500 12px var(--font)">Bag</span></header><div class="h">For the days you'll keep</div></div>
+    </div></div>
+
+    <div class="screen"><div class="cap">8 · Code and Checks with no website yet</div><div class="in">
+      <div class="tabs" role="tablist" aria-label="Inspector"><button role="tab" aria-selected="false">Design</button><button role="tab" aria-selected="true">Code</button><button role="tab" aria-selected="false">Checks</button><button role="tab" aria-selected="false">Versions</button></div>
+      <div class="empty"><b>No code yet</b><p>Code shows here once the website has its own repository.</p></div>
+      <div class="empty"><b>No checks yet</b><p>Checks run when a version is built.</p></div>
+    </div></div>
+
+    <div class="screen"><div class="cap">9 · Apply refused</div><div class="in">
+      <div class="msg"><div class="who"><i>F</i>Frrata agent</div>
+        <section aria-label="Colours for Brand" class="prop"><div style="display:flex;justify-content:space-between;gap:8px"><b>Colours for Brand</b><small>1 to apply</small></div>
+          <small>Accent</small><div class="sw"><i style="background:#B5542B"></i><span class="mono">#B5542B</span></div>
+          <span class="chip bad">Not applied</span>
+          <span class="err">The brand changed since you opened it. Reload to see it.</span>
+          <div class="btns"><button class="btn sm">Reload</button><button class="btn sm ghost">Not this</button></div>
+        </section></div>
+    </div></div>
+
+  </div>
+</section>
+
+<section id="calls">
+  <h2>Your calls</h2>
+  <div class="answers">
+    <div class="card"><h3>1 · Limits in words, not money</h3><p>Staff see that a limit was reached, never a dollar figure. Partners will see credits once credits exist. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>2 · Continue after a request's limit</h3><p>Continue starts a new request with a fresh limit, counted against today's. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>3 · The store's preview until hosting</h3><p>The preview pane shows the console's store preview, drafts included. The website's own preview replaces it once websites are hosted. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>4 · No Admin › Agent screen yet</h3><p>Staff stop the agent with one switch. The approved Admin screen comes with partner access. <b>Recommended: yes.</b></p></div>
+  </div>
+  <p class="line">Not built now: credits, the brand's review link, intake, routines and code kept after a session. Each comes with its own phase.</p>
+</section>
+</div>
