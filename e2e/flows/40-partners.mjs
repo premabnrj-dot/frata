@@ -142,9 +142,10 @@ export default {
     await t.step('the owner removes the partner; access ends', async () => {
       await neha.goto(CONSOLE + '/console/settings/people')
       await neha.getByText('Built this store', { exact: false }).waitFor()
-      await neha.getByRole('button', { name: 'Remove partner', exact: true }).click()
-      await neha.getByRole('button', { name: 'Remove Pia Studio' }).click()
-      await neha.getByRole('button', { name: 'Remove partner', exact: true }).waitFor({ state: 'detached' })
+      // The row's button is a bin named for the partner (2026-11-22); the dialog's destructive button carries the same name.
+      await neha.getByRole('button', { name: 'Remove Pia Studio', exact: true }).first().click()
+      await neha.getByRole('dialog').getByRole('button', { name: 'Remove Pia Studio', exact: true }).click()
+      await neha.getByRole('button', { name: 'Remove Pia Studio', exact: true }).first().waitFor({ state: 'detached' })
       const [l] = await db`select removed_at from partner_links where tenant_id = ${T}`
       assert.ok(l.removed_at)
       assert.equal((await db`select 1 from members where tenant_id = ${T} and user_id = ${P.id}`).length, 0)

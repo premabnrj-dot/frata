@@ -179,14 +179,17 @@ export default {
     await t.step('Builder → Lead opens the console; back to Builder closes it again', async () => {
       const row = pia.getByRole('listitem').filter({ hasText: B.email })
       await pia.goto(CONSOLE + '/partner/team')
-      await row.getByLabel(`Role for ${B.email}`).selectOption('lead')
+      // The role is a menu named for the current role (2026-11-22), not a select.
+      await row.getByRole('button', { name: 'Builder', exact: true }).click()
+      await pia.getByRole('menuitem', { name: 'Lead', exact: true }).click()
       await expectToast(pia, `${B.email} is now a Lead.`, 'ok')
       const [m] = await db`select role from members where user_id = ${B.id} and tenant_id = ${KESAR}`
       assert.equal(m.role, 'partner')
       await bp.goto(CONSOLE + '/console/orders')
       await bp.getByRole('heading', { name: 'Orders' }).first().waitFor()
       await pia.goto(CONSOLE + '/partner/team')
-      await row.getByLabel(`Role for ${B.email}`).selectOption('builder')
+      await row.getByRole('button', { name: 'Lead', exact: true }).click()
+      await pia.getByRole('menuitem', { name: 'Builder', exact: true }).click()
       await expectToast(pia, `${B.email} is now a Builder.`, 'ok')
       await bp.goto(CONSOLE + '/console/orders')
       await bp.getByRole('heading', { name: 'Builders can’t see this page' }).waitFor()
