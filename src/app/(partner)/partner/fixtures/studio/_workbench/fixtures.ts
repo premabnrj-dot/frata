@@ -17,7 +17,6 @@ export const PREVIEWING = 'v7'
 export const SITE = {
   paper: '#FAF6EF', ink: '#2B1B14', accent: '#8C1D2C', soft: '#EADFCF', onHero: '#FFF8EC',
   hero: ['#D9A441', '#B5542B', '#7A2A1E'],
-  swatches: ['#8C1D2C', '#D9A441', '#FAF6EF', '#2B1B14'],
 } as const
 
 export const PRODUCTS = [
@@ -26,6 +25,8 @@ export const PRODUCTS = [
   { name: 'Haldi Cotton Sari', price: '₹1,890', swatch: '#8D90B8', soldOut: false },
 ] as const
 
+/** The store's serif in the fixture (the real preview draws the store's own faces, WB·4). */
+export const SERIF = 'Georgia, serif'
 export const STRIP = 'Free shipping above ₹1,499 · Pay on delivery'
 export const HEADING = 'For the days you’ll keep'
 export const LONGEST = 'For the days you’ll keep and hand on to your daughters'
@@ -86,3 +87,20 @@ export const VERSIONS = [
   { name: 'v6 · Sindoor paper', state: 'restore', id: 'v6' },
   { name: 'v5 · Warm voice', state: 'restore', id: 'v5' },
 ] as const
+
+/** The Brand book (mockup docs/mockups/2026-11-22-four-screens.html § 3): the brand record read-only, in Design. */
+export const BRAND_ROW = [SITE.accent, SITE.hero[0], SITE.paper] as const
+export const BOOK = {
+  line: 'Kurtas, saris and lehengas for haldi mornings, sangeet nights and every day after.',
+  voice: 'Warm · English',
+  buyers: 'Brides’ families · gifting · everyday wear',
+  words: 'haldi · sangeet · ready to wear · kind prices',
+  never: 'cheap · hurry · trendy',
+  logo: 'House of Ayuda · from the console',
+  look: 'Sindoor paper',
+  lookSwatches: [SITE.paper, SITE.accent, SITE.ink],
+  type: 'For the days you’ll keep',
+} as const
+/** The shell's states, set from the test page's address (?builder=1, ?nologo=1, ?waiting=1); fixtures only. */
+export type ShellFlags = { builder: boolean; noLogo: boolean; waiting: boolean }
+export const NO_FLAGS: ShellFlags = { builder: false, noLogo: false, waiting: false }
