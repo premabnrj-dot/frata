@@ -37,7 +37,7 @@ export function Preview({ phone, previewOnly, onPreviewOnly, picked, onPick }: {
   const scale = previewScale(room, w)
   return (
     <>
-      <div data-bar className="@container flex min-w-0 items-center gap-1.5 overflow-x-auto border-b border-border bg-card px-2 py-1.5">
+      <div data-bar className="@container flex min-w-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 py-1.5">
         <select aria-label="Page" value={page} onChange={(e) => setPage(e.target.value)} className={cn(FIELD, 'shrink-0 px-2 text-label')}>
           {PAGES.map((p) => <option key={p}>{p}</option>)}
         </select>
