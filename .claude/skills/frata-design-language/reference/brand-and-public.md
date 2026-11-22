@@ -84,13 +84,13 @@ These sections are the owner-approved rules of one surface; they are moved here 
 Live on `/` (the pilot); /partners, /build-that-converts, /start and /login keep rules 42 and the W·1 frame until each
 moves. Where this section and rules 36–42 disagree on a Rani Mela page, this section wins. Rules 41, 43 and 44 still hold.
 
-45. **Colour has one job each**, from the `--site-*` tokens in `base.css` (the same in both modes; `check:contrast`
-    holds every pair): **rani** is every action (buttons fill rani on the website, the logo's thread, one highlight
+45. **Colour has one job each**, from the `--site-*` tokens at the top of `src/app/site.css` (never `base.css`: the
+    shop sheet imports it and its CSS budget has no room; the same in both modes; `check:contrast` holds every pair): **rani** is every action (buttons fill rani on the website, the logo's thread, one highlight
     word per screen); **neel** is trust (the number band, help, Hindi lines, the footer at neel-night); **marigold**
     celebrates (a sticker, "Most brands pick this"), only ever as a filled shape, never text; **peacock** is good news
     (Delivered, what you keep, ticks; as text only in its `-text` shade). Text on a tint uses that colour's deep shade.
 46. **Type:** Bricolage Grotesque at 800 for headings, DM Sans for words (`src/components/brand/site-fonts.ts`), Mukta
-    700 for a Hindi line (`lang="hi"`, one per section at most, never a translation of the heading beside it),
+    700, cut to the letters the page uses (`MUKTA_LETTERS`, tested), for a Hindi line (`lang="hi"`, one per section at most, never a translation of the heading beside it),
     JetBrains Mono for ₹ and order numbers.
 47. **The frame:** a white page; `HomeHeader` (sticky, the wordmark with its thread, a rani Start free), sections that
     alternate paper, a rani or neel tint and one full neel band, a full rani closing band, `HomeFooter` on neel-night.

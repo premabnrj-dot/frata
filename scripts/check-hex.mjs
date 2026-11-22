@@ -22,6 +22,7 @@ const EXEMPT = [
   // Where the tokens are DEFINED.
   /^src\/app\/base\.css$/, // the tokens live here since Signal S2-0 (globals.css and shop.css import it)
   /^src\/app\/neel\.css$/, // the console's tokens (Neel N0), imported by globals.css only
+  /^src\/app\/site\.css$/, // the website's tokens (Rani Mela), imported by the homepage only so no shop carries them
   // The share card's palette: an image drawn by next/og, outside the CSS tokens (search and sharing S1·4).
   /^src\/domains\/seo\/card-paper\.ts$/,
 ]

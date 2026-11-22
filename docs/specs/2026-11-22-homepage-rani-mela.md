@@ -24,16 +24,16 @@ frata-design-language reference/brand-and-public.md rules 45–51.
   number hidden). Phone: one column, tiles and steps two then one across.
 - **Tenancy** — n/a: no merchant data; plans are platform rows read by `publicPlansForPage`.
 - **Modularity** — `src/app/page.tsx` composes; parts in `src/components/brand/site-home.tsx`; the sheet
-  `src/app/site.css` scoped under `[data-site]`; tokens in `base.css`.
+  `src/app/site.css` scoped under `[data-site]`, its tokens at the top (not `base.css`: the shop sheet imports that).
 - **SSOT** — every ₹ from the plans or `exampleOrder()`; the example's GST is now returned by the engine (`gst`), so the
   card's lines add up to what the brand keeps (tested) instead of the page working out GST itself.
 - **YAGNI** — no scroll animation, no carousel, no testimonials or logos (none are real yet).
-- **Performance** — no client script; fonts self-hosted; DM Sans preloaded, Mukta's 105 kB Devanagari file is lazy by
-  unicode-range. speed-reviewer measures the build.
+- **Performance** — no client script; fonts self-hosted; DM Sans preloaded, Mukta cut to the page's letters (35 kB from 105 kB,
+  tested), lazy by unicode-range. speed-reviewer measures the build.
 - **Security** — no action, no input. Links out to WhatsApp only.
 - **Motion** — CSS only, rule 50.
 - **Unit economics** — none; figures are read, not changed.
-- **Blast radius** — `/` only. `base.css` gains `--site-*` tokens (unused elsewhere); `ExampleOrder` gains a field.
+- **Blast radius** — `/` only. no shared sheet changes; `ExampleOrder` gains a field.
 
 ## Out of scope
 The other public pages (next, one by one); real testimonials (when brands agree to be named).

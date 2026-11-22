@@ -106,8 +106,10 @@ export const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => 
 /** Problems in one css text, as sentences. */
 export function check(css) {
   const problems = []
-  const light = block(css, ':root, [data-neel] [data-store-theme] {')
-  if (!light) return ['no `:root, [data-neel] [data-store-theme] {` block']
+  const root = block(css, ':root, [data-neel] [data-store-theme] {')
+  if (!root) return ['no `:root, [data-neel] [data-store-theme] {` block']
+  // The website's own tokens (src/app/site.css, Rani Mela): read with the light tokens, the same in every mode.
+  const light = { ...root, ...(block(css, '[data-site] {') ?? {}) }
   const neel = block(css, '[data-neel] {')
   const dark = block(css, ':root[data-theme="dark"] {')
   const themes = [['light', light]]
@@ -123,9 +125,9 @@ export function check(css) {
     return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : null
   }
   // Colour tokens only (radius, depth and type are the same in both modes).
-  if (dark) for (const k of Object.keys(light)) if (colour(light, k) && !(k in dark)) problems.push(`dark: --${k} is not defined (it would fall back to the light value)`)
-  // The website (Rani Mela) and EkCode look the same in both modes: their dark values must equal the light ones.
-  if (dark) for (const k of Object.keys(light)) if (/^(site|ek)-/.test(k) && k in dark && light[k] !== dark[k]) problems.push(`dark: --${k} differs from light (${dark[k]} vs ${light[k]}); this look is the same in both modes`)
+  if (dark) for (const k of Object.keys(root)) if (colour(root, k) && !(k in dark)) problems.push(`dark: --${k} is not defined (it would fall back to the light value)`)
+  // EkCode looks the same in both modes: its dark values must equal the light ones.
+  if (dark) for (const k of Object.keys(light)) if (/^ek-/.test(k) && k in dark && light[k] !== dark[k]) problems.push(`dark: --${k} differs from light (${dark[k]} vs ${light[k]}); this look is the same in both modes`)
   const used = new Set(Object.keys(DECORATIVE))
   for (const [name, t] of themes) {
     for (const [fg, bg, need] of pairs()) {
@@ -144,7 +146,7 @@ export function check(css) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   // The tokens: base.css (light and dark) and neel.css (the console's), read as one text.
-  const files = process.argv[2] ? [process.argv[2]] : ['src/app/base.css', 'src/app/neel.css']
+  const files = process.argv[2] ? [process.argv[2]] : ['src/app/base.css', 'src/app/neel.css', 'src/app/site.css']
   const file = files.join(' + ')
   for (const f of files) if (!existsSync(f)) { console.error(`check:contrast — no such file: ${f}`); process.exit(2) }
   const problems = check(files.map((f) => readFileSync(f, 'utf8')).join('\n'))

@@ -6,6 +6,17 @@
    ============================================================================= */
 
 [data-site] {
+  /* Colour: rani leads every action, neel carries trust, marigold celebrates, peacock is good news. The same in
+     both modes (the website's own look); check:contrast reads this block. */
+  --site-rani: #D61F69; --site-rani-press: #B3134F; --site-rani-deep: #8E0F3F; --site-rani-soft: #FFF0F6; --site-rani-tint: #FFD9E8;
+  --site-neel: #23307A; --site-neel-deep: #172057; --site-neel-night: #0E1440; --site-neel-soft: #EEF0FB; --site-on-neel-2: #C9CEEA;
+  --site-marigold: #FFB21C; --site-marigold-soft: #FFF5DC; --site-marigold-text: #6B4300;
+  --site-peacock: #0B8A72; --site-peacock-text: #0A6E5B; --site-peacock-soft: #DDF4EE;
+  --site-ink: #1E1420; --site-ink-2: #4F4552; --site-muted: #6E6472; --site-line: #EEE6EE; --site-edge: #E2D8E3;
+  --site-paper: #FFFFFF; --site-paper-2: #FBF8FB; --site-on-strong: #FFFFFF;
+  --site-sh-rani: 0 6px 16px -6px rgb(214 31 105 / 0.55); --site-sh-card: 0 24px 60px -24px rgb(35 48 122 / 0.45);
+  --site-sh-lift: 0 18px 30px -18px rgb(30 20 32 / 0.35); --site-sh-pop: 0 22px 44px -24px rgb(214 31 105 / 0.5);
+  --site-sh-toast: 0 18px 36px -14px rgb(14 20 64 / 0.55); --site-sh-sticker: 0 6px 14px -6px rgb(0 0 0 / 0.3);
   --site-display: var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
   --site-body: var(--font-dm-sans), var(--font-inter), system-ui, sans-serif;
   --site-hindi: var(--font-mukta), var(--font-noto-deva), sans-serif;

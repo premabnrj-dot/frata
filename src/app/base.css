@@ -77,17 +77,6 @@
      Ink line on paper, one warm fill, two accents. Never on a control, never rani, never the only sign of anything. */
   --illo-line: #1C1917; --illo-paper: #FFFFFF; --illo-fill: #EFEBE5;
   --illo-haldi: var(--haldi); --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
-  /* The website (Rani Mela, owner 2026-11-22; mockup docs/mockups/2026-11-17-homepage-rani-mela.html): rani leads every
-     action, neel carries trust, marigold celebrates, peacock is good news. The same in both modes (its own look). */
-  --site-rani: #D61F69; --site-rani-press: #B3134F; --site-rani-deep: #8E0F3F; --site-rani-soft: #FFF0F6; --site-rani-tint: #FFD9E8;
-  --site-neel: #23307A; --site-neel-deep: #172057; --site-neel-night: #0E1440; --site-neel-soft: #EEF0FB; --site-on-neel-2: #C9CEEA;
-  --site-marigold: #FFB21C; --site-marigold-soft: #FFF5DC; --site-marigold-text: #6B4300;
-  --site-peacock: #0B8A72; --site-peacock-text: #0A6E5B; --site-peacock-soft: #DDF4EE;
-  --site-ink: #1E1420; --site-ink-2: #4F4552; --site-muted: #6E6472; --site-line: #EEE6EE; --site-edge: #E2D8E3;
-  --site-paper: #FFFFFF; --site-paper-2: #FBF8FB; --site-on-strong: #FFFFFF;
-  --site-sh-rani: 0 6px 16px -6px rgb(214 31 105 / 0.55); --site-sh-card: 0 24px 60px -24px rgb(35 48 122 / 0.45);
-  --site-sh-lift: 0 18px 30px -18px rgb(30 20 32 / 0.35); --site-sh-pop: 0 22px 44px -24px rgb(214 31 105 / 0.5);
-  --site-sh-toast: 0 18px 36px -14px rgb(14 20 64 / 0.55); --site-sh-sticker: 0 6px 14px -6px rgb(0 0 0 / 0.3);
 
   --radius: 0.375rem;
   /* Radius and depth as variables (Neel N0 step 4): these are today's values; [data-neel] sets its own. Hand-written CSS
@@ -108,13 +97,6 @@
 :root[data-theme="dark"] {
   /* EkCode is the same in both modes (its own brand). */
   --ek-ink: #1C1917; --ek-paper: #FAFAF9; --ek-cursor: #D61F69; --ek-cursor-on-ink: #FF5C97; --ek-sub: #5F5A55; --ek-line: #DEDBD7;
-  /* The website (Rani Mela) is the same in both modes. */
-  --site-rani: #D61F69; --site-rani-press: #B3134F; --site-rani-deep: #8E0F3F; --site-rani-soft: #FFF0F6; --site-rani-tint: #FFD9E8;
-  --site-neel: #23307A; --site-neel-deep: #172057; --site-neel-night: #0E1440; --site-neel-soft: #EEF0FB; --site-on-neel-2: #C9CEEA;
-  --site-marigold: #FFB21C; --site-marigold-soft: #FFF5DC; --site-marigold-text: #6B4300;
-  --site-peacock: #0B8A72; --site-peacock-text: #0A6E5B; --site-peacock-soft: #DDF4EE;
-  --site-ink: #1E1420; --site-ink-2: #4F4552; --site-muted: #6E6472; --site-line: #EEE6EE; --site-edge: #E2D8E3;
-  --site-paper: #FFFFFF; --site-paper-2: #FBF8FB; --site-on-strong: #FFFFFF;
   --scrim: color-mix(in srgb, #000 60%, transparent); /* dark: the ink is light, so the veil is black */
   --background: #141211;
   --foreground: #EDEAE6;

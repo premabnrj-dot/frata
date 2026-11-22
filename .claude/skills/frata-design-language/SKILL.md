@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 10.1.1
+  version: 10.1.2
   owner: owner
   verified: 2026-11-22
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/app/site.css", "src/components/brand/site-home.tsx"]
@@ -122,7 +122,7 @@ from it).
   (#D61F69, the frrata mark; brand spec 2026-11-07): never a button fill, a
   number or a status. Rani as words is `--brand-text` only; on an ink surface,
   `--brand-on-ink`. `--thread` is the 2 px line (§ Brand rules 33–40).
-  The website in Rani Mela is the one exception: its `--site-*` tokens make rani the action colour there
+  The website in Rani Mela is the one exception: its `--site-*` tokens (in `src/app/site.css`) make rani the action colour there
   (reference/brand-and-public.md rules 45–51, owner 2026-11-22).
   `--haldi` and `--neel` are for brand surfaces only (sign-in, the website,
   drawings); the illustration haldi derives from `--haldi`.
