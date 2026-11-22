@@ -131,6 +131,8 @@ export default {
         assert.equal(await s.locator('[data-brand] footer').count(), 1)
         // The bag-link page: the logo alone, no footer, no link.
         await s.goto(`${SHOP}/cart?l=nonsense`); await s.getByText('This bag link doesn’t work').waitFor()
+        const ink = await s.evaluate(() => [getComputedStyle(document.querySelector('[data-brand]')).color, getComputedStyle(document.querySelector('[data-brand] h1')).color])
+        assert.equal(ink[1], ink[0], 'the bag link’s heading is the store’s ink (P2 screen 1)')
         assert.equal(await s.locator('[data-brand]').count(), 1); assert.equal(await s.locator('[data-brand] footer').count(), 0)
         assert.equal(await s.getByRole('link', { name: 'Back to Kesar Studio' }).count(), 0)
       })
