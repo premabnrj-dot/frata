@@ -11,6 +11,7 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Managed Agents
 - Vercel Sandbox (the second runtime)
 - Answered from documentation (2026-11-22)
+- Measured on `studio-eval` (2026-11-22)
 - Not yet confirmed (the V3a·1 spike)
 
 ## Account and terms — checked 2026-11-16
@@ -80,9 +81,37 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
   per-request `x-vercel-oidc-token` [V, manage-claude/authentication; SDK 1.12.0 types; vercel.com/docs/oidc/reference].
 - Branding: "{Name} Powered by Claude" allowed; never "Claude Code" or look-alike art [V, managed-agents/reference].
 
-## Not yet confirmed (the V3a·1 spike measures each; probes in `scripts/studio/spike.mjs`)
+## Measured on `studio-eval` — 2026-11-22 (spike probes in `scripts/studio/spike.mjs`; results and evidence in `docs/research/2026-11-22-studio-agent-spike.md`)
+
+Each is our own measurement on the live API [V, probe named].
+- The workspace's default inference geo is **`global`** (a Haiku call with no geo was served there); an agent pinned to
+  `us` is accepted. So the agent file pins `us` [`geo`].
+- A session: create about 0.9 s, first stream event about 0.5 s after the message, a one-command turn 3–5 s. The sandbox
+  is a small VM: 4 vCPUs, 16 GB, 30 GB free on `/`, no cgroup limits inside, runs as root (the documentation's 8 GB and
+  10 GB read as a floor) [`session`, `limits`].
+- `limited`: **DNS is filtered.** A name not on the list doesn't resolve, even by a raw query to 8.8.8.8 (NXDOMAIN), so
+  a refused name fails as "could not resolve host", not as a 403. By address, Anthropic's transparent egress gateway
+  answers `403`, `x-deny-reason: host_not_allowed`, "Host not in allowlist: <host>". It routes by name, not address: a
+  refused name pinned to its real address gets 403. No proxy variables in the sandbox; TCP 22 refused [`network`,
+  `network-ip`].
+- Vault header credential: the sandbox holds a longer placeholder, the host receives the real value in a header, a URL
+  query carries the placeholder unsubstituted, and an echoing host hands the real value back into the sandbox. The
+  harness tells the model to use credential variables only for their intended purpose: it refused to send one to an echo
+  host until that was stated as the credential's purpose [`vault`].
+- Custom tools: each round of calls idles the session once (`requires_action`) when every pending result goes back in one
+  send. Answering parallel calls one by one adds an idle per partial answer. Every turn ends with one more idle (`end_turn`)
+  [`custom-tools`, `custom-tools-batched`].
+- The prompt cache is shared across sessions of one agent version: a second session read all 14,680 cached tokens on its
+  first turn. The harness writes **5-minute** entries only [`cache`].
+- 70 sessions created in one burst in 0.6 s, and 20 parallel command turns: no 429 [`concurrency-70`,
+  `concurrency-active`].
+- Mount by commit works with no hosts allowed: HEAD is detached at the SHA, and the remote URL holds no credential
+  [`mount-sha`, public repository].
+- `usage.list_cost` equals the tokens at list rates plus running time, **in whole cents** (a $0.044 turn reads $0.04)
+  [`session`].
+
+## Not yet confirmed (the V3a·1 spike: blocked on owner set-up, see the report § Blocked)
 
 No current source, 2026-11-22 [U]: whether `CLAUDE.md`, `AGENTS.md`, `.mcp.json` or hooks load as instructions (only
-`.claude/skills` is documented); whether a GitHub App installation token works as the repository token; DNS under
-`limited`; whether two sessions of one agent version share a cache; whether a sandbox can expose a port; an Indian bank's
-forex margin on a USD payment.
+`.claude/skills` is documented); whether a GitHub App installation token works as the repository token; whether a
+sandbox can expose a port; an Indian bank's forex margin on a USD payment.

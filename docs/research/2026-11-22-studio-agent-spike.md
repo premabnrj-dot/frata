@@ -1,39 +1,89 @@
 # Studio agent spike (V3a·1): what Managed Agents does, measured or read, item by item
-Status: **in progress** (2026-11-22). Documentation answers are in; probes are running on the `studio-eval` key; lane D, branch `claude/lane-d-agent-spike`. Plan: `docs/plans/2026-11-12-studio-build.md`
+Status: **probes done; blocked items wait on the owner** (2026-11-22). Lane D, branch `claude/lane-d-agent-spike`.
+Plan: `docs/plans/2026-11-12-studio-build.md`
 § V3a (V3a·1) · Spec: `docs/specs/2026-11-16-studio-agent.md` § 9 · Decision: ADR-0020 · Script:
 `scripts/studio/spike.mjs` (results: `docs/research/2026-11-22-studio-agent-spike.results.json`).
 
-## In short
-- **Blocked first on the key.** A network secret can't be saved for `api.anthropic.com` (the session proxy never adds a
-  credential to Anthropic's hosts), so the key has to go in as an environment variable on `frata-studio-eval`, named
-  `STUDIO_EVAL_ANTHROPIC_KEY` (never `ANTHROPIC_API_KEY`, which the session's own runtime would read). Every session on
-  that environment can read it, and so can every command run in one; the workspace's monthly spend limit is the backstop.
-  The script refuses to run without it and never prints it.
-- **What the documentation settles today (2026-11-22):** mount by commit SHA is supported. A vault secret goes in
-  headers or body, never the URL. `limited` refuses a host on 80/443 with a 403 that names the host. Sessions are kept
-  until we delete them (no ZDR, no HIPAA). `inference_geo` is `us` or `global` only and the workspace stores data in the
-  US only (no India). Rate limits are 300 creates and 1,200 reads a minute per organisation, and no documented cap on
-  concurrent sessions. WIF takes any standards-compliant OIDC issuer, and the SDK takes a per-request token. No webhook
-  fires per tool call; one fires per idle.
-- **Three facts in our spec or skill are out of date:**
-  - The rate limits in `frata-integrations` (600 a minute for "other" calls, environments 60 a minute and 5 at once)
-    come from the cached skill bundle. The live reference page says 300 creates and 1,200 reads a minute.
-  - `allow_package_managers: true` also opens `github.com`, `api.github.com` and `raw.githubusercontent.com` to the
-    sandbox. The policy must keep it `false`, which spec § 5 already implies.
-  - A Console-made vault credential is header-only by default; through the API, leaving `injection_location` out
-    enables both header and body. Our code must send `{header: true}`.
-- **Needs the owner:** a GitHub organisation with the session App, a fixture repository and GitHub Team; a build key the
-  owner agrees to mint (a production row) or a non-production API host; the Anthropic Console's service account,
-  federation issuer and rule; the Vercel team `frrata-sites` with Deployment Protection and one preview; a Console
-  webhook endpoint; a real Safari. Exactly what each item needs is in § Blocked.
-- **Spend:** $0 so far. With the key, the eight probes that need nothing else have hard session budgets summing to
-  **$3.11**; I expect under $1 of list cost.
+## In short (for the owner, 2026-11-22)
+**Measured on the `studio-eval` workspace:** 17 probe runs, **$0.45** of list cost of the $25 cap, nothing failed.
+Every session and throwaway vault the probes made is deleted (the workspace lists 0 of each). Four agents and two
+environments are kept for re-runs, their ids in the results file. The key was never printed, logged or committed.
+
+### Each V3a·1 item
+| # | Item | Verdict | Evidence (§ Measured beside documented) |
+|---|---|---|---|
+| 1 | A session on Starter 0 for Kesar | **passed** for a session; Starter 0 on Kesar **blocked** | `session`: create 0.9 s, first event 0.5 s, a one-command turn 3–5 s; a 4-vCPU, 16 GB VM running as root (`limits`). Starter 0 needs items 2, 6 and 9 |
+| 2 | The session App's token as the repository token | **blocked** | No GitHub organisation or App yet |
+| 3 | Mount by commit SHA | **passed** | `mount-sha`: a public repository at a non-head commit, no hosts allowed: HEAD detached at the SHA, no credential in the remote |
+| 4 | `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, hooks as instructions | **blocked** | Needs the fixture repository in Frrata's organisation (or the owner's yes to a public one) |
+| 5 | `limited` hosts and DNS | **passed**, one difference | `network`, `network-ip`: names off the list don't resolve (NXDOMAIN even straight from 8.8.8.8); by address the gateway answers 403 `host_not_allowed`; no bypass by IP, pinned address, direct DNS or port 22 |
+| 6 | The build key in a vault header | mechanism **passed**; the real key **blocked** | `vault`: placeholder in the sandbox, real value in the header at egress, URL query not substituted, an echo hands the value back |
+| 7 | A webhook per custom tool call? | **passed** (no: one per round) ; the live webhook **blocked** | `custom-tools(-batched)`: 4 calls in 3 rounds raise 3 `requires_action` idles plus 1 `end_turn`, when each round's results go back in one send |
+| 8 | The share link's cookie in Safari | **blocked** | Needs `frrata-sites`, a protected preview, a real Safari |
+| 9 | `next build` time and memory | **blocked** | Needs a build key and an API host; the machine's size is measured (item 1) |
+| 10 | Concurrency and rate limits | **passed** | 70 sessions in one burst (0.6 s), 20 parallel command turns (p90 3.7 s), no 429 |
+| 11 | Cache shares | **passed** | `cache`: a second session read all 14,680 tokens the first wrote; 5-minute entries only |
+| 12 | Retention and `inference_geo` | **passed** | `geo`: the workspace default is **`global`**; a `us` pin is accepted. A deleted session and its events return 404 at once; undeleted ones stay (documentation) |
+| 13 | Vercel OIDC to Anthropic | **blocked** | Needs the Console's service account, issuer and rule |
+| 14 | A ruleset bypass naming one App | **blocked** | Needs the organisation on GitHub Team and both Apps |
+| 15 | Share links through Deployment Protection | **blocked** | Needs `frrata-sites` and a protected preview |
+
+### What the findings change in the Studio plan (proposed; spec § 5, § 7, § 8 and V3a·4/5 to take them)
+- **Policy: `allow_package_managers: false`** (documented: `true` opens `github.com`, `api.github.com`,
+  `raw.githubusercontent.com`). Measured consequence: under `false` the npm registry doesn't resolve either. So a
+  sandbox that must run `npm ci` lists `registry.npmjs.org` by exact name in `allowed_hosts`, never the toggle.
+- **Vault credentials header-only:** send `injection_location: {header: true}`. Measured: a URL query carries only the
+  placeholder, and **an echoing host hands the real key back into the sandbox**. So `api.frrata.shop` must never
+  reflect the key header in any body or error (a security-reviewer item for the Storefront API).
+- **`/api/cron/studio` every minute is the main path**, the webhook only a nudge: deliveries drop silently after 3 tries
+  (documented), and a turn raises (rounds of tool calls + 1) idles. The server answers **every pending call of a round
+  in one send**: answering one by one measured an extra idle per partial answer.
+- **The 30-day sweep is ours:** Anthropic keeps sessions until we delete them; delete works at once (measured 404).
+  Admin › Agent shows the oldest undeleted session.
+- **US-only, pinned:** the workspace stores in `us` only, and its measured default inference geo is `global`. The agent
+  file pins `model.inference_geo: "us"`; `check:studio` checks the pin.
+- **Smaller ones:**
+  - A tool error of "could not resolve host" means "not in the policy".
+  - The sandbox runs as root with no cgroup limits, so the network policy and the vault are the controls, not users
+    inside it.
+  - The cache lives 5 minutes, so spec § 8's "cold cache after pauses" line (re-writes at $5/M) is the right model.
+  - `list_cost` comes in whole cents: a turn's credits are computed from the cumulative cost's delta, at most 1¢
+    (0.15 credit) off.
+
+### What a turn costs, measured
+- `usage.list_cost` equals tokens at list rates plus running time: $4 in, $20 out, $0.20 cache read, $5 5-minute write,
+  $0.08 an hour of active time. These are spec § 8's inputs, so its arithmetic stands on the right prices.
+- **A one-command turn:**
+  - $0.04 cold: a new agent's first session writes the harness's ~7.3k-token prefix.
+  - $0.01–0.02 warm.
+  - $0.007 each when 20 ran together on a warm cache.
+- Running time is negligible: 55 s of active time for 20 turns.
+- A real page turn ($1.12 by spec § 8's 25-request assumption) could not be measured. It needs the site repository and
+  the build key (items 2, 6, 9), and the 20-task proof measures it after them.
+
+### What the owner must set up (details in § Blocked)
+1. **GitHub:** the organisation `frrata` on GitHub Team, the **session App** (contents read and write, installed on one
+   repository) and the **fleet App**, and the private repository `frrata/spike-fixture` holding `spike.mjs fixture`'s
+   files, with a short-lived installation token for the session as `SPIKE_GITHUB_TOKEN` (items 2, 4, 14, and 1 on
+   Kesar).
+2. **A build key:** your yes to mint one 24-hour build key for Kesar on production (one `storefront_keys` row and its
+   audit row), or a non-production API host with a demo shop; as `SPIKE_BUILD_KEY` and `SPIKE_API_HOST` (items 6 real
+   key, 9, and 1 on Kesar).
+3. **Claude Console:** a service account in `studio-eval`, a federation issuer `https://oidc.vercel.com/<team>` and a
+   rule for this project's preview tokens; the rule id as a Preview variable (item 13). And a **webhook endpoint**
+   (Manage → Webhooks) pointing at a preview that stores `session.status_idled` deliveries, its signing secret on that
+   preview (item 7 live).
+4. **Vercel:** the team `frrata-sites` with Deployment Protection and one protected preview (items 8, 15).
+5. **Devices:** a Mac and an iPhone with Safari for the framed-preview test (item 8).
 
 ## How to run it
 ```bash
 node scripts/studio/spike.mjs                    # the plan: each probe, what it needs, its cap; no network
 node scripts/studio/spike.mjs run models geo     # free and near-free first
-node scripts/studio/spike.mjs run session network vault custom-tools cache concurrency --yes   # ≤ $3.10 of caps
+node scripts/studio/spike.mjs run session limits network network-ip vault custom-tools custom-tools-batched cache --yes
+node scripts/studio/spike.mjs run concurrency concurrency-70 concurrency-active
+SPIKE_REPO_URL=https://github.com/octocat/Hello-World SPIKE_REPO_SHA=553c2077f0edc3d5dc5d17262f6aa498e69d6f8e \
+  node scripts/studio/spike.mjs run mount-sha             # a public repository at a non-head commit
 node scripts/studio/spike.mjs fixture /tmp/spike-fixture   # the canary repository for `instructions`
 ```
 Rules the script keeps:
@@ -43,13 +93,13 @@ Rules the script keeps:
   measured list cost, and a run that could pass $25 refuses. A run over $3 needs `--yes`.
 - **Cleanup:** a probe deletes its own sessions, throwaway vault and uploaded file when it ends. One agent per shape and
   one environment per network shape are reused, and their ids are recorded.
-- **Verified so far:** with a dummy key, the script reaches `api.anthropic.com` through this session's proxy, gets
-  `401 authentication_error`, records it and spends nothing (2026-11-22).
+- **Verified:** with a dummy key the script got `401 authentication_error` and spent nothing. With the real key, 17 runs
+  spent $0.45, and the workspace was left with no session and no vault (2026-11-22).
 
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.42** of the $25 cap (list cost, 15 runs).
+Measured spend so far: **$0.45** of the $25 cap (list cost, 17 runs).
 
 | Probe | Ran | Status | Answer | List cost |
 |---|---|---|---|---|
@@ -59,12 +109,14 @@ Measured spend so far: **$0.42** of the $25 cap (list cost, 15 runs).
 | `network` | 2026-11-22 19:33 UTC | answered | see evidence: resolver, proxy variables, what resolves, allowed vs refused codes | $0.02 |
 | `network-ip` | 2026-11-22 19:34 UTC | answered | see evidence: raw-IP reach, pinned-address reach, direct DNS, non-HTTP port | $0.04 |
 | `vault` | 2026-11-22 19:36 UTC | answered | value in the sandbox's variable: false; header substituted at egress: true; URL query substituted: false; the sandbox's variable is 61 chars (the real value 38); an echoing host hands the real value back into the sandbox: true | $0.02 |
-| `custom-tools` | 2026-11-22 19:37 UTC | answered | 4 custom tool calls idled the session 4 times (requires_action). Each idle raises one session.status_idled webhook (docs), so parallel calls share one | $0.02 |
+| `custom-tools` | 2026-11-22 19:37 UTC | answered | 4 custom tool calls idled the session 4 times (requires_action), results sent one by one as each call arrived. Each idle raises one session.status_idled webhook (docs) | $0.02 |
 | `custom-tools-batched` | 2026-11-22 19:37 UTC | answered | 4 custom tool calls idled the session 3 times (requires_action), results sent together per idle. Each idle raises one session.status_idled webhook (docs) | $0.01 |
 | `cache` | 2026-11-22 19:38 UTC | answered | second session read 14680 cached tokens against the first's 0: cache shared across sessions: true | $0.07 |
 | `concurrency` | 2026-11-22 19:38 UTC | answered | 10/10 sessions created at once in 502 ms; errors: none | $0.00 |
 | `concurrency-70` | 2026-11-22 19:38 UTC | answered | 70/70 sessions created at once in 569 ms; errors: none | $0.00 |
 | `concurrency-active` | 2026-11-22 19:39 UTC | answered | 20/20 turns ran a command at once in 6920 ms wall; turn p50 2688 ms, p90 3737 ms, max 6475 ms; errors: none | $0.14 |
+| `mount-sha` | 2026-11-22 19:40 UTC | answered | HEAD equals the requested SHA: true; token used: false | $0.02 |
+| `limits` | 2026-11-22 19:40 UTC | answered | see evidence: cgroup memory, cpu and pid limits, disk, user | $0.01 |
 
 <!-- spike:results:end -->
 
@@ -76,7 +128,8 @@ Each probe's measured answer, set against what the documentation said. "Same" me
 |---|---|---|---|
 | `models` (the key) | — | The `studio-eval` key answers; `claude-opus-5-5` reports a 1,000,000-token context and 128,000 output. $0.00 | **passed** |
 | `geo` (12) | `inference_geo` is `us` or `global`; the workspace's default decides when the agent doesn't pin one | One Haiku 5.5 call with no geo was served in **`global`**: the workspace default is `global`, not `us`. An agent pinned to `us` was accepted. $0.0000035 | **passed**; same, and it settles that the agent file must pin `us` (otherwise inference may run anywhere) |
-| `session` (1, 9 in part) | Ubuntu 24.04, x86_64, up to 8 GB memory and 10 GB disk, Node 22 default; CPU count not stated | A session on a closed `limited` environment ran one bash command. Create 890 ms, first stream event 550 ms after the message, whole turn 5.2 s, 4.9 s active. Ubuntu 24.04.5, x86_64, Node v22.23.5, **4 CPUs** (`nproc`), `free` shows **16 GB**, `df` shows 30 GB free on `/`. 6 input + 297 output tokens, 7,017 read from cache and 7,347 written on the session's **first** turn (the harness's own prompt). **$0.04** list cost (the API's own `list_cost`) | **passed**. Differs: memory and disk read higher than the documented limits, but `free` and `df` may show the host, not the sandbox's cap, so plan on 8 GB and 10 GB until `build` measures a real peak |
+| `session` (1, 9 in part) | Ubuntu 24.04, x86_64, up to 8 GB memory and 10 GB disk, Node 22 default; CPU count not stated | A session on a closed `limited` environment ran one bash command. Create 890 ms, first stream event 550 ms after the message, whole turn 5.2 s, 4.9 s active. Ubuntu 24.04.5, x86_64, Node v22.23.5, **4 CPUs** (`nproc`), `free` shows **16 GB**, `df` shows 30 GB free on `/`. 6 input + 297 output tokens, 7,017 read from cache and 7,347 written on the session's **first** turn (the harness's own prompt). **$0.04** list cost (the API's own `list_cost`) | **passed**. Differs: memory and disk read higher than the documented limits, but `free` and `df` may show the host, not the sandbox's cap, so plan on 8 GB and 10 GB until `build` measures a real peak. **`limits` follow-up:** no cgroup limit exists inside the sandbox (`memory.max`, `cpu.max`, `pids.max` absent). It is a whole small VM: 4 vCPUs, 16 GB, a 252 GB ext4 root with 30 GB free (`/workspace` and `/tmp` on the same disk), running as **root**, 20,000 open files. $0.01. So the 8 GB / 10 GB reads as a floor or is out of date; a real build peak still waits on `build` |
+| `mount-sha` (3) | `checkout: {type: "commit", sha}` is supported; the repository is cloned at session start | Public `octocat/Hello-World` mounted at its **first commit** (`553c207…`, not the branch head) on an environment with **no hosts allowed**. `git rev-parse HEAD` equals the SHA, `status` says `HEAD (no branch)`, and the remote URL holds no credential. No token. $0.02 | **passed**; same. A private repository with the session App's token (item 2) is still blocked |
 | `network` + `network-ip` (5) | Under `limited` only `allowed_hosts` are reachable; a refused request on 80/443 gets a 403 naming the host; DNS not described | Environment allowing only `postman-echo.com`. **DNS is filtered:** `/etc/resolv.conf` names 8.8.8.8 and 8.8.4.4, but only allowed names resolve. `example.com` and `registry.npmjs.org` return nothing, and a raw UDP query straight to 8.8.8.8 gets NXDOMAIN (rcode 3). So a refused *name* fails as `curl: (6) Could not resolve host`, not as a 403. **By address**, traffic reaches Anthropic's egress gateway (TLS certificate `CN=default.domain`, issuer `Anthropic, Egress Gateway SDS Issuing CA (production)`). It answers `https://1.1.1.1` and `http://1.1.1.1` with `403`, `x-deny-reason: host_not_allowed`, "Host not in allowlist: 1.1.1.1". A refused name pinned to its real address (`--resolve`) gets 403. An allowed name pinned to a foreign address still gets 200 from the real host: the gateway routes by name, not by address. TCP 22 to GitHub: connection refused. No `HTTP(S)_PROXY` variables in the sandbox (the gateway is transparent). Allowed host: 200. $0.02 + $0.04 | **passed**. Differs: a refused name is a DNS failure, not a 403. Studio's tool errors must read "could not resolve host" as "host not in the policy". No bypass by IP, by pinned address or by direct DNS was found; whether the filtered resolver forwards refused names upstream (a DNS side channel) can't be seen from inside |
 | `vault` (6, mechanism) | An `environment_variable` credential shows the sandbox an opaque placeholder and is substituted at egress in headers and/or body, only to its own hosts, never in the URL; a host that echoes headers hands the value back | A throwaway 38-character random value in a vault created through the API with `injection_location: {header: true}`, allowed to `postman-echo.com` only. **In the sandbox** the variable is a 61-character placeholder whose SHA-256 differs from the value's. **In a header**, the host received the real value (38 characters, matching hash): substituted at egress. **In a URL query**, the host received the placeholder unchanged (61 characters, the sandbox's hash): not substituted. The echoed header hands the **real value back into the sandbox**. **The agent refused twice before it ran this.** First it ran only the local check: sending a credential to a public echo service "would leak it". Then it said the session's setup tells it to treat credential variables as real secrets and use them only for their intended purpose. It ran once the credential's name and the message stated this check as its purpose, with the command printing only lengths and hashes. Three runs, $0.02 each | **passed**; same as documented. New: the harness steers the model away from sending a vault credential anywhere but its purpose. So `api.frrata.shop` must never reflect the key header in a body or an error, or the key enters the sandbox |
 | `custom-tools` + `custom-tools-batched` (7) | No webhook per tool call; `session.status_idled` fires on every move to idle, including "awaiting custom tool result" | Four custom calls: n=1, then n=2, then n=3 and n=4 in one response. **Answered one by one as each call streamed in: 4 `requires_action` idles.** The parallel pair idled once, and once more after its first result while the second was still pending. **Answered all pending calls in one send at each idle: 3 idles**, one per round of calls. Every turn also ends with an `end_turn` idle. A call reached the stream 0.2–0.5 s after the one before it; a whole four-call turn took 5–6 s. $0.02 + $0.01 | **passed**; same as documented. A turn raises (rounds of tool calls + 1) idles, so (rounds + 1) `session.status_idled` webhooks, not one per call. Studio's server must answer every pending call of a round in **one** send, or it raises extra idles |
@@ -84,6 +137,7 @@ Each probe's measured answer, set against what the documentation said. "Same" me
 | `concurrency` + `concurrency-70` + `concurrency-active` (10) | 300 creates and 1,200 reads a minute per organisation; no documented cap on concurrent sessions | **10 sessions** created in one burst in 502 ms. **70 sessions** (decision 29's cap) in one burst in 569 ms. No 429 in either, $0.00 (no model call; 0.8 s of active time billed for the ten). **20 sessions each ran one bash turn at the same moment:** 20/20 succeeded, 6.9 s wall, first event 450–572 ms in every one, turn p50 2.7 s, p90 3.7 s, max 6.5 s; 55 s of active time in all. No 429. $0.14 | **passed**; consistent with the documentation. 70 at once is within the create limit and doesn't queue; 20 parallel model turns show no throttling on this workspace's tier. Not measured: 70 *active* turns at once (that would draw the organisation's token rate limit, whose tier the Console shows) |
 
 ## Item by item
+The Status column below is the documentation pass's (before any probe); each item's measured verdict is in § In short.
 Sources are tagged [V] when they are vendor documentation or SDK types read on the date shown, and [U] when no current
 source was found. "Probe" names the script's test; its pass line says what makes the answer a yes.
 
@@ -117,21 +171,17 @@ source was found. "Probe" names the script's test; its pass line says what makes
 Nothing here was created by this lane (no accounts, teams, Apps, webhooks or production rows).
 | Unblocks | The owner sets up | Then the spike runs |
 |---|---|---|
-| Every probe | `STUDIO_EVAL_ANTHROPIC_KEY` as an environment variable on `frata-studio-eval`, holding the `studio-eval` workspace's key (monthly spend limit set), then a new session on that environment | `run models geo`, then the six key-only probes |
+| ~~Every probe~~ | Done 2026-11-22: `STUDIO_EVAL_ANTHROPIC_KEY` on `frata-studio-eval` | ran: see § In short |
 | 2, 3 (private), 4, 14, and Starter 0 on Kesar (1) | The GitHub organisation `frrata` on GitHub Team; the **session App** (contents read and write, installed on one repository) and the **fleet App**; a private repository `frrata/spike-fixture` holding `spike.mjs fixture`'s files; a short-lived installation token handed to the session as `SPIKE_GITHUB_TOKEN` | `run mount-sha instructions`; the ruleset test by hand |
 | 6 (real key), 9, and Starter 0 on Kesar (1) | Either the owner's yes to mint one 24-hour build key for Kesar on production (`api.frrata.shop`; one `storefront_keys` row and its audit row), or a non-production API host with a demo shop; set as `SPIKE_BUILD_KEY` and `SPIKE_API_HOST` | `run build` (cap $2) |
 | 7 (live) | A webhook endpoint in the Console (Manage → Webhooks; there is no API) pointing at a preview with a handler that stores `session.status_idled` deliveries, and its signing secret on that preview | `run custom-tools` with deliveries counted against idles |
 | 13 | In the Claude Console: a service account in `studio-eval`, a federation issuer `https://oidc.vercel.com/<team>`, a rule mapping this project's preview tokens to it; the rule id as a Preview variable | a preview route lists models with no key |
 | 8, 15 | The Vercel team `frrata-sites` with Deployment Protection, one protected preview, and a Mac and an iPhone with Safari | both by hand, with screenshots |
 
-## What this changes elsewhere (proposed, not yet applied outside this file)
-- `frata-integrations` § Anthropic: today's answers dated there, and the rate limits corrected (this branch; listed in
-  the report to the orchestrator).
-- Spec § 5 and V3a·4: write `allow_package_managers: false` into the policy file, because `true` opens GitHub to the
-  sandbox; send `injection_location: {header: true}` explicitly; pin `inference_geo` to `us` in the agent file (the
-  workspace's default otherwise decides, and `global` may route anywhere).
-- ADR-0020 point 3: "Sessions are deleted at Anthropic 30 days after they end" stays our own sweep. Anthropic keeps
-  them until deleted, so a failed sweep keeps transcripts indefinitely; Admin › Agent should show the oldest undeleted
-  session.
-- V3a·5: since webhook deliveries can drop silently, `/api/cron/studio` every minute is the path that guarantees
-  progress, not only a net.
+## What this changes elsewhere
+- `frata-integrations` › `reference/anthropic.md`: a new section "Measured on `studio-eval`" with each fact above,
+  dated and tagged by probe; "Not yet confirmed" cut down to what's still blocked (this branch).
+- Proposed, not applied (owner and plan): the six plan changes in § In short. Spec § 5 and V3a·4 get the policy file
+  (`allow_package_managers: false`, `registry.npmjs.org` by name if the sandbox installs) and `{header: true}`. The agent
+  file gets the `us` pin. V3a·5 takes the cron as the main path with one send per round. ADR-0020 point 3 stays our own
+  sweep. The Storefront API gets the rule that the key header is never reflected.

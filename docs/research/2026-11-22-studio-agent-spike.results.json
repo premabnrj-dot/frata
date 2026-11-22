@@ -58,7 +58,7 @@
       "item": "inference_geo: the workspace default, and whether an agent may pin `us`",
       "ran_at": "2026-11-22T19:32:22.044Z",
       "session_ids": [],
-      "list_cost_usd": 0.0000035,
+      "list_cost_usd": 3.5e-06,
       "status": "answered",
       "answer": "default inference geo served: global; an agent pinned to `us` was accepted; the SDK allows only \"global\" and \"us\" (no India)",
       "evidence": {
@@ -369,7 +369,7 @@
       ],
       "list_cost_usd": 0.02,
       "status": "answered",
-      "answer": "4 custom tool calls idled the session 4 times (requires_action). Each idle raises one session.status_idled webhook (docs), so parallel calls share one",
+      "answer": "4 custom tool calls idled the session 4 times (requires_action), results sent one by one as each call arrived. Each idle raises one session.status_idled webhook (docs)",
       "evidence": {
         "calls": 4,
         "requiresActionIdles": 4,
@@ -428,7 +428,8 @@
           "list_cost_usd": 0.02
         }
       ],
-      "deleted": true
+      "deleted": true,
+      "answer_note": "answer text corrected after the run: the script first claimed parallel calls share one idle, which this run disproved"
     },
     {
       "probe": "custom-tools-batched",
@@ -2005,6 +2006,66 @@
             "ephemeral_5m_input_tokens": 236
           },
           "active_seconds": 2.299,
+          "list_cost_usd": 0.01
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "mount-sha",
+      "item": "Mount by commit SHA",
+      "ran_at": "2026-11-22T19:40:19.066Z",
+      "session_ids": [
+        "sesn_01WtxT9R683R1o2iKwznWTKh"
+      ],
+      "list_cost_usd": 0.02,
+      "status": "answered",
+      "answer": "HEAD equals the requested SHA: true; token used: false",
+      "evidence": {
+        "output": "553c2077f0edc3d5dc5d17262f6aa498e69d6f8e\n## HEAD (no branch)\norigin\thttps://github.com/octocat/Hello-World.git (fetch)\n"
+      },
+      "active_seconds": 4.244,
+      "usage": [
+        {
+          "session": "sesn_01WtxT9R683R1o2iKwznWTKh",
+          "input": 6,
+          "output": 217,
+          "cache_read": 13934,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 2535
+          },
+          "active_seconds": 4.244,
+          "list_cost_usd": 0.02
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "probe": "limits",
+      "item": "The sandbox's own limits from its cgroup (memory, CPU, pids), disk and user",
+      "ran_at": "2026-11-22T19:40:38.158Z",
+      "session_ids": [
+        "sesn_01JJRYTzBLSFPBoRNwhU6MaP"
+      ],
+      "list_cost_usd": 0.01,
+      "status": "answered",
+      "answer": "see evidence: cgroup memory, cpu and pid limits, disk, user",
+      "evidence": {
+        "output": "memory.max: (none)\nmemory.high: (none)\nmemory.swap.max: (none)\ncpu.max: (none)\npids.max: (none)\n4\nFilesystem      Size  Used Avail Use% Mounted on\n/dev/vda        252G   11G   30G  26% /\n/dev/vda        252G   11G   30G  26% /\n/dev/vda        252G   11G   30G  26% /\n20000\nroot\n/dev/vda on / type ext4 (rw,relatime,discard,no_prefetch_block_bitmaps,resv_strict,resuid=65534,resgid=65534)\n"
+      },
+      "active_seconds": 4.607,
+      "usage": [
+        {
+          "session": "sesn_01JJRYTzBLSFPBoRNwhU6MaP",
+          "input": 6,
+          "output": 416,
+          "cache_read": 13960,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 736
+          },
+          "active_seconds": 4.607,
           "list_cost_usd": 0.01
         }
       ],

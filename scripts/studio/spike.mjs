@@ -61,6 +61,7 @@ const PROBES = {
   models: { item: 'The key and the workspace answer', needs: [], est: 0, run: probeModels },
   geo: { item: 'inference_geo: the workspace default, and whether an agent may pin `us`', needs: [], est: 0.01, run: probeGeo },
   session: { item: 'A Managed Agents session starts; the container (Node, CPUs, memory, disk); time to first event', needs: [], est: 0.5, run: probeSession },
+  limits: { item: 'The sandbox\'s own limits from its cgroup (memory, CPU, pids), disk and user', needs: [], est: 0.25, run: probeLimits },
   network: { item: '`limited` hosts and DNS: what resolves, what is refused and how', needs: [], est: 0.5, run: probeNetwork },
   'network-ip': { item: '`limited` by address: raw IPs, a refused name pinned to its address, direct DNS, port 22', needs: [], est: 0.25, run: probeNetworkIp },
   vault: { item: 'A secret in a vault header: placeholder in the sandbox, substituted at egress, never in a URL', needs: [], est: 0.5, run: probeVault },
@@ -253,6 +254,18 @@ async function probeSession(r, run) {
     answer: t.toolOutputs.length ? `a session ran a command; create ${createMs} ms, first event ${t.firstEventMs} ms, turn ${t.ms} ms` : 'no tool output came back',
     evidence: { createMs, firstEventMs: t.firstEventMs, turnMs: t.ms, output: t.toolOutputs.join('\n').slice(0, 2000) },
   }
+}
+
+// The follow-up to `session`: free and df may show the host; the cgroup files show the sandbox's own limits.
+async function probeLimits(r, run) {
+  const agent = await spikeAgent(r)
+  const env = await spikeEnv(r, 'env-closed', { type: 'limited', allowed_hosts: [], allow_package_managers: false, allow_mcp_servers: false })
+  const s = await newSession(r, run, { agent, env, cap: PROBES.limits.est, title: 'limits' })
+  const cmd = ['for f in memory.max memory.high memory.swap.max cpu.max pids.max; do printf "%s: " $f; cat /sys/fs/cgroup/$f 2>/dev/null || echo "(none)"; done',
+    'grep -c ^processor /proc/cpuinfo', 'df -h / /workspace /tmp 2>&1 | tail -n +1', 'ulimit -n', 'whoami', 'mount | grep -E " / | /workspace " | head -3'].join('; ')
+  const t = await turn(s.id, `Run: ${cmd}`)
+  const out = t.toolOutputs.join('\n')
+  return { status: out ? 'answered' : 'failed', answer: out ? 'see evidence: cgroup memory, cpu and pid limits, disk, user' : 'no output', evidence: { output: out.slice(0, 2000) } }
 }
 
 async function probeNetwork(r, run) {
