@@ -251,6 +251,13 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:client_bills|client_deals|bill_tries))\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — a partner's own bills have no table grants; the partner definers are the only door (P2)`)
 }
+// Studio credits (C1, drizzle/0163–0164; plan docs/plans/2026-11-22-c1-credits.md): no table grant to ANY role; the
+// person definers (app_partner_credit*, app_partner_set_*, app_partner_invoice, app_partner_seat_change) and the system
+// ones (app_pc_*) are the only door, and Admin reads only admin_partner_gst_rows (tenancy audit
+// low finding: a rule naming every table, since partner_billing and partner_invoices share no prefix with the rest).
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:billing|seats|credit_purchases|invoices|credit_uses|credit_entries|client_budgets|credit_notices|credit_tries)|fx_rates)\b[^;]*?\bto\b/g)) {
+  failures.push(`grant on ${m[1]}  — Studio credit tables have no table grants; the app_partner_credit* / app_pc_* definers are the only door (C1)`)
+}
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
   if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)

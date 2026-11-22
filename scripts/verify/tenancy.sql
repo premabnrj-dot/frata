@@ -3986,6 +3986,316 @@ do $$ declare r text; f text; begin
 end $$;
 rollback;
 
+-- § 89 · Studio credits (C1, 0163–0164; plan docs/plans/2026-11-22-c1-credits.md with its five reviews of 2026-11-22). G owns
+-- partner Nook (§ 82) with stores n1 and n2; D is a Builder on n1; E a Lead on n1; Y owns partner Yarn. Credits, purchases,
+-- invoices and budgets reach their own partner's owner alone (a Lead its assigned clients' budgets, a Builder a client's used
+-- and budget in Studio's panel); a payment buys only its own attempt, once, at its exact amount; a draw can't name another
+-- partner's lot; no Frrata role reads a row. Everything here rolls back.
+begin;
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000189', 'e89@nook.test', now()), ('aaaaaaaa-0000-0000-0000-000000000190', 'y89@yarn.test', now());
+set local role frata_app;
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000190', 'Yami', 'Yarn', '919845012389', 'Pune', '{}', '', '1-4', 1);
+select app_fx_rate_set((now() at time zone 'Asia/Kolkata')::date, 940000, 'manual');
+reset role;
+update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; D uuid := current_setting('proof.nookd')::uuid; E uuid := 'aaaaaaaa-0000-0000-0000-000000000189';
+  Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; n1 uuid := current_setting('proof.nook1')::uuid; inv uuid; l1 uuid; l2 uuid; ly uuid;
+  b record; p record; py record; u record; u2 uuid; n int; t text; j jsonb; seat record; v_inv uuid; v_bal int;
+begin
+  perform proof.check(G); perform proof.check(D); perform proof.check(Y);
+  inv := app_partner_invite(G, proof.sess(G), proof.h(G), 'e89@nook.test', 'lead', array[n1]);
+  perform app_partner_accept(E, inv); perform proof.check(E);
+  select x.link_id into l1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1;
+  select x.link_id into l2 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id <> n1 limit 1;
+  -- no Frrata role reads the ledger
+  begin perform 1 from partner_credit_entries; raise exception 'FAIL: app reads the ledger'; exception when insufficient_privilege then null; end;
+  begin insert into partner_credit_entries (partner_id, kind, credits, expires_at) values (gen_random_uuid(), 'grant', 20, now()); raise exception 'FAIL: app wrote a lot';
+  exception when insufficient_privilege then null; end;
+  -- the free 20 at approval, once each (Y approved above; Nook approved in § 82)
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 20 then raise exception 'FAIL: Y has no free 20'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), true)->>'balance')::int <> 20 then raise exception 'FAIL: G has no free 20'; end if;
+  -- reads: the owner only; a Lead or Builder is refused; a wrong check is refused
+  foreach t in array array['lead', 'builder'] loop
+    begin perform app_partner_credits_overview(case t when 'lead' then E else D end, proof.sess(case t when 'lead' then E else D end), proof.h(case t when 'lead' then E else D end), false);
+      raise exception 'FAIL: a % read the overview', t;
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+    begin perform app_partner_credits_payments(case t when 'lead' then E else D end, proof.sess(case t when 'lead' then E else D end), proof.h(case t when 'lead' then E else D end));
+      raise exception 'FAIL: a % read payments', t;
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+    begin perform app_partner_credits_usage(case t when 'lead' then E else D end, proof.sess(case t when 'lead' then E else D end), proof.h(case t when 'lead' then E else D end), current_date, null, 50, null);
+      raise exception 'FAIL: a % read usage', t;
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  end loop;
+  begin perform app_partner_credits_overview(G, proof.sess(G), 'wrong', false); raise exception 'FAIL: a wrong check read the overview';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  -- no purchase before invoice details (architecture M10)
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: bought before invoice details';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'details_first' then raise; end if; end;
+  -- billing details: the owner's; a second partner with the same PAN loses its free credits (owner 2026-11-22)
+  perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'Nook Studio LLP', '27AAACP1234R1Z5', null, '12 Hill Road, Mumbai', 'bills@nook.test');
+  begin perform app_partner_set_billing(E, proof.sess(E), proof.h(E), 'x', null, '27', 'x', null); raise exception 'FAIL: a Lead set billing details';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'x', '27AAACP1234R1Z', null, 'x', null); raise exception 'FAIL: a malformed GSTIN saved';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_gstin' then raise; end if; end;
+  perform app_partner_set_billing(Y, proof.sess(Y), proof.h(Y), 'Yarn', '29AAACP1234R1Z1', null, 'Bengaluru', null);
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 0 then raise exception 'FAIL: a shared PAN kept a second free 20'; end if;
+  -- budgets: the owner sets; a Lead reads its assigned clients only; a Builder none; another partner can't name the link
+  perform app_partner_set_budget(G, proof.sess(G), proof.h(G), l1, 30);
+  begin perform app_partner_set_budget(E, proof.sess(E), proof.h(E), l1, 300); raise exception 'FAIL: a Lead raised a budget';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_set_budget(Y, proof.sess(Y), proof.h(Y), l1, 300); raise exception 'FAIL: another partner set a budget';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' and sqlerrm <> 'not_found' then raise; end if; end;
+  if (select count(*) from app_partner_credits_budgets(E, proof.sess(E), proof.h(E))) <> 1
+     or exists (select 1 from app_partner_credits_budgets(E, proof.sess(E), proof.h(E)) x where x.link_id <> l1 or x.new_site_budget is not null)
+  then raise exception 'FAIL: a Lead''s budgets'; end if;
+  begin perform app_partner_credits_budgets(D, proof.sess(D), proof.h(D)); raise exception 'FAIL: a Builder read budgets';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  -- Studio's panel: a Builder gets its client's used and budget, never the balance; not a store it isn't on
+  select * into b from app_partner_credits_panel(D, proof.sess(D), proof.h(D), l1, false);
+  if b.role <> 'builder' or b.balance is not null or b.budget <> 30 then raise exception 'FAIL: a Builder''s panel (%)', b; end if;
+  if l2 is not null then
+    begin perform app_partner_credits_panel(D, proof.sess(D), proof.h(D), l2, false); raise exception 'FAIL: a Builder read an unassigned store''s panel';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  end if;
+  -- a purchase: an attempt first; a wrong amount is refunded, the right one buys once; a payment never buys twice
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true,
+    'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  begin perform app_partner_credit_buy(E, proof.sess(E), proof.h(E), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: a Lead bought credits';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  if not app_pc_purchase_order(p.id, 'order_proof89g0001', false) then raise exception 'FAIL: order not stored'; end if;
+  if app_pc_purchase_order(p.id, 'order_proof89g0002', false) then raise exception 'FAIL: an order replaced'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0001', true, 999, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: a wrong amount bought credits'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0002', true, 235882, 'INR', false, null, null) = 'applied' then raise exception 'FAIL: live money bought a test attempt'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0003', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: the right payment bought nothing'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0003', true, 235882, 'INR', true, null, null) <> 'duplicate' then raise exception 'FAIL: a payment applied twice'; end if;
+  if app_pc_apply('order_proof89nope1', 'pay_proof89g0004', true, 235882, 'INR', true, null, null) <> 'unknown' then raise exception 'FAIL: an unknown order applied'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> 120 then raise exception 'FAIL: G''s balance after a pack'; end if;
+  -- a test lot never pays where money is real (security H1)
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), true)->>'balance')::int <> 20 then raise exception 'FAIL: a test lot counted as real money'; end if;
+  select * into py from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true,
+    'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(py.id, 'order_proof89y0001', false);
+  if app_pc_apply('order_proof89y0001', 'pay_proof89g0003', true, 235882, 'INR', true, null, null) <> 'duplicate' then raise exception 'FAIL: G''s payment bought Y credits'; end if;
+  -- invoices: issued once on the test series; another partner can't read it
+  select (x->>'invoice_id')::uuid into v_inv from jsonb_array_elements(app_partner_credits_payments(G, proof.sess(G), proof.h(G))->'purchases') x where x->>'id' = p.id::text;
+  if v_inv is null or (select i.number from app_partner_invoice(G, proof.sess(G), proof.h(G), v_inv) i) not like 'FRR/T26-27/%' then raise exception 'FAIL: the invoice'; end if;
+  begin perform app_partner_invoice(Y, proof.sess(Y), proof.h(Y), v_inv); raise exception 'FAIL: another partner read an invoice';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  -- the door: the link, the assignment, the budget, the balance; the rate stored; settle never above the reserve
+  select * into u from app_pc_reserve(D, proof.sess(D), proof.h(D), l1, 'preview', 'home', 19, false);
+  if u.reserved <> 19 then raise exception 'FAIL: a Builder''s preview'; end if;
+  begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'page', 19, false); raise exception 'FAIL: past the client''s budget';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'budget' then raise; end if; end;
+  begin perform app_pc_reserve(Y, proof.sess(Y), proof.h(Y), l1, 'turn', 'page', 1, false); raise exception 'FAIL: another partner reserved on a link';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  if l2 is not null then
+    begin perform app_pc_reserve(E, proof.sess(E), proof.h(E), l2, 'turn', 'page', 1, false); raise exception 'FAIL: a Lead reserved on an unassigned store';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  end if;
+  if app_pc_settle(u.use_id, 1156000) <> 19 then raise exception 'FAIL: a page turn is 19 credits'; end if;
+  if app_pc_settle(u.use_id, 1) is not null then raise exception 'FAIL: settled twice'; end if;
+  select x.use_id into u2 from app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'edit', 5, false) x;
+  if app_pc_settle(u2, 99999999) <> 5 then raise exception 'FAIL: charged above the reserve'; end if;
+  select x.use_id into u2 from app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'edit', 4, false) x;
+  if not app_pc_return(u2, 'frrata') then raise exception 'FAIL: a return'; end if;
+  if app_pc_return(u2, 'frrata') then raise exception 'FAIL: a return twice'; end if;
+  if (select x.used from app_partner_credits_budgets(G, proof.sess(G), proof.h(G)) x where x.link_id = l1) <> 24 then raise exception 'FAIL: a client''s used credits'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> 96 then raise exception 'FAIL: G''s balance after use'; end if;
+  begin perform app_partner_set_budget(G, proof.sess(G), proof.h(G), l1, 10); raise exception 'FAIL: a budget below what is used';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'below_used' then raise; end if; end;
+  begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'nonsense', 1, false); raise exception 'FAIL: a use outside the vocabulary';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  perform set_config('proof.l1_89', l1::text, true); perform set_config('proof.l2_89', coalesce(l2::text, ''), true);
+  perform set_config('proof.y89p', py.id::text, true);
+  -- the seat: the real check, one live seat, the mandate from the payment; the owner alone changes it
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true,
+    'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89s0001', false);
+  if app_pc_apply('order_proof89s0001', 'pay_proof89s0001', true, 353882, 'INR', true, null, 'token_proof89s0001') <> 'applied' then raise exception 'FAIL: the seat'; end if;
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: two live seats';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'has_seat' then raise; end if; end;
+  begin perform app_partner_seat_change(E, proof.sess(E), proof.h(E), 'cancel', null); raise exception 'FAIL: a Lead cancelled the seat';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_partner_seat_change(G, proof.sess(G), proof.h(G), 'plan', 'plus');
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->'seat'->>'nextPlan') <> 'plus' then raise exception 'FAIL: a plan change at renewal'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->'mandate'->>'max')::bigint <> 360000
+     or (app_partner_credits_payments(G, proof.sess(G), proof.h(G))::text like '%token_proof89%') then raise exception 'FAIL: the mandate''s facts (or its token was returned)'; end if;
+  -- the token's own events find it by token id; a dispute claws back what is left of its lot
+  if not app_pc_token_event('token_proof89s0001', 'cancelled') then raise exception 'FAIL: a token event'; end if;
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  if not app_pc_dispute('pay_proof89s0001') then raise exception 'FAIL: a dispute not recorded'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal - 150
+  then raise exception 'FAIL: a dispute''s clawback (% before, % after)', v_bal, app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance'; end if;
+  -- a refused capture is due a refund, claimed once
+  select count(*) into n from app_pc_refunds_due(10) x where x.payment_id = 'pay_proof89g0001';
+  if n <> 1 then raise exception 'FAIL: a refund due'; end if;
+  select x.id into u2 from app_pc_refunds_due(10) x where x.payment_id = 'pay_proof89g0001';
+  if not app_pc_refund_claim(u2) then raise exception 'FAIL: a refund not claimed'; end if;
+  if app_pc_refund_claim(u2) then raise exception 'FAIL: a refund claimed twice'; end if;
+  -- the emails carry the owner (and a Lead for its client's 80%), never someone else
+  if exists (select 1 from app_pc_notices_claim(100) x where x.partner_id = G and ('y89@yarn.test' = any (x.owners) or 'y89@yarn.test' = any (x.leads))) then raise exception 'FAIL: Y got G''s email'; end if;
+  perform app_pc_refund_done(u2, 'rfnd_proof89');
+  if exists (select 1 from app_pc_refunds_due(10) x where x.id = u2) then raise exception 'FAIL: a refund done stays due'; end if;
+  -- a failed payment, then a late capture of the same attempt still buys (architecture M7)
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'credits', 20, null, null, null, 40000, 0, 0, 7200, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89c0001', false);
+  if app_pc_apply('order_proof89c0001', 'pay_proof89c0001', false, 47200, 'INR', true, 'declined', null) <> 'failed' then raise exception 'FAIL: a declined payment'; end if;
+  if app_pc_apply('order_proof89c0002', 'pay_proof89c0002', true, 47200, 'INR', true, null, null) <> 'unknown' then raise exception 'FAIL: an order not ours'; end if;
+  if app_pc_apply('order_proof89c0001', 'pay_proof89c0003', true, 47200, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a late capture bought nothing'; end if;
+  -- a real invoice: the real series, and its GSTIN locked
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, false, false, 'Frrata Pvt Ltd', '08AAACF0000A1Z5', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89l0001', false);
+  if app_pc_apply('order_proof89l0001', 'pay_proof89l0001', true, 235882, 'INR', false, null, null) <> 'applied' then raise exception 'FAIL: a live pack'; end if;
+  if not exists (select 1 from jsonb_array_elements(app_partner_credits_payments(G, proof.sess(G), proof.h(G))->'purchases') x
+                  where x->>'id' = p.id::text and x->>'invoice_number' like 'FRR/26-27/%') then raise exception 'FAIL: a real invoice on the real series'; end if;
+  begin perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'Nook Studio LLP', '27AAACQ1234R1Z5', null, '12 Hill Road, Mumbai', null); raise exception 'FAIL: a GSTIN changed after a real invoice';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'gstin_locked' then raise; end if; end;
+  -- more than the balance holds
+  if l2 is not null then
+    begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l2, 'turn', 'page', 120, true); raise exception 'FAIL: a reserve above the real balance';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'balance' then raise; end if; end;
+  end if;
+  -- an attempt left unpaid is listed, then closed with nothing taken
+  if not exists (select 1 from app_pc_unsettled(interval '-1 minute', 50) x where x.id = current_setting('proof.y89p')::uuid) then raise exception 'FAIL: an unpaid attempt unlisted'; end if;
+  if not app_pc_close(current_setting('proof.y89p')::uuid, 'Not paid') then raise exception 'FAIL: closing an unpaid attempt'; end if;
+end $$;
+reset role;
+-- the renewal chain: due seats listed, an attempt and its notice, its order once the email went, a debit claimed once,
+-- the plan frozen at notice, the seat's end and its mandate's cancel
+do $$ declare g uuid; begin
+  select pm.partner_id into g from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000092' and pm.role = 'owner';
+  update partner_seats set period_end = now() + interval '1 day' where partner_id = g and ended_at is null;
+  update partner_billing set mandate_revoked_at = null where partner_id = g;
+  perform set_config('proof.g89p', g::text, true);
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; r record; v uuid; n record; pe timestamptz; seat jsonb;
+begin
+  select * into r from app_pc_renewals(100) x where x.partner_id = gp;
+  if r.seat_id is null or not r.mandate or r.attempts <> 0 or not r.partner_live then raise exception 'FAIL: a due seat (%)', r; end if;
+  v := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if v is null then raise exception 'FAIL: a renewal attempt'; end if;
+  if app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27') is not null
+  then raise exception 'FAIL: two open renewal attempts'; end if;
+  if exists (select 1 from app_pc_renewals_notified(50) x where x.id = v) then raise exception 'FAIL: an order before the email went'; end if;
+  select * into n from app_pc_notices_claim(100) x where x.kind = 'predebit' and x.partner_id = gp;
+  if n.id is null or (n.data->>'total')::bigint <> 353882 or n.data->>'mandateRef' <> '0001' or not ('g@nook.test' = any (n.owners) or cardinality(n.owners) = 1)
+  then raise exception 'FAIL: the pre-debit notice (%)', n; end if;
+  perform app_pc_notice_done(n.id, true, null);
+  if not exists (select 1 from app_pc_renewals_notified(50) x where x.id = v) then raise exception 'FAIL: a renewal ready for its order'; end if;
+  if not app_pc_purchase_order(v, 'order_proof89r0001', true) then raise exception 'FAIL: a renewal order'; end if;
+  if not app_pc_claim(v) then raise exception 'FAIL: a debit claim'; end if;
+  if app_pc_claim(v) then raise exception 'FAIL: a debit claimed twice'; end if;
+  pe := r.period_end;
+  if app_pc_apply('order_proof89r0001', 'pay_proof89r0001', true, 353882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a renewal paid'; end if;
+  seat := app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->'seat';
+  if seat->>'plan' <> 'studio' or seat->>'nextPlan' <> 'plus' or (seat->>'periodEnd')::timestamptz <> pe + interval '1 month'
+  then raise exception 'FAIL: the plan frozen at notice (%)', seat; end if;
+  if not app_pc_seat_end(r.seat_id, false) then raise exception 'FAIL: a seat end'; end if;
+  if not exists (select 1 from app_pc_token_cancels(10) x where x.partner_id = gp and x.token_id = 'token_proof89s0001') then raise exception 'FAIL: the mandate to cancel'; end if;
+  perform app_pc_token_cancelled(gp, 'token_proof89s0001');
+  if exists (select 1 from app_pc_token_cancels(10) x where x.partner_id = gp) then raise exception 'FAIL: a cancelled mandate listed again'; end if;
+end $$;
+reset role;
+-- Frrata's GST export sees the real invoice and never a test one
+set local role frata_admin;
+do $$ begin
+  if not exists (select 1 from admin_partner_gst_rows(now() - interval '1 day', now() + interval '1 day') x where x.number like 'FRR/26-27/%' and x.total = 235882)
+  then raise exception 'FAIL: a real partner invoice missing from the GST export'; end if;
+  if exists (select 1 from admin_partner_gst_rows(now() - interval '1 day', now() + interval '1 day') x where x.number like 'FRR/T%') then raise exception 'FAIL: a test invoice in the GST export'; end if;
+end $$;
+reset role;
+-- credits drawn from a lot that has since ended come back as a new lot for 12 months
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; u record; begin
+  select * into u from app_pc_reserve(G, proof.sess(G), proof.h(G), current_setting('proof.l1_89')::uuid, 'turn', 'edit', 2, true);
+  perform set_config('proof.u89', u.use_id::text, true);
+end $$;
+reset role;
+update partner_credit_entries l set expires_at = now() - interval '1 second'
+ where l.id in (select e.lot_id from partner_credit_entries e where e.use_id = current_setting('proof.u89')::uuid and e.kind = 'reserve');
+set local role frata_app;
+do $$ begin if not app_pc_return(current_setting('proof.u89')::uuid, 'frrata') then raise exception 'FAIL: a return'; end if; end $$;
+reset role;
+do $$ begin
+  if (select sum(e.credits) from partner_credit_entries e where e.use_id = current_setting('proof.u89')::uuid and e.kind = 'return' and e.expires_at > now() + interval '11 months') <> 2
+  then raise exception 'FAIL: credits from an ended lot did not come back for 12 months'; end if;
+end $$;
+-- a draw can never name another partner's lot (the foreign key carries the partner: tenancy H2)
+do $$ declare g uuid; y uuid; lot uuid; begin
+  select pm.partner_id into g from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000092' and pm.role = 'owner';
+  select pm.partner_id into y from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000190' and pm.role = 'owner';
+  select e.id into lot from partner_credit_entries e where e.partner_id = g and e.kind = 'grant';
+  begin insert into partner_credit_entries (partner_id, kind, credits, lot_id) values (y, 'void', -1, lot); raise exception 'FAIL: a draw named another partner''s lot';
+  exception when foreign_key_violation then null; end;
+  -- no rate, no reserve
+  delete from fx_rates;
+  perform set_config('proof.g89', g::text, true);
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; l1 uuid; begin
+  select x.link_id into l1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id = current_setting('proof.nook1')::uuid;
+  begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'edit', 1, false); raise exception 'FAIL: a reserve without a rate';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'rate' then raise; end if; end;
+end $$;
+reset role;
+-- a suspended partner reads and buys nothing
+update partners set suspended_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; begin
+  begin perform app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), false); raise exception 'FAIL: a suspended partner read credits';
+  exception when sqlstate 'P0001' then if sqlerrm not in ('not_owner', 'confirm_first') then raise; end if; end;
+end $$;
+reset role;
+rollback;
+begin;
+do $$ declare r text; f text; begin
+  foreach f in array array[
+    'app_partner_credit_try(uuid, uuid, text, text)', 'app_partner_credits_overview(uuid, uuid, text, boolean)',
+    'app_partner_credits_usage(uuid, uuid, text, date, uuid, integer, timestamptz)', 'app_partner_credits_budgets(uuid, uuid, text)',
+    'app_partner_credits_payments(uuid, uuid, text)', 'app_partner_invoice(uuid, uuid, text, uuid)', 'app_partner_credits_panel(uuid, uuid, text, uuid, boolean)',
+    'app_partner_set_budget(uuid, uuid, text, uuid, integer)', 'app_partner_set_site_budget(uuid, uuid, text, integer)',
+    'app_partner_set_alerts(uuid, uuid, text, boolean, boolean)', 'app_partner_set_billing(uuid, uuid, text, text, text, text, text, text)',
+    'app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text)',
+    'app_partner_seat_change(uuid, uuid, text, text, text)', 'app_pc_purchase_ctx(uuid)', 'app_pc_set_customer(uuid, text)',
+    'app_pc_purchase_order(uuid, text, boolean)', 'app_pc_claim(uuid)', 'app_pc_apply(text, text, boolean, bigint, text, boolean, text, text)',
+    'app_pc_unsettled(interval, integer)', 'app_pc_close(uuid, text)', 'app_pc_renewals(integer)',
+    'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
+    'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
+    'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',
+    'app_pc_dispute(text)', 'app_pc_notices_claim(integer)', 'app_pc_notice_done(uuid, boolean, text)', 'app_fx_rate_set(date, integer, text)',
+    'app_fx_rate_latest()', 'app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean)', 'app_pc_settle(uuid, bigint)', 'app_pc_return(uuid, text)'] loop
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin'] loop
+      if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run %', r, f; end if;
+    end loop;
+    if not has_function_privilege('frata_app', f, 'execute') then raise exception 'FAIL: frata_app cannot run %', f; end if;
+  end loop;
+  foreach f in array array['app_pc_owner(uuid, uuid, text, boolean, boolean)', 'app_pc_lots(uuid, boolean)', 'app_pc_balance(uuid, boolean)',
+    'app_pc_charged(uuid)', 'app_pc_window(uuid)', 'app_pc_link_used(uuid, uuid)', 'app_pc_notice(uuid, text, text, uuid, uuid)',
+    'app_pc_on_partner_approved()', 'app_pc_issue(uuid)', 'app_pc_give_back(uuid, integer)'] loop
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin', 'frata_app'] loop
+      if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run the internal %', r, f; end if;
+    end loop;
+  end loop;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_app'] loop
+    if has_function_privilege(r, 'admin_partner_gst_rows(timestamptz, timestamptz)', 'execute') then raise exception 'FAIL: % can run the GST rows', r; end if;
+  end loop;
+  if not has_function_privilege('frata_admin', 'admin_partner_gst_rows(timestamptz, timestamptz)', 'execute') then raise exception 'FAIL: frata_admin cannot read the GST rows'; end if;
+  foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
+    foreach f in array array['partner_billing', 'partner_seats', 'partner_credit_purchases', 'partner_invoices', 'partner_credit_uses',
+      'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates'] loop
+      if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') or has_table_privilege(r, f, 'update')
+         or has_table_privilege(r, f, 'delete') or has_table_privilege(r, f, 'truncate') then raise exception 'FAIL: % reaches %', r, f; end if;
+    end loop;
+  end loop;
+end $$;
+rollback;
+
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
