@@ -36,13 +36,17 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    minute); header and footer links don't prefetch. Filters and
    search are dynamic: send filter parameters in their fixed order (collection, size, colour, price, stock, sort),
    values exactly as `facets` gives them, defaults left out.
-8. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps
+8. **A build key** (Studio, a preview deployment, or your computer through `npx frrata dev`): set
+   `FRRATA_KEY_MODE=header` and `lib/frrata.ts` sends the key in the `Frrata-Key` header to `/2026-12/<resource>`,
+   never in the address. It reads drafts and hidden pages, is never cached, and answers no browser (no CORS): read on
+   the server only. It ends after 24 hours (a preview's with the preview).
+9. **Previews.** The brand's "Preview on website" opens `/frrata-preview?token=…&to=/pages/<handle>`; the route keeps
    the token in an HttpOnly cookie for 10 minutes and `previewOr()` sends it as the `Frrata-Preview` header. Accept
    only `/pages/<handle>` in `to`.
-9. **Keep the paths.** `/products/<handle>` and `/collections/<handle>`: the store's own Frrata pages move shoppers
+10. **Keep the paths.** `/products/<handle>` and `/collections/<handle>`: the store's own Frrata pages move shoppers
    here by the same paths. A product's old handle answers with its current one: redirect to it.
 
-10. **The brand comes from the store.** `shop.brand` holds the logo files (main, mark, stacked, reversed), eleven
+11. **The brand comes from the store.** `shop.brand` holds the logo files (main, mark, stacked, reversed), eleven
    colours, the headings and body fonts (Google Fonts families), corners and spacing; a running season's accent is
    already in `colours`. Render `<BrandStyle brand={shop.brand} />` once in `app/layout.tsx` and use only its
    variables (`var(--brand-accent)`, `var(--brand-body)`, …); draw logos with `<Logo>`, always through `<img>`

@@ -9,7 +9,12 @@ const VERSION = '2026-12'
 // A test key (frs_test_…, before the store opens) reads drafts too. On your computer it is never cached, so an edit
 // shows at once; deployed (a preview), its reads are kept 15 s so a busy preview stays inside the key's limit.
 const DEPLOYED = !!process.env.VERCEL // Vercel sets it at build and at run; nothing sets it on your computer
-const READ: RequestInit = KEY.startsWith('frs_test_') ? (DEPLOYED ? { next: { revalidate: 15 } } : { cache: 'no-store' }) : { next: { revalidate: 60 } }
+// FRRATA_KEY_MODE=header: a build key (Studio, a preview, your computer through `npx frrata dev`) travels in the
+// Frrata-Key header, never the address. It reads drafts and hidden pages too, is never cached, and works from a server only.
+const HEADER = process.env.FRRATA_KEY_MODE === 'header'
+const READ: RequestInit = HEADER ? { cache: 'no-store', headers: { 'Frrata-Key': KEY } }
+  : KEY.startsWith('frs_test_') ? (DEPLOYED ? { next: { revalidate: 15 } } : { cache: 'no-store' }) : { next: { revalidate: 60 } }
+const at = (path: string) => (HEADER ? `${ORIGIN}/${VERSION}/${path}` : `${ORIGIN}/${VERSION}/k/${KEY}/${path}`)
 export const PREVIEW_COOKIE = '__Host-frrata-preview'
 
 export type Image = { sizes: { width: number; url: string }[]; width: number; height: number; alt: string; colour: string | null }
@@ -43,7 +48,7 @@ export type Faq = { handle: string; title: string; items: FaqItem[] }
 /** One read. Null for any 404 (unknown, deleted, hidden: the API gives one answer for all). */
 export async function api<T>(path: string): Promise<T | null> {
   if (!KEY) throw new Error('FRRATA_KEY is not set')
-  const res = await fetch(`${ORIGIN}/${VERSION}/k/${KEY}/${path}`, READ)
+  const res = await fetch(at(path), READ)
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Frrata ${res.status}`)
   return res.json() as Promise<T>
@@ -51,7 +56,7 @@ export async function api<T>(path: string): Promise<T | null> {
 
 /** A hidden page while the brand previews it (/frrata-preview set the cookie): never cached, the token in a header. */
 export async function previewOr<T>(path: string): Promise<T | null> {
-  const token = (await cookies()).get(PREVIEW_COOKIE)?.value
+  const token = HEADER ? null : (await cookies()).get(PREVIEW_COOKIE)?.value // a build key already reads hidden pages
   if (!token) return api<T>(path)
   const res = await fetch(`${ORIGIN}/${VERSION}/k/${KEY}/preview/${path}`, { cache: 'no-store', headers: { 'Frrata-Preview': token } })
   return res.ok ? (res.json() as Promise<T>) : api<T>(path)

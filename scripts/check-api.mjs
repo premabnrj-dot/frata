@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Fails: a Storefront API route that does not keep its tree (cached live routes never read the request; test routes
-// never cache), an open output schema, a merchant cost named anywhere in the API, a route outside a released version.
+// Fails: a Storefront API route that does not keep its tree (cached live routes never read the request; test and
+// header-tree routes never cache), an open output schema, a merchant cost named anywhere in the API, a route outside a released version.
 //
 // ⚠️ WHY (ADR-0018, ADR-0003; plan docs/plans/2026-11-15-v1-storefront-api.md § SA0·5). A live key's answers are cached
 // copies shared by every caller: a header read there is a runtime error, and an echoed Origin or a draft would be served
@@ -60,7 +60,15 @@ for (const file of walk(ROUTES)) {
   } else if (tree === 't') {
     if (!/tree:\s*'test'/.test(text) || !/mode:\s*'dynamic'/.test(text)) failures.push(`${file}  a t/ route serves test keys: tree: 'test', mode: 'dynamic'`)
     if (!dynamicFile || /export const revalidate\b/.test(text)) failures.push(`${file}  a test route is never cached: export const dynamic = 'force-dynamic' and no revalidate`)
-  } else failures.push(`${file}  is neither k/ (live keys) nor t/ (test keys)`)
+  } else if (tree === 'h') {
+    // The header tree (G·2; ADR-0018's build-key amendment): build keys in the Frrata-Key header, drafts included, read
+    // from a server only. Never cached, in any way a route file can ask for.
+    if (!/tree:\s*'header'/.test(text) || !/mode:\s*'dynamic'/.test(text)) failures.push(`${file}  an h/ route serves build keys: tree: 'header', mode: 'dynamic'`)
+    if (!dynamicFile || /export const revalidate\b/.test(text)) failures.push(`${file}  a header-tree route is never cached: export const dynamic = 'force-dynamic' and no revalidate`)
+    if (/\bgenerateStaticParams\b/.test(text)) failures.push(`${file}  a header-tree route never pre-renders (no generateStaticParams)`)
+    if (/\[key\]/.test(rel)) failures.push(`${file}  a header-tree route takes its key from the header, never the path`)
+  } else failures.push(`${file}  is neither k/ (live keys), t/ (test keys) nor h/ (build keys, in the header)`)
+  if (tree !== 'h' && /tree:\s*'header'/.test(text)) failures.push(`${file}  tree: 'header' outside h/`)
 }
 
 // Output schemas: closed. Pure mappers and schemas live in src/domains/storefront-api/.

@@ -124,9 +124,9 @@ export async function myHandovers(uid: string): Promise<Handover[]> {
 /** The Accept screen's key list (SA1b D·7): per invite the store's website and its live keys, names and kinds only,
  *  through app_my_handover_keys (built over app_my_handovers, so exactly the invites this person sees). `host` is null while
  *  the store has no Website: its test keys still answer then (0149), so they are listed (security review MED-2). */
-export type HandoverSite = { host: string | null; keys: { name: string; kind: 'public' | 'test' }[] }
+export type HandoverSite = { host: string | null; keys: { name: string; kind: 'public' | 'test' | 'build' }[] }
 export async function myHandoverKeys(uid: string): Promise<Map<string, HandoverSite>> {
-  const rows = await db().execute<{ invite_id: string; site_host: string | null; name: string; kind: 'public' | 'test' }>(
+  const rows = await db().execute<{ invite_id: string; site_host: string | null; name: string; kind: 'public' | 'test' | 'build' }>(
     sql`select invite_id, site_host, name, kind from app_my_handover_keys(${uid}::uuid)`)
   const out = new Map<string, HandoverSite>()
   for (const r of rows) {

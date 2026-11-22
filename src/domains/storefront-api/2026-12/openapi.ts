@@ -30,12 +30,27 @@ const pageHandle = { name: 'handle', in: 'path', required: true, schema: { type:
 const preview = { name: 'Frrata-Preview', in: 'header', required: true, description: 'The preview token from the store’s console. It opens one page or the FAQ, under one key, for 10 minutes. A page’s token never opens the FAQ. A missing or old one gets the same 404.', schema: { type: 'string' } }
 const get = (summary: string, schema: z.ZodType, params: object[] = []) => ({ get: { summary, parameters: [key, ...params], responses: { 200: ok(schema, summary), 404: notFound, 429: busy, 500: unavailable } } })
 
+/** The header tree (G·2; ADR-0018's build-key amendment): the same resources, a build key in the Frrata-Key header in
+ *  place of the key in the path. Drafts included, never cached, read from a server only (no CORS headers). */
+const BUILD_NOTE = 'Send a build key (frs_build_…) in the Frrata-Key header. It reads drafts too. Its answers are never cached, and no browser may read them.'
+const byHeader = (paths: Record<string, { get: { summary: string; parameters: object[] } }>) =>
+  Object.fromEntries(Object.entries(paths).filter(([p]) => !p.includes('/preview/')).map(([p, v]) => [p.replace('/k/{key}', ''),
+    { get: { ...v.get, summary: `${v.get.summary}. ${BUILD_NOTE}`, parameters: v.get.parameters.filter((x) => x !== key), security: [{ buildKey: [] }] } }]))
+
 export function openApi() {
+  const keyed = keyPaths()
   return {
     openapi: '3.1.0',
     info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue, content and pages. Prices are in paise. Render text as text, never as HTML. Objects may gain fields. Lists of values may grow. New block kinds may appear. Ignore what you don’t know. A test key also opens a draft product by its handle. A hidden page opens only under preview/, with the Frrata-Preview header. Checkout stays on the store’s checkout address. The bag link in the store’s cart field sends a shopper’s bag there.' },
     servers: [{ url: 'https://api.frrata.shop/2026-12' }],
-    paths: {
+    components: { securitySchemes: { buildKey: { type: 'apiKey', in: 'header', name: 'Frrata-Key', description: BUILD_NOTE } } },
+    paths: { ...keyed, ...byHeader(keyed) },
+  }
+}
+
+/** The paths under a key in the path (live and test keys). */
+function keyPaths() {
+  return {
       '/k/{key}/shop': get('The store, with the legal details every page must show', S.Shop),
       '/k/{key}/products/page/{n}': get('Listed products, 48 a page', S.Page, [n]),
       '/k/{key}/products/{handle}': get('One product. Its handle in the answer is its current address.', S.Product, [handle]),
@@ -55,6 +70,5 @@ export function openApi() {
       '/k/{key}/preview/pages/{handle}': { get: { ...get('A hidden page as it stands, under a preview token', S.StorePage, [pageHandle, preview]).get } },
       '/k/{key}/preview/faq': { get: { ...get('The FAQ as it stands, under a preview token', S.Faq, [preview]).get } },
       '/k/{key}/search': get('Listed products matching every word of q', S.Search, [{ name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 1, maxLength: 60 } }]),
-    },
   }
 }

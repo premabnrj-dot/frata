@@ -19,8 +19,8 @@ const audit = async (p) => {
   return p.evaluate(async () => (await window.axe.run(document, { resultTypes: ['violations'] })).violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`))
 }
-const get = (path) => new Promise((res, rej) => {
-  const r = http.request({ host: '127.0.0.1', port: PORTS.app, path, headers: { host: API } }, (m) => { let b = ''; m.on('data', (d) => (b += d)); m.on('end', () => res({ status: m.statusCode, body: b })) })
+const get = (path, more = {}) => new Promise((res, rej) => {
+  const r = http.request({ host: '127.0.0.1', port: PORTS.app, path, headers: { host: API, ...more } }, (m) => { let b = ''; m.on('data', (d) => (b += d)); m.on('end', () => res({ status: m.statusCode, body: b, headers: m.headers })) })
   r.on('error', rej); r.end()
 })
 
@@ -109,8 +109,8 @@ export default {
       // A key as newKey makes one (src/domains/storefront-api/keys.ts): 32 base62 characters, then a 6-character CRC-32
       // checksum in base62, so keyShape lets it through to the lookup.
       const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-      const testKey = () => {
-        const head = 'frs_test_' + Array.from({ length: 32 }, () => B62[randomInt(62)]).join('')
+      const testKey = (kind = 'frs_test_') => {
+        const head = kind + Array.from({ length: 32 }, () => B62[randomInt(62)]).join('')
         let n = crc32(head), check = ''
         for (let i = 0; i < 6; i++) { check = B62[n % 62] + check; n = Math.floor(n / 62) }
         return head + check
@@ -142,6 +142,40 @@ export default {
           await p.reload()
           await p.getByRole('heading', { name: 'Keys' }).waitFor()
           await p.getByText(k2.slice(0, 14)).waitFor()
+        })
+
+        // G·2 (Studio plan; ADR-0018's build-key amendment): a build key travels in the Frrata-Key header to the header
+        // tree only, reads drafts, is never cached and carries no CORS header; the owner sees it with its end and deletes it,
+        // and it stops at once (looked up uncached).
+        await t.step('a build key reads drafts in the Frrata-Key header only, never cached, no CORS; the owner deletes it and it stops at once', async () => {
+          const bk = testKey('frs_build_'), k3 = testKey(); await addTest(k3)
+          await db`insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values
+            (${T}, 'build', 'developer', 'Kabir’s computer', ${createHash('sha256').update(bk).digest('hex')}, ${bk.slice(0, 16)}, ${'cccccccc-0000-0000-0000-000000000001'}, now() + interval '24 hours')`
+          const [draft] = await db`select handle from products where tenant_id = ${T} and status = 'draft' limit 1`
+          const H = { 'frrata-key': bk, origin: 'http://localhost:3000' }
+          const shop = await get('/2026-12/shop', H)
+          assert.equal(shop.status, 200, shop.body.slice(0, 200))
+          assert.equal(shop.headers['cache-control'], 'private, no-store')
+          assert.deepEqual(Object.keys(shop.headers).filter((h) => h.startsWith('access-control-')), [], 'no CORS header on the header tree')
+          if (draft) assert.equal((await get(`/2026-12/products/${draft.handle}`, H)).status, 200, 'a build key reads a draft product')
+          // the header never reaches a cached route, and a build key never answers in a path or without its header
+          assert.equal((await get(`/2026-12/k/${k3}/shop`, { 'frrata-key': bk })).status, 404, 'a key path with the header matched a key tree')
+          assert.equal((await get(`/2026-12/k/${k3}/shop`)).status, 200, 'the test key itself still reads')
+          assert.equal((await get(`/2026-12/k/${bk}/shop`)).status, 404, 'a build key answered in the path')
+          assert.equal((await get('/2026-12/shop', { 'frrata-key': k3 })).status, 404, 'a test key answered in the header')
+          assert.equal((await get('/2026-12/shop')).status, 404, 'the header tree answered with no header')
+          await p.reload()
+          const row = p.getByRole('listitem').filter({ hasText: 'Kabir’s computer' })
+          await row.getByText(/^Build · ends /).waitFor()
+          await row.getByText(bk.slice(0, 14)).waitFor()
+          await p.screenshot({ path: t.out('website-build-key-1280'), fullPage: true })
+          await row.getByRole('button', { name: 'Delete', exact: true }).click()
+          const dlg = p.getByRole('dialog', { name: 'Delete the key “Kabir’s computer”?' })
+          await dlg.getByText('Work with it stops within a minute. This can’t be undone.').waitFor()
+          await dlg.getByRole('button', { name: 'Delete key' }).click()
+          await expectToast(p, 'Key “Kabir’s computer” deleted', 'ok')
+          assert.equal((await get('/2026-12/shop', H)).status, 404, 'a deleted build key still answers')
+          await row.getByText('Deleted', { exact: true }).waitFor()
         })
       } finally {
         await db`update tenants set first_opened_at = ${opened} where id = ${T}`

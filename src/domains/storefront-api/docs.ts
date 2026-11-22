@@ -85,7 +85,9 @@ const note = (s: Schema): string => s.description ?? s.anyOf?.find((x) => x.desc
 export function referencePages(): RefPage[] {
   const doc = openApi() as unknown as { paths: Record<string, { get: { summary: string; parameters?: { name: string; in: string; description?: string; schema?: Schema }[]; responses: Record<string, { description: string; content?: Record<string, { schema: Schema }> }> } }> }
   const rank = (slug: string) => { const i = ORDER.indexOf(slug); return i < 0 ? ORDER.length : i }
-  return Object.entries(doc.paths).map(([path, { get }]) => {
+  // One page per resource: the header tree's paths (a build key in Frrata-Key, G·2) are the same resources, said once in
+  // the guides and in the description's securitySchemes, never a second page per path.
+  return Object.entries(doc.paths).filter(([path]) => path.startsWith('/k/')).map(([path, { get }]) => {
     const schema = get.responses['200']?.content?.['application/json']?.schema ?? {}
     const fields: RefField[] = []
     for (const [k, v] of Object.entries(schema.properties ?? {})) {

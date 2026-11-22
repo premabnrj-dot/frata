@@ -24,7 +24,7 @@ import { STARTER_URL } from '@/domains/storefront-api/kit'
 // action's reply and lives in this component's state until the dialog closes: never a URL, a toast or a later render.
 // =============================================================================
 
-export type KeyView = { id: string; name: string; prefix: string; chip: string; live: boolean; isPublic: boolean; line: { text: string; phone: string | null }[] }
+export type KeyView = { id: string; name: string; prefix: string; chip: string; live: boolean; isPublic: boolean; line: { text: string; phone: string | null }[]; stops: string }
 type Choice = { domainId: string; www: boolean }
 type Option = Choice & { label: string }
 
@@ -265,7 +265,7 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
 
       <Dialog open={!!del} onClose={() => setDel(null)} title={del ? `Delete the key “${del.name}”?` : ''}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setDel(null)}>Keep key</Button><Button variant="destructive" busy={busy} onClick={remove}>Delete key</Button></>}>
-        <p>Websites using it stop working within a minute. This can’t be undone.</p>
+        <p>{del?.stops ?? 'Websites using it stop working within a minute.'} This can’t be undone.</p>
       </Dialog>
     </>
   )

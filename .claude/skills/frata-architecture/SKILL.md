@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.5.0
+  version: 3.6.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
   covers: ["src/middleware.ts", "src/lib/db/tenant.ts"]
 ---
@@ -39,7 +39,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **The Storefront API** (ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`): its host `NEXT_PUBLIC_API_HOST`
   is a `routeFor` kind of its own, rewritten by next.config (`apiRewrites`; never the middleware, whose matcher skips
   versioned paths). Live keys (`frs_pub_`) reach the cached tree `api/storefront/<v>/k/`, test keys (`frs_test_`) the
-  dynamic tree `t/`. **A cached route handler never reads the request** (a header read is a runtime error there, and
+  dynamic tree `t/`, build keys (`frs_build_`, G·2) only in the `Frrata-Key` header the dynamic tree `h/` (no CORS, looked
+  up uncached, minted only by `mintBuildKey`). **A cached route handler never reads the request** (a header read is a runtime error there, and
   anything per-caller would be served to everyone); CORS there is a static `*`. Every handler is
   `export const GET = apiRequest({ version, tree, mode, resource, schema, run })`: `run` gets `ctx` (shop, key, kind,
   version, now) and parsed path params, never the Request; its answer leaves as `schema.parse()` of a closed schema.

@@ -5,7 +5,7 @@ import { processMux } from '@/lib/video/process'
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
-import { addonTrialNotices, shopsToErase, shopsWithPendingEvents } from '@/lib/db/platform'
+import { addonTrialNotices, deleteEndedBuildKeys, shopsToErase, shopsWithPendingEvents } from '@/lib/db/platform'
 import { processEvents } from '@/lib/orders/payment'
 import { ERASE_AFTER_DAYS, eraseAbandoned } from '@/lib/orders/erase'
 import { errName } from '@/lib/log'
@@ -54,6 +54,8 @@ export async function GET(request: Request) {
   try { collection = await collectDue(new Date(), started + 25_000) } catch (e) { console.error('[cron] collection', errName(e)) }
   // A3: trial reminders are written before the drain, so their emails go out in this run.
   try { await addonTrialNotices() } catch (e) { console.error('[cron] addon trials', errName(e)) }
+  // G·2: build keys past their end are deleted daily (they already stopped answering at their end).
+  try { await deleteEndedBuildKeys() } catch (e) { console.error('[cron] build keys', errName(e)) }
   const { claimed, sent } = await drainOutbox(started + 45_000)
   // Razorpay and WhatsApp events not yet processed (each is processed at once on arrival; this is only the safety net).
   let events = 0

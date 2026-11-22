@@ -60,7 +60,7 @@ describe('storefront keys (ADR-0018 § 2)', () => {
 })
 
 describe('who manages keys, and what a key shows', async () => {
-  const { mayManageApi, keyState, lastUsed } = await import('../keys')
+  const { mayManageApi, keyState, keyAnswers, lastUsed } = await import('../keys')
   it('a partner only while the store has no owner; never without the capability', () => {
     expect(mayManageApi('owner', true)).toBe(true)
     expect(mayManageApi('admin', true)).toBe(true)
@@ -79,6 +79,20 @@ describe('who manages keys, and what a key shows', async () => {
     expect(keyState({ kind: 'test', expiresAt: '2026-11-01T00:00:00Z', revokedAt: null, partnerId: null }, store, now)).toMatchObject({ kind: 'ended', why: 'expired' })
     expect(keyState({ kind: 'test', expiresAt: '2026-12-01T00:00:00Z', revokedAt: null, partnerId: null }, { ...store, firstOpenedAt: '2026-11-14T00:00:00Z' }, now)).toMatchObject({ kind: 'ended', why: 'opened' })
     expect(keyState({ kind: 'public', expiresAt: null, revokedAt: null, partnerId: 'p' }, { firstOpenedAt: null, partnerLinks: [{ partnerId: 'p', removedAt: '2026-11-10T00:00:00Z' }] }, now).kind).toBe('partner_gone')
+  })
+  it('derives a build key’s state as the definer does (G·2)', () => {
+    const b = { kind: 'build' as const, expiresAt: '2026-11-16T00:00:00Z', revokedAt: null, partnerId: 'p' }
+    const opened = { ...store, firstOpenedAt: '2026-11-14T00:00:00Z' }
+    expect(keyState(b, store, now, { live: true, leftAt: null })).toEqual({ kind: 'build', endsAt: '2026-11-16T00:00:00Z' })
+    // a partner's outlives the opening; the store's own does not
+    expect(keyState(b, opened, now, { live: true, leftAt: null }).kind).toBe('build')
+    expect(keyState({ ...b, partnerId: null }, opened, now)).toMatchObject({ kind: 'ended', key: 'build', why: 'opened' })
+    expect(keyState({ ...b, expiresAt: '2026-11-15T05:00:00Z' }, store, now)).toMatchObject({ kind: 'ended', key: 'build', why: 'expired' })
+    expect(keyState(b, store, now, { live: false, leftAt: '2026-11-14T09:00:00Z' })).toEqual({ kind: 'maker_gone', at: '2026-11-14T09:00:00Z' })
+    expect(keyState(b, { firstOpenedAt: null, partnerLinks: [{ partnerId: 'p', removedAt: '2026-11-10T00:00:00Z' }] }, now).kind).toBe('partner_gone')
+    expect(keyState({ ...b, revokedAt: '2026-11-15T01:00:00Z' }, store, now).kind).toBe('deleted')
+    expect(keyAnswers(keyState(b, store, now, { live: true, leftAt: null }))).toBe(true)
+    expect(keyAnswers(keyState(b, store, now, { live: false, leftAt: null }))).toBe(false)
   })
   it('says when a key was last used in India’s days', () => {
     const dm = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })

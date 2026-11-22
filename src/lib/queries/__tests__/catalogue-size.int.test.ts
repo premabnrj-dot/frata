@@ -50,5 +50,12 @@ describe.skipIf(!host)('the cached catalogue', () => {
     console.log(`[catalogue-size] ${entry.products.length} products → ${bytes} bytes`, process.env.SHOW ? JSON.stringify(entry.products[0]) : "")
     expect(entry.products.length).toBeGreaterThanOrEqual(600)
     expect(bytes).toBeLessThan(BUDGET)
+    // G·2: a build key's raw draft entry (one per store, 15 s; drafts included) under the same budget.
+    const { draftCatalogueRaw } = await import('@/lib/queries/storefront')
+    const draft = await draftCatalogueRaw(A)
+    const draftBytes = Buffer.byteLength(JSON.stringify(draft))
+    console.log(`[catalogue-size] draft entry: ${draft.products.length} products → ${draftBytes} bytes`)
+    expect(draft.products.length).toBeGreaterThanOrEqual(600)
+    expect(draftBytes).toBeLessThan(BUDGET)
   }, 120_000)
 })

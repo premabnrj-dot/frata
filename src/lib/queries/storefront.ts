@@ -374,4 +374,12 @@ export const previewCatalogue = async (tenantId: string) => expand(await coreCat
 export async function previewProduct(tenantId: string, handle: string): Promise<Lookup> {
   return lookup(await coreHandles(tenantId, true), () => coreProduct(tenantId, handle, true), handle)
 }
+// A build key's drafts (G·2; Studio spec § 5, speed 3): the draft catalogue at 600 products takes 200–370 ms uncached, and
+// every Studio session and preview reads it again and again. One raw entry per store (never per key, never one the live
+// tree reads: its own name), kept 15 s and tagged like the shop's catalogue, so every catalogue save purges it at once;
+// expanded per request as the live entry is.
+const draftCatalogueEntry = shopCached('draft-catalogue-v1', 'catalogue', (t) => coreCatalogue(t, true), 15)
+export const draftCatalogue = cache(async (tenantId: string): Promise<StoreCatalogue> => expand(await draftCatalogueEntry(tenantId)))
+/** What draftCatalogue caches, uncached (catalogue-size.int.test.ts: its bytes against the cache's 2 MB limit). */
+export const draftCatalogueRaw = (tenantId: string) => coreCatalogue(tenantId, true)
 export const moduleCached = shopCached // a module's shop reads (check:tenant 6d); 'reviews:product' keys by product id

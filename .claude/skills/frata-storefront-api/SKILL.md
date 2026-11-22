@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.2.0
+  version: 2.3.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -17,7 +17,8 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
 ## The rules
 
 1. **One door.** Every route is `export const GET = apiRequest({ version, tree, mode, resource, schema, params?, limit?,
-   run })` (`src/lib/storefront-api/request.ts`). The shop comes ONLY from the key in the path, through
+   run })` (`src/lib/storefront-api/request.ts`). The shop comes ONLY from the key (in the path; a build key in the
+   `Frrata-Key` header, rule 2), through
    `storefrontKeyFor` (`src/lib/queries/storefront-keys.ts`) → `storefrontKeyRow` (`src/lib/db/platform.ts`) → the
    definer `app_storefront_key`. `run` gets `ctx` (shop, key, kind, version, now) and its parsed path params, never the
    Request; params naming a shop are refused. `check:tenant` § 9 and `check:actions` hold it. `openapi.json` and the docs
@@ -29,7 +30,16 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    and `frs_pub_` keys to `k/` (cached copies, `revalidate = 3600`, `generateStaticParams = () => []`). **A cached route
    never reads the request** (a header read is a runtime error, and anything per caller would be served to everyone):
    CORS there is a static `*`. Search is the one dynamic live route (varies by `q`; `public, s-maxage=60`). `check:api`
-   holds it; `scripts/verify/api-isr.mjs` proves it under `next start`.
+   holds it; `scripts/verify/api-isr.mjs` proves it under `next start`. **The third tree, `h/`** (G·2; ADR-0018's
+   build-key amendment): a `frs_build_` key in the `Frrata-Key` header, never a path. The first versioned rewrite sends
+   ANY request carrying the header to `h/` (keyless paths, `/<v>/<resource>`), and every other versioned rewrite has
+   `missing: [header]`, so it never reaches a cached route (`host.test.ts`). `tree: 'header'`, dynamic, `private,
+   no-store`, `Vary: Frrata-Key`, **no CORS header at all** (read from a server only), the key looked up uncached
+   (`storefrontKeyNow`), limited per key (`apiTestKey`), drafts included (`resources.ts`: the one raw draft catalogue per
+   store, `draftCatalogue`, 15 s, catalogue tags; pages and FAQ as they stand, hidden ones too). Minted ONLY by
+   `mintBuildKey` (`src/lib/storefront-api/build-keys.ts`, inside the store's tenant transaction, `api.manage`, audited,
+   `apiBuildKeyShop`, at most 50 live a store), deleted daily once ended (`app_delete_ended_build_keys`, the daily cron).
+   The starter sends the header only with `FRRATA_KEY_MODE=header`.
 3. **Every refusal is one 404 body** (one exception: a filter's grammar error, `400 {"error":"bad_filter","param"}`,
    after the key checks out, through `BadParam`) (`{"error":"not_found"}`): bad shape, unknown, deleted, expired, wrong tree, a
    product of another shop, a draft under a live key. Limits fail closed (`apiMissIp` and `apiMissKey`: misses per
@@ -68,7 +78,10 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    through `shopPages` (a day, tag `pages`: a longer period doesn't shorten the hour).
 8. **Every stop is the definer's**, never a stored flag: deleted (`revoked_at`), expired, a test key once the store ever
    opened (`tenants.first_opened_at`), a key a partner made once its link is gone or it is suspended, a Website whose
-   `site_domain_id` row is not live. Proof: `scripts/verify/tenancy.sql` § 81.
+   `site_domain_id` row is not live; a build key after opening unless a partner's, and a partner person's build key once
+   that person leaves the partner, loses the store's members row or (a Lead or a Builder) its assignment
+   (`app_build_key_maker_live`, called only inside the definers; Settings › Website reads the same answer through
+   `app_build_key_makers`). Proof: `scripts/verify/tenancy.sql` § 81.
 9. **Keys are never stored, shown twice or logged by us.** Stored is the sha256 hex; the key is in the create action's
    reply once; our logs carry the key id. (Vercel's request logs hold the path: a live key is public by design.)
 

@@ -11,6 +11,7 @@
 // =============================================================================
 
 import { API_VERSIONS, isVersionPath } from '../storefront-api/versions'
+import { KEY_HEADER } from '../storefront-api/keys'
 
 export type Surface =
   | { kind: 'console' }
@@ -108,7 +109,8 @@ export const isDocsPath = (pathname: string) => /^\/(?:docs(?:\/[a-z0-9-]+(?:\/[
 export const EKCODE_PATHS = new Set(['/', '/privacy', '/terms', '/contact', '/continue'])
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-type Rewrite = { source: string; destination: string; has: { type: 'host'; value: string }[]; missing: { type: 'host'; value: string }[] }
+type Match = { type: 'host'; value: string; key?: undefined } | { type: 'header'; key: string; value?: undefined }
+type Rewrite = { source: string; destination: string; has: Match[]; missing: Match[] }
 
 /**
  * The shop rewrite, as next.config `beforeFiles` rewrites: a host that is not the
@@ -161,6 +163,10 @@ export const KEY_BODY = '[0-9A-Za-z]{38}'
  * (`t/`, dynamic: drafts, CORS to the shop's site, never cached); every other key-shaped path to the cached tree (`k/`).
  * `openapi.json` has no key. Anything else on the API host matches no route: 404.
  */
+/** The build key's header, as next.config's `has` matches it (header names are matched lower-case). */
+const KEY_HEADER_LC = KEY_HEADER.toLowerCase()
+const noKeyHeader: Match[] = [{ type: 'header', key: KEY_HEADER_LC }]
+
 export function apiRewrites(apiHost: string): Rewrite[] {
   const api = apiHost.toLowerCase()
   if (!api) return []
@@ -171,9 +177,13 @@ export function apiRewrites(apiHost: string): Rewrite[] {
     { source: '/docs/:rest*', destination: `${DOCS_INTERNAL}/:rest*`, has, missing: [] },
     { source: '/llms.txt', destination: `${DOCS_INTERNAL}/llms.txt`, has, missing: [] },
     ...API_VERSIONS.flatMap((v) => [
-    { source: `/${v}/k/:key(frs_test_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/t/:key/:rest*`, has, missing: [] },
-    { source: `/${v}/k/:key(frs_pub_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/k/:key/:rest*`, has, missing: [] },
-    { source: `/${v}/openapi.json`, destination: `/api/storefront/${v}/openapi.json`, has, missing: [] },
+    // A build key (the build-key amendment, point 3): ANY versioned request carrying the header goes to the dynamic tree
+    // h/ and nowhere else, first, so a header-tree request never matches a cached route (a key-shaped path under it
+    // matches no h/ route: the one 404). The rewrites below are also kept off any request carrying it.
+    { source: `/${v}/:rest*`, destination: `/api/storefront/${v}/h/:rest*`, has: [...has, { type: 'header' as const, key: KEY_HEADER_LC }], missing: [] },
+    { source: `/${v}/k/:key(frs_test_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/t/:key/:rest*`, has, missing: noKeyHeader },
+    { source: `/${v}/k/:key(frs_pub_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/k/:key/:rest*`, has, missing: noKeyHeader },
+    { source: `/${v}/openapi.json`, destination: `/api/storefront/${v}/openapi.json`, has, missing: noKeyHeader },
   ])]
 }
 

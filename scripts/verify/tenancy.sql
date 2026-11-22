@@ -4237,6 +4237,149 @@ do $$ begin
   if pg_temp.skey(repeat('f', 64)) is not null then raise exception 'FAIL: a deleted test key answers with no Website'; end if;
 end $$;
 commit;
+-- 81 (cont.) · Build keys (Studio plan G·2, 0156–0157; ADR-0018's build-key amendment). A build key's shape follows its
+-- purpose (24 hours, a preview's 30 days); before the store ever opened it answers as a test key does; after opening only
+-- with a partner, and a partner person's key only while that person is live in the partner, still a member of the store
+-- and, for a Lead or a Builder, assigned to it. app_build_key_makers names the caller's own store's makers only;
+-- app_delete_ended_build_keys deletes ended build keys and nothing else; the maker check itself runs for no role.
+insert into tenants (id, slug, name) values
+  ('e8100000-0000-0000-0000-000000000001', 'proof-e81', 'Proof E81'),
+  ('e8100000-0000-0000-0000-000000000002', 'proof-f81', 'Proof F81');
+insert into shop_settings (tenant_id, pickup_pincode) values
+  ('e8100000-0000-0000-0000-000000000001', '452009'), ('e8100000-0000-0000-0000-000000000002', '110017');
+insert into auth.users (id, email, email_confirmed_at) values
+  ('e8100000-0000-0000-0000-0000000000f1', 'owner@studio81.test', now()),
+  ('e8100000-0000-0000-0000-0000000000f2', 'lead@studio81.test', now()),
+  ('e8100000-0000-0000-0000-0000000000f3', 'builder@studio81.test', now()),
+  ('e8100000-0000-0000-0000-0000000000f4', 'gone@studio81.test', now());
+insert into partners (id, user_id, email, name, business_name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f1', 'owner@studio81.test', 'Asha Rao', 'Studio 81', '919876543281', 'Indore', '0', 1, now(), now());
+insert into partner_members (id, partner_id, user_id, email, role, accepted_at) values
+  ('e8100000-0000-0000-0000-0000000000b1', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f1', 'owner@studio81.test', 'owner', now()),
+  ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f2', 'lead@studio81.test', 'lead', now()),
+  ('e8100000-0000-0000-0000-0000000000b3', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f3', 'builder@studio81.test', 'builder', now()),
+  ('e8100000-0000-0000-0000-0000000000b4', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f4', 'gone@studio81.test', 'lead', now());
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values
+  ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000a1', 2000, 24, 90),
+  ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000a1', 2000, 24, 90);
+insert into members (tenant_id, user_id, role, partner_member_id) values
+  ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000f1', 'partner', 'e8100000-0000-0000-0000-0000000000b1'),
+  ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000f2', 'partner', 'e8100000-0000-0000-0000-0000000000b2'),
+  ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000f3', 'builder', 'e8100000-0000-0000-0000-0000000000b3'),
+  ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f1', 'partner', 'e8100000-0000-0000-0000-0000000000b1'),
+  ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f2', 'partner', 'e8100000-0000-0000-0000-0000000000b2'),
+  ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f3', 'builder', 'e8100000-0000-0000-0000-0000000000b3'),
+  ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f4', 'partner', 'e8100000-0000-0000-0000-0000000000b4'),
+  ('e8100000-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999', 'owner', null);
+insert into partner_assignments (partner_member_id, tenant_id) values
+  ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-000000000001'),
+  ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-000000000002'),
+  ('e8100000-0000-0000-0000-0000000000b3', 'e8100000-0000-0000-0000-000000000001'),
+  ('e8100000-0000-0000-0000-0000000000b4', 'e8100000-0000-0000-0000-000000000002');
+update tenants set first_opened_at = now() - interval '1 day' where id = 'e8100000-0000-0000-0000-000000000002';
+insert into storefront_keys (id, tenant_id, kind, purpose, name, hash, prefix, partner_id, created_by, expires_at) values
+  -- E (never opened, no Website): the store's own build key, a Lead's, an unassigned-anywhere Builder's
+  ('e8100000-0000-0000-0000-000000000011', 'e8100000-0000-0000-0000-000000000001', 'build', 'session', 'Studio session', repeat('e', 63) || '1', 'frs_build_e81aaa', null, '99999999-9999-9999-9999-999999999999', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000012', 'e8100000-0000-0000-0000-000000000001', 'build', 'developer', 'Lead computer', repeat('e', 63) || '2', 'frs_build_e81bbb', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f2', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000013', 'e8100000-0000-0000-0000-000000000001', 'build', 'preview', 'Preview v1', repeat('e', 63) || '3', 'frs_build_e81ccc', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f3', now() + interval '30 days'),
+  -- F (opened): the store's own, the partner's owner's, a Lead's, a Builder's (not assigned to F), a Lead about to leave
+  ('e8100000-0000-0000-0000-000000000021', 'e8100000-0000-0000-0000-000000000002', 'build', 'session', 'Own session', repeat('e', 63) || '4', 'frs_build_f81aaa', null, '99999999-9999-9999-9999-999999999999', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000022', 'e8100000-0000-0000-0000-000000000002', 'build', 'session', 'Owner session', repeat('e', 63) || '5', 'frs_build_f81bbb', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f1', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000023', 'e8100000-0000-0000-0000-000000000002', 'build', 'developer', 'Lead computer', repeat('e', 63) || '6', 'frs_build_f81ccc', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f2', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000024', 'e8100000-0000-0000-0000-000000000002', 'build', 'developer', 'Builder computer', repeat('e', 63) || '7', 'frs_build_f81ddd', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f3', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000025', 'e8100000-0000-0000-0000-000000000002', 'build', 'developer', 'Leaving', repeat('e', 63) || '8', 'frs_build_f81eee', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f4', now() + interval '24 hours'),
+  ('e8100000-0000-0000-0000-000000000026', 'e8100000-0000-0000-0000-000000000002', 'build', 'session', 'Ended', repeat('e', 63) || '9', 'frs_build_f81fff', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f2', now() + interval '1 hour');
+update storefront_keys set expires_at = now() - interval '1 minute', created_at = now() - interval '2 hours' where id = 'e8100000-0000-0000-0000-000000000026';
+-- the shape: a purpose on every build key and nowhere else; its end; its prefix
+do $$ begin
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'build', 'No purpose', repeat('d', 63) || '1', 'frs_build_d81aaa', '99999999-9999-9999-9999-999999999999', now() + interval '1 hour');
+    raise exception 'FAIL: a build key with no purpose'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'test', 'session', 'Test purpose', repeat('d', 63) || '2', 'frs_test_d81bbb', '99999999-9999-9999-9999-999999999999', now() + interval '1 hour');
+    raise exception 'FAIL: a test key with a purpose'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'build', 'session', 'Long session', repeat('d', 63) || '3', 'frs_build_d81ccc', '99999999-9999-9999-9999-999999999999', now() + interval '25 hours');
+    raise exception 'FAIL: a session key past 24 hours'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'build', 'preview', 'Long preview', repeat('d', 63) || '4', 'frs_build_d81ddd', '99999999-9999-9999-9999-999999999999', now() + interval '31 days');
+    raise exception 'FAIL: a preview key past 30 days'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'build', 'session', 'No end', repeat('d', 63) || '5', 'frs_build_d81eee', '99999999-9999-9999-9999-999999999999', null);
+    raise exception 'FAIL: a build key with no end'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'build', 'session', 'Wrong prefix', repeat('d', 63) || '6', 'frs_test_d81fff', '99999999-9999-9999-9999-999999999999', now() + interval '1 hour');
+    raise exception 'FAIL: a build key with a test prefix'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at) values ('e8100000-0000-0000-0000-000000000001', 'build', 'agent', 'Bad purpose', repeat('d', 63) || '7', 'frs_build_d81ggg', '99999999-9999-9999-9999-999999999999', now() + interval '1 hour');
+    raise exception 'FAIL: an unknown purpose'; exception when check_violation then null; end;
+  if exists (select 1 from pg_proc p, unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r
+             where p.oid = 'app_build_key_maker_live(uuid, uuid, uuid)'::regprocedure and has_function_privilege(r, p.oid, 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_build_key_maker_live(uuid, uuid, uuid)'::regprocedure and a.grantee = 0)
+  then raise exception 'FAIL: the build-key maker check can be called'; end if;
+  if pg_get_function_result('app_build_key_makers()'::regprocedure) is distinct from 'TABLE(user_id uuid, email text, partner_name text, live boolean, left_at timestamp with time zone)'
+     or not (select prosecdef from pg_proc where oid = 'app_build_key_makers()'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_build_key_makers()'::regprocedure) is distinct from array['search_path=""']
+     or not (select prosecdef from pg_proc where oid = 'app_delete_ended_build_keys()'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_delete_ended_build_keys()'::regprocedure) is distinct from array['search_path=""']
+  then raise exception 'FAIL: a build-key definer is not pinned or returns more'; end if;
+  if exists (select 1 from unnest(array['app_build_key_makers()', 'app_delete_ended_build_keys()']) f, unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r
+             where has_function_privilege(r, f::regprocedure, 'execute'))
+     or exists (select 1 from unnest(array['app_build_key_makers()', 'app_delete_ended_build_keys()']) f, pg_proc p, aclexplode(p.proacl) a where p.oid = f::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_build_key_makers()', 'execute')
+     or not has_function_privilege('frata_app', 'app_delete_ended_build_keys()', 'execute')
+  then raise exception 'FAIL: a build-key definer runs for a role other than frata_app'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  -- before opening, as a test key does: the store's own and its assigned partner people's
+  if pg_temp.skey(repeat('e', 63) || '1') is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s own build key does not answer before opening'; end if;
+  if pg_temp.skey(repeat('e', 63) || '2') is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s Lead''s build key does not answer'; end if;
+  if pg_temp.skey(repeat('e', 63) || '3') is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s assigned Builder''s preview key does not answer'; end if;
+  if (select kind from app_storefront_key(repeat('e', 63) || '2')) is distinct from 'build' then raise exception 'FAIL: a build key answers as another kind'; end if;
+  -- after opening: only a partner's, only while its maker is live, a member and (Lead, Builder) assigned
+  if pg_temp.skey(repeat('e', 63) || '4') is not null then raise exception 'FAIL: an opened store''s own build key answers (decision 5: partners only)'; end if;
+  if pg_temp.skey(repeat('e', 63) || '5') is distinct from 'e8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: the partner owner''s build key on F does not answer'; end if;
+  if pg_temp.skey(repeat('e', 63) || '6') is distinct from 'e8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: an assigned Lead''s build key on F does not answer'; end if;
+  if pg_temp.skey(repeat('e', 63) || '7') is not null then raise exception 'FAIL: an unassigned Builder''s build key answers on F'; end if;
+  if pg_temp.skey(repeat('e', 63) || '8') is distinct from 'e8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: the leaving Lead''s key does not answer yet'; end if;
+  if pg_temp.skey(repeat('e', 63) || '9') is not null then raise exception 'FAIL: an ended build key answers'; end if;
+end $$;
+commit;
+-- the Lead leaves the partner, the other Lead is unassigned from F, the Builder loses its member row on E
+update partner_members set removed_at = now(), removed_by = 'e8100000-0000-0000-0000-0000000000f1' where id = 'e8100000-0000-0000-0000-0000000000b4';
+delete from partner_assignments where partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' and tenant_id = 'e8100000-0000-0000-0000-000000000002';
+delete from members where tenant_id = 'e8100000-0000-0000-0000-000000000001' and user_id = 'e8100000-0000-0000-0000-0000000000f3';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('e', 63) || '8') is not null then raise exception 'FAIL: a removed Lead''s build key answers'; end if;
+  if pg_temp.skey(repeat('e', 63) || '6') is not null then raise exception 'FAIL: an unassigned Lead''s build key answers on F'; end if;
+  if pg_temp.skey(repeat('e', 63) || '2') is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: unassigning the Lead from F stopped its key on E'; end if;
+  if pg_temp.skey(repeat('e', 63) || '3') is not null then raise exception 'FAIL: a Builder''s build key answers once its member row is gone'; end if;
+  if pg_temp.skey(repeat('e', 63) || '5') is distinct from 'e8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: the partner owner''s key stopped with its colleagues'' changes'; end if;
+end $$;
+commit;
+-- the makers' list: the caller's own store only, live as the definer says, the leaving date
+begin; set local role frata_app;
+select set_config('app.tenant_id', 'e8100000-0000-0000-0000-000000000002', true);
+do $$ begin
+  if (select count(*) from app_build_key_makers()) <> 4 then raise exception 'FAIL: F''s makers are not its four partner people (got %)', (select count(*) from app_build_key_makers()); end if;
+  if exists (select 1 from app_build_key_makers() where user_id = '99999999-9999-9999-9999-999999999999') then raise exception 'FAIL: the makers list names a key with no partner'; end if;
+  if (select live from app_build_key_makers() where user_id = 'e8100000-0000-0000-0000-0000000000f1') is not true then raise exception 'FAIL: the partner owner reads as gone'; end if;
+  if (select live from app_build_key_makers() where user_id = 'e8100000-0000-0000-0000-0000000000f2') is not false then raise exception 'FAIL: the unassigned Lead reads as live on F'; end if;
+  if (select left_at from app_build_key_makers() where user_id = 'e8100000-0000-0000-0000-0000000000f4') is null then raise exception 'FAIL: the removed Lead has no leaving date'; end if;
+  if (select partner_name from app_build_key_makers() where user_id = 'e8100000-0000-0000-0000-0000000000f1') is distinct from 'Studio 81' then raise exception 'FAIL: the maker''s partner is not named'; end if;
+end $$;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+do $$ begin if exists (select 1 from app_build_key_makers()) then raise exception 'FAIL: C reads F''s build-key makers'; end if; end $$;
+select set_config('app.tenant_id', '', true);
+do $$ begin if exists (select 1 from app_build_key_makers()) then raise exception 'FAIL: the makers list answers with no store set'; end if; end $$;
+commit;
+-- the daily delete: ended build keys only
+begin; set local role frata_app;
+do $$ declare n int; begin
+  n := app_delete_ended_build_keys();
+  if n < 1 then raise exception 'FAIL: the ended build key was not deleted'; end if;
+end $$;
+commit;
+do $$ begin
+  if exists (select 1 from storefront_keys where id = 'e8100000-0000-0000-0000-000000000026') then raise exception 'FAIL: an ended build key survived the daily delete'; end if;
+  if (select count(*) from storefront_keys where tenant_id in ('e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-000000000002')) <> 8 then raise exception 'FAIL: the daily delete took a live key'; end if;
+  if not exists (select 1 from storefront_keys where id = 'c8100000-0000-0000-0000-00000000000e') then raise exception 'FAIL: the daily delete took an ended test key'; end if;
+end $$;
 
 -- 80. Store content (V1 content, 0133–0136; plan docs/plans/2026-11-15-v1-content.md; tenancy-auditor 2026-11-15): a
 -- store's bars, menus and Contact line are its own both ways; tenant, kind and key never change; at most 3 bars a store

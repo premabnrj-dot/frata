@@ -36,21 +36,29 @@ export default async function WebsitePageRoute() {
     return p ? (p.partnerName ?? ROLE_LABEL[p.role as MemberRole] ?? null) : null
   }
   const keys: KeyView[] = page.keys.map((k) => {
-    const s = keyState(k, page, now)
-    const maker = k.partnerId ? who(k.createdBy) : null
+    const builder = k.kind === 'build' && k.partnerId ? page.makers[k.createdBy] ?? null : null
+    const s = keyState(k, page, now, builder)
+    // A build key names the person who made it and their partner (mockup website-one-address § 4); others the partner.
+    const maker = builder ? [builder.email, builder.partnerName].filter(Boolean).join(', ') : k.partnerId ? who(k.createdBy) : null
     // Each line as the computer shows it, and as a phone does (`phone` null: left out there; mockup § Phone).
     const line: KeyView['line'] = []
     const when = (at: string) => (now.getTime() - new Date(at).getTime() < 60_000 ? 'Just now' : dayMonthIN(new Date(at))) // clock-ok: server render
     if (s.kind === 'deleted') line.push({ text: `Deleted by ${who(k.revokedBy) ?? 'someone who left'} · ${when(s.at)}`, phone: when(s.at) })
     else if (s.kind === 'partner_gone') { const t = s.at ? `Your partner’s access ended · ${dayMonthIN(new Date(s.at))}` : 'Your partner’s access ended'; line.push({ text: t, phone: t }) }
+    else if (s.kind === 'maker_gone') { const t = `${builder?.email ?? 'Your partner’s person'}’s access ended${s.at ? ` · ${dayMonthIN(new Date(s.at))}` : ''}`; line.push({ text: t, phone: t }) }
     else if (s.kind === 'ended' && s.why === 'opened' && s.at) { const t = `Store opened · ${dayMonthIN(new Date(s.at))}`; line.push({ text: t, phone: t }) }
     else if (s.kind === 'ended' && s.at) { const t = dayMonthIN(new Date(s.at)); line.push({ text: t, phone: t }) }
     else {
-      if (maker) line.push({ text: `Made by ${maker}`, phone: null })
-      const u = lastUsed(k.lastSeenOn, now, dayMonthIN); line.push({ text: u, phone: u })
+      // A build key keeps its maker on a phone and drops its last use there (§ 4's phone); other keys the other way.
+      const u = lastUsed(k.lastSeenOn, now, dayMonthIN)
+      if (maker) line.push({ text: `Made by ${maker}`, phone: k.kind === 'build' ? `Made by ${maker}` : null })
+      line.push({ text: u, phone: k.kind === 'build' && maker ? null : u })
     }
-    const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? `Test · ends ${dayMonthIN(new Date(s.endsAt))}` : s.kind === 'ended' ? 'Test · ended' : 'Deleted'
-    return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, live: keyAnswers(s), isPublic: k.kind === 'public', line }
+    const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? `Test · ends ${dayMonthIN(new Date(s.endsAt))}` : s.kind === 'build' ? `Build · ends ${dayMonthIN(new Date(s.endsAt))}`
+      : s.kind === 'ended' ? (s.key === 'build' ? 'Build · ended' : 'Test · ended') : s.kind === 'maker_gone' ? 'Build · ended' : 'Deleted'
+    // What Delete says it stops (§ 4's dialog): a partner's build key names the partner's work.
+    const stops = k.kind === 'build' ? (builder?.partnerName ? `${builder.partnerName}’s work with it stops within a minute.` : 'Work with it stops within a minute.') : 'Websites using it stop working within a minute.'
+    return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, live: keyAnswers(s), isPublic: k.kind === 'public', line, stops }
   })
   const site = page.siteOrigin ? page.domains.find((d) => d.id === page.siteDomainId) ?? null : null
   const main = page.domains.find((d) => d.main) ?? null
@@ -66,7 +74,7 @@ export default async function WebsitePageRoute() {
         checkout={main ? { host: main.host, razorpayOk: main.razorpayOk, custom: true } : { host: shopHost(page.slug), razorpayOk: false, custom: false }}
         maxKeys={MAX_LIVE_KEYS}
         keys={keys}
-        liveCount={keys.filter((k) => k.live).length}
+        liveCount={page.keys.filter((k, i) => k.kind !== 'build' && keys[i]!.live).length}
         testAllowed={!page.firstOpenedAt}
         openapi={API_HOST ? `https://${API_HOST}/${CURRENT_API_VERSION}/openapi.json` : null}
         docs={`https://${API_HOST || 'api.frrata.shop'}/docs`}

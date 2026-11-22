@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { keyHash } from '@/lib/queries/storefront-keys'
-import { and, count, eq, isNull, sql } from 'drizzle-orm'
+import { and, count, eq, isNull, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { asMember } from '@/lib/auth/as-member'
@@ -115,7 +115,8 @@ export async function createKeyAction(input: unknown): Promise<CreateKeyResult> 
       await tx.select({ t: shopSettings.tenantId }).from(shopSettings).where(eq(shopSettings.tenantId, t)).for('update')
       const [s] = await tx.select({ opened: tenants.firstOpenedAt }).from(tenants).where(eq(tenants.id, t))
       if (p.data.kind === 'test' && s?.opened) return 'The store is open. Make a Live key.'
-      const [n] = await tx.select({ n: count() }).from(storefrontKeys).where(and(eq(storefrontKeys.tenantId, t), isNull(storefrontKeys.revokedAt)))
+      // Build keys have their own ceiling (mintBuildKey): they never use up the store's 20 Live and Test keys (G·2).
+      const [n] = await tx.select({ n: count() }).from(storefrontKeys).where(and(eq(storefrontKeys.tenantId, t), isNull(storefrontKeys.revokedAt), ne(storefrontKeys.kind, 'build')))
       if ((n?.n ?? 0) >= MAX_LIVE_KEYS) return 'Delete a key to make another.'
       if (!(await withinLimit(LIMITS.apiKeyCreateShop, t, new Date(), true))) {
         const w = LIMITS.apiKeyCreateShop.windowSeconds * 1000
