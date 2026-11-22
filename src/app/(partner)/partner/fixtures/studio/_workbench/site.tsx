@@ -1,14 +1,12 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { HEADING, LONGEST, PARTS, PRODUCTS, SITE, STRIP, CLIENT, type Case, type Part } from './fixtures'
+import { HEADING, LONGEST, PARTS, PRODUCTS, SERIF, SITE, STRIP, CLIENT, type Case, type Part } from './fixtures'
 
 // The fixture store inside the preview (mockup screen 1 `.dev`): the strip, the header, the hero, New in and three
 // products, in the store's own colours (data, from its brand record). It is the store, so it sits in
 // [data-store-theme]: no Neel rule reaches it. A part a person can pick (the hero, New in) is a button; the picked one
 // wears the focus colour's outline (--pick, resolved on the frame outside the store). WB·4 replaces this with the session's real preview.
-
-const SERIF = 'Georgia, serif'
 
 export function FixtureSite({ shown, picked, onPick }: { shown: Case; picked: Part | null; onPick: (p: Part) => void }) {
   const part = (p: Part) => ({
