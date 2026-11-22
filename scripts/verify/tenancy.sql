@@ -4270,7 +4270,8 @@ insert into members (tenant_id, user_id, role, partner_member_id) values
   ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f2', 'partner', 'e8100000-0000-0000-0000-0000000000b2'),
   ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f3', 'builder', 'e8100000-0000-0000-0000-0000000000b3'),
   ('e8100000-0000-0000-0000-000000000002', 'e8100000-0000-0000-0000-0000000000f4', 'partner', 'e8100000-0000-0000-0000-0000000000b4'),
-  ('e8100000-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999', 'owner', null);
+  ('e8100000-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999', 'owner', null),
+  ('e8100000-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'owner', null);
 insert into partner_assignments (partner_member_id, tenant_id) values
   ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-000000000001'),
   ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-000000000002'),
@@ -4352,6 +4353,15 @@ do $$ begin
   if pg_temp.skey(repeat('e', 63) || '5') is distinct from 'e8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: the partner owner''s key stopped with its colleagues'' changes'; end if;
 end $$;
 commit;
+-- a build key the store's own people made stops once its maker holds no members row there (tenancy audit 2026-11-22)
+insert into storefront_keys (id, tenant_id, kind, purpose, name, hash, prefix, partner_id, created_by, expires_at) values
+  ('e8100000-0000-0000-0000-000000000031', 'e8100000-0000-0000-0000-000000000001', 'build', 'session', 'Gone owner', repeat('e', 62) || '10', 'frs_build_e81ddd', null, 'e8100000-0000-0000-0000-0000000000f4', now() + interval '24 hours');
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('e', 62) || '10') is not null then raise exception 'FAIL: a build key whose own-store maker is no member answers'; end if;
+end $$;
+commit;
+delete from storefront_keys where id = 'e8100000-0000-0000-0000-000000000031';
 -- the makers' list: the caller's own store only, live as the definer says, the leaving date
 begin; set local role frata_app;
 select set_config('app.tenant_id', 'e8100000-0000-0000-0000-000000000002', true);

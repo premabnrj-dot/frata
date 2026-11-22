@@ -22,7 +22,9 @@ create or replace function app_store_building_keys() returns integer
            select 1 from public.partner_links l join public.partners pa on pa.id = l.partner_id
             where l.tenant_id = k.tenant_id and l.partner_id = k.partner_id and l.removed_at is null
               and pa.approved_at is not null and pa.declined_at is null and pa.suspended_at is null))
-     and (k.kind <> 'build' or k.partner_id is null or public.app_build_key_maker_live(k.tenant_id, k.partner_id, k.created_by))
+     and (k.kind <> 'build'
+          or (k.partner_id is null and exists (select 1 from public.members m where m.tenant_id = k.tenant_id and m.user_id = k.created_by))
+          or (k.partner_id is not null and public.app_build_key_maker_live(k.tenant_id, k.partner_id, k.created_by)))
 $$;
 --> statement-breakpoint
 revoke all on function app_store_building_keys() from public, anon, authenticated, service_role, frata_admin, frata_builder;

@@ -80,7 +80,9 @@ export async function pollDeviceSignIn(device: string, ip: string): Promise<Poll
     console.error('[device] mint', errName(err))
   }
   if (minted?.ok) return { status: 'ok', key: minted.key, expiresAt: minted.expiresAt }
-  // Not minted: the code is given back while it is live, so the CLI's next poll tries again (impact review 2026-11-22).
+  // Refused for good (the person may not make keys there): the claim stays spent (security LOW-8). Anything else (the
+  // store's limit or ceiling, a failure): given back while live, so the CLI's next poll tries again (impact review).
+  if (minted && minted.why === 'not_allowed') return { status: 'refused' }
   await deviceCodeUnclaim(hash).catch((e) => console.error('[device] unclaim', errName(e)))
-  return minted && minted.why === 'not_allowed' ? { status: 'refused' } : { status: 'busy' }
+  return { status: 'busy' }
 }

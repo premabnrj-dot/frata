@@ -3,7 +3,7 @@ import { apiBrand, previewBrand } from '@/lib/queries/brand'
 import { rasterLogoMade } from '@/lib/media/brand-files'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
 import { collectionOut, collectionPageOut, fromOurStore, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
-import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, draftCatalogue, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
+import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, draftCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
 import { BadParam, type ApiCtx } from './request'
 import { facetsOut, filterPageOut, parseFilter, type FilterQuery } from '@/domains/storefront-api/2026-12/filter'
 import { visibility, type Status } from '@/domains/catalogue/availability'
@@ -32,11 +32,11 @@ import { paise } from '@/domains/money/paise'
 
 // A build key (G·2, the header tree) reads what a test key reads, drafts included: its catalogue from the one raw draft
 // entry per store (15 s, purged by every catalogue save), its pages and FAQ as they stand now (drafts and hidden ones).
-const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
-  ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
-  : ctx.keyKind === 'build'
-    ? { shop: previewShop, catalogue: draftCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
-    : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent, brand: apiBrand }
+// A Test key reads the same entry (security review 2026-11-22 MED-2): it is in browsers and request logs by design, so
+// its 300 reads a minute must not each be a 200–370 ms uncached catalogue read.
+const loaders = (ctx: ApiCtx) => ctx.keyKind === 'public'
+  ? { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent, brand: apiBrand }
+  : { shop: previewShop, catalogue: draftCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
 /** The store's pages for this key: a build key's include drafts and hidden ones (the build-key amendment, point 4). */
 const pagesFor = (ctx: ApiCtx) => (ctx.keyKind === 'build' ? previewPages(ctx.tenantId) : shopPages(ctx.tenantId))
 

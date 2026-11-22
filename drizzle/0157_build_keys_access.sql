@@ -11,7 +11,9 @@
 --   - a build key a partner person made answers only while that person is live in the partner (app_pm_live), still
 --     holds a members row on this store, and, for a Lead or a Builder, is assigned to it. Unassigning or removing the
 --     person ends their keys at once; nothing is written, the definer derives it (and the lookup is never cached);
---   - the partner's own stops (its link, its suspension) hold as for every key.
+--   - the partner's own stops (its link, its suspension) hold as for every key;
+--   - a build key the store's own people made answers only while its maker still holds a members row there (tenancy
+--     audit 2026-11-22: a removed owner or Manager's key stops at once, as a partner person's does).
 -- The returned columns, the definer's settings and its grants are as 0142 made them (re-run below).
 -- app_build_key_makers() lists, for Settings › Website, the people who made this store's build keys: their email, their
 -- partner's name, whether they still answer and when they left. Ids of the caller's own store only.
@@ -56,7 +58,9 @@ create or replace function app_storefront_key(p_hash text) returns table (key_id
            select 1 from public.partner_links l join public.partners pa on pa.id = l.partner_id
             where l.tenant_id = k.tenant_id and l.partner_id = k.partner_id and l.removed_at is null
               and pa.approved_at is not null and pa.declined_at is null and pa.suspended_at is null))
-     and (k.kind <> 'build' or k.partner_id is null or public.app_build_key_maker_live(k.tenant_id, k.partner_id, k.created_by))
+     and (k.kind <> 'build'
+          or (k.partner_id is null and exists (select 1 from public.members m where m.tenant_id = k.tenant_id and m.user_id = k.created_by))
+          or (k.partner_id is not null and public.app_build_key_maker_live(k.tenant_id, k.partner_id, k.created_by)))
 $$;
 --> statement-breakpoint
 revoke all on function app_storefront_key(text) from public, anon, authenticated, service_role, frata_admin, frata_builder;

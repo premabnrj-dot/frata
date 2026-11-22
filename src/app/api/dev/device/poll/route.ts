@@ -9,21 +9,32 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 10
 const json = (status: number, body: object) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } })
 
+// Each answer keeps its code for machines and says in one line what the person at the CLI does next (words review).
+const SAY = {
+  too_large: 'That request was too large.', bad_request: 'Run `npx frrata dev <your store>` again.',
+  busy: 'Too many tries. Wait a minute, then run it again.', unavailable: 'Frrata could not answer. Try again in a minute.',
+  not_found: 'This sign-in ended. Run `npx frrata dev` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
+} as const
+const fail = (status: number, error: keyof typeof SAY) => json(status, { error, message: SAY[error] })
+/** A body over 512 bytes is refused before it is read (security LOW-5). */
+const tooBig = (req: Request) => Number(req.headers.get('content-length') ?? '0') > 512
+
 export async function POST(req: Request): Promise<Response> {
+  if (tooBig(req)) return fail(413, 'too_large')
   const raw = await req.text()
-  if (raw.length > 512) return json(413, { error: 'too_large' })
+  if (raw.length > 512) return fail(413, 'too_large')
   let device: unknown
-  try { device = (JSON.parse(raw) as { device?: unknown }).device } catch { return json(400, { error: 'bad_request' }) }
-  if (!isDeviceSecret(device)) return json(404, { error: 'not_found' })
+  try { device = (JSON.parse(raw) as { device?: unknown }).device } catch { return fail(400, 'bad_request') }
+  if (!isDeviceSecret(device)) return fail(404, 'not_found')
   try {
     const r = await pollDeviceSignIn(device, ipFrom(req.headers))
-    if (!r) return json(404, { error: 'not_found' })
+    if (!r) return fail(404, 'not_found')
     if (r.status === 'pending') return json(202, { status: 'pending' })
-    if (r.status === 'busy') return json(429, { error: 'busy' })
-    if (r.status === 'refused') return json(403, { error: 'not_allowed' })
+    if (r.status === 'busy') return fail(429, 'busy')
+    if (r.status === 'refused') return fail(403, 'not_allowed')
     return json(200, { key: r.key, expiresAt: r.expiresAt })
   } catch (err) {
     console.error('[device] poll', errName(err))
-    return json(500, { error: 'unavailable' })
+    return fail(500, 'unavailable')
   }
 }

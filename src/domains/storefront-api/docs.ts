@@ -34,7 +34,7 @@ export const GUIDES: Guide[] = [
   ] },
   { slug: 'keys', title: 'Keys', lead: 'A key names one store. Put the live key in your site’s server settings, never in its code.', body: [
     { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.'],
-      ['frs_build_…', 'Build. Sent in the Frrata-Key header to /2026-12/<resource>, never in the address. Drafts and hidden pages too, never cached, no browser. Ends after 24 hours.']], head: ['Key', 'Reads'] },
+      ['frs_build_…', 'Build. Sent in the Frrata-Key header to /2026-12/<resource>, never in the address. Reads drafts and hidden pages. Never cached. Answers no browser. Ends after 24 hours, a preview’s after 30 days at most.']], head: ['Key', 'Reads'] },
     { p: 'Every refusal is the same 404: an unknown, deleted or expired key, a product of another store, a draft under a live key.' },
     { p: 'A test key works before any domain is connected.' },
     { p: 'A live key works once the Website points at a connected domain.' },
@@ -60,7 +60,7 @@ export const GUIDES: Guide[] = [
     { p: 'A change in the console reaches the API within seconds. A drop, an offer or a brand season starting reaches it within five minutes.' },
     { p: 'Search and filters are cached for 60 seconds per address. Send filter parameters in their order and leave out defaults.' },
     { p: 'Cache answers on your site for a minute. Read again after that.' },
-    { p: 'Too many requests from one network get 429 with Retry-After.' },
+    { p: 'Too many requests from one network, or under one Test or build key, get 429 with Retry-After.' },
   ] },
   { slug: 'preview', title: 'Preview', lead: 'Show a hidden page on the brand’s site before shoppers see it.', body: [
     { p: 'In Content › Pages the brand picks Preview on website. Frrata opens your site at /frrata-preview with a token for 10 minutes.' },

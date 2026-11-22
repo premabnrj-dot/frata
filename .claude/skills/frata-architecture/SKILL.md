@@ -40,7 +40,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   is a `routeFor` kind of its own, rewritten by next.config (`apiRewrites`; never the middleware, whose matcher skips
   versioned paths). Live keys (`frs_pub_`) reach the cached tree `api/storefront/<v>/k/`, test keys (`frs_test_`) the
   dynamic tree `t/`, build keys (`frs_build_`, G·2) only in the `Frrata-Key` header the dynamic tree `h/` (no CORS, looked
-  up uncached, minted only by `mintBuildKey`). **A cached route handler never reads the request** (a header read is a runtime error there, and
+  up uncached, minted only by `mintBuildKey`). G·3's device sign-in mints inside the store a definer names for a
+  confirmed code (`app_device_code_claim`: a members row of the person who confirmed it, re-read at the claim), never a
+  store from the request: not a fourth source, the person's own membership (tenancy audit 2026-11-22). **A cached route handler never reads the request** (a header read is a runtime error there, and
   anything per-caller would be served to everyone); CORS there is a static `*`. Every handler is
   `export const GET = apiRequest({ version, tree, mode, resource, schema, run })`: `run` gets `ctx` (shop, key, kind,
   version, now) and parsed path params, never the Request; its answer leaves as `schema.parse()` of a closed schema.

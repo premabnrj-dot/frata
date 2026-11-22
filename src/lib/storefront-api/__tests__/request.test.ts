@@ -200,7 +200,7 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     const wrong = apiRequest({ version: '2026-12', tree: 'test', mode: 'isr', resource: 'shop', schema: Shop, run: async () => ({ name: 'x' }) })
     expect((await wrong(req(), at(TEST))).status).toBe(404)
   })
-  it('notes a key seen only on the cached tree', async () => {
+  it('notes a key seen on the cached tree and the header tree, never the test tree', async () => {
     vi.mocked(seenApi.markKeySeen).mockClear()
     await live(untouchable(), at(LIVE))
     expect(seenApi.markKeySeen).toHaveBeenCalledTimes(1)

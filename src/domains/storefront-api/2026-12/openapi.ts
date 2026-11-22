@@ -21,7 +21,7 @@ const ok = (schema: z.ZodType, description: string) => ({
 const err = (code: string) => ({ type: 'object', properties: { error: { const: code } }, required: ['error'], additionalProperties: false })
 const badFilter = { description: 'The query broke a rule. The answer names the parameter. Send each once, in this order, and leave out defaults. The order is collection, size, colour, price, stock, sort.', content: { 'application/json': { schema: { type: 'object', properties: { error: { const: 'bad_filter' }, param: { type: 'string' } }, required: ['error', 'param'], additionalProperties: false } } } }
 const notFound = { description: 'Unknown key, product or page. All three get this same answer.', content: { 'application/json': { schema: err('not_found') } } }
-const busy = { description: 'Too many requests from your network. Wait as long as Retry-After says.', headers: { 'Retry-After': { schema: { type: 'integer' } } }, content: { 'application/json': { schema: err('busy') } } }
+const busy = { description: 'Too many requests from your network or under your key. Wait as long as Retry-After says.', headers: { 'Retry-After': { schema: { type: 'integer' } } }, content: { 'application/json': { schema: err('busy') } } }
 const unavailable = { description: 'We couldn’t answer just now. Try again in a minute.', content: { 'application/json': { schema: err('unavailable') } } }
 const key = { name: 'key', in: 'path', required: true, description: 'Your store’s live key (frs_pub_…) or, before it opens, a test key (frs_test_…).', schema: { type: 'string', pattern: '^frs_(pub|test)_[0-9A-Za-z]{38}$' } }
 const n = { name: 'n', in: 'path', required: true, schema: { type: 'integer', minimum: 1, maximum: MAX_PAGE } }
@@ -32,7 +32,7 @@ const get = (summary: string, schema: z.ZodType, params: object[] = []) => ({ ge
 
 /** The header tree (G·2; ADR-0018's build-key amendment): the same resources, a build key in the Frrata-Key header in
  *  place of the key in the path. Drafts included, never cached, read from a server only (no CORS headers). */
-const BUILD_NOTE = 'Send a build key (frs_build_…) in the Frrata-Key header. It reads drafts too. Its answers are never cached, and no browser may read them.'
+const BUILD_NOTE = 'Send a build key (frs_build_…) in the Frrata-Key header. It reads drafts and hidden pages too. Its answers are never cached, and no browser may read them.'
 const byHeader = (paths: Record<string, { get: { summary: string; parameters: object[] } }>) =>
   Object.fromEntries(Object.entries(paths).filter(([p]) => !p.includes('/preview/')).map(([p, v]) => [p.replace('/k/{key}', ''),
     { get: { ...v.get, summary: `${v.get.summary}. ${BUILD_NOTE}`, parameters: v.get.parameters.filter((x) => x !== key), security: [{ buildKey: [] }] } }]))
@@ -41,7 +41,7 @@ export function openApi() {
   const keyed = keyPaths()
   return {
     openapi: '3.1.0',
-    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue, content and pages. Prices are in paise. Render text as text, never as HTML. Objects may gain fields. Lists of values may grow. New block kinds may appear. Ignore what you don’t know. A test key also opens a draft product by its handle. A hidden page opens only under preview/, with the Frrata-Preview header. Checkout stays on the store’s checkout address. The bag link in the store’s cart field sends a shopper’s bag there.' },
+    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue, content and pages. Prices are in paise. Render text as text, never as HTML. Objects may gain fields. Lists of values may grow. New block kinds may appear. Ignore what you don’t know. A test key also opens a draft product by its handle. A hidden page opens under preview/ with the Frrata-Preview header, or under a build key. Checkout stays on the store’s checkout address. The bag link in the store’s cart field sends a shopper’s bag there.' },
     servers: [{ url: 'https://api.frrata.shop/2026-12' }],
     components: { securitySchemes: { buildKey: { type: 'apiKey', in: 'header', name: 'Frrata-Key', description: BUILD_NOTE } } },
     paths: { ...keyed, ...byHeader(keyed) },

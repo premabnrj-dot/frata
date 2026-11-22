@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { keyHash } from '@/lib/queries/storefront-keys'
-import { and, count, eq, isNull, ne, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { asMember } from '@/lib/auth/as-member'
@@ -62,10 +62,11 @@ export async function setWebsiteAction(input: unknown): Promise<Done> {
       const t = auth.membership.tenantId
       if (p.data.runs === 'frrata') {
         await tx.update(shopSettings).set({ siteOrigin: null, siteDomainId: null }).where(eq(shopSettings.tenantId, t))
-        // A test key answers while no Website is set (0149), so going back to Frrata deletes them: the developer's site
-        // stops, as the confirm says (security review 2026-11-16 HIGH-1). Each is audited like a Delete.
+        // Test and build keys answer while no Website is set (0149, 0157), so going back to Frrata deletes them: the
+        // developer's site and every build stop, as the confirm says (security reviews 2026-11-16 HIGH-1, 2026-11-22
+        // MED-1). Each is audited like a Delete.
         const gone = await tx.update(storefrontKeys).set({ revokedAt: sql`now()`, revokedBy: auth.userId })
-          .where(and(eq(storefrontKeys.tenantId, t), eq(storefrontKeys.kind, 'test'), isNull(storefrontKeys.revokedAt)))
+          .where(and(eq(storefrontKeys.tenantId, t), inArray(storefrontKeys.kind, ['test', 'build']), isNull(storefrontKeys.revokedAt)))
           .returning({ id: storefrontKeys.id, hash: storefrontKeys.hash })
         for (const k of gone) await audit(tx, auth, 'storefront_key.delete', k.id, { fields: ['revoked_at'] })
         hashes = gone.map((k) => k.hash)

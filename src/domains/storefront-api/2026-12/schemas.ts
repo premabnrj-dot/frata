@@ -22,7 +22,8 @@ const moment = z.string().datetime({ offset: true })
 /** G15: schema.org structured data, as the store's own pages give it (src/domains/seo/defaults.ts), serialised with
  *  every `<` escaped, so it goes as it is inside <script type="application/ld+json">. Its addresses are the website's. */
 // Sized for a product at its 300 sizes (about 1 kB each in the markup), not a round number (impact review 2026-11-22).
-const jsonLd = z.string().max(400_000).describe('Structured data (schema.org) as JSON text, every < already escaped. Put it as it is inside <script type="application/ld+json">. Its addresses are on siteOrigin when set.')
+// No raw `<` at all: the output check refuses one, so a builder that skipped ldText's escape can never ship (security LOW-7).
+const jsonLd = z.string().max(400_000).regex(/^[^<]*$/).describe('Structured data (schema.org) as JSON text. Every < is already escaped. Put it as it is inside <script type="application/ld+json">. Its addresses use siteOrigin when it is set. It holds the store, product or list objects. Build your own breadcrumb from collection.')
 
 export const POLICY_KINDS = ['returns', 'shipping', 'privacy', 'terms', 'contact'] as const
 export const AVAILABILITY_KINDS = ['in_stock', 'low_stock', 'sold_out', 'preorder', 'made_to_order'] as const
@@ -84,7 +85,7 @@ export const Product = z.strictObject({
   offers: z.array(OfferLine).max(4),
   seo: Seo,
   collection: z.strictObject({ handle, title: text(200) }).nullable().optional()
-    .describe('The product’s home collection, for a breadcrumb. It is the first collection holding it, in the store’s order. Null when none does.'),
+    .describe('The product’s home collection, for a breadcrumb. It is the first collection that lists it, in the store’s order. Null when none does.'),
   jsonLd: jsonLd.optional(),
 })
 

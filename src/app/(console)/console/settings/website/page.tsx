@@ -46,7 +46,7 @@ export default async function WebsitePageRoute() {
     const when = (at: string) => (now.getTime() - new Date(at).getTime() < 60_000 ? 'Just now' : dayMonthIN(new Date(at))) // clock-ok: server render
     if (s.kind === 'deleted') line.push({ text: `Deleted by ${who(k.revokedBy) ?? 'someone who left'} · ${when(s.at)}`, phone: when(s.at) })
     else if (s.kind === 'partner_gone') { const t = s.at ? `Your partner’s access ended · ${dayMonthIN(new Date(s.at))}` : 'Your partner’s access ended'; line.push({ text: t, phone: t }) }
-    else if (s.kind === 'maker_gone') { const t = `${builder?.email ?? 'Your partner’s person'}’s access ended${s.at ? ` · ${dayMonthIN(new Date(s.at))}` : ''}`; line.push({ text: t, phone: t }) }
+    else if (s.kind === 'maker_gone') { const t = `${builder?.email ? `${builder.email}’s access` : 'Their access'} ended${s.at ? ` · ${dayMonthIN(new Date(s.at))}` : ''}`; line.push({ text: t, phone: t }) }
     else if (s.kind === 'ended' && s.why === 'opened' && s.at) { const t = `Store opened · ${dayMonthIN(new Date(s.at))}`; line.push({ text: t, phone: t }) }
     else if (s.kind === 'ended' && s.at) { const t = dayMonthIN(new Date(s.at)); line.push({ text: t, phone: t }) }
     else {
@@ -60,7 +60,7 @@ export default async function WebsitePageRoute() {
     const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? (left ? `Test · ${left} ${left === 1 ? 'day' : 'days'} left` : `Test · ends ${dayMonthIN(new Date(s.endsAt))}`) : s.kind === 'build' ? `Build · ends ${dayMonthIN(new Date(s.endsAt))}`
       : s.kind === 'ended' ? (s.key === 'build' ? 'Build · ended' : 'Test · ended') : s.kind === 'maker_gone' ? 'Build · ended' : 'Deleted'
     // What Delete says it stops (§ 4's dialog): a partner's build key names the partner's work.
-    const stops = k.kind === 'build' ? (builder?.partnerName ? `${builder.partnerName}’s work with it stops within a minute.` : 'Work with it stops within a minute.') : 'Websites using it stop working within a minute.'
+    const stops = k.kind === 'build' ? (builder?.partnerName ? `${builder.partnerName}’s work with it stops within a minute.` : 'Websites using it stop working within a minute.') : 'Websites using it stop working within a minute.'
     return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, warn: left !== null, live: keyAnswers(s), isPublic: k.kind === 'public', line, stops }
   })
   const site = page.siteOrigin ? page.domains.find((d) => d.id === page.siteDomainId) ?? null : null

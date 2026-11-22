@@ -44,7 +44,7 @@ export async function openShop(): Promise<Result> {
       // is held, as key creation and mintBuildKey hold it, so no key slips in between this check and the opening.
       const [s] = await tx.select({ name: tenants.name, slug: tenants.slug, legalName: shopSettings.legalName, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone, codOn: shopSettings.codOn, codMax: shopSettings.codMax, publishedAt: shopSettings.publishedAt,
         siteOrigin: shopSettings.siteOrigin,
-        buildingKeys: sql<number>`app_store_building_keys()` })
+        siteLock: shopSettings.tenantId })
         .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, t)).for('update', { of: shopSettings })
       if (!s) return 'Your store’s settings are missing.'
       if (s.publishedAt) return null
@@ -52,7 +52,9 @@ export async function openShop(): Promise<Result> {
       const steps = setupSteps({ shopName: s.name, address: hostFor(s.slug), productCount: p?.n ?? 0, legalName: s.legalName, grievanceName: s.grievanceName, grievanceEmail: s.grievanceEmail, grievancePhone: s.grievancePhone, codOn: s.codOn, codMaxPaise: Number(s.codMax), paymentsConnected: canTakeOnline(await keysFor(tx, t)), publishedAt: null },
         BUILT_PAGES, String)
       if (!readyToOpen(steps)) return `Not yet: ${steps.filter((x) => !x.done && x.key !== 'publish').map((x) => x.title.toLowerCase()).join(', ')}.`
-      if (websiteBlocksOpening({ siteOrigin: s.siteOrigin, buildingKeys: Number(s.buildingKeys) })) return NOT_READY
+      // Counted after the lock (a second statement sees a key committed while this one waited: security LOW-4).
+      const [b] = await tx.execute<{ n: number }>(sql`select app_store_building_keys() as n`)
+      if (websiteBlocksOpening({ siteOrigin: s.siteOrigin, buildingKeys: Number(b?.n ?? 0) })) return NOT_READY
       await tx.update(shopSettings).set({ publishedAt: sql`now()` }).where(and(eq(shopSettings.tenantId, t), isNull(shopSettings.publishedAt)))
       if (!auth.membership.supportSessionId) await tx.insert(auditEvents).values({ tenantId: t, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'shop.open', target: hostFor(s.slug) })
       return null

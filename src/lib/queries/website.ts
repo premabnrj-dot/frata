@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { shopDomains } from '@/lib/db/schema-addresses'
 import { partnerLinks } from '@/lib/db/schema-partners'
@@ -37,9 +37,13 @@ export const websitePage = (tenantId: string) => withTenant(tenantId, async (tx)
     tx.select({ at: tenants.firstOpenedAt, slug: tenants.slug }).from(tenants).where(eq(tenants.id, tenantId)),
     tx.select({ id: shopDomains.id, host: shopDomains.host, apex: shopDomains.apex, withWww: shopDomains.withWww, mainAt: shopDomains.mainAt, razorpayOkAt: shopDomains.razorpayOkAt })
       .from(shopDomains).where(and(eq(shopDomains.tenantId, tenantId), isNotNull(shopDomains.provedAt), isNull(shopDomains.removedAt), isNull(shopDomains.parkedAt))),
-    tx.select({ id: storefrontKeys.id, name: storefrontKeys.name, kind: storefrontKeys.kind, purpose: storefrontKeys.purpose, prefix: storefrontKeys.prefix, partnerId: storefrontKeys.partnerId, createdBy: storefrontKeys.createdBy,
+    // Live and Test keys, and build keys, each their own 100 newest (security LOW-6: up to 50 live build keys a store
+    // must never push a Live or Test key off the owner's list).
+    Promise.all([false, true].map((build) => tx.select({ id: storefrontKeys.id, name: storefrontKeys.name, kind: storefrontKeys.kind, purpose: storefrontKeys.purpose, prefix: storefrontKeys.prefix, partnerId: storefrontKeys.partnerId, createdBy: storefrontKeys.createdBy,
       createdAt: storefrontKeys.createdAt, expiresAt: storefrontKeys.expiresAt, revokedAt: storefrontKeys.revokedAt, revokedBy: storefrontKeys.revokedBy, lastSeenOn: storefrontKeys.lastSeenOn })
-      .from(storefrontKeys).where(eq(storefrontKeys.tenantId, tenantId)).orderBy(desc(storefrontKeys.createdAt)).limit(100),
+      .from(storefrontKeys)
+      .where(and(eq(storefrontKeys.tenantId, tenantId), build ? eq(storefrontKeys.kind, 'build') : ne(storefrontKeys.kind, 'build'))).orderBy(desc(storefrontKeys.createdAt)).limit(100)))
+      .then(([own, build]) => [...own!, ...build!].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))),
     tx.select({ partnerId: partnerLinks.partnerId, removedAt: partnerLinks.removedAt }).from(partnerLinks).where(eq(partnerLinks.tenantId, tenantId)),
     tx.execute<{ user_id: string; role: string; partner_name: string | null }>(sql`select user_id, role, partner_name from app_shop_people()`),
     tx.execute<{ user_id: string; email: string | null; partner_name: string; live: boolean; left_at: Date | string | null }>(sql`select user_id, email, partner_name, live, left_at from app_build_key_makers()`),

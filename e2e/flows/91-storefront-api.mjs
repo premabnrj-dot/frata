@@ -130,7 +130,7 @@ export default {
           await p.getByRole('radio', { name: /Runs on Frrata/ }).click()
           await p.getByLabel('Unsaved changes').getByRole('button', { name: /^Save/ }).click()
           const confirm = p.getByRole('dialog', { name: 'Run your website on Frrata?' })
-          await confirm.getByText('Test keys are deleted.').waitFor()
+          await confirm.getByText('Test and build keys are deleted.', { exact: false }).waitFor()
           await confirm.getByRole('button', { name: 'Run on Frrata' }).click()
           await expectToast(p, 'Saved', 'ok')
           const [r] = await db`select revoked_at, revoked_by from storefront_keys where hash = ${createHash('sha256').update(k1).digest('hex')}`

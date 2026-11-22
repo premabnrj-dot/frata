@@ -26,7 +26,10 @@ const PRICE = /(\b(price|mrp|priorPrice)|\.(min|max))\s*[-+*/%]=?\s*[\w(.]|[\w)]
 for (const f of code.filter((x) => /\.tsx?$/.test(x) && !x.endsWith('lib/money.ts') && !x.endsWith('lib/cart-link.ts'))) {
   const src = readFileSync(f, 'utf8')
   src.split('\n').forEach((l, i) => { if (!/^\s*\/\//.test(l) && PRICE.test(l)) problems.push(`${f}:${i + 1}: arithmetic on a price. Show it as the API gives it (rupees()).`) })
-  if (/dangerouslySetInnerHTML/.test(src)) problems.push(`${f}: dangerouslySetInnerHTML. API text is text, never HTML.`)
+  // The one named exception (G·4, contract review M10): the API's own `jsonLd`, already escaped, as the only content of a
+  // <script type="application/ld+json">. Anything else set as HTML fails.
+  const LD = /<script type="application\/ld\+json" dangerouslySetInnerHTML=\{\{ __html: [\w.?]+\.jsonLd \}\} \/>/g
+  if (/dangerouslySetInnerHTML/.test(src.replace(LD, ''))) problems.push(`${f}: dangerouslySetInnerHTML. API text is text, never HTML (the one exception: an API jsonLd in its own <script type="application/ld+json">).`)
   if (/\/cart\?l=/.test(src)) problems.push(`${f}: a hand-made bag link. Use cartLink() (lib/cart-link.ts).`)
 }
 // 6. The brand record (one-address P1·7). The two files the kit ships (components/frrata/) set the variables and draw the

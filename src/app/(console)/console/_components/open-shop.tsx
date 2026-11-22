@@ -49,11 +49,14 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
   }
   // The question takes focus when it appears (the button that asked it is gone); dismissing it gives focus back.
   useEffect(() => { if (ask) askRef.current?.focus(); else if (back.current) { back.current = false; triggerRef.current?.focus() } }, [ask])
+  // D0·3's dialog opened after "Open it" was gone: closing it puts focus back on Open my store itself (design-system review).
+  const wasNotReady = useRef(false)
+  useEffect(() => { if (notReady) wasNotReady.current = true; else if (wasNotReady.current) { wasNotReady.current = false; triggerRef.current?.focus() } }, [notReady])
   if (!canManage) return null
   return (
     <div className="space-y-2">
-      <Dialog open={notReady} onClose={() => { setNotReady(false); back.current = true }} title="Your store is still closed."
-        actions={<><Link href="/console/settings/web-address" className={button({ variant: 'primary' })}>Connect my domain</Link><Button variant="ghost" data-autofocus onClick={() => { setNotReady(false); back.current = true }}>Keep it closed</Button></>}>
+      <Dialog open={notReady} onClose={() => setNotReady(false)} title="Your store is still closed."
+        actions={<><Link href="/console/settings/web-address" onClick={() => setNotReady(false)} className={button({ variant: 'primary' })}>Connect my domain</Link><Button variant="ghost" data-autofocus onClick={() => setNotReady(false)}>Keep it closed</Button></>}>
         <p>Your website runs on a Test key. Test keys stop when the store opens.</p>
       </Dialog>
       {isOpen ? (

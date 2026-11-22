@@ -156,7 +156,7 @@ export function WebsiteView(p: {
 
       <Dialog open={confirmFrrata} onClose={() => setConfirmFrrata(false)} title="Run your website on Frrata?"
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmFrrata(false)}>Keep your own website</Button><Button busy={saving} onClick={save}>Run on Frrata</Button></>}>
-        <p>Your developer’s website stops working within a minute. Test keys are deleted.</p>
+        <p>Your developer’s website stops working within a minute. Test and build keys are deleted.</p>
       </Dialog>
     </div>
   )
