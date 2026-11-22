@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.5.0
+  version: 2.6.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -26,7 +26,7 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `/docs`) are the keyless entry points.
 2. **Two trees, never mixed.** next.config's `apiRewrites` (never the middleware: a middleware rewrite uncaches a route,
    and the matcher skips versioned paths so a CDN hit costs no middleware run) send `frs_test_` keys to `t/` (dynamic:
-   drafts through the preview loaders, `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
+   drafts through the preview loaders, the catalogue from the shared 15 s draft entry (`draftCatalogue`), `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
    and `frs_pub_` keys to `k/` (cached copies, `revalidate = 3600`, `generateStaticParams = () => []`). **A cached route
    never reads the request** (a header read is a runtime error, and anything per caller would be served to everyone):
    CORS there is a static `*`. Search is the one dynamic live route (varies by `q`; `public, s-maxage=60`). `check:api`
@@ -127,7 +127,8 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    (`src/lib/storefront-api/device.ts`, for the future page; `deviceCodeFor` shows the store's name first) needs a
    passkey check in the last 5 minutes and `api.manage` on the store the CLI named, never one the page sends; the
    approval and its audit row are one definer. `/api/dev/device/poll` (per network, then per device) claims a confirmed
-   code ONCE and mints through `mintBuildKey` as that person (developer, 24 hours); a mint that fails gives it back.
+   code ONCE and mints through `mintBuildKey` as that person (developer, 24 hours); a mint that fails for a passing
+   reason (a limit, the ceiling) gives it back, a refusal keeps it spent.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run
