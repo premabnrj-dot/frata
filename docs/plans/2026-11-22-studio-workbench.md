@@ -185,10 +185,10 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 | Screen 1: a folded panel's widths under 640 px (chat folds too) | Under 768 px is the phone layout, so that case never shows | The console's phone width (UX foundation 10) | yes, 2026-11-22 |
 | Screen 1 § States: someone else building ("Kabir is building v8"), a Builder (no Publish, Design a proposal), no code yet (no Code or Checks tab) | Not drawn in the shell | Each needs the session's data (who builds, the person's role, whether a build exists): WB·4. `inspectorTabs(phone, built)` already answers the third | yes, 2026-11-22 |
 | Screen 1's "Who" switch (Designer, Developer, Partner, chat only) | Not built | The mockup's own demo control, not part of the screen | yes, 2026-11-22 |
-| Four screens § 3: the Design tab above the Brand row drawn as tags (Height, Heading position) | The approved segmented controls stay | The § 3 sketch is a cut-down view of the tab approved on screen 1 | no |
-| Four screens § 3: the Type sample in Cormorant 24/28 | Georgia at the title size (22/28) | Fixture only (the real preview draws the store's faces, WB·4); the type scale | no |
-| Four screens § 3: where focus goes on opening the book (not drawn) | The book's Design button | The way back is the first thing a keyboard reaches; Esc and Design return focus to the Brand row | no |
-| Four screens § 3: "Waiting for the owner" beside the title | Beside it from about 344 px of inspector; in the 320 px default it wraps under "‹ Design · Brand book" | The three need about 320 px and the tab has 296; dropping the Design words or cutting the title would hide what the drawing names | no |
+| Four screens § 3: the Design tab above the Brand row drawn as tags (Height, Heading position) | The approved segmented controls stay | The § 3 sketch is a cut-down view of the tab approved on screen 1 | yes, 2026-11-22 (owner: "approved") |
+| Four screens § 3: the Type sample in Cormorant 24/28 | Georgia at the title size (22/28) | Fixture only (the real preview draws the store's faces, WB·4); the type scale | yes, 2026-11-22 (owner: "approved") |
+| Four screens § 3: where focus goes on opening the book (not drawn) | The book's Design button | The way back is the first thing a keyboard reaches; Esc and Design return focus to the Brand row | yes, 2026-11-22 (owner: "approved") |
+| Four screens § 3: "Waiting for the owner" beside the title | Beside it from about 344 px of inspector; in the 320 px default it wraps under "‹ Design · Brand book" | The three need about 320 px and the tab has 296; dropping the Design words or cutting the title would hide what the drawing names | yes, 2026-11-22 (owner: "approved") |
 
 ## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 | Item | Ruling |
