@@ -70,9 +70,13 @@ export default {
         const row = document.querySelector('[role="tablist"][aria-label="Inspector"]').getBoundingClientRect()
         const fold = document.querySelector('button[aria-label="Hide inspector"]').getBoundingClientRect()
         const list = document.querySelector('[role="tablist"][aria-label="Inspector"]')
-        return { scrolls: bar.scrollWidth > bar.clientWidth, lastIn: kids.at(-1).right <= b.right, overlaps, gap: Math.round(fold.left - row.right), tabsScroll: list.scrollWidth > list.clientWidth }
+        // Room to spare: what the bar's controls need (their widths, the gaps between them and the bar's padding) against
+        // its width. The status's ml-auto takes up the rest, so scrollWidth alone cannot show the margin.
+        const cs = getComputedStyle(bar), gap = parseFloat(cs.columnGap) || 0
+        const need = kids.reduce((n, r) => n + r.width, 0) + gap * (kids.length - 1) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+        return { scrolls: bar.scrollWidth > bar.clientWidth, room16: need <= bar.clientWidth - 16, lastIn: kids.at(-1).right <= b.right, overlaps, gap: Math.round(fold.left - row.right), tabsScroll: list.scrollWidth > list.clientWidth }
       })
-      assert.deepEqual(fit, { scrolls: false, lastIn: true, overlaps: 0, gap: 8, tabsScroll: false })
+      assert.deepEqual(fit, { scrolls: false, room16: true, lastIn: true, overlaps: 0, gap: 8, tabsScroll: false })
       assert.equal(await p.getByRole('button', { name: 'Preview only' }).isVisible(), true)
       // The status keeps its words for a screen reader even when only its spinner shows.
       assert.equal(await p.locator('[data-building]').textContent(), 'Building v8 · about 1–2 min')

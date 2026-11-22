@@ -209,3 +209,12 @@ Where the 22 Nov workbench and the 16 Nov redraw differ, the chat's cards, compo
 | Brand book's place in the inspector | Not drawn. Not built in the shell; a drawing goes to the owner. **Owner** |
 | The resize edge, the `?` key list with its off switch, the rail dot's count | Not drawn. Built to defaults (a 4 px separator; a Dialog listing the keys with the switch; a dot with a hidden count) and shown to the owner on the built screen. **Owner** |
 | Ctrl/⌘+K find; the credits drawer | Not in the shell |
+
+## Owner's answers on the lanes' questions (2026-11-22)
+| Question | Answer |
+|---|---|
+| Lane D's 19 Deviations; the top button while a check fails | "differences approved. It should read publish v8" |
+| Lane B's Deviations and its five migrations | "approved" |
+| A developer key for a partner's Builder | "let be things as it is for now. no need to offer access to builders for now." |
+| Lane E's nine Deviations and its migration | "approved" |
+| An owner's review card on Brand › Checkout for a partner's waiting change | "Add one in a later phase … but not now." Until then Notices is the review. It joins the list of mockups still to draw |
