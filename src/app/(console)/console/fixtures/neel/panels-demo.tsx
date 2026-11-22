@@ -3,6 +3,7 @@
 import { useId, useState } from 'react'
 import { Section } from '@/components/layout/section'
 import { Icon } from '@/components/icons/icon'
+import { STUDIO_ICONS } from '@/components/icons/studio-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ICON_BUTTON, PanelRail } from '@/components/ui/panel-rail'
@@ -22,8 +23,8 @@ export default function PanelsDemo() {
       <div className="flex flex-wrap items-start gap-6">
         <PanelRail items={[{ icon: 'messages', label: 'Show chat', note: '1 new', expanded: false, onClick: () => {} }]} className="h-24 rounded-md border border-line-soft" />
         <PanelRail items={[
-          { icon: 'inspector', label: 'Show inspector', expanded: false, onClick: () => {} }, { icon: 'brush', label: 'Design', onClick: () => {} },
-          { icon: 'code', label: 'Code', onClick: () => {} }, { icon: 'tick', label: 'Checks', note: '1 to fix', onClick: () => {} }, { icon: 'clock', label: 'Versions', onClick: () => {} },
+          { icon: STUDIO_ICONS.inspector, label: 'Show inspector', expanded: false, onClick: () => {} }, { icon: STUDIO_ICONS.brush, label: 'Design', onClick: () => {} },
+          { icon: 'code', label: 'Code', onClick: () => {} }, { icon: 'tick', label: 'Checks', note: '1 to fix', onClick: () => {} }, { icon: STUDIO_ICONS.clock, label: 'Versions', onClick: () => {} },
         ]} className="rounded-md border border-line-soft" />
         <div className="flex h-40 min-w-0 flex-1 overflow-hidden rounded-md border border-line-soft">
           {railed
@@ -47,8 +48,8 @@ export default function PanelsDemo() {
           </div>
         </div>
         <div className="flex gap-1">
-          {(['focus', 'device', 'copy', 'external'] as const).map((n) => <button key={n} type="button" aria-label={`Icon ${n}`} className={ICON_BUTTON}><Icon name={n} className="size-4" /></button>)}
-          <button type="button" aria-label="Preview only" aria-pressed="true" className={ICON_BUTTON}><Icon name="focus" className="size-4" /></button>
+          {(['focus', 'device', 'copy', 'external'] as const).map((n) => <button key={n} type="button" aria-label={`Icon ${n}`} className={ICON_BUTTON}><Icon name={n === 'external' ? n : STUDIO_ICONS[n]} className="size-4" /></button>)}
+          <button type="button" aria-label="Preview only" aria-pressed="true" className={ICON_BUTTON}><Icon name={STUDIO_ICONS.focus} className="size-4" /></button>
         </div>
       </div>
     </Section>

@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { Icon } from '@/components/icons/icon'
+import { STUDIO_ICONS } from '@/components/icons/studio-icons'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/empty'
 import { ICON_BUTTON, PanelRail } from '@/components/ui/panel-rail'
@@ -138,15 +139,15 @@ export function Workbench() {
           className={cn('relative min-h-0 min-w-0 border-l border-border outline-none', inspFolded ? 'bg-side' : 'grid grid-rows-[44px_minmax(0,1fr)] bg-card', phone && 'border-0')}>
           {inspFolded
             ? <PanelRail items={[
-                { icon: 'inspector', label: 'Show inspector', expanded: false, controls: `${base}-inspector`, onClick: () => fold('inspector') },
-                { icon: 'brush', label: 'Design', onClick: () => show('design') }, { icon: 'code', label: 'Code', onClick: () => show('code') },
-                { icon: 'tick', label: 'Checks', note: TO_FIX ? `${TO_FIX} to fix` : undefined, onClick: () => show('checks') }, { icon: 'clock', label: 'Versions', onClick: () => show('versions') },
+                { icon: STUDIO_ICONS.inspector, label: 'Show inspector', expanded: false, controls: `${base}-inspector`, onClick: () => fold('inspector') },
+                { icon: STUDIO_ICONS.brush, label: 'Design', onClick: () => show('design') }, { icon: 'code', label: 'Code', onClick: () => show('code') },
+                { icon: 'tick', label: 'Checks', note: TO_FIX ? `${TO_FIX} to fix` : undefined, onClick: () => show('checks') }, { icon: STUDIO_ICONS.clock, label: 'Versions', onClick: () => show('versions') },
               ]} />
             : <>
                 <div className="flex min-w-0 items-end gap-2 border-b border-line-soft px-1">
                   <Tabs base={base} label="Inspector" variant="line" value={shownTab} onChange={show} className="min-w-0 flex-1 overflow-x-auto"
                     tabs={tabs.map((t) => ({ id: t, label: t === 'checks' && TO_FIX ? <>Checks <Badge tone="warn">{TO_FIX}<span className="sr-only"> to fix</span></Badge></> : TAB_WORDS[t] }))} />
-                  {phone ? null : <button type="button" aria-label="Hide inspector" aria-expanded="true" aria-controls={`${base}-inspector`} onClick={() => fold('inspector')} className={cn(ICON_BUTTON, 'mb-1.5 self-center')}><Icon name="inspector" className="size-4" /></button>}
+                  {phone ? null : <button type="button" aria-label="Hide inspector" aria-expanded="true" aria-controls={`${base}-inspector`} onClick={() => fold('inspector')} className={cn(ICON_BUTTON, 'mb-1.5 self-center')}><Icon name={STUDIO_ICONS.inspector} className="size-4" /></button>}
                 </div>
                 <div className="min-h-0 overflow-auto p-3">
                   <TabPanel base={base} id="design" value={shownTab}><DesignTab key={picked} picked={picked} /></TabPanel>
@@ -163,7 +164,7 @@ export function Workbench() {
               {PHONE_TABS.map((t) => (
                 <button key={t} type="button" aria-pressed={phoneTab === t} onClick={() => setPhoneTab(t)}
                   className={cn('grid justify-items-center gap-0.5 py-1.5 text-small', phoneTab === t ? 'font-medium text-primary' : 'text-muted-foreground')}>
-                  <Icon name={t === 'chat' ? 'messages' : t === 'website' ? 'device' : 'menu'} className="size-5.5" />{PHONE_WORDS[t]}
+                  <Icon name={t === 'chat' ? 'messages' : t === 'website' ? STUDIO_ICONS.device : 'menu'} className="size-5.5" />{PHONE_WORDS[t]}
                 </button>
               ))}
             </nav>

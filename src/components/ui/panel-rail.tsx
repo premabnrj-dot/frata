@@ -1,6 +1,6 @@
 'use client'
 
-import { Icon, type IconName } from '@/components/icons/icon'
+import { Icon, type IconName, type IconPaths } from '@/components/icons/icon'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 // =============================================================================
 
 export type RailItem = {
-  icon: IconName
+  icon: IconName | IconPaths
   /** The button's name ("Show chat", "Checks"). */
   label: string
   /** What needs the person, said after the name and drawn as the dot ("1 new", "1 to fix"). */

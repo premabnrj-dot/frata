@@ -89,14 +89,6 @@ const ICONS = {
   bell: ['M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z', 'M10 20.5a2 2 0 0 0 4 0'],
   // Apps gallery (2026-11-11): an app on a higher plan; the shackle is the tinge.
   lock: ['M5.5 11h13v9h-13z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
-  // Studio workbench (WB·2/WB·3; mockup 2026-11-22 screen 1): the inspector as a panel on the right, Design, Versions,
-  // Preview only, a shopper's phone (the Website tab) and Copy.
-  inspector: ['M4 5h16v14H4z', 'M14.5 5v14'],
-  brush: ['M14.5 4.5l5 5-8 8-5 .5.5-5z', 'M12 7l5 5'],
-  clock: ['M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17z', 'M12 7.5V12l3 2'],
-  focus: ['M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5', 'M10 12h4'],
-  device: ['M7 3h10v18H7z', 'M10.5 18h3'],
-  copy: ['M9 9h11v11H9z', 'M15 9V4H4v11h5'],
   people: ['M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5 M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M15 12.5a2.7 2.7 0 1 0 0-5.4 M16.5 15c2 .4 3.6 2 4.5 5'],
   // Autopay (billing rework R1, 2026-11-22): a phone, approved — UPI's own way to pay, never NPCI's mark.
   upi: ['M7 3h10v18H7z M12 18.5h.01', 'M9.5 11.5l2 2 3-3'],
@@ -105,10 +97,12 @@ const ICONS = {
 } as const satisfies Record<string, readonly [string, string]>
 
 export type IconName = keyof typeof ICONS
+/** An icon drawn outside the shared set (one surface's own icons, kept out of every page's script): its body and tinge. */
+export type IconPaths = readonly [string, string]
 
 /** One frrata icon. `current` draws it at the current page's weight (2.25). */
-export function Icon({ name, className, current = false }: { name: IconName; className?: string; current?: boolean }) {
-  const [body, tinge] = ICONS[name]
+export function Icon({ name, className, current = false }: { name: IconName | IconPaths; className?: string; current?: boolean }) {
+  const [body, tinge] = typeof name === 'string' ? ICONS[name] : name
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={current ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
       <path d={body} />

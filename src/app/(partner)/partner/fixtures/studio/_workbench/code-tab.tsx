@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tag } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/segmented'
 import { Icon } from '@/components/icons/icon'
+import { STUDIO_ICONS } from '@/components/icons/studio-icons'
 import { ICON_BUTTON } from '@/components/ui/panel-rail'
 import { cn } from '@/lib/utils'
 import { BRANCH, BUILDING, DEV_COMMAND, DIFF, FILES } from './fixtures'
@@ -44,7 +45,7 @@ export default function CodeTab({ say }: { say: (words: string) => void }) {
       <p className="text-small font-medium text-muted-foreground">Work on your computer</p>
       <div className="flex items-center gap-2 rounded-md border border-border bg-sunk py-1 pr-1 pl-2.5">
         <code className="min-w-0 flex-1 truncate font-mono text-small">{DEV_COMMAND}</code>
-        <button type="button" aria-label="Copy command" onClick={copy} className={ICON_BUTTON}><Icon name="copy" className="size-4" /></button>
+        <button type="button" aria-label="Copy command" onClick={copy} className={ICON_BUTTON}><Icon name={STUDIO_ICONS.copy} className="size-4" /></button>
       </div>
       <div className="flex min-h-8 items-center justify-between gap-2.5">
         <span className="font-mono text-small">{BRANCH.name} · {BRANCH.changes} changes</span>

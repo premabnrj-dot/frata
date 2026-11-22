@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '@/components/icons/icon'
+import { STUDIO_ICONS } from '@/components/icons/studio-icons'
 import { Spinner } from '@/components/ui/button'
 import { Tag } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/segmented'
@@ -50,7 +51,7 @@ export function Preview({ phone, previewOnly, onPreviewOnly, picked, onPick }: {
         {phone ? null : <span data-building className="ml-auto flex shrink-0 items-center gap-1.5 text-small whitespace-nowrap text-muted-foreground"><Spinner className="size-3 shrink-0" /><span className="sr-only @[46rem]:not-sr-only">Building {BUILDING} · about 1–2 min</span></span>}
         <Tag className={cn('shrink-0', phone && 'ml-auto')}>Preview · {PREVIEWING}</Tag>
         <button type="button" aria-label="Open preview in a new tab" className={ICON_BUTTON}><Icon name="external" className="size-4" /></button>
-        {phone ? null : <button type="button" aria-label="Preview only" aria-pressed={previewOnly} onClick={onPreviewOnly} className={ICON_BUTTON}><Icon name="focus" className="size-4" /></button>}
+        {phone ? null : <button type="button" aria-label="Preview only" aria-pressed={previewOnly} onClick={onPreviewOnly} className={ICON_BUTTON}><Icon name={STUDIO_ICONS.focus} className="size-4" /></button>}
       </div>
       <div ref={stage} className="min-h-0 overflow-auto p-5">
         <div data-device={w} style={{ width: w, zoom: scale, '--pick': 'var(--ring)' } as React.CSSProperties} className="mx-auto overflow-hidden rounded-lg border border-border shadow-md">
