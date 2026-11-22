@@ -60,7 +60,7 @@ export default async function WebsitePageRoute() {
     const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? (left ? `Test · ${left} ${left === 1 ? 'day' : 'days'} left` : `Test · ends ${dayMonthIN(new Date(s.endsAt))}`) : s.kind === 'build' ? `Build · ends ${dayMonthIN(new Date(s.endsAt))}`
       : s.kind === 'ended' ? (s.key === 'build' ? 'Build · ended' : 'Test · ended') : s.kind === 'maker_gone' ? 'Build · ended' : 'Deleted'
     // What Delete says it stops (§ 4's dialog): a partner's build key names the partner's work.
-    const stops = k.kind === 'build' ? (builder?.partnerName ? `${builder.partnerName}’s work with it stops within a minute.` : 'Websites using it stop working within a minute.') : 'Websites using it stop working within a minute.'
+    const stops = k.kind === 'build' && builder?.partnerName ? `${builder.partnerName}’s work with it stops within a minute.` : 'Websites using it stop working within a minute.'
     return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, warn: left !== null, live: keyAnswers(s), isPublic: k.kind === 'public', line, stops }
   })
   const site = page.siteOrigin ? page.domains.find((d) => d.id === page.siteDomainId) ?? null : null

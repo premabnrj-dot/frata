@@ -172,7 +172,7 @@ export default {
           await p.screenshot({ path: t.out('website-build-key-1280'), fullPage: true })
           await row.getByRole('button', { name: 'Delete', exact: true }).click()
           const dlg = p.getByRole('dialog', { name: 'Delete the key “Kabir’s computer”?' })
-          await dlg.getByText('Work with it stops within a minute. This can’t be undone.').waitFor()
+          await dlg.getByText('Websites using it stop working within a minute. This can’t be undone.').waitFor()
           await dlg.getByRole('button', { name: 'Delete key' }).click()
           await expectToast(p, 'Key “Kabir’s computer” deleted', 'ok')
           assert.equal((await get('/2026-12/shop', H)).status, 404, 'a deleted build key still answers')
