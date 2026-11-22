@@ -67,8 +67,8 @@ These sections are the owner-approved rules of one surface; they are moved here 
     `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`
     button), the `Selvedge` (the block print as a woven edge under the stage, the
     only place it appears), a Neel `NumberBand` of terms (paper on Neel, gated),
-    and `SiteFooter` with WhatsApp written out. /, /partners, /login and /start.
-43. **The product is shown as it is**, drawn (`ConsolePreview`,
+    and `SiteFooter` with WhatsApp written out. /partners, /login, /start and /build-that-converts (`/` is Rani Mela, rules 45–51).
+43. **The product is shown as it is**, drawn (`ExampleOrderCard` on `/`,
     `EarningsPreview`): `inert`, marked "Example", every figure from the engines
     (`exampleOrder()` through `orderProfit()`, `shareExample()`), never typed.
     No invented testimonials or logos.

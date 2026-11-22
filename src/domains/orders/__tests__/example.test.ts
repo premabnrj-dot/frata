@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EXAMPLE_COSTS, exampleOrder } from '../example'
+import { exampleOrder, exampleOrderLines } from '../example'
 
 describe('the public pages’ example order', () => {
   it('is worked out by the profit engine, with the fee only when delivered', () => {
@@ -13,9 +13,9 @@ describe('the public pages’ example order', () => {
 
   it('reads as lines that add up to what the brand keeps', () => {
     for (const bps of [200, 100, 50]) {
-      const e = exampleOrder(bps), c = EXAMPLE_COSTS
+      const e = exampleOrder(bps)
       expect(e.gst).toBe(11_857) // 5% inside ₹2,490
-      expect(e.collect - e.gst - c.cogs - c.forwardShipping - c.packaging - c.codFee - c.adCost - e.fee).toBe(e.ifDelivered)
+      expect(e.collect - exampleOrderLines(e).reduce((s, l) => s + l.amount, 0)).toBe(e.ifDelivered)
     }
   })
 })

@@ -8,7 +8,7 @@ import { paise } from '@/domains/money/paise'
 import { exampleOrder } from '@/domains/orders/example'
 import type { Feature } from '@/domains/plans/entitlements'
 import { FEATURE_NAMES } from '@/domains/plans/labels'
-import { MODULES } from '@/domains/modules/registry'
+import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { publicPlansForPage } from '@/lib/db/platform'
 import { formatInr } from '@/lib/format'
 
@@ -28,18 +28,21 @@ const LEAKS: [SiteIconName, string, string][] = [
   ['apps', 'Ten apps, ten bills', 'Each fixes one thing. None of them talk to each other.'],
   ['guess', 'Revenue, not profit', 'You see what you sold. Not what you kept.'],
 ]
-const TILES: [SiteIconName, string, string, string, boolean][] = [
-  ['cod', 's-t-rani', 'Safe COD', 'Risky orders flagged before you ship.', false],
-  ['profit', 's-t-mari', 'Real profit', 'Every order, after every cost.', false],
-  ['ship', 's-t-pea', 'Shipping', 'PIN code checked. Slip printed.', false],
-  ['chat', 's-t-neel', 'WhatsApp confirm', 'Fewer fake orders. Fewer returns.', true],
+// The module each row shows, where there is one: its Next tag comes from the registry, never typed here.
+const TILES: [SiteIconName, string, string, string, ModuleKey | null][] = [
+  ['cod', 's-t-rani', 'Safe COD', 'Risky orders flagged before you ship.', null],
+  ['profit', 's-t-mari', 'Real profit', 'Every order, after every cost.', 'true_profit'],
+  ['ship', 's-t-pea', 'Shipping', 'PIN code checked. Slip printed.', 'delivery_zones'],
+  ['chat', 's-t-neel', 'WhatsApp confirm', 'Fewer fake orders. Fewer returns.', 'rto_shield'],
 ]
-const STEPS: [string, string, string, boolean][] = [
-  ['Open your store', 'Add products, sizes and prices.', 'Day 1', false],
-  ['An order lands', 'COD risk read in a second.', '10:06 pm', false],
-  ['Confirmed on WhatsApp', 'Packed, slip printed, picked up.', 'Next morning', true],
-  ['Delivered', 'Your real profit, right on the order.', 'Day 4', false],
+const STEPS: [string, string, string, ModuleKey | null][] = [
+  ['Open your store', 'Add products, sizes and prices.', 'Day 1', null],
+  ['An order lands', 'COD risk read in a second.', '10:06 pm', null],
+  ['Confirmed on WhatsApp', 'Packed, slip printed, picked up.', 'Next morning', 'rto_shield'],
+  ['Delivered', 'Your real profit, right on the order.', 'Day 4', 'true_profit'],
 ]
+const isNext = (k: ModuleKey | null) => k !== null && MODULES[k].status === 'next'
+const TERMS: [string, string, string][] = [['₹0', 'fee on a parcel that comes back', 's-dot-rani'], ['1', 'afternoon to open your store', 's-dot-mari'], ['0', 'apps to install', 's-dot-pea']]
 const FAQ = [
   ['Do I need a developer?', 'No. Everything is set in the console.'],
   ['A COD parcel comes back?', 'No Frrata fee on it.'],
@@ -82,9 +85,7 @@ export default async function Home() {
             )}
           </div>
           <ul role="list" className="s-w s-terms" aria-label="Our terms">
-            <li><span className="s-dot s-dot-rani" /><b>₹0</b> fee on a parcel that comes back</li>
-            <li><span className="s-dot s-dot-mari" /><b>1</b> afternoon to open</li>
-            <li><span className="s-dot s-dot-pea" /><b>0</b> apps to install</li>
+            {TERMS.map(([n, l, dot]) => <li key={l}><span className={`s-dot ${dot}`} /><b>{n}</b> {l}</li>)}
           </ul>
         </section>
 
@@ -100,7 +101,7 @@ export default async function Home() {
         <section className="s-sec s-relief"><div className="s-w">
           <SectionHead eyebrow="One console" title="Every rupee, counted." line="Store, checkout, COD, shipping and profit. Built together, so nothing slips." />
           <ul role="list" className="s-tiles">
-            {TILES.map(([icon, tone, t, d, next]) => <li key={t} className={`s-tile ${tone}`}><SiteIcon name={icon} /><h3>{t}</h3><p>{d}</p>{next && <span><NextTag /></span>}</li>)}
+            {TILES.map(([icon, tone, t, d, m]) => <li key={t} className={`s-tile ${tone}`}><SiteIcon name={icon} /><h3>{t}</h3><p>{d}</p>{isNext(m) && <span><NextTag /></span>}</li>)}
           </ul>
         </div></section>
 
@@ -108,10 +109,7 @@ export default async function Home() {
         <section className="s-band" aria-labelledby="terms-h"><div className="s-w">
           <h2 id="terms-h">Fair terms. Written in numbers.</h2>
           <dl>
-            <div><dt>fee on a parcel that comes back</dt><dd>₹0</dd></div>
-            {maxFee !== null && <div><dt>at most, on delivered orders</dt><dd>{maxFee.toLocaleString('en-IN')}%</dd></div>}
-            <div><dt>afternoon to open your store</dt><dd>1</dd></div>
-            <div><dt>apps to install</dt><dd>0</dd></div>
+            {[...TERMS.slice(0, 1), ...(maxFee !== null ? [[`${maxFee.toLocaleString('en-IN')}%`, 'at most, on delivered orders']] : []), ...TERMS.slice(1)].map(([n, l]) => <div key={l}><dt>{l}</dt><dd>{n}</dd></div>)}
           </dl>
         </div></section>
 
@@ -119,8 +117,8 @@ export default async function Home() {
         <section id="how" className="s-sec s-how"><div className="s-w">
           <SectionHead eyebrow="How it works" title="Your first order, start to finish." />
           <ol role="list" className="s-steps">
-            {STEPS.map(([t, d, when, next], i) => (
-              <li key={t} className="s-step"><span className="s-n" aria-hidden="true">{i + 1}</span><h3>{t}</h3><p>{d}</p><span className="s-when">{when}</span>{next && <span><NextTag /></span>}</li>
+            {STEPS.map(([t, d, when, m], i) => (
+              <li key={t} className="s-step"><span className="s-n" aria-hidden="true">{i + 1}</span><h3>{t}</h3><p>{d}</p><span className="s-when">{when}</span>{isNext(m) && <span><NextTag /></span>}</li>
             ))}
           </ol>
         </div></section>
@@ -140,7 +138,7 @@ export default async function Home() {
                     <p className="s-fee"><b>{(p.feeBps / 100).toLocaleString('en-IN')}%</b> of each delivered order</p>
                     <ul role="list">
                       <li><SiteIcon name="tick" className="" />Up to {p.includedOrders.toLocaleString('en-IN')} orders a month</li>
-                      {p.features.map((f) => <li key={f}><SiteIcon name="tick" className="" /><span>{FEATURE_NAMES[f as Feature] ?? f} {MODULES[f as Feature]?.status === 'next' && <NextTag />}</span></li>)}
+                      {p.features.map((f) => <li key={f}><SiteIcon name="tick" className="" /><span>{FEATURE_NAMES[f as Feature] ?? f} {f in MODULES && isNext(f as ModuleKey) && <NextTag />}</span></li>)}
                     </ul>
                     <Link href="/start" className={`s-btn ${pop ? 's-btn-rani' : 's-btn-ghost'}`}>Start free</Link>
                   </div>

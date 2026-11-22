@@ -1,5 +1,5 @@
 # W·1 · The public pages in the Frrata identity
-Status: built · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/5XCS7xCWJj8zGS5SUpv8cf · Approved: owner, 2026-11-07 (calls 1–6 as recommended)
+Status: built (Home superseded by docs/specs/2026-11-22-homepage-rani-mela.md) · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/5XCS7xCWJj8zGS5SUpv8cf · Approved: owner, 2026-11-07 (calls 1–6 as recommended)
 
 ## Goal
 Ranked problems (1) COD/RTO losses and (6) true profit per order, told to the merchants who have them, plus partner

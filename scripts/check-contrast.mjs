@@ -124,6 +124,8 @@ export function check(css) {
   }
   // Colour tokens only (radius, depth and type are the same in both modes).
   if (dark) for (const k of Object.keys(light)) if (colour(light, k) && !(k in dark)) problems.push(`dark: --${k} is not defined (it would fall back to the light value)`)
+  // The website (Rani Mela) and EkCode look the same in both modes: their dark values must equal the light ones.
+  if (dark) for (const k of Object.keys(light)) if (/^(site|ek)-/.test(k) && k in dark && light[k] !== dark[k]) problems.push(`dark: --${k} differs from light (${dark[k]} vs ${light[k]}); this look is the same in both modes`)
   const used = new Set(Object.keys(DECORATIVE))
   for (const [name, t] of themes) {
     for (const [fg, bg, need] of pairs()) {

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { EXAMPLE_COSTS, type ExampleOrder } from '@/domains/orders/example'
+import { type ExampleOrder, exampleOrderLines } from '@/domains/orders/example'
 import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
 import { FRATA_WHATSAPP_DISPLAY, frataWhatsappLink } from '@/lib/site'
@@ -59,17 +59,13 @@ export function WhatsAppButton() {
 
 /** The example order, every line from exampleOrder() and its named costs (website rule 43): never typed. */
 export function ExampleOrderCard({ order }: { order: ExampleOrder }) {
-  const c = EXAMPLE_COSTS
-  const lines: [string, number][] = [
-    ['Product cost', c.cogs], ['Shipping, packing, COD fee', c.forwardShipping + c.packaging + c.codFee], ['Ads', c.adCost], ['GST', order.gst], ['Frrata fee', order.fee],
-  ]
   return (
     <figure className="s-order">
       <span className="s-sticker" aria-hidden="true">{formatInr(order.ifDelivered)} kept</span>
       <div className="s-order-top"><span className="s-num">KS-5012 · Example</span><span className="s-chip s-chip-peacock"><i />Delivered</span></div>
       <dl>
         <div className="s-ol"><dt>Order value</dt><dd className="s-num">{formatInr(order.collect)}</dd></div>
-        {lines.map(([k, v]) => <div key={k} className="s-ol"><dt>{k}</dt><dd className="s-num">{formatInr(paise(-v))}</dd></div>)}
+        {exampleOrderLines(order).map((l) => <div key={l.label} className="s-ol"><dt>{l.label}</dt><dd className="s-num">{formatInr(paise(-l.amount))}</dd></div>)}
         <div className="s-ol s-total"><dt>You keep</dt><dd className="s-num">{formatInr(order.ifDelivered)}</dd></div>
       </dl>
       <figcaption>Example kurta set, pay on delivery.</figcaption>
