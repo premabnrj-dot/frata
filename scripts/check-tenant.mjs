@@ -270,6 +270,9 @@ const BUILDER_COLUMNS = {
   // One brand record (one-address P1·2, drizzle/*_brand_record.sql): the live record a Builder previews, and the store's
   // logo beside it. Never `previous`, `updated_by`, a proposal or a season.
   brand_tokens: 'tenant_id logo_mark_url logo_stacked_url logo_reversed_url color_bg color_panel color_text color_muted color_accent color_on color_edge color_line color_good color_warn color_bad font_display font_body radius density',
+  // Checkout design (one-address P2·1, drizzle/*_checkout_design.sql): the live design a Builder previews beside the
+  // record. Never `previous` or `updated_by`.
+  checkout_design: 'tenant_id header back_link policy_rows trust heading thanks',
   shop_settings: 'tenant_id logo_url',
 }
 const builderSelectOk = (what) => {
@@ -281,7 +284,7 @@ for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql'))) {
   const body = readFileSync(join('drizzle', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n').toLowerCase()
   for (const m of body.matchAll(/grant\s+([^;]*?)\bto\s+([^;]*\bfrata_builder\b[^;]*);/g)) {
     const what = m[1].trim()
-    const ok = /_builders_access\.sql$|_brand_record\.sql$/.test(f) && (
+    const ok = /_builders_access\.sql$|_brand_record\.sql$|_checkout_design\.sql$/.test(f) && (
       /^usage on schema public$/.test(what)
       || /^execute on function (app_member_role\(\)|app_current_tenant\(\))$/.test(what)
       || builderSelectOk(what))

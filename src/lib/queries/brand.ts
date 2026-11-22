@@ -3,13 +3,14 @@ import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings } from '@/lib/db/schema'
-import { brandProposals, brandSeasons, brandTokens } from '@/lib/db/schema-brand'
+import { brandProposals, brandSeasons, brandTokens, checkoutDesign } from '@/lib/db/schema-brand'
 import { storefrontKeys } from '@/lib/db/schema-storefront-api'
 import { DEFAULT_PALETTE } from '@/domains/brand/defaults'
 import { emptyRecord, type BrandRecord, type Density, type Font, type Hex, type Radius } from '@/domains/brand/record'
 import { readRecord } from '@/domains/brand/schema'
 import type { Season } from '@/domains/brand/seasons'
 import { hasCodeSite } from '@/domains/brand/code-site'
+import { readDesign, type CheckoutDesign } from '@/domains/brand/checkout'
 import { shopCached, shopCatalogue } from './storefront'
 import { isListed } from '@/domains/storefront/listing'
 import { urlFor } from '@/domains/media/sizes'
@@ -82,6 +83,27 @@ export const previewBrand = coreBrand
 /** The Storefront API's live tree: the same read at the API's hour (M5). */
 export const apiBrand = shopCached('api-brand-v1', 'settings', coreBrand, 3600)
 
+// ── Checkout design (one-address P2·3) ────────────────────────────────────────────────────────────────────────────
+
+/** The live design's columns (the Builder's grant is the same list, drizzle/0156); never `previous` or `updated_by`. */
+const designCols = { header: checkoutDesign.header, back: checkoutDesign.backLink, rows: checkoutDesign.policyRows, trust: checkoutDesign.trust, heading: checkoutDesign.heading, thanks: checkoutDesign.thanks }
+
+/** The store's saved design inside the caller's transaction, or null when none is saved (the pages draw the default). */
+export async function checkoutDesignWith(tx: Tx, t: string): Promise<CheckoutDesign | null> {
+  const [r] = await tx.select(designCols).from(checkoutDesign).where(eq(checkoutDesign.tenantId, t))
+  return r ? readDesign(r) : null
+}
+
+/** What checkout, the bag-link page, order pages and policies draw on a code-site store: the live record, its seasons
+ *  and the saved design (null: none saved). Null for a theme shop (O19), whose pages keep their theme. */
+export type CheckoutLook = ShopBrand & { design: CheckoutDesign | null }
+const coreLook = (t: string): Promise<CheckoutLook | null> => withTenant(t, async (tx) => {
+  const [b, design] = await Promise.all([shopBrandWith(tx, t, new Date()), checkoutDesignWith(tx, t)])
+  return b ? { record: b.record, saved: b.saved, seasons: b.seasons, design } : null
+})
+/** 60 s or until `shop:<t>:settings` is purged (a brand or design save purges exactly that). */
+export const checkoutLook = shopCached('checkout-look-v1', 'settings', coreLook)
+
 // ── Console › Brand ───────────────────────────────────────────────────────────────────────────────────────────────
 
 export type WaitingChange = { id: string; record: BrandRecord; summary: string; proposedBy: string; proposedAt: string; baseVersion: number }
@@ -106,7 +128,7 @@ export const brandPage = (t: string, now: Date) => withTenant(t, async (tx): Pro
     tx.select({ version: brandTokens.version, by: brandTokens.updatedBy, at: brandTokens.updatedAt, previous: sql<boolean>`${brandTokens.previous} is not null` }).from(brandTokens).where(eq(brandTokens.tenantId, t)),
     tx.select({ at: shopSettings.publishedAt, legalName: shopSettings.legalName, address: shopSettings.address, gstin: shopSettings.gstin, prefix: shopSettings.orderPrefix }).from(shopSettings).where(eq(shopSettings.tenantId, t)),
     tx.select({ id: brandProposals.id, record: brandProposals.record, summary: brandProposals.summary, by: brandProposals.proposedBy, at: brandProposals.proposedAt, base: brandProposals.baseVersion })
-      .from(brandProposals).where(and(eq(brandProposals.tenantId, t), isNull(brandProposals.decidedAt))).limit(1),
+      .from(brandProposals).where(and(eq(brandProposals.tenantId, t), eq(brandProposals.kind, 'brand'), isNull(brandProposals.decidedAt))).limit(1),
     tx.execute<{ user_id: string; partner_name: string | null }>(sql`select user_id, partner_name from app_shop_people()`),
   ])
   const rec = w ? readRecord(w.record) : null

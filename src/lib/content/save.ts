@@ -199,8 +199,8 @@ export async function saveBrand(input: unknown, action: 'brand.save' | 'settings
     const fields = changes.map((c) => c.label)
     if (saver === 'waits') {
       // A newer save takes the waiting one's place (mockup screen 4): one open change a store.
-      await tx.update(brandProposals).set({ decidedAt: now, decision: 'replaced', decidedBy: me }).where(and(eq(brandProposals.tenantId, t), isNull(brandProposals.decidedAt)))
-      const [p] = await tx.insert(brandProposals).values({ tenantId: t, record: next, summary: changeSummary(changes), baseVersion: row?.version ?? 0, proposedBy: me }).returning({ id: brandProposals.id })
+      await tx.update(brandProposals).set({ decidedAt: now, decision: 'replaced', decidedBy: me }).where(and(eq(brandProposals.tenantId, t), eq(brandProposals.kind, 'brand'), isNull(brandProposals.decidedAt)))
+      const [p] = await tx.insert(brandProposals).values({ tenantId: t, kind: 'brand', record: next, summary: changeSummary(changes), baseVersion: row?.version ?? 0, proposedBy: me }).returning({ id: brandProposals.id })
       await tx.execute(sql`select app_brand_notice(${p!.id}::uuid)`)
       await memberAudit(tx, auth, 'brand.propose', p!.id, { fields })
       return { outcome: 'waits', version: row?.version ?? null }
@@ -221,8 +221,9 @@ export async function decideBrand(input: unknown): Promise<BrandResult> {
   return write({ action: `brand.${decision}`, roles: CAN_MANAGE, limit: LIMITS.brandSave }, async (tx, auth) => {
     if (!decidesBrand(auth.membership.role, auth.membership.supportSessionId)) return { error: auth.membership.supportSessionId ? BRAND_REFUSAL.support : 'Only the owner or a Manager can answer this change. Nothing was changed.' }
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
+    // A checkout change is answered by decideCheckout (its own record and version); never applied as a brand record.
     const [p] = await tx.select({ id: brandProposals.id, record: brandProposals.record, base: brandProposals.baseVersion }).from(brandProposals)
-      .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id), isNull(brandProposals.decidedAt))).for('update')
+      .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id), eq(brandProposals.kind, 'brand'), isNull(brandProposals.decidedAt))).for('update')
     if (!p) return { error: 'This change was already answered. Reload to see it.' }
     const settle = () => tx.update(brandProposals).set({ decidedAt: now, decision: decision === 'approve' ? 'approved' : 'declined', decidedBy: me })
       .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id)))
