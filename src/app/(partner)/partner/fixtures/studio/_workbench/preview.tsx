@@ -16,7 +16,8 @@ import { FixtureSite } from './site'
 // new tab, Preview only) and the stage, where the store is drawn at a shopper's width and scaled down to fit. A phone
 // offers its own width only, and no Preview only (one region at a time already). The bar fits with both panels open:
 // what is building shows its words only when the bar has room (46 rem, a container query), else its spinner with the
-// words for a screen reader; past that (both panels widened) the bar scrolls, as drawn.
+// words for a screen reader; past that (both panels widened) the bar scrolls, as drawn. Page and Case have fixed widths
+// (a long choice may clip under the arrow; the list shows it whole) so the bar keeps 16 px of room at 1280.
 
 export function Preview({ phone, previewOnly, onPreviewOnly, picked, onPick }: {
   phone: boolean; previewOnly: boolean; onPreviewOnly: () => void; picked: Part | null; onPick: (p: Part) => void
@@ -37,11 +38,11 @@ export function Preview({ phone, previewOnly, onPreviewOnly, picked, onPick }: {
   const scale = previewScale(room, w)
   return (
     <>
-      <div data-bar className="@container flex min-w-0 items-center gap-1.5 overflow-x-auto border-b border-border bg-card px-2 py-1.5">
-        <select aria-label="Page" value={page} onChange={(e) => setPage(e.target.value)} className={cn(FIELD, 'shrink-0 px-2 text-label')}>
+      <div data-bar className="@container flex min-w-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 py-1.5">
+        <select aria-label="Page" value={page} onChange={(e) => setPage(e.target.value)} className={cn(FIELD, 'w-24 shrink-0 px-2 text-label')}>
           {PAGES.map((p) => <option key={p}>{p}</option>)}
         </select>
-        <select aria-label="Case" value={shown} onChange={(e) => setShown(e.target.value as Case)} className={cn(FIELD, 'shrink-0 px-2 text-label')}>
+        <select aria-label="Case" value={shown} onChange={(e) => setShown(e.target.value as Case)} className={cn(FIELD, 'w-28 shrink-0 px-2 text-label')}>
           {CASES.map(([v, words]) => <option key={v} value={v}>{words}</option>)}
         </select>
         <Segmented label="Width" value={String(w)} onPick={(v) => setWidth(Number(v) as PreviewWidth)} className="shrink-0 flex-nowrap"
