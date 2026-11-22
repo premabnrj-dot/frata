@@ -1,0 +1,273 @@
+<title>Frrata Brand Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&family=Mukta:wght@600;700&family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@500;700&family=Familjen+Grotesk:wght@500;700&family=Figtree:wght@400;500;700&family=Hind:wght@500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: choice board. Neutral frame; three panels, each a mini homepage built around Frrata rani (#D61F69). */
+:root{
+  --bg:#F7F6F7; --fg:#18141A; --muted:#625A66; --line:#E6E1E7; --card:#FFFFFF;
+  --ui:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --rani:#D61F69;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121014;--fg:#EEEAEF;--muted:#A69DAA;--line:#2A252C;--card:#1A171C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121014;--fg:#EEEAEF;--muted:#A69DAA;--line:#2A252C;--card:#1A171C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.55}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.inner{max-width:1140px;margin:0 auto}
+header.top{padding-block:48px 20px}
+header.top h1{font-weight:600;font-size:clamp(26px,3.6vw,34px);letter-spacing:-.02em;margin:0 0 8px;text-wrap:balance}
+header.top p{margin:0;color:var(--muted);max-width:62ch}
+.ramp{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-top:22px;max-width:640px}
+.ramp div{height:40px;border-radius:6px;display:flex;align-items:flex-end;padding:4px 5px;font-family:var(--mono);font-size:10px}
+.ramp-cap{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.jump a{font-size:13px;font-weight:500;text-decoration:none;color:var(--fg);border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px}
+.jump a:hover,.jump a:focus-visible{border-color:var(--rani);outline:none}
+
+.dir{padding-block:18px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.panel-head{padding:20px 24px;border-bottom:1px solid var(--line)}
+.panel-head .tag{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.panel-head h2{margin:2px 0 4px;font-size:21px;font-weight:600;letter-spacing:-.01em}
+.panel-head p{margin:0;color:var(--muted);max-width:66ch;font-size:14px}
+
+/* mini homepage, drawn in the direction's own colours */
+.site{background:var(--s-bg);color:var(--s-ink);font-family:var(--s-body)}
+.s-nav{display:flex;align-items:center;gap:20px;font-size:13.5px;padding:18px clamp(20px,4vw,44px)}
+.s-logo{font-family:var(--s-display);font-weight:800;font-size:20px;letter-spacing:-.02em}
+.s-logo i{font-style:normal;color:var(--s-primary)}
+.s-sp{flex:1}
+.s-lk{color:var(--s-muted)}
+.s-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center;padding:12px clamp(20px,4vw,44px) 36px}
+.s-hero > *{min-width:0}
+.s-copy{display:grid;gap:16px}
+.s-eyebrow{justify-self:start;font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--s-primary-soft);color:var(--s-primary-deep)}
+.s-h{margin:0;font-family:var(--s-display);font-size:clamp(32px,4.6vw,52px);line-height:1.04;letter-spacing:-.03em;font-weight:var(--s-dw);text-wrap:balance}
+.s-h em{font-style:normal;color:var(--s-primary)}
+.s-hi{margin:0;font-family:var(--s-hindi);font-weight:700;font-size:19px;color:var(--s-primary-deep)}
+.s-sub{margin:0;font-size:16.5px;color:var(--s-muted);max-width:42ch}
+.s-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.s-btn{display:inline-flex;align-items:center;font-size:14.5px;font-weight:600;padding:12px 20px;border-radius:var(--s-r);text-decoration:none}
+.s-btn.p{background:var(--s-primary);color:#fff}
+.s-btn.s{background:var(--s-ink);color:var(--s-bg)}
+.s-btn.g{border:1.5px solid var(--s-line);color:var(--s-ink)}
+
+.s-order{position:relative;background:var(--s-card);border:1px solid var(--s-line);border-radius:calc(var(--s-r) + 8px);padding:18px;display:grid;box-shadow:0 18px 40px -18px rgba(80,10,40,.25)}
+.s-order .top{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;font-size:13px}
+.s-order .id{font-family:var(--mono);color:var(--s-muted)}
+.s-badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px}
+.s-line{display:flex;justify-content:space-between;font-size:14px;padding:9px 0;border-top:1px solid var(--s-line)}
+.s-line span:first-child{color:var(--s-muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.s-line.total{font-weight:700}
+.s-line.total span:first-child{color:var(--s-ink)}
+.s-sticker{position:absolute;top:-14px;right:-10px;transform:rotate(6deg);font-family:var(--s-display);font-weight:800;font-size:13px;padding:6px 12px;border-radius:999px}
+
+.s-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 clamp(20px,4vw,44px) 36px}
+.s-tile{border-radius:calc(var(--s-r) + 6px);padding:18px;display:grid;gap:10px;align-content:start}
+.s-tile svg{width:40px;height:40px}
+.s-tile b{font-family:var(--s-display);font-weight:var(--s-dw);font-size:17px;letter-spacing:-.01em}
+.s-tile p{margin:0;font-size:13.5px;opacity:.82}
+
+/* system strip */
+.system{display:grid;grid-template-columns:1.3fr 1fr;border-top:1px solid var(--line)}
+.system > div{padding:20px 24px;min-width:0}
+.system > div + div{border-left:1px solid var(--line)}
+.lbl{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.sws{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.sw{display:grid;gap:3px;font-size:12px}
+.sw i{display:block;height:42px;border-radius:10px;border:1px solid rgba(0,0,0,.06)}
+.sw b{font-weight:600}
+.sw code{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.type{display:grid;gap:6px}
+.type .d{margin:0;font-size:28px;line-height:1.1;letter-spacing:-.02em}
+.type .b{margin:0;font-size:14px;color:var(--muted)}
+.type .dv{margin:0;font-size:18px}
+.type .f{font-size:12px;color:var(--muted)}
+.notes{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.notes div{padding:14px 24px;font-size:13.5px}
+.notes div + div{border-left:1px solid var(--line)}
+.notes b{font-weight:600;margin-right:6px}
+
+/* A · Rani Mela — rani + jewel tones on white */
+#mela .site{--s-bg:#FFFFFF;--s-ink:#1E1420;--s-muted:#665B69;--s-line:#EEE6EE;--s-card:#FFFFFF;--s-primary:#D61F69;--s-primary-deep:#8E0F3F;--s-primary-soft:#FFE3EE;--s-r:12px;--s-display:'Bricolage Grotesque',sans-serif;--s-dw:800;--s-body:'DM Sans',sans-serif;--s-hindi:'Mukta',sans-serif}
+#mela .t1{background:#FFE3EE;color:#5A0A2A}#mela .t2{background:#FFF1CC;color:#5C3D00}#mela .t3{background:#D7F3EE;color:#0B4A42}#mela .t4{background:#E5E4FF;color:#25207A}
+#mela .s-sticker{background:#FFB21C;color:#1E1420}
+#mela .s-badge{background:#D7F3EE;color:#0B6B5E}
+#mela .total .num{color:#0B8A72}
+
+/* B · Rani Studio — rani + soft tints, plum ink */
+#studio .site{--s-bg:#FFFBFC;--s-ink:#2A0F1E;--s-muted:#6E5764;--s-line:#F2E4EA;--s-card:#FFFFFF;--s-primary:#D61F69;--s-primary-deep:#9C1450;--s-primary-soft:#FFE8F0;--s-r:14px;--s-display:'Sora',sans-serif;--s-dw:700;--s-body:'Inter',sans-serif;--s-hindi:'Noto Sans Devanagari',sans-serif}
+#studio .t1{background:#FFE8F0;color:#6A0F37}#studio .t2{background:#FFEBDD;color:#6B3511}#studio .t3{background:#EDE7FF;color:#3A2380}#studio .t4{background:#E1F5EC;color:#165A3E}
+#studio .s-sticker{background:#2A0F1E;color:#FFE8F0}
+#studio .s-badge{background:#E1F5EC;color:#167048}
+#studio .total .num{color:#167048}
+
+/* C · Rani Pop — rani + flat brights, black type, sticker shapes */
+#pop .site{--s-bg:#FFFFFF;--s-ink:#111111;--s-muted:#555555;--s-line:#111111;--s-card:#FFFFFF;--s-primary:#D61F69;--s-primary-deep:#D61F69;--s-primary-soft:#FFD6E6;--s-r:10px;--s-display:'Familjen Grotesk',sans-serif;--s-dw:700;--s-body:'Figtree',sans-serif;--s-hindi:'Hind',sans-serif}
+#pop .s-order{border-width:2px;box-shadow:6px 6px 0 #111}
+#pop .s-btn.p{box-shadow:3px 3px 0 #111;border:2px solid #111}
+#pop .s-btn.g{border:2px solid #111}
+#pop .s-tile{border:2px solid #111}
+#pop .t1{background:#D61F69;color:#fff}#pop .t2{background:#FF8A1F;color:#111}#pop .t3{background:#2F6BFF;color:#fff}#pop .t4{background:#C6F432;color:#111}
+#pop .s-sticker{background:#C6F432;color:#111;border:2px solid #111}
+#pop .s-badge{background:#C6F432;color:#111;border:1.5px solid #111}
+#pop .total .num{color:#D61F69}
+
+.pick{padding-block:28px 64px}
+.pick .inner{max-width:760px;display:grid;gap:12px}
+.pick h2{margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.pick p{margin:0;color:var(--muted)}
+.pick ul{margin:0;padding-left:18px;display:grid;gap:6px}
+
+@media (max-width:880px){
+  .s-hero{grid-template-columns:1fr}
+  .s-lk{display:none}
+  .s-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .system,.notes{grid-template-columns:1fr}
+  .system > div + div,.notes div + div{border-left:0;border-top:1px solid var(--line)}
+  .sws{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .s-sticker{right:8px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .s-btn,.s-tile{transition:transform .18s ease}
+  .s-btn:hover,.s-tile:hover{transform:translateY(-2px)}
+}
+a:focus-visible{outline:2px solid var(--rani);outline-offset:3px}
+</style>
+
+<header class="top pad">
+  <div class="inner">
+    <h1>Frrata rani, as the hero colour</h1>
+    <p>Every direction starts from the frrata mark's rani pink and builds a full, playful palette around it. Same homepage hero in each.</p>
+    <div class="ramp" aria-label="Rani scale from 50 to 900">
+      <div style="background:#FFF0F6;color:#8E0F3F">50</div><div style="background:#FFD9E8;color:#8E0F3F">100</div><div style="background:#FFB0CF;color:#690B30">200</div><div style="background:#FF7FAE;color:#430720">300</div><div style="background:#F04A8A;color:#fff">400</div><div style="background:#D61F69;color:#fff">500</div><div style="background:#B3134F;color:#fff">600</div><div style="background:#8E0F3F;color:#fff">700</div><div style="background:#690B30;color:#fff">800</div><div style="background:#430720;color:#fff">900</div>
+    </div>
+    <p class="ramp-cap">Rani 500 is the brand. 50–200 for tints, 600–700 for text and pressed states, 900 for dark ink.</p>
+    <nav class="jump" aria-label="Directions"><a href="#mela">A · Rani Mela</a><a href="#studio">B · Rani Studio</a><a href="#pop">C · Rani Pop</a></nav>
+  </div>
+</header>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cod" viewBox="0 0 40 40"><rect x="5" y="11" width="30" height="18" rx="4" fill="currentColor" opacity=".18"/><rect x="5" y="11" width="30" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="20" cy="20" r="4.5" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 40 40"><path d="M7 30l9-9 6 5 11-12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14h7v7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-ship" viewBox="0 0 40 40"><path d="M6 13h17v14H6z" fill="currentColor" opacity=".18"/><path d="M6 13h17v14H6zM23 18h6l5 5v4H23z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="29" r="2.6" fill="currentColor"/><circle cx="29" cy="29" r="2.6" fill="currentColor"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 40 40"><path d="M8 10h24v15H17l-7 6v-6H8z" fill="currentColor" opacity=".18"/><path d="M8 10h24v15H17l-7 6v-6H8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M14 17h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+</svg>
+
+<!-- A -->
+<section class="dir pad" id="mela"><div class="inner panel">
+  <div class="panel-head"><span class="tag">Direction A</span><h2>Rani Mela</h2><p>Rani with jewel-tone friends: marigold, peacock teal and indigo. Bright like a mela, laid out cleanly on white. Bricolage keeps the current headline voice.</p></div>
+  <div class="site">
+    <div class="s-nav"><span class="s-logo">fr<i>r</i>ata</span><span class="s-sp"></span><span class="s-lk">Product</span><span class="s-lk">Pricing</span><span class="s-lk">Partners</span><a class="s-btn p" href="#mela">Start free</a></div>
+    <div class="s-hero">
+      <div class="s-copy">
+        <span class="s-eyebrow">For Indian D2C brands</span>
+        <p class="s-h">Sell more. Keep more. <em>Know your profit.</em></p>
+        <p class="s-hi">हर ऑर्डर का असली मुनाफ़ा</p>
+        <p class="s-sub">Your store, COD and payments in one place. See what every order really earned.</p>
+        <div class="s-row"><a class="s-btn p" href="#mela">Start your store free</a><a class="s-btn g" href="#mela">See a demo</a></div>
+      </div>
+      <div class="s-order"><span class="s-sticker">₹980 kept</span><div class="top"><span class="id">#KS-5012 · Example</span><span class="s-badge">Delivered</span></div><div class="s-line"><span>Order value</span><span class="num">₹2,490</span></div><div class="s-line"><span>Shipping and packing</span><span class="num">−₹210</span></div><div class="s-line"><span>Frrata fee</span><span class="num">−₹112</span></div><div class="s-line total"><span>Profit</span><span class="num">₹980</span></div></div>
+    </div>
+    <div class="s-tiles">
+      <div class="s-tile t1"><svg><use href="#i-cod"/></svg><b>Safe COD</b><p>Risky orders flagged before you ship.</p></div>
+      <div class="s-tile t2"><svg><use href="#i-profit"/></svg><b>Real profit</b><p>Every order, after every cost.</p></div>
+      <div class="s-tile t3"><svg><use href="#i-ship"/></svg><b>Fast shipping</b><p>Pincode checked, slip printed.</p></div>
+      <div class="s-tile t4"><svg><use href="#i-chat"/></svg><b>WhatsApp confirm</b><p>Fewer fake orders, fewer returns.</p></div>
+    </div>
+  </div>
+  <div class="system">
+    <div><p class="lbl">Colour</p><div class="sws">
+      <div class="sw"><i style="background:#D61F69"></i><b>Rani</b><code>#D61F69</code></div>
+      <div class="sw"><i style="background:#FFB21C"></i><b>Marigold</b><code>#FFB21C</code></div>
+      <div class="sw"><i style="background:#0B8A72"></i><b>Peacock</b><code>#0B8A72</code></div>
+      <div class="sw"><i style="background:#4B44D6"></i><b>Indigo</b><code>#4B44D6</code></div>
+      <div class="sw"><i style="background:#1E1420"></i><b>Ink</b><code>#1E1420</code></div>
+      <div class="sw"><i style="background:#FFFFFF"></i><b>Paper</b><code>#FFFFFF</code></div></div></div>
+    <div class="type"><p class="lbl">Type</p><p class="d" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800">Bricolage Grotesque</p><p class="b">Headlines keep today's brand face. DM Sans for text.</p><p class="dv" style="font-family:'Mukta',sans-serif;font-weight:700">हर ऑर्डर का असली मुनाफ़ा</p><span class="f">Hindi · Mukta</span></div>
+  </div>
+  <div class="notes"><div><b>Good</b>Most colourful and festive. Tiles make features easy to scan.</div><div><b>Watch</b>Four accents need fixed jobs, or it gets busy.</div></div>
+</div></section>
+
+<!-- B -->
+<section class="dir pad" id="studio"><div class="inner panel">
+  <div class="panel-head"><span class="tag">Direction B</span><h2>Rani Studio</h2><p>Rani as the one strong colour, with soft tints of blush, peach, lilac and mint behind it. Plum ink instead of black. Playful but polished, like a design studio.</p></div>
+  <div class="site">
+    <div class="s-nav"><span class="s-logo">fr<i>r</i>ata</span><span class="s-sp"></span><span class="s-lk">Product</span><span class="s-lk">Pricing</span><span class="s-lk">Partners</span><a class="s-btn p" href="#studio">Start free</a></div>
+    <div class="s-hero">
+      <div class="s-copy">
+        <span class="s-eyebrow">For Indian D2C brands</span>
+        <p class="s-h">Sell more. Keep more. <em>Know your profit.</em></p>
+        <p class="s-hi">हर ऑर्डर का असली मुनाफ़ा</p>
+        <p class="s-sub">Your store, COD and payments in one place. See what every order really earned.</p>
+        <div class="s-row"><a class="s-btn p" href="#studio">Start your store free</a><a class="s-btn g" href="#studio">See a demo</a></div>
+      </div>
+      <div class="s-order"><span class="s-sticker">₹980 kept</span><div class="top"><span class="id">#KS-5012 · Example</span><span class="s-badge">Delivered</span></div><div class="s-line"><span>Order value</span><span class="num">₹2,490</span></div><div class="s-line"><span>Shipping and packing</span><span class="num">−₹210</span></div><div class="s-line"><span>Frrata fee</span><span class="num">−₹112</span></div><div class="s-line total"><span>Profit</span><span class="num">₹980</span></div></div>
+    </div>
+    <div class="s-tiles">
+      <div class="s-tile t1"><svg><use href="#i-cod"/></svg><b>Safe COD</b><p>Risky orders flagged before you ship.</p></div>
+      <div class="s-tile t2"><svg><use href="#i-profit"/></svg><b>Real profit</b><p>Every order, after every cost.</p></div>
+      <div class="s-tile t3"><svg><use href="#i-ship"/></svg><b>Fast shipping</b><p>Pincode checked, slip printed.</p></div>
+      <div class="s-tile t4"><svg><use href="#i-chat"/></svg><b>WhatsApp confirm</b><p>Fewer fake orders, fewer returns.</p></div>
+    </div>
+  </div>
+  <div class="system">
+    <div><p class="lbl">Colour</p><div class="sws">
+      <div class="sw"><i style="background:#D61F69"></i><b>Rani</b><code>#D61F69</code></div>
+      <div class="sw"><i style="background:#FFE8F0"></i><b>Blush</b><code>#FFE8F0</code></div>
+      <div class="sw"><i style="background:#FFEBDD"></i><b>Peach</b><code>#FFEBDD</code></div>
+      <div class="sw"><i style="background:#EDE7FF"></i><b>Lilac</b><code>#EDE7FF</code></div>
+      <div class="sw"><i style="background:#E1F5EC"></i><b>Mint</b><code>#E1F5EC</code></div>
+      <div class="sw"><i style="background:#2A0F1E"></i><b>Plum ink</b><code>#2A0F1E</code></div></div></div>
+    <div class="type"><p class="lbl">Type</p><p class="d" style="font-family:'Sora',sans-serif;font-weight:700">Sora</p><p class="b">Geometric, modern, very readable. Inter for text.</p><p class="dv" style="font-family:'Noto Sans Devanagari',sans-serif;font-weight:700">हर ऑर्डर का असली मुनाफ़ा</p><span class="f">Hindi · Noto Sans Devanagari</span></div>
+  </div>
+  <div class="notes"><div><b>Good</b>Clean and professional, still colourful. Rani always stands out.</div><div><b>Watch</b>Tints need enough contrast for text. Checked here at 4.5:1 or better.</div></div>
+</div></section>
+
+<!-- C -->
+<section class="dir pad" id="pop"><div class="inner panel">
+  <div class="panel-head"><span class="tag">Direction C</span><h2>Rani Pop</h2><p>Rani with flat brights: tangerine, cobalt and lime. Black outlines and hard shadows, like stickers on a parcel. The most playful of the three.</p></div>
+  <div class="site">
+    <div class="s-nav"><span class="s-logo">fr<i>r</i>ata</span><span class="s-sp"></span><span class="s-lk">Product</span><span class="s-lk">Pricing</span><span class="s-lk">Partners</span><a class="s-btn p" href="#pop">Start free</a></div>
+    <div class="s-hero">
+      <div class="s-copy">
+        <span class="s-eyebrow">For Indian D2C brands</span>
+        <p class="s-h">Sell more. Keep more. <em>Know your profit.</em></p>
+        <p class="s-hi">हर ऑर्डर का असली मुनाफ़ा</p>
+        <p class="s-sub">Your store, COD and payments in one place. See what every order really earned.</p>
+        <div class="s-row"><a class="s-btn p" href="#pop">Start your store free</a><a class="s-btn g" href="#pop">See a demo</a></div>
+      </div>
+      <div class="s-order"><span class="s-sticker">₹980 kept</span><div class="top"><span class="id">#KS-5012 · Example</span><span class="s-badge">Delivered</span></div><div class="s-line"><span>Order value</span><span class="num">₹2,490</span></div><div class="s-line"><span>Shipping and packing</span><span class="num">−₹210</span></div><div class="s-line"><span>Frrata fee</span><span class="num">−₹112</span></div><div class="s-line total"><span>Profit</span><span class="num">₹980</span></div></div>
+    </div>
+    <div class="s-tiles">
+      <div class="s-tile t1"><svg><use href="#i-cod"/></svg><b>Safe COD</b><p>Risky orders flagged before you ship.</p></div>
+      <div class="s-tile t2"><svg><use href="#i-profit"/></svg><b>Real profit</b><p>Every order, after every cost.</p></div>
+      <div class="s-tile t3"><svg><use href="#i-ship"/></svg><b>Fast shipping</b><p>Pincode checked, slip printed.</p></div>
+      <div class="s-tile t4"><svg><use href="#i-chat"/></svg><b>WhatsApp confirm</b><p>Fewer fake orders, fewer returns.</p></div>
+    </div>
+  </div>
+  <div class="system">
+    <div><p class="lbl">Colour</p><div class="sws">
+      <div class="sw"><i style="background:#D61F69"></i><b>Rani</b><code>#D61F69</code></div>
+      <div class="sw"><i style="background:#FF8A1F"></i><b>Tangerine</b><code>#FF8A1F</code></div>
+      <div class="sw"><i style="background:#2F6BFF"></i><b>Cobalt</b><code>#2F6BFF</code></div>
+      <div class="sw"><i style="background:#C6F432"></i><b>Lime</b><code>#C6F432</code></div>
+      <div class="sw"><i style="background:#111111"></i><b>Black</b><code>#111111</code></div>
+      <div class="sw"><i style="background:#FFFFFF"></i><b>White</b><code>#FFFFFF</code></div></div></div>
+    <div class="type"><p class="lbl">Type</p><p class="d" style="font-family:'Familjen Grotesk',sans-serif;font-weight:700">Familjen Grotesk</p><p class="b">Characterful, slightly quirky. Figtree for text.</p><p class="dv" style="font-family:'Hind',sans-serif;font-weight:600">हर ऑर्डर का असली मुनाफ़ा</p><span class="f">Hindi · Hind</span></div>
+  </div>
+  <div class="notes"><div><b>Good</b>Memorable and fun. Stands out from every other SaaS site.</div><div><b>Watch</b>Hard outlines can tip back into "too bold" on long pages.</div></div>
+</div></section>
+
+<section class="pick pad"><div class="inner">
+  <h2>My pick: B · Rani Studio</h2>
+  <ul>
+    <li>Rani leads every screen: buttons, highlights, the logo. Nothing competes with it.</li>
+    <li>Soft tints bring the colour and play, and still look clean and professional.</li>
+    <li>Plum ink is warmer than black and pairs naturally with rani.</li>
+  </ul>
+  <p>One rule changes with any of these: rani becomes the button colour. Today's design rules forbid that, so I'll update them when we build.</p>
+  <p>Reply with A, B or C, or a mix like "B with A's tiles", and I'll design the full homepage in it.</p>
+</div></section>

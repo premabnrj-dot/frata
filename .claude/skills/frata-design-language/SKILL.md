@@ -2,10 +2,10 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 10.0.0
+  version: 10.1.2
   owner: owner
-  verified: 2026-11-16
-  covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css"]
+  verified: 2026-11-22
+  covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/app/site.css", "src/components/brand/site-home.tsx"]
 ---
 
 # Frata design language
@@ -122,6 +122,8 @@ from it).
   (#D61F69, the frrata mark; brand spec 2026-11-07): never a button fill, a
   number or a status. Rani as words is `--brand-text` only; on an ink surface,
   `--brand-on-ink`. `--thread` is the 2 px line (§ Brand rules 33–40).
+  The website in Rani Mela is the one exception: its `--site-*` tokens (in `src/app/site.css`) make rani the action colour there
+  (reference/brand-and-public.md rules 45–51, owner 2026-11-22).
   `--haldi` and `--neel` are for brand surfaces only (sign-in, the website,
   drawings); the illustration haldi derives from `--haldi`.
 - `--accent`, `--muted`, `--secondary` are neutral hover surfaces.
@@ -320,4 +322,4 @@ The rules above bind every screen. Each surface's approved rules are in one file
 | [reference/console-operations.md](reference/console-operations.md) | the orders queue and records, Apps, Content, Settings and GST, Shipping, Analytics, shop addresses, Plan and billing, Neel analytics and finding, a code-site store's Brand, Website card, build keys and publishing Notices | Work queues, Apps, Apps gallery, Console › Content, Settings choices, Shipping, Analytics, Shop addresses, Plan and billing, Neel analytics, Neel finding, Brand, Website and publishing |
 | [reference/shop.md](reference/shop.md) | anything a shopper sees: the storefront, live themes (retiring, ADR-0014), Theme Studio and Signal, checkout and order pages on a code-site store, EkCode, share cards | Storefront as built, Storefront, Shop themes, Theme Studio, Theme Signal, Checkout and order pages, EkCode, Share cards |
 | [reference/admin-and-partner.md](reference/admin-and-partner.md) | a Frrata Admin screen or the partner workspace | Frrata Admin, Frata Admin, Partner workspace |
-| [reference/brand-and-public.md](reference/brand-and-public.md) | the Frrata brand (logo, voice of the marketing site) or the public pages (home, pricing, sign-up) | Brand, The public pages |
+| [reference/brand-and-public.md](reference/brand-and-public.md) | the Frrata brand (logo, voice of the marketing site) or the public pages (home, pricing, sign-up) | Brand, The public pages, Rani Mela (the website's look since 2026-11-22) |

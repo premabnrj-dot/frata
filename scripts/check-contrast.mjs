@@ -41,6 +41,13 @@ const DECORATIVE = {
   'illo-indigo-soft': 'illustration second accent, pale',
   // Brand-surface companions (brand spec 2026-11-07): sign-in, the website, drawings. Never text, never a control.
   haldi: 'brand-surface highlight (and the illustration accent); never text or a control',
+  // The website (Rani Mela): shapes and rules that carry no words.
+  'site-rani-tint': 'website: a soft rani circle behind the hero; never text',
+  'site-line': 'website: separates content (cards, order lines); never the only sign of a control',
+  'site-edge': "website: a ghost button's edge; the button is known by its words",
+  'site-peacock': 'website: the tick mark in a toast and the plan list; the words beside say the same',
+  'site-rani-press': 'website: the pressed rani button; its words stay white (checked against --site-rani)',
+  'site-neel-deep': 'website: the shape inside the neel band; nothing is read on it',
 }
 
 export function pairs() {
@@ -71,6 +78,13 @@ export function pairs() {
   // Neel N1b: words on a heat or a tile map cell (a cohort's %, a state's code), dark on the light half, white on the dark.
   for (const i of [0, 1, 2, 3]) p.push(['foreground', `heat-${i}`, TEXT], ['risk-text', `risk-${i}`, TEXT])
   for (const i of [4, 5]) p.push(['heat-on', `heat-${i}`, TEXT], ['risk-on', `risk-${i}`, TEXT])
+  // The website (Rani Mela): every word on every surface it sits on.
+  for (const bg of ['site-paper', 'site-paper-2']) p.push(['site-ink', bg, TEXT], ['site-ink-2', bg, TEXT], ['site-muted', bg, TEXT], ['site-rani', bg, TEXT], ['site-neel', bg, TEXT], ['site-peacock-text', bg, TEXT])
+  p.push(['site-on-strong', 'site-rani', TEXT], ['site-on-strong', 'site-rani-press', TEXT], ['site-on-strong', 'site-neel', TEXT], ['site-on-strong', 'site-neel-night', TEXT], ['site-on-strong', 'site-peacock-text', TEXT],
+    ['site-on-neel-2', 'site-neel', TEXT], ['site-on-neel-2', 'site-neel-night', TEXT], ['site-rani-deep', 'site-on-strong', TEXT],
+    ['site-rani-deep', 'site-rani-soft', TEXT], ['site-ink-2', 'site-rani-soft', TEXT], ['site-neel', 'site-neel-soft', TEXT], ['site-ink-2', 'site-neel-soft', TEXT],
+    ['site-peacock-text', 'site-peacock-soft', TEXT], ['site-marigold-text', 'site-marigold-soft', TEXT], ['site-ink', 'site-marigold', TEXT],
+    ['site-on-strong', 'site-neel-deep', TEXT])
   return p
 }
 
@@ -92,8 +106,10 @@ export const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => 
 /** Problems in one css text, as sentences. */
 export function check(css) {
   const problems = []
-  const light = block(css, ':root, [data-neel] [data-store-theme] {')
-  if (!light) return ['no `:root, [data-neel] [data-store-theme] {` block']
+  const root = block(css, ':root, [data-neel] [data-store-theme] {')
+  if (!root) return ['no `:root, [data-neel] [data-store-theme] {` block']
+  // The website's own tokens (src/app/site.css, Rani Mela): read with the light tokens, the same in every mode.
+  const light = { ...root, ...(block(css, '[data-site] {') ?? {}) }
   const neel = block(css, '[data-neel] {')
   const dark = block(css, ':root[data-theme="dark"] {')
   const themes = [['light', light]]
@@ -109,7 +125,9 @@ export function check(css) {
     return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : null
   }
   // Colour tokens only (radius, depth and type are the same in both modes).
-  if (dark) for (const k of Object.keys(light)) if (colour(light, k) && !(k in dark)) problems.push(`dark: --${k} is not defined (it would fall back to the light value)`)
+  if (dark) for (const k of Object.keys(root)) if (colour(root, k) && !(k in dark)) problems.push(`dark: --${k} is not defined (it would fall back to the light value)`)
+  // EkCode looks the same in both modes: its dark values must equal the light ones.
+  if (dark) for (const k of Object.keys(light)) if (/^ek-/.test(k) && k in dark && light[k] !== dark[k]) problems.push(`dark: --${k} differs from light (${dark[k]} vs ${light[k]}); this look is the same in both modes`)
   const used = new Set(Object.keys(DECORATIVE))
   for (const [name, t] of themes) {
     for (const [fg, bg, need] of pairs()) {
@@ -128,7 +146,7 @@ export function check(css) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   // The tokens: base.css (light and dark) and neel.css (the console's), read as one text.
-  const files = process.argv[2] ? [process.argv[2]] : ['src/app/base.css', 'src/app/neel.css']
+  const files = process.argv[2] ? [process.argv[2]] : ['src/app/base.css', 'src/app/neel.css', 'src/app/site.css']
   const file = files.join(' + ')
   for (const f of files) if (!existsSync(f)) { console.error(`check:contrast — no such file: ${f}`); process.exit(2) }
   const problems = check(files.map((f) => readFileSync(f, 'utf8')).join('\n'))

@@ -30,6 +30,20 @@ export function PartnerLoop({ className }: { className?: string }) {
   )
 }
 
+/** A shopper's journey in one picture: sees the store, pays, the order arrives. */
+export function BuyerJourney({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 480 220" className={className}>
+      <rect x="1" y="1" width="478" height="218" rx="16" className="fill-illo-haldi-soft" />
+      <path d="M118 110h244" fill="none" strokeWidth={2} strokeDasharray="6 8" strokeLinecap="round" className="stroke-illo-line" />
+      <path d="M352 104l10 6-10 6" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="stroke-illo-line" />
+      <g transform="translate(40 62)"><rect width="96" height="96" rx="14" className="fill-illo-paper stroke-illo-line" strokeWidth={2} /><g transform="translate(24 24)"><Pictogram name="store" size={48} /></g></g>
+      <g transform="translate(192 62)"><rect width="96" height="96" rx="14" className="fill-illo-paper stroke-illo-line" strokeWidth={2} /><g transform="translate(24 24)"><Pictogram name="payments" size={48} /></g></g>
+      <g transform="translate(344 62)"><rect width="96" height="96" rx="14" className="fill-illo-paper stroke-illo-line" strokeWidth={2} /><g transform="translate(24 24)"><Pictogram name="delivered" size={48} /></g></g>
+    </svg>
+  )
+}
+
 /** A pictogram on its tile: the one way a pictogram sits in a card, a step or an empty state. */
 export function PictoTile({ name, tone = 'paper' }: { name: PictogramName; tone?: 'paper' | 'haldi' | 'indigo' }) {
   const bg = tone === 'haldi' ? 'bg-illo-haldi-soft' : tone === 'indigo' ? 'bg-illo-indigo-soft' : 'bg-illo-fill'

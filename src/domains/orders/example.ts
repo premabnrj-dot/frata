@@ -16,14 +16,27 @@ export const EXAMPLE_COLLECT = paise(249_000)
 /** The example's assumptions, said on the page in a tip. */
 export const EXAMPLE_COSTS = { cogs: paise(99_000), forwardShipping: paise(7_000), rtoShipping: paise(7_000), codFee: paise(4_000), packaging: paise(2_500), adCost: paise(18_000) } as const
 /** The order without its GST (clothing under the slab: the low rate), through the tax engine. */
-const NET = paise(split(EXAMPLE_COLLECT, LOW_BPS, true).taxable)
+const SPLIT = split(EXAMPLE_COLLECT, LOW_BPS, true)
+const NET = paise(SPLIT.taxable)
 
-export type ExampleOrder = { collect: Paise; fee: Paise; ifDelivered: Paise; ifReturned: Paise }
+export type ExampleOrder = { collect: Paise; gst: Paise; fee: Paise; ifDelivered: Paise; ifReturned: Paise }
 
 export function exampleOrder(feeBps: number): ExampleOrder {
   const fee = deliveredFee(NET, feeBps)
   // The example's return is put back in stock (the usual case), so its cost is not lost.
   const c: OrderCosts = { netRevenue: NET, gatewayFee: paise(0), platformFee: fee, restocked: true, ...EXAMPLE_COSTS }
   const p = orderProfit(c, 1)
-  return { collect: EXAMPLE_COLLECT, fee, ifDelivered: p.ifDelivered, ifReturned: p.ifRto }
+  return { collect: EXAMPLE_COLLECT, gst: paise(SPLIT.gst), fee, ifDelivered: p.ifDelivered, ifReturned: p.ifRto }
+}
+
+/** The example as the lines a page reads, from what is collected down to what is kept: each cost once, in order. */
+export function exampleOrderLines(o: ExampleOrder): { label: string; amount: Paise }[] {
+  const c = EXAMPLE_COSTS
+  return [
+    { label: 'Product cost', amount: c.cogs },
+    { label: 'Shipping, packing, COD fee', amount: paise(c.forwardShipping + c.packaging + c.codFee) },
+    { label: 'Ads', amount: c.adCost },
+    { label: 'GST', amount: o.gst },
+    { label: 'Frrata fee', amount: o.fee },
+  ]
 }

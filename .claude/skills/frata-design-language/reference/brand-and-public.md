@@ -67,8 +67,8 @@ These sections are the owner-approved rules of one surface; they are moved here 
     `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`
     button), the `Selvedge` (the block print as a woven edge under the stage, the
     only place it appears), a Neel `NumberBand` of terms (paper on Neel, gated),
-    and `SiteFooter` with WhatsApp written out. /, /partners, /login and /start.
-43. **The product is shown as it is**, drawn (`ConsolePreview`,
+    and `SiteFooter` with WhatsApp written out. /partners, /login, /start and /build-that-converts (`/` is Rani Mela, rules 45–51).
+43. **The product is shown as it is**, drawn (`ExampleOrderCard` on `/`,
     `EarningsPreview`): `inert`, marked "Example", every figure from the engines
     (`exampleOrder()` through `orderProfit()`, `shareExample()`), never typed.
     No invented testimonials or logos.
@@ -78,3 +78,28 @@ These sections are the owner-approved rules of one surface; they are moved here 
     `shareTable()`). The shared `InfoTip` and the sign-in form are the only
     islands.
     Large ₹ figures are mono (a ₹ in the display face pulls the Devanagari file).
+
+## Rani Mela — the website's look (owner-approved 2026-11-22; mockup `docs/mockups/2026-11-17-homepage-rani-mela.html`, spec `docs/specs/2026-11-22-homepage-rani-mela.md`)
+
+Live on `/` (the pilot); /partners, /build-that-converts, /start and /login keep rules 42 and the W·1 frame until each
+moves. Where this section and rules 36–42 disagree on a Rani Mela page, this section wins. Rules 41, 43 and 44 still hold.
+
+45. **Colour has one job each**, from the `--site-*` tokens at the top of `src/app/site.css` (never `base.css`: the
+    shop sheet imports it and its CSS budget has no room; the same in both modes; `check:contrast` holds every pair): **rani** is every action (buttons fill rani on the website, the logo's thread, one highlight
+    word per screen); **neel** is trust (the number band, help, Hindi lines, the footer at neel-night); **marigold**
+    celebrates (a sticker, "Most brands pick this"), only ever as a filled shape, never text; **peacock** is good news
+    (Delivered, what you keep, ticks; as text only in its `-text` shade). Text on a tint uses that colour's deep shade.
+46. **Type:** Bricolage Grotesque at 800 for headings, DM Sans for words (`src/components/brand/site-fonts.ts`), Mukta
+    700, cut to the letters the page uses (`MUKTA_LETTERS`, tested), for a Hindi line (`lang="hi"`, one per section at most, never a translation of the heading beside it),
+    JetBrains Mono for ₹ and order numbers.
+47. **The frame:** a white page; `HomeHeader` (sticky, the wordmark with its thread, a rani Start free), sections that
+    alternate paper, a rani or neel tint and one full neel band, a full rani closing band, `HomeFooter` on neel-night.
+    The mark's quarter circle and circle are the only shapes, behind the hero and inside the two bands.
+48. **Sections follow the founder's feeling, one per scroll:** this is for me (hero) · that's my problem (leaks) ·
+    there's a fix (tiles) · the terms are fair (neel band) · I can do this (steps) · I know which plan (pricing) · my
+    last worry is gone (questions) · let's start (rani band).
+49. **Icons** on the website are its own sprite (`SiteIconSprite`): a 32 grid, a 2 px round line, one fill at 18%,
+    coloured by the tile they sit on; always `aria-hidden` beside words.
+50. **Motion is CSS only:** the hero rises once on load (320 ms, 60 ms apart), the sticker pops once, buttons press
+    down 1 px and lift 2 px on hover, tiles lift 4 px; nothing moves on scroll; reduced motion moves nothing.
+51. **Not built yet says Next**, on the tile, the step, the order card and the toast that show it (rule 41).
