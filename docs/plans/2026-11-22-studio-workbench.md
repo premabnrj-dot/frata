@@ -9,7 +9,7 @@ Status: draft (the spec is approved; three plan reviews still pending below; no 
 **Review:** words-reviewer 40 rows on the mockup, all rewritten, 2026-11-22
 **Review:** tenancy-auditor FIX BEFORE MERGE (3 high, 3 medium, 1 low), all folded in (§ Tenancy audit), 2026-11-22
 **Review:** speed-reviewer pending
-**Review:** unit-economics-reviewer pending (AP2's Mux minutes; the hosting question below)
+**Review:** unit-economics-reviewer NEUTRAL for merchants, HURTS Frrata until the video budget is enforced; no second host now; folded in (§ Unit economics), 2026-11-22
 
 This plan adds to `docs/plans/2026-11-16-execution.md`; that file keeps the order of everything else. Each phase runs
 the loop in its § "Each phase, every time": regression net first, `impact-reviewer` per task, the phase's reviewers on
@@ -95,6 +95,15 @@ invoice serial, outbox row or analytics; erased at opening; no EkCode), and is r
 | M the "is this app usable" read is unnamed | AP1·4 | Through a `shopCached` loader in `src/lib/queries/modules.ts`, keyed by `ctx.tenantId`, tagged `shop:<t>` |
 | M limits keyed by network alone | AP2·1 | The limit key is `<keyId>:<network /64>`: websites on one fleet share egress |
 | L Renew | D0·2 | Deletes by `id` + `tenant_id` + `kind = 'test'` in the same `asMember` transaction; the new row's `partner_id` follows `createKeyAction`'s rule; purge `skey:<old hash>` |
+
+## Unit economics, folded in (2026-11-22; ₹103.40 a dollar; list prices times guesses unless marked measured)
+| Finding | Task | What is built or decided |
+|---|---|---|
+| A delivered 720p minute costs ₹0.083 (Mux list, read 2026-11-09); partner code, not the theme, decides playback; the minutes cap (`PRODUCT_VIDEO_CAPS`) is shown in Admin, not enforced (`src/domains/video/state.ts`). Expected ₹55 / ₹551 / ₹1,834 a month (Launch / Growth / Scale); an autoplaying partner site ₹1,654 / ₹16,544 / ₹55,009 | AP2·2, AP2·3 | The budget is **enforced before AP2·2 ships**: past it `product.video` answers null (poster only), never a stop on selling; amber at 80 %. The starter block: 720p, click to play, `preload="none"`, no loop. **Owner call before AP2:** minutes included per plan (proposed 1,000 / 10,000 / 30,000) and the price past them (proposed ₹250 per 1,000) |
+| Hosting on Cloudflare saves ₹19–1,046 a site a month against Vercel Flat Rate, ₹272–9,435 against metered; the router on Vercel (ADR-0019) stays either way | the hosting row below | No second host at 1–3 pilot sites: the saving is under ₹6,000 a month against a base fee, an unproven OpenNext spike and a second adapter. Decided on measurement |
+| Images: no optimiser is billed today (photos are resized once in the browser and served from Vercel Blob; `next/image` is used nowhere). Blob transfer is the cost; R2 has no egress charge. Guessed saving ₹860–1,810 a store, in conflict with the themes review's ₹6–211 | the hosting row below | Not moved on a guess |
+| One read settles hosting and images | P5·0 | P5·0 gains: 30 days of the `frata` team's Vercel usage (Blob transfer GB, Fast Data Transfer GB, requests a page view) and whether Flat Rate is on (decision 23) |
+| Three exchange rates in the records (₹88, ₹94, ₹103.40) | W0 | W0·1 restates ADR-0017's tables at the skill's rate, dated |
 
 ## Owner steps and open questions (none blocks wave 2)
 | Item | State | Blocks |
