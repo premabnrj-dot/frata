@@ -189,7 +189,7 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 ## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 | Item | Ruling |
 |---|---|
-| G·3 the page where a person confirms the device code (Settings › Developer) | Drawn in no approved mockup. The server parts are built; the page waits for a mockup. **Owner** |
+| G·3 the page where a person confirms the device code | Drawn and approved since in § "Four screens drawn for the owner": Partner workspace › Developer, built on `claude/lane-b-g3-page` |
 | D0·2 a Renew button on a Test key | Not drawn. The chip is built; the button waits. **Owner** |
 | D0·3 what "no proved address" means before `app_website_of` exists | Open my store refuses when the store holds a Test or Build key that still answers and has no Website on a proved, live domain |
 | G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |

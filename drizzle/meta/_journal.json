@@ -1128,6 +1128,13 @@
       "when": 1795358816035,
       "tag": "0160_device_codes_access",
       "breakpoints": true
+    },
+    {
+      "idx": 161,
+      "version": "7",
+      "when": 1795376097866,
+      "tag": "0162_device_code_network",
+      "breakpoints": true
     }
   ]
 }
