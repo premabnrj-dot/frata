@@ -38,7 +38,7 @@ export function Tabs<T extends string>({ base, label, tabs, value, onChange, cla
         <button key={t.id} id={tabId(base, t.id)} type="button" role="tab" aria-selected={t.id === value} aria-controls={panelId(base, t.id)}
           tabIndex={t.id === value ? 0 : -1} onClick={() => onChange(t.id)}
           className={line
-            ? cn('inline-flex min-h-11 items-center gap-1.5 border-b-2 px-2 pt-2.5 pb-2 text-label whitespace-nowrap transition-colors duration-fast ease-standard',
+            ? cn('inline-flex min-h-11 items-center gap-1.5 border-b-2 px-1.5 pt-2.5 pb-2 text-label whitespace-nowrap transition-colors duration-fast ease-standard',
               t.id === value ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')
             : cn('min-h-11 rounded-[calc(var(--r-mid)-3px)] px-3 text-label font-medium transition-colors duration-fast ease-standard md:min-h-[30px]',
               t.id === value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{t.label}</button>

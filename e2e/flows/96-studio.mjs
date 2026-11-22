@@ -62,6 +62,22 @@ export default {
       await insp.getByText('Home hero', { exact: true }).waitFor()
     })
 
+    await t.step('1280, both panels open: the preview bar and the tab row fit, nothing overlaps', async () => {
+      const fit = await p.evaluate(() => {
+        const bar = document.querySelector('[data-bar]'), b = bar.getBoundingClientRect()
+        const kids = [...bar.children].filter((c) => c.getBoundingClientRect().width > 0).map((c) => c.getBoundingClientRect())
+        const overlaps = kids.slice(1).filter((r, i) => r.left < kids[i].right - 0.5).length
+        const row = document.querySelector('[role="tablist"][aria-label="Inspector"]').getBoundingClientRect()
+        const fold = document.querySelector('button[aria-label="Hide inspector"]').getBoundingClientRect()
+        const list = document.querySelector('[role="tablist"][aria-label="Inspector"]')
+        return { scrolls: bar.scrollWidth > bar.clientWidth, lastIn: kids.at(-1).right <= b.right, overlaps, gap: Math.round(fold.left - row.right), tabsScroll: list.scrollWidth > list.clientWidth }
+      })
+      assert.deepEqual(fit, { scrolls: false, lastIn: true, overlaps: 0, gap: 8, tabsScroll: false })
+      assert.equal(await p.getByRole('button', { name: 'Preview only' }).isVisible(), true)
+      // The status keeps its words for a screen reader even when only its spinner shows.
+      assert.equal(await p.locator('[data-building]').textContent(), 'Building v8 · about 1–2 min')
+    })
+
     await t.step('1280: a panel folds to its rail by its button and opens only when asked', async () => {
       const hide = chat.getByRole('button', { name: 'Hide chat' })
       assert.equal(await hide.getAttribute('aria-expanded'), 'true')

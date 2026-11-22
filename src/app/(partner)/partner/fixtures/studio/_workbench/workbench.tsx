@@ -143,7 +143,7 @@ export function Workbench() {
                 { icon: 'tick', label: 'Checks', note: TO_FIX ? `${TO_FIX} to fix` : undefined, onClick: () => show('checks') }, { icon: 'clock', label: 'Versions', onClick: () => show('versions') },
               ]} />
             : <>
-                <div className="flex min-w-0 items-end border-b border-line-soft px-1.5">
+                <div className="flex min-w-0 items-end gap-2 border-b border-line-soft px-1">
                   <Tabs base={base} label="Inspector" variant="line" value={shownTab} onChange={show} className="min-w-0 flex-1 overflow-x-auto"
                     tabs={tabs.map((t) => ({ id: t, label: t === 'checks' && TO_FIX ? <>Checks <Badge tone="warn">{TO_FIX}<span className="sr-only"> to fix</span></Badge></> : TAB_WORDS[t] }))} />
                   {phone ? null : <button type="button" aria-label="Hide inspector" aria-expanded="true" aria-controls={`${base}-inspector`} onClick={() => fold('inspector')} className={cn(ICON_BUTTON, 'mb-1.5 self-center')}><Icon name="inspector" className="size-4" /></button>}
