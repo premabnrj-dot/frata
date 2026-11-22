@@ -291,3 +291,19 @@ NEEDED, tenancy FIX BEFORE BUILD, security FIX BEFORE BUILD, speed OVER BUDGET a
 all taken into its plan). **Outside C1, open:** merchant billing's `debit.ts` creates orders without a notification
 object, so Razorpay sends its own pre-debit notice and retries a failed UPI debit three times itself, against Frrata's
 own notice and its never-resent rule; its own fix before the first real monthly debit.
+
+## Evening of 22 Nov: answers, releases and what resumes
+- **Owner's answers:** the runtime's nine-state mockup approved (https://claude.ai/artifact/LQNZJuCogy1Wo4ce4gpy6B, four calls
+  as recommended); `DATABASE_URL_BUILDER` and `STUDIO_ANTHROPIC_KEY` added in Vercel (a new `studio-eval` key with its
+  spend limit; security M3's residual stands until a `studio` workspace, a gate before any partner uses Studio); yes to
+  one 24-hour build key on the test store; a test partner and store exist; "yes, this is my computer" (G·3's checkbox
+  for another or unknown network); "yes fix the three stale browser tests".
+- **Released to main today:** lane D's workbench shell (d218e19, then 34540bc: Studio's six icons out of the shared
+  set after Vercel's build failed the look editor's budget by 0.1 kB), lane B's G-a and D0 (4dccd25; migrations
+  0156–0160 applied and their twelve functions verified by md5), lane E's P2 (fc97a5f; 0161 applied and verified), the
+  Brand book (8804a30), and three stale e2e flows brought in step with main's new controls (39979c5).
+- **Building:** lane B (G·3's page), lane C (C1), lane D (the agent runtime, R0–R7). **Not yet handed out:** lane E's
+  review card on Brand › Checkout. **Open with the owner:** the exchange-rate source (recommended: a rate typed in
+  Admin from the bank's actual rate, monthly); merchant billing's missing notification object (its own fix).
+- **Resume:** the owner's usage limit resets at 05:45 IST on 23 Nov; one-shot scheduled tasks wake lanes B, C and D at
+  05:48 and the orchestrator at 05:50 to check each lane, release what is ready and report.
