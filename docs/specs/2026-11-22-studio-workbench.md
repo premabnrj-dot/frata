@@ -1,9 +1,8 @@
 # Studio workbench, the road to one address, and apps for websites
-Status: draft (for the owner; four reviews folded in 2026-11-22, § Reviews; nothing built) · Date: 2026-11-22 · Mockup: https://claude.ai/artifact/7nJMbpWCz2z4EBXmNeyj2n
-(`docs/mockups/2026-11-22-studio-workbench.html`) · Approved: —
+Status: active (owner, 2026-11-22: "go with your recommendation"; "Yes, test orders before opening"; four reviews folded in, § Reviews; nothing built) · Date: 2026-11-22 · Mockup: https://claude.ai/artifact/7nJMbpWCz2z4EBXmNeyj2n
+(`docs/mockups/2026-11-22-studio-workbench.html`) · Approved: owner, 2026-11-22 (all ten calls as recommended) · Plan: `docs/plans/2026-11-22-studio-workbench.md`
 Builds on: `docs/plans/2026-11-16-execution.md`, `docs/plans/2026-11-12-studio-build.md`,
-`docs/plans/2026-11-16-one-address-checkout.md`, ADR-0018, ADR-0019, ADR-0020. The plan file is written after sign-off
-(`check:plans` refuses a plan without a dated approval).
+`docs/plans/2026-11-16-one-address-checkout.md`, ADR-0018, ADR-0019, ADR-0020.
 
 The owner, 2026-11-22: "pick all the remaining studio and it's relevant plans … do a final review and prepare for
 execution"; why a domain before keys; a cleaner, best-in-the-world UX; a developer's and a designer's regular work;
@@ -245,7 +244,7 @@ preview's page list" (drawn in screen 1), not a separate tab.
 Still to run once the owner decides: `tenancy-auditor`, `speed-reviewer` and `unit-economics-reviewer` on the plan;
 `design-system-reviewer` on screen 1; every reviewer again on T1's spec.
 
-## Owner decisions
+## Owner decisions (all taken as recommended, owner 2026-11-22)
 1 preview addresses on a Test key (not now) · 2 Open my store refuses without a proved address (yes) · 3 the workbench
 with Versions and Brand book docked (yes; a deviation from 16 Nov) · 4 one address before the frame (no; build P3
 first) · 5 test orders before opening, own spec (yes) · 6 own hosting behind one address (not now) · 7 every app declares
