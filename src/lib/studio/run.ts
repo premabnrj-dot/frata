@@ -188,7 +188,7 @@ async function cancels(live: () => boolean): Promise<number> {
     // A mandate with no customer can't be cancelled from here: it stays listed, and the log says so.
     if (!t.customerId) { console.error('[credits] token cancel without a customer', t.partnerId); continue }
     try { await cancelToken(t.customerId, t.tokenId); await system.tokenCancelled(t.partnerId, t.tokenId); n++ }
-    catch (e) { console.error('[credits] token cancel', errName(e)) }
+    catch (e) { console.error('[credits] token cancel', errName(e)); await system.tokenCancelTried(t.partnerId, t.tokenId, errName(e)).catch(() => undefined) }
   }
   return n
 }

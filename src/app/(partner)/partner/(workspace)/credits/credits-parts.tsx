@@ -148,7 +148,11 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
 
 // ── Start Studio or Studio Plus (undrawn mockup § Plan) ─────────────────────────────────────────────────────────────
 
-export function StartSeat({ plan, renews, label, primary = true }: { plan: SeatPlan; renews: string; label?: string; primary?: boolean }) {
+/** Studio → Studio Plus at once (owner 2026-11-23, option B; undrawn mockup § Studio Plus now): the credits left stay;
+ *  Studio's renewal for this period is stopped, or the move waits while it is with the bank. */
+export type Move = { from: string; carried: number; renewal: { forPeriodEnd: string; total: number; claimed: boolean } | null }
+
+export function StartSeat({ plan, renews, label, primary = true, move }: { plan: SeatPlan; renews: string; label?: string; primary?: boolean; move?: Move }) {
   const p = SEAT_PLANS[plan]
   const [open, setOpen] = useState(false)
   const [method, setMethod] = useState<'upi' | 'card'>('upi')
@@ -157,8 +161,13 @@ export function StartSeat({ plan, renews, label, primary = true }: { plan: SeatP
   const close = () => { setOpen(false); reset() }
   const waiting = pay.state === 'waiting' || pay.state === 'busy'
   return <>
-    <Button size="sm" variant={primary ? 'primary' : 'secondary'} onClick={() => setOpen(true)}>{label ?? `Start ${p.name}`}</Button>
-    <Dialog open={open} onClose={close} title={`Start ${p.name}`} error={payError(pay, error)}
+    <Button size="sm" variant={primary ? 'primary' : 'secondary'} onClick={() => setOpen(true)}>{label ?? `${move ? 'Move to' : 'Start'} ${p.name}`}</Button>
+    {move?.renewal?.claimed ? <Dialog open={open} onClose={close} title={`${move.from}’s payment is with your bank`}
+      actions={<Button variant="secondary" onClick={close} data-autofocus>Close</Button>}>
+      <p className="text-sm text-muted-foreground">{move.from}’s <span className="font-num">{inr(move.renewal.total)}</span> is being paid. Try again once it’s paid.</p>
+    </Dialog> :
+    <Dialog open={open} onClose={close} title={`${move ? 'Move to' : 'Start'} ${p.name}`}
+      error={pay.state === 'declined' && move ? `${payError(pay, error)} You’re still on ${move.from}.` : payError(pay, error)}
       actions={pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
         : <><Button variant="secondary" onClick={close} data-autofocus>Not now</Button>
           <Button busy={waiting} onClick={() => void run({ kind: 'seat', plan, method }, close)}>{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
@@ -169,12 +178,14 @@ export function StartSeat({ plan, renews, label, primary = true }: { plan: SeatP
           <dt className="font-semibold">Pay today</dt><dd className="font-num text-right font-semibold">{inr(total)}</dd>
           <dt className="text-muted-foreground">Credits</dt><dd className="font-num text-right">{p.credits} now, {p.credits} each month</dd>
           <dt className="text-muted-foreground">Renews</dt><dd className="text-right">{renews}</dd>
+          {move && <><dt className="text-muted-foreground">{move.from} credits left</dt><dd className="font-num text-right">{move.carried} stay</dd></>}
+          {move?.renewal && <><dt className="text-muted-foreground">{move.from}’s {move.renewal.forPeriodEnd} payment</dt><dd className="text-right">Stopped</dd></>}
         </dl>
         <span className="text-label" aria-hidden>Pays by</span>
         <RadioCards label="Pays by" value={method} onPick={setMethod}
-          options={(['upi', 'card'] as const).map((m) => ({ v: m, title: m === 'upi' ? 'UPI AutoPay' : 'Card', sub: `Up to ${inr(p.mandateMax)} a debit` }))} />
+          options={(['upi', 'card'] as const).map((m) => ({ v: m, title: m === 'upi' ? 'UPI AutoPay' : 'Card', sub: `Up to ${formatInr(p.mandateMax)} a debit` }))} />
       </div>}
-    </Dialog>
+    </Dialog>}
   </>
 }
 

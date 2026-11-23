@@ -4396,6 +4396,145 @@ do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; l1 uuid; begin
   exception when sqlstate 'P0001' then if sqlerrm <> 'rate' then raise; end if; end;
 end $$;
 reset role;
+-- C1·B Move to Studio Plus now (0168–0169; plan § Follow-up C1·B with its three reviews). G moves Studio → Studio Plus with
+-- Studio's renewal open: the renewal is closed (never failed, no email), the old mandate queued for cancelling, Y untouched.
+-- A renewal with the bank makes the move wait; a claim waits while a start is open; a renewal claimed after a start makes
+-- the start's capture a refund (and queues its mandate); a renewal of an ended seat buys nothing and takes no invoice
+-- number; a start without a token buys nothing; one start at a time; every other seat move is has_seat; merchant billing
+-- rows are untouched.
+do $$ begin
+  perform set_config('proof.yb89p', (select pm.partner_id::text from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000190' and pm.role = 'owner'), true);
+  perform set_config('proof.merchant89b', (select md5(coalesce((select string_agg(t::text, ',' order by t::text) from frrata_payments t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from frrata_invoices t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_accounts t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_mandate_setups t), ''))), true);
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; p record; begin
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89m0001', false);
+  if app_pc_apply('order_proof89m0001', 'pay_proof89m0001', true, 353882, 'INR', true, null, 'token_proof89m0001') <> 'applied' then raise exception 'FAIL: B · G''s Studio'; end if;
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0001', false);
+  if app_pc_apply('order_proof89q0001', 'pay_proof89q0001', true, 353882, 'INR', true, null, 'token_proof89q0001') <> 'applied' then raise exception 'FAIL: B · Y''s Studio'; end if;
+end $$;
+reset role;
+update partner_seats set period_end = now() + interval '1 day' where partner_id in (current_setting('proof.g89p')::uuid, current_setting('proof.yb89p')::uuid) and ended_at is null;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190';
+  gp uuid := current_setting('proof.g89p')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; r record; gr uuid; yr uuid; p record; t text;
+begin
+  for r in select * from app_pc_renewals(100, null, null) x where x.partner_id in (gp, yp) loop
+    if r.partner_id = gp then gr := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    else yr := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27'); end if;
+  end loop;
+  if gr is null or yr is null then raise exception 'FAIL: B · the two renewals'; end if;
+  perform set_config('proof.gr89b', gr::text, true); perform set_config('proof.yr89b', yr::text, true);
+  -- G starts Studio Plus: its renewal can't be claimed while the start is open; Y's can
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if app_pc_claim(gr) then raise exception 'FAIL: B · a renewal claimed while a start is open'; end if;
+  -- a second start while the first is with the gateway waits
+  perform app_pc_purchase_order(p.id, 'order_proof89m0002', false);
+  t := null;
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 500, 'plus', 'card', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'start_open' then raise exception 'FAIL: B · two starts at once (%)', t; end if;
+  -- the Plus capture: the old seat ends, its renewal closes, the old mandate is queued, 500 credits arrive
+  if app_pc_apply('order_proof89m0002', 'pay_proof89m0002', true, 1179882, 'INR', true, null, 'token_proof89m0002') <> 'applied' then raise exception 'FAIL: B · the move'; end if;
+  -- Y's renewal is claimed (no start of Y's is open), so Y's move waits
+  if not app_pc_claim(yr) then raise exception 'FAIL: B · Y''s renewal claim'; end if;
+  t := null;
+  begin perform app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'renewal_paying' then raise exception 'FAIL: B · a move while Studio''s payment is with the bank (%)', t; end if;
+  -- every other move waits for the renewal
+  t := null;
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'has_seat' then raise exception 'FAIL: B · Studio Plus → Studio at once (%)', t; end if;
+end $$;
+reset role;
+do $$ declare gp uuid := current_setting('proof.g89p')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; gr uuid := current_setting('proof.gr89b')::uuid; yr uuid := current_setting('proof.yr89b')::uuid; begin
+  if (select closed_reason from partner_credit_purchases where id = gr) is distinct from 'Moved to Studio Plus'
+     or (select failed_at from partner_credit_purchases where id = gr) is not null then raise exception 'FAIL: B · G''s renewal not closed as moved'; end if;
+  if exists (select 1 from partner_credit_notices n where n.purchase_id = gr and n.kind = 'renewal_failed') then raise exception 'FAIL: B · a renewal-failed email for a move'; end if;
+  if (select plan from partner_seats where partner_id = gp and ended_at is null) <> 'plus' or (select count(*) from partner_seats where partner_id = gp and ended_at is null) <> 1
+  then raise exception 'FAIL: B · G''s live seat is not Studio Plus alone'; end if;
+  if (select token_id from partner_billing where partner_id = gp) <> 'token_proof89m0002' or (select mandate_max from partner_billing where partner_id = gp) <> 1200000
+  then raise exception 'FAIL: B · G''s new mandate'; end if;
+  if not exists (select 1 from partner_mandate_cancels m where m.partner_id = gp and m.token_id = 'token_proof89m0001' and m.cancelled_at is null)
+  then raise exception 'FAIL: B · the old mandate not queued for cancelling'; end if;
+  if not exists (select 1 from partner_credit_entries e join partner_credit_purchases p on p.id = e.purchase_id where p.partner_id = gp and p.plan = 'plus' and e.kind = 'seat' and e.credits = 500)
+  then raise exception 'FAIL: B · Studio Plus''s 500 credits'; end if;
+  -- Y untouched by G's move
+  if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' or (select token_id from partner_billing where partner_id = yp) <> 'token_proof89q0001'
+     or (select closed_at from partner_credit_purchases where id = yr) is not null or exists (select 1 from partner_mandate_cancels where partner_id = yp)
+  then raise exception 'FAIL: B · G''s move touched Y'; end if;
+  -- the race: Y's renewal unclaimed, Y starts Studio Plus, then the renewal is claimed anyway (a run before the lock)
+  update partner_credit_purchases set claimed_at = null where id = yr;
+end $$;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; p record; begin
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0002', false);
+end $$;
+reset role;
+update partner_credit_purchases set claimed_at = now() + interval '1 second' where id = current_setting('proof.yr89b')::uuid;
+do $$ begin perform set_config('proof.counter89b', (select coalesce(sum(next), 0)::text from platform_counters where kind = 'invoice'), true); end $$;
+set local role frata_app;
+do $$ declare yp uuid := current_setting('proof.yb89p')::uuid; begin
+  -- Studio's renewal went first: the Studio Plus capture buys nothing, its new mandate is queued for cancelling
+  if app_pc_apply('order_proof89q0002', 'pay_proof89q0002', true, 1179882, 'INR', true, null, 'token_proof89q0002') <> 'refund_due' then raise exception 'FAIL: B · two months on one day'; end if;
+  -- the renewal itself buys its period
+  perform app_pc_purchase_order(current_setting('proof.yr89b')::uuid, 'order_proof89q0003', true);
+  if app_pc_apply('order_proof89q0003', 'pay_proof89q0003', true, 353882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: B · Y''s renewal'; end if;
+end $$;
+reset role;
+do $$ declare gp uuid := current_setting('proof.g89p')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; begin
+  if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' then raise exception 'FAIL: B · a refunded start moved Y'; end if;
+  if not exists (select 1 from partner_mandate_cancels where partner_id = yp and token_id = 'token_proof89q0002') then raise exception 'FAIL: B · a refunded start''s mandate left live'; end if;
+  -- G's old renewal, reopened as if its capture came late: an ended seat's renewal buys nothing, takes no invoice number
+  update partner_credit_purchases set closed_at = null, closed_reason = null, gateway_order_id = 'order_proof89m0003', claimed_at = now() where id = current_setting('proof.gr89b')::uuid;
+  perform set_config('proof.counter89b', (select coalesce(sum(next), 0)::text from platform_counters where kind = 'invoice'), true);
+end $$;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; p record; t text; begin
+  if app_pc_apply('order_proof89m0003', 'pay_proof89m0003', true, 353882, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: B · an ended seat''s renewal bought credits'; end if;
+  -- a start without a mandate buys nothing (Y's renewal is paid; Y may start again)
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0004', false);
+  if app_pc_apply('order_proof89q0004', 'pay_proof89q0004', true, 1179882, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: B · a seat moved without its mandate'; end if;
+end $$;
+reset role;
+do $$ declare gr uuid := current_setting('proof.gr89b')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; begin
+  if exists (select 1 from partner_invoices where purchase_id = gr) or exists (select 1 from partner_credit_entries where purchase_id = gr)
+  then raise exception 'FAIL: B · an ended seat''s renewal took an invoice or credits'; end if;
+  if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' then raise exception 'FAIL: B · a tokenless start moved Y'; end if;
+  if (select md5(coalesce((select string_agg(t::text, ',' order by t::text) from frrata_payments t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from frrata_invoices t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_accounts t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_mandate_setups t), ''))) <> current_setting('proof.merchant89b')
+  then raise exception 'FAIL: B · merchant billing rows changed'; end if;
+  -- a closed attempt of an ended seat is closed, never failed, and sends nothing
+  update partner_credit_purchases set refund_due_at = null, refund_payment_id = null, refund_amount = null, closed_at = null, claimed_at = null, gateway_order_id = null where id = current_setting('proof.gr89b')::uuid;
+end $$;
+set local role frata_app;
+do $$ begin
+  if not app_pc_close(current_setting('proof.gr89b')::uuid, 'Not paid') then raise exception 'FAIL: B · closing'; end if;
+  -- the cancel queue: due, tried, done
+  perform app_pc_token_cancel_tried(current_setting('proof.g89p')::uuid, 'token_proof89m0001', 'gateway');
+  if exists (select 1 from app_pc_token_cancels(100) x where x.token_id = 'token_proof89m0001') then raise exception 'FAIL: B · a failed cancel retried at once'; end if;
+end $$;
+reset role;
+do $$ begin
+  if (select failed_at from partner_credit_purchases where id = current_setting('proof.gr89b')::uuid) is not null
+     or exists (select 1 from partner_credit_notices where purchase_id = current_setting('proof.gr89b')::uuid and kind = 'renewal_failed')
+  then raise exception 'FAIL: B · an ended seat''s renewal failed or emailed'; end if;
+  if (select tries from partner_mandate_cancels where token_id = 'token_proof89m0001') <> 1 then raise exception 'FAIL: B · a failed cancel''s try not kept'; end if;
+  -- one version of every definer (a changed signature would leave a second, granted to PUBLIC)
+  if exists (select 1 from pg_proc where proname like 'app_pc_%' or proname like 'app_partner_credit%' group by proname having count(*) > 1)
+  then raise exception 'FAIL: B · two versions of a credits definer'; end if;
+end $$;
 -- a suspended partner reads and buys nothing
 update partners set suspended_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
 set local role frata_app;
@@ -4419,6 +4558,7 @@ do $$ declare r text; f text; begin
     'app_pc_unsettled(interval, integer)', 'app_pc_close(uuid, text)', 'app_pc_renewals(integer, timestamptz, uuid)',
     'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
     'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
+    'app_pc_token_cancel_tried(uuid, text, text)',
     'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',
     'app_pc_dispute(text)', 'app_pc_notices_claim(integer, uuid[])', 'app_pc_notice_done(uuid, boolean, text)',
     'app_fx_rate_latest()', 'app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean)', 'app_pc_settle(uuid, bigint)', 'app_pc_return(uuid, text)'] loop
@@ -4430,7 +4570,7 @@ do $$ declare r text; f text; begin
   foreach f in array array['app_pc_owner(uuid, uuid, text, boolean, boolean)', 'app_pc_lots(uuid, boolean)', 'app_pc_balance(uuid, boolean)',
     'app_pc_charged(uuid)', 'app_pc_window(uuid)', 'app_pc_link_used(uuid, uuid)', 'app_pc_notice(uuid, text, text, uuid, uuid)',
     'app_pc_on_partner_approved()', 'app_pc_issue(uuid)', 'app_pc_give_back(uuid, integer)',
-    'app_pc_debt(uuid, boolean)', 'app_pc_debt_draw(uuid, boolean)'] loop
+    'app_pc_debt(uuid, boolean)', 'app_pc_debt_draw(uuid, boolean)', 'app_pc_cancel_mandate(uuid, text)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin', 'frata_app'] loop
       if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run the internal %', r, f; end if;
     end loop;
@@ -4445,7 +4585,7 @@ do $$ declare r text; f text; begin
   if not has_function_privilege('frata_admin', 'app_fx_rate_set(date, integer)', 'execute') then raise exception 'FAIL: Admin cannot set the rate'; end if;
   foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
     foreach f in array array['partner_billing', 'partner_seats', 'partner_credit_purchases', 'partner_invoices', 'partner_credit_uses',
-      'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates'] loop
+      'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates', 'partner_mandate_cancels'] loop
       if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') or has_table_privilege(r, f, 'update')
          or has_table_privilege(r, f, 'delete') or has_table_privilege(r, f, 'truncate') then raise exception 'FAIL: % reaches %', r, f; end if;
     end loop;

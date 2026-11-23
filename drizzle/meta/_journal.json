@@ -1163,6 +1163,20 @@
       "when": 1795394157627,
       "tag": "0165_billing_events_route_partners",
       "breakpoints": true
+    },
+    {
+      "idx": 166,
+      "version": "7",
+      "when": 1795415430737,
+      "tag": "0168_studio_mandate_cancels",
+      "breakpoints": true
+    },
+    {
+      "idx": 167,
+      "version": "7",
+      "when": 1795415459782,
+      "tag": "0169_studio_plus_now",
+      "breakpoints": true
     }
   ]
 }

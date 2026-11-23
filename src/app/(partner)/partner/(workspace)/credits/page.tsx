@@ -207,8 +207,11 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
             {d?.legalName ? <div className="grid gap-0.5 text-sm"><span>{d.legalName}</span>{d.gstin ? <span className="font-mono text-small">{d.gstin.slice(0, 7)}••••{d.gstin.slice(12)}</span>
               : <span className="text-muted-foreground">{stateName(d.stateCode) ?? ''}</span>}</div> : <p className="text-sm text-muted-foreground">Add a name and a state.</p>}
           </Section>
-          {p.mandate && <Section title="Pays by"><dl className="grid grid-cols-[1fr_auto] gap-x-3 text-sm">
-            <dt className="text-muted-foreground">{p.mandate.method === 'card' ? 'Card' : 'UPI AutoPay'}</dt><dd className="font-num text-right">Up to {formatMoney(p.mandate.max)} a debit</dd></dl></Section>}
+          {(p.mandate || p.cancelling) && <Section title="Pays by"><dl className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 text-sm">
+            {p.mandate && <><dt className="text-muted-foreground">{p.mandate.method === 'card' ? 'Card' : 'UPI AutoPay'}</dt><dd className="font-num text-right">Up to {formatMoney(p.mandate.max)} a debit</dd></>}
+            {/* An old mandate the hourly run is still cancelling (C1·B, as drawn): gone once it is cancelled. */}
+            {p.cancelling && <><dt className="text-muted-foreground">Old Studio AutoPay</dt><dd className="text-right"><Badge tone="warn">Cancelling</Badge></dd></>}
+          </dl></Section>}
         </div>
       </div>
     }
@@ -226,8 +229,12 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
             <small className="text-small text-muted-foreground">{p ? `${p.credits} credits a month` : `${FREE_CREDITS} credits, once`}</small>
             {p && <small className="text-small text-muted-foreground">Use within 12 months</small>}
             {p && state === 'partner' && <div className="mt-2"><StartSeat plan={k as SeatPlan} renews={renews} primary={k === 'studio'} /></div>}
-            {p && v.seat && state === 'active' && v.seat.plan !== k && v.seat.nextPlan !== k &&
-              <div className="mt-2"><ChangePlan to={k as SeatPlan} from={dayMonthIN(v.seat.periodEnd)} credits={p.credits} label={`Move to ${p.name}`} /></div>}
+            {p && v.seat && state === 'active' && v.seat.plan !== k && v.seat.nextPlan !== k && (v.seat.plan === 'studio' && k === 'plus'
+              // Studio → Studio Plus at once (owner 2026-11-23, option B); Studio Plus → Studio waits for the renewal.
+              ? <div className="mt-2"><StartSeat plan="plus" renews={renews} move={{ from: SEAT_PLANS.studio.name,
+                  carried: v.lots.filter((l) => l.kind === 'seat').reduce((a, l) => a + l.left, 0),
+                  renewal: v.renewalOpen ? { forPeriodEnd: dayMonthIN(v.renewalOpen.forPeriodEnd), total: v.renewalOpen.total, claimed: v.renewalOpen.claimed } : null }} /></div>
+              : <div className="mt-2"><ChangePlan to={k as SeatPlan} from={dayMonthIN(v.seat.periodEnd)} credits={p.credits} label={`Move to ${p.name}`} /></div>)}
             {p && v.seat && v.seat.nextPlan === k && <small className="text-small">From {dayMonthIN(v.seat.periodEnd)}</small>}
           </div>
         })}

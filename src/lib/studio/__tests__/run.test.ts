@@ -25,7 +25,7 @@ const sys = vi.hoisted(() => ({
   claim: vi.fn(async () => true), renewalsNotified: vi.fn(async () => [] as unknown[]), setOrder: vi.fn(async () => true),
   staleUses: vi.fn(async () => [] as string[]), returnUse: vi.fn(async () => true),
   refundsDue: vi.fn(async () => [] as unknown[]), refundClaim: vi.fn(async () => true), refundDone: vi.fn(async () => undefined),
-  tokenCancels: vi.fn(async () => [] as unknown[]), tokenCancelled: vi.fn(async () => undefined),
+  tokenCancels: vi.fn(async () => [] as unknown[]), tokenCancelled: vi.fn(async () => undefined), tokenCancelTried: vi.fn(async () => undefined),
   noticesClaim: vi.fn(async () => [] as unknown[]), noticeDone: vi.fn(async () => undefined),
 }))
 vi.mock('@/lib/db/partner-credits', () => ({ system: sys }))
