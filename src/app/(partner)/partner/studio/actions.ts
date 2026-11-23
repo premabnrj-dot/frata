@@ -12,7 +12,7 @@ import { send, stop, type SendWhy } from '@/lib/studio/sessions'
 // from the person's own open session. The refusal codes are drawn by the chat (R7, states 1–6).
 // =============================================================================
 
-const SendInput = z.strictObject({ text: z.string().min(1).max(LINE_MAX) })
+const SendInput = z.strictObject({ text: z.string().trim().min(1).max(LINE_MAX) })
 
 export async function sendAction(input: unknown): Promise<{ ok: true } | { ok: false; why: SendWhy | 'input' }> {
   const auth = await requireStudio()

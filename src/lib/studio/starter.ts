@@ -12,7 +12,9 @@ import { tarOf, type ArchiveFile } from '@/domains/studio/archive'
 // =============================================================================
 
 const ROOT = join(process.cwd(), 'kit', 'starter')
-const SKIP = new Set(['node_modules', '.next', '.vercel', '.git', '.env', '.env.local'])
+const SKIP = new Set(['node_modules', '.next', '.vercel', '.git', '.turbo', 'dist', 'out', '.DS_Store'])
+/** Never an env file of any name (`.env.example`, the kit's own list of names, is the one kept). */
+const skipped = (n: string) => SKIP.has(n) || (n.startsWith('.env') && n !== '.env.example')
 
 let made: { bytes: Uint8Array; sha256: string } | null = null
 
@@ -21,7 +23,7 @@ export function starterArchive(): { bytes: Uint8Array; sha256: string } {
   const files: ArchiveFile[] = []
   const walk = (dir: string) => {
     for (const n of readdirSync(dir).sort()) {
-      if (SKIP.has(n)) continue
+      if (skipped(n)) continue
       const p = join(dir, n)
       if (statSync(p).isDirectory()) walk(p)
       else files.push({ path: relative(ROOT, p).split('\\').join('/'), bytes: new Uint8Array(readFileSync(p)) })

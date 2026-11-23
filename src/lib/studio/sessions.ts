@@ -1,7 +1,7 @@
 import 'server-only'
 import { after } from 'next/server'
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
-import { budgetFor, studioCaps } from '@/domains/studio/spend'
+import { budgetFor, deltaOf, studioCaps } from '@/domains/studio/spend'
 import type { MicroUsd } from '@/domains/money/usd'
 import { endReason, type EndReason } from '@/domains/studio/session'
 import type { Tx } from '@/lib/db'
@@ -31,7 +31,8 @@ import { StudioUnbound, withStudio, type StudioOk } from './with-studio'
 // is held across a runtime call (check:studio). The cron ends, cleans and deletes sessions from ids only (app_studio_due).
 // =============================================================================
 
-export type SendWhy = 'closed' | 'busy' | 'person_day' | 'platform_day' | 'sessions' | 'turn_open' | 'start' | 'send' | 'budget'
+/** `busy`: a lock wait or a Send at the same moment (try again); `limit`: too many Sends this hour (slow down). */
+export type SendWhy = 'closed' | 'input' | 'busy' | 'limit' | 'person_day' | 'platform_day' | 'sessions' | 'turn_open' | 'start' | 'send' | 'budget'
 export type SendResult = { ok: true; sessionId: string; turnId: string } | { ok: false; why: SendWhy }
 export type Deps = { runtime: StudioRuntime; starter: () => { bytes: Uint8Array; sha256: string }; follow: boolean }
 const DEFAULT: Deps = { runtime: managedRuntime, starter: starterArchive, follow: true }
@@ -62,8 +63,9 @@ async function listCostOf(rt: StudioRuntime, runtimeId: string | null): Promise<
   if (!runtimeId) return 0
   return rt.usage(runtimeId).then((u) => u.listCost as number, () => null)
 }
+/** The one measured delta (src/domains/studio/spend.ts deltaOf, as the advance settles): null when it cannot be read. */
 const deltaIn = async (tx: Tx, sessionId: string, listCost: number | null) =>
-  listCost === null ? null : Math.max(0, listCost - (await spendOf(tx, sessionId)).spent)
+  listCost === null ? null : deltaOf((await spendOf(tx, sessionId)).spent, listCost as MicroUsd)
 
 type Opened = { sessionId: string; turnId: string; runtimeId: string | null; budgetCents: number; pausedBefore: boolean; fresh: boolean }
 
@@ -71,8 +73,9 @@ type Opened = { sessionId: string; turnId: string; runtimeId: string | null; bud
 export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): Promise<SendResult> {
   const text = sendText(raw)
   const caps = studioCaps()
-  if (!text || !caps || STUDIO_OPEN !== 'staff') return { ok: false, why: 'closed' }
-  if (!(await withinLimit(LIMITS.studioSendUser, auth.userId, new Date(), true))) return { ok: false, why: 'busy' }
+  if (!text) return { ok: false, why: 'input' }
+  if (!caps || STUDIO_OPEN !== 'staff') return { ok: false, why: 'closed' }
+  if (!(await withinLimit(LIMITS.studioSendUser, auth.userId, new Date(), true))) return { ok: false, why: 'limit' }
   let opened: Opened
   try {
     opened = await withStudio(auth, async (tx, partnerId) => {
@@ -185,7 +188,7 @@ async function failSession(auth: StudioOk, o: Opened, reason: 'start' | 'send' |
 
 /** Stop: the person's own open session ends (its open turn fails, measured), then it is cleaned up. */
 export async function stop(auth: StudioOk, rt: StudioRuntime = managedRuntime): Promise<{ ok: boolean }> {
-  if (!(await withinLimit(LIMITS.studioSendUser, auth.userId, new Date(), true))) return { ok: false }
+  // No hourly limit: a person near the Send limit can always Stop (one open session a person; ending is idempotent).
   const open = await withStudio(auth, (tx) => tx.select({ id: studioSessions.id, runtimeId: studioSessions.runtimeId }).from(studioSessions)
     .where(and(eq(studioSessions.tenantId, auth.tenantId), eq(studioSessions.userId, auth.userId), isNull(studioSessions.endedAt)))).catch(() => [])
   const s = open[0]

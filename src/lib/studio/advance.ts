@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { inCallWindow } from '@/domains/studio/turn'
 import { cursorAfter, opensTurn } from '@/domains/studio/events'
+import { deltaOf } from '@/domains/studio/spend'
 import { TOOL_ERRORS } from '@/domains/studio/tools'
 import type { MicroUsd } from '@/domains/money/usd'
 import type { Tx } from '@/lib/db'
@@ -218,7 +219,7 @@ async function closeTurn(ref: AdvanceRef, lease: Lease, rt: StudioRuntime, how: 
   const done = await bound(ref, async (tx) => {
     const rows = await tx.execute(sql`select spent_micro from app_studio_spend_of(${lease.sessionId}::uuid)`)
     const spent = Number((rows as unknown as { spent_micro: number }[])[0]?.spent_micro ?? 0)
-    const measured = listCost === null ? null : Math.max(0, listCost - spent)
+    const measured = listCost === null ? null : deltaOf(spent as MicroUsd, listCost as MicroUsd)
     const r = await tx.execute(sql`select app_studio_close_turn(${ref.turnId}::uuid, ${how}, ${how === 'failed' ? 'runtime' : null}, ${measured}::bigint, ${largest}::bigint) as ok`)
     await tx.update(studioSessions).set({ advancingUntil: null }).where(and(eq(studioSessions.tenantId, ref.tenantId), eq(studioSessions.id, lease.sessionId)))
     return (r as unknown as { ok: boolean }[])[0]?.ok === true

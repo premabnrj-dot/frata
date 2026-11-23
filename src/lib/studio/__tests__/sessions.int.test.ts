@@ -35,6 +35,8 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     const { default: postgres } = await import('postgres')
     su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 2, onnotice: () => {} })
     f = await makeStudioStore(su, stamp)
+    // The platform's day cap is shared by every int run on this throwaway database: start this file under it.
+    await su`update studio_spend_days set measured_micro = 0 where day = to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD')`
     rt = (await import('../runtime-managed')).managedRuntime
     S = await import('../sessions')
   })
@@ -137,6 +139,84 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     expect(interrupt).toBeGreaterThan(raise)
     expect(message).toBeGreaterThan(interrupt)
     await cron(); await cron()
+  })
+
+  it('refusals: an empty text, a person’s day, the platform’s day, three sessions open: nothing sent, nothing reserved', async () => {
+    const day = (await su`select to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD') as d`)[0]!.d as string
+    for (const s of await su`select id from studio_sessions where user_id = ${f.user} and ended_at is null`) await su`update studio_sessions set ended_at = now(), end_reason = 'stopped' where id = ${s.id}`
+    const n = fake.state.requests.length
+    expect(await S.send(f.auth, '   ', deps())).toEqual({ ok: false, why: 'input' })
+    await su`insert into studio_spend_people (day, user_id, reserved_micro) values (${day}, ${f.user}, 2900000) on conflict (day, user_id) do update set reserved_micro = studio_spend_people.reserved_micro + 2900000`
+    expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'person_day' })
+    await su`update studio_spend_people set reserved_micro = reserved_micro - 2900000 where day = ${day} and user_id = ${f.user}`
+    const [d0] = await su`select reserved_micro, measured_micro from studio_spend_days where day = ${day}`
+    await su`update studio_spend_days set reserved_micro = reserved_micro + 10000000 where day = ${day}`
+    expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'platform_day' })
+    await su`update studio_spend_days set reserved_micro = ${d0!.reserved_micro} where day = ${day}`
+    // Three other sessions open on the platform: a new session is refused (an open one would still take a turn).
+    const others = await su<{ id: string }[]>`insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id)
+      select ${f.tenant}, ${f.partner}, ${f.member}, gen_random_uuid() from generate_series(1, 3) returning id`
+    try { expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'sessions' }) }
+    finally { for (const o of others) await su`update studio_sessions set ended_at = now(), end_reason = 'stopped' where id = ${o.id}` }
+    expect(fake.state.requests.length).toBe(n) // nothing reached Anthropic
+    expect(await openSession()).toBeUndefined()
+    expect(await reserved()).toBe(0)
+  })
+
+  it('the margin gone (the largest request reaches the ceiling): the session ends `restart` and a new one starts', async () => {
+    expect((await S.send(f.auth, 'hello', deps())).ok).toBe(true)
+    await cron()
+    const old = (await openSession())!
+    await su`update studio_spend_sessions set largest_micro = 500000 where session_id = ${old.id}`
+    expect((await S.send(f.auth, 'hello again', deps())).ok).toBe(true)
+    expect((await su`select end_reason from studio_sessions where id = ${old.id}`)[0]!.end_reason).toBe('restart')
+    expect((await openSession())!.id).not.toBe(old.id)
+    await cron(); await cron()
+  })
+
+  it('a budget raise that fails fails the turn and ends the session; nothing is left reserved', async () => {
+    const s = (await openSession())!
+    fake.state.failNext['POST /v1/sessions/sesn_*'] = 1
+    expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'budget' })
+    expect((await su`select end_reason from studio_sessions where id = ${s.id}`)[0]!.end_reason).toBe('restart')
+    expect((await su`select failed_reason from studio_turns where session_id = ${s.id} order by sent_at desc limit 1`)[0]!.failed_reason).toBe('budget')
+    await cron()
+    expect(await reserved()).toBe(0)
+    expect(await liveKeys()).toBe(0)
+  })
+
+  it('Stop during a turn: the turn fails with its measured cost; Stop with nothing open is fine', async () => {
+    expect((await S.send(f.auth, 'facts please', deps())).ok).toBe(true)
+    const s = (await openSession())!
+    expect((await S.stop(f.auth, rt)).ok).toBe(true)
+    const [t] = await su`select t.failed_reason, x.settled_at is not null as settled, x.measured_micro from studio_turns t join studio_spend_turns x on x.turn_id = t.id
+      where t.session_id = ${s.id} order by t.sent_at desc limit 1`
+    expect(t).toMatchObject({ failed_reason: 'runtime', settled: true })
+    expect(Number(t!.measured_micro)).toBeGreaterThan(0) // the request that ran is counted
+    expect(await S.stop(f.auth, rt)).toEqual({ ok: true })
+    await cron()
+    expect(await reserved()).toBe(0)
+  })
+
+  it('the cron ends an idle session and one whose person is gone', async () => {
+    expect((await S.send(f.auth, 'hello', deps())).ok).toBe(true)
+    await cron()
+    let s = (await openSession())!
+    await su`update studio_sessions set last_activity_at = now() - interval '2 hours' where id = ${s.id}`
+    await cron()
+    expect((await su`select end_reason from studio_sessions where id = ${s.id}`)[0]!.end_reason).toBe('idle')
+    expect((await S.send(f.auth, 'facts please', deps())).ok).toBe(true)
+    s = (await openSession())!
+    await su`update partner_links set removed_at = now() where tenant_id = ${f.tenant}`
+    try {
+      await cron()
+      expect((await su`select end_reason from studio_sessions where id = ${s.id}`)[0]!.end_reason).toBe('actor')
+      expect(await su`select 1 from studio_tool_calls where session_id = ${s.id} and executed_at is not null`).toHaveLength(0)
+    } finally { await su`update partner_links set removed_at = null where tenant_id = ${f.tenant}` }
+    await cron()
+    // Ended with no person to vouch for its cost, the turn keeps its whole reserve counted for the day (the cautious
+    // side; for the caps the same as measuring it at the reserve).
+    expect(await reserved()).toBe(500_000)
   })
 
   it('the cron ends a session at 23 hours and deletes it at Anthropic 30 days after its end', async () => {

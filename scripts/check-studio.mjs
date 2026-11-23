@@ -19,8 +19,9 @@
 //            runtime, or to a cached loader from src/lib/queries (a reader that takes the transaction, `…With(tx, …)`,
 //            is fine). A cached loader inside a transaction deadlocks the pool; a network call holds a connection.
 //   doors    a Studio action or route that does not start with requireStudio(); the Studio cron without
-//            isCronRequest(; a file importing the advance (only the cron route and sessions.ts) or asTurn (only the
-//            advance), so a turn id comes from the cron's work list or the person's own session, never a request.
+//            isCronRequest(; a file importing the advance (only the cron route and sessions.ts), asTurn (only the
+//            advance) or sessions.ts (only the Studio actions and the cron route), so a turn or session id comes from
+//            the cron's work list or the person's own session, never a request.
 //   inputs   a tool input schema with an id-shaped key (a tool's input never names a store, person or row).
 // Comment lines are skipped everywhere (and in a Markdown file all but its fenced code), so this header and the records
 // that describe the gate cannot fail it: `node scripts/check-studio.mjs <file>` runs the source rules on one file, and
@@ -69,6 +70,9 @@ const DEFINERS = {
  *  list or from the person's own open session read under withStudio (sessions.ts), never from a request. */
 const IMPORTERS = {
   'src/lib/studio/advance': ['src/app/api/cron/studio/route.ts', 'src/lib/studio/sessions.ts'],
+  // Its cron side ends and cleans sessions with no person's bind (tenancy audit of R6, M): the Studio actions (the
+  // person's own session, under withStudio) and the cron route only.
+  'src/lib/studio/sessions': ['src/app/(partner)/partner/studio/actions.ts', 'src/app/api/cron/studio/route.ts'],
   // asTurn and its bind step (withTurnBound) are reached only through this module: the advance, and the tools, which
   // only ever get the turn asTurn hands them (their exemption is this module's only).
   'src/lib/studio/as-turn': ['src/lib/studio/advance.ts'],
