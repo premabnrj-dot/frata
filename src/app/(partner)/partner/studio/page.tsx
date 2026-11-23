@@ -14,6 +14,7 @@ import { StudioApp } from './_live/studio-app'
 import { BrandRead } from './_live/brand-read'
 import { switchStoreAction } from '@/app/choose/actions'
 import { ConfirmPasskeys } from './_live/entry-parts'
+import { STUDIO_CHECKS } from './_live/checks'
 
 // =============================================================================
 // /partner/studio — STUDIO, FOR FRRATA STAFF ON ONE TEST STORE (plan docs/plans/2026-11-22-v3a-runtime.md R7; ADR-0020).
@@ -48,11 +49,11 @@ function Step({ step }: { step: StudioStep }) {
       </form>} />)
   }
   if (step.kind === 'staff_passkey') return frame(<Panel title="Add a staff passkey" action={<Link href="/admin" className={button({ size: 'sm' })}>Add staff passkey</Link>} />)
+  const done = STUDIO_CHECKS.map((c) => c.key).filter((k) => step[k])
   return frame(
-    <Panel title="Confirm your passkeys" action={<ConfirmPasskeys staff={step.staff} partner={step.partner} />}>
+    <Panel title="Confirm your passkeys" action={<ConfirmPasskeys done={done} />}>
       <ol className="grid list-decimal gap-1.5 pl-5 text-left text-muted-foreground">
-        <li>{step.staff ? 'Staff passkey: Done' : 'Staff passkey'}</li>
-        <li>{step.partner ? 'Partner passkey: Done' : 'Partner passkey'}</li>
+        {STUDIO_CHECKS.map((c) => <li key={c.key}>{done.includes(c.key) ? `${c.line}: Done` : c.line}</li>)}
       </ol>
     </Panel>,
   )
