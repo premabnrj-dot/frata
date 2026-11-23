@@ -1205,6 +1205,13 @@
       "when": 1795437674340,
       "tag": "0171_passkeys_off_access",
       "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1795442556635,
+      "tag": "0172_admin_costs",
+      "breakpoints": true
     }
   ]
 }

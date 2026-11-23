@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.15.0
+  version: 3.16.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -62,6 +62,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
   holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
   waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
+- **Admin › Costs** (2026-11-23, drizzle/0172, proof § 102, `check:tenant` § 10): platform tables only `frata_admin`
+  touches; every export re-checks `ADMIN_ONLY` — [reference/money-and-gst.md](reference/money-and-gst.md) § Admin › Costs.
 - **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
   `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
 - **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
@@ -242,7 +244,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0165 and 0168–0169, proof
   § 89): eleven platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
   `partner_credit_uses`, `partner_credit_entries`, `partner_client_budgets`, `partner_credit_notices`, `partner_credit_tries`,
-  `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them). The ledger is `partner_credit_entries`,
+  `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them; the one carve-out is
+  `admin_fx_rate_latest()`, a definer that gives `frata_admin` the latest rate row for Admin › Costs, drizzle/0172). The ledger is `partner_credit_entries`,
   append-only lots and draws; a balance is a sum, never stored. Rows that point at each other carry the partner in a
   composite foreign key on `(partner_id, id)` (`partner_links` and `partner_members` gained that key), and those keys are
   RESTRICT: a tenant or partner person with Studio uses can't be deleted until an erase flow decides what happens to them.
@@ -499,7 +502,7 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 
 | Open | When | Sections |
 |---|---|---|
-| [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials |
+| [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials, Admin › Costs |
 | [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
 | [reference/modules-themes-sites.md](reference/modules-themes-sites.md) | a module (apps), a theme (retiring, ADR-0014), or the kit and fleet rules for shop websites as code | Modules, Themes, Shop websites as code |
 | [reference/speed.md](reference/speed.md) | a page, query, cache or background job: the budgets, what holds each, and the findings P1–P15 | Speed |

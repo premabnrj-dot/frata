@@ -19,6 +19,12 @@ import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
 export type DialogSpec = {
   /** The More item's or the button's words: "End trial…". */
   label: string
+  /** The button's words on a phone, when shorter ("Add" for "Add cost"). */
+  short?: string
+  /** An icon drawn before the label on the button (not in a More item). */
+  icon?: ReactNode
+  /** A small button (30 px; 44 on a phone) for a row or a band. */
+  size?: 'sm'
   /** The dialog's question: "End Noor Threads' trial?". */
   title: string
   /** What happens, one or two short sentences. */
@@ -65,7 +71,7 @@ export function DialogButton({ spec, variant = 'secondary' }: { spec: DialogSpec
   const close = () => { setOpen(false); setError(null) }
   return (
     <>
-      <Button type="button" variant={variant} onClick={() => setOpen(true)}>{spec.label.replace(/…$/, '')}</Button>
+      <Button type="button" variant={variant} {...(spec.size ? { size: spec.size } : {})} onClick={() => setOpen(true)}>{spec.icon}{spec.short ? <><span className="max-md:hidden">{spec.label.replace(/…$/, '')}</span><span className="md:hidden">{spec.short}</span></> : spec.label.replace(/…$/, '')}</Button>
       <Dialog open={open} onClose={close} title={spec.title} description={spec.description} actions={null}>
         {open ? <Body spec={spec} onClose={close} onError={setError} error={error} /> : null}
       </Dialog>

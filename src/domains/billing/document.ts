@@ -48,13 +48,8 @@ export function frrataCreditNoteDoc(inv: FrrataDoc, cn: { number: string; issued
 /** One row of the GST export (GSTR-1 style) for a CA. */
 export type GstRow = { type: 'Invoice' | 'Credit note'; number: string; date: Date; against: string; buyer: string; gstin: string; placeOfSupply: string; taxable: number; cgst: number; sgst: number; igst: number; total: number }
 
-/** A CSV cell: quoted, quotes doubled, and a leading = + - @ (or tab/CR) neutralised so a spreadsheet never runs it (finding 17). */
-export function csvCell(v: string | number): string {
-  const s = String(v)
-  // A plain number ("-118.00") stays a number; anything else starting with a formula character is made text.
-  const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s) ? `'${s}` : s
-  return `"${safe.replace(/"/g, '""')}"`
-}
+export { csvCell } from '../csv'
+import { csvCell } from '../csv'
 
 const rs = (p: number) => (p / 100).toFixed(2)
 export function gstCsv(rows: GstRow[], day: (d: Date) => string): string {

@@ -229,7 +229,7 @@ const OPEN_FOR_APP = {
 // Each policy as the migrations LEAVE it: a later alter replaces an earlier body, a drop removes it (so a branch a
 // later migration took away is not reported, and one it adds is).
 const finalPolicies = new Map()
-for (const m of sql.matchAll(/(create|alter|drop) policy\s+(?:if exists\s+)?(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
+for (const m of sql.matchAll(/(create|alter|drop) policy\s+(?:if exists\s+)?(\w+)\s+on\s+(?:"?public"?\.)?"?([a-z_]+)"?([\s\S]*?);/g)) {
   const [, verb, name, table, body] = m
   const key = `${table}.${name}`
   if (verb === 'drop') { finalPolicies.delete(key); continue }
@@ -275,6 +275,40 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 // low finding: a rule naming every table, since partner_billing and partner_invoices share no prefix with the rest).
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:billing|seats|credit_purchases|invoices|credit_uses|credit_entries|client_budgets|credit_notices|credit_tries|mandate_cancels)|fx_rates)\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — Studio credit tables have no table grants; the app_partner_credit* / app_pc_* definers are the only door (C1)`)
+}
+// 10. Admin › Costs (drizzle/0172, tenancy review 2026-11-23, re-audit findings 2–5): platform tables only frata_admin
+// touches. A grant on either to any other role, a privilege beyond its list, a policy that is not exactly "for all to
+// frata_admin using …", an `alter policy` or an owner change on them, a view or function that reads them, or a role
+// membership grant, fails; and the tables are named only in src/lib/db/schema-costs.ts and src/lib/admin/costs.ts (the
+// database cannot tell a master admin from support staff, so that fence is the second lock: every export there re-checks
+// ADMIN_ONLY, and the Today source calls those exports instead of reading the tables).
+const COST_GRANTS = { cost_items: 'select, insert, update', cost_payments: 'select, insert, delete' }
+const COST_TABLE = /\bcost_(?:items|payments)\b/
+for (const m of sql.matchAll(/grant\s+([^;]*?)\bon\s+(?:table\s+)?([^;]*?)\bto\s+([^;]*);/g)) {
+  for (const t of Object.keys(COST_GRANTS)) {
+    if (!new RegExp(`\\b${t}\\b`).test(m[2])) continue
+    if (m[1].trim().replace(/\s+/g, ' ') !== COST_GRANTS[t] || m[2].trim() !== t || m[3].trim() !== 'frata_admin') {
+      failures.push(`grant on ${t}  — only "grant ${COST_GRANTS[t]} on ${t} to frata_admin" is allowed (Admin › Costs, drizzle/0172)`)
+    }
+  }
+}
+for (const { name, table, body } of finalPolicies.values()) {
+  if (COST_GRANTS[table] && !/^\s*for all to frata_admin\s+using\b/.test(body)) failures.push(`policy ${name} on ${table}  must be "for all to frata_admin using …" and nothing else (Admin › Costs)`)
+}
+for (const m of sql.matchAll(/alter policy\s+\w+\s+on\s+(?:"?public"?\.)?"?(cost_(?:items|payments))"?/g)) failures.push(`alter policy on ${m[1]}  — drop and create it, so the gate reads its whole body (Admin › Costs)`)
+for (const m of sql.matchAll(/alter table\s+(?:only\s+)?(?:"?public"?\.)?"?(cost_(?:items|payments))"?\s+(?:owner to|disable row level security|no force row level security)/g)) failures.push(`${m[1]}  changes owner or turns row level security off (Admin › Costs)`)
+for (const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?(?:materialized\s+)?view\b[^;]*;/g)) if (COST_TABLE.test(m[0])) failures.push('a view reads the Costs tables  — only src/lib/admin/costs.ts reads them (Admin › Costs)')
+for (const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?function\b[\s\S]*?\$(\w*)\$([\s\S]*?)\$\1\$/g)) if (COST_TABLE.test(m[2])) failures.push('a function reads the Costs tables  — only src/lib/admin/costs.ts reads them (Admin › Costs)')
+// A role handed another role's powers, or a blanket grant, reaches the Costs tables without naming them.
+for (const m of sql.matchAll(/\bgrant\s+(frata_\w+)\s+to\s+([^;]*);/g)) failures.push(`grant ${m[1]} to ${m[2].trim()}  — a role membership hands over every grant of ${m[1]} (the proof in § 82 and § 102 names none)`)
+for (const m of sql.matchAll(/\bgrant\s+[^;]*\bon\s+all\s+(?:tables|functions)\s+in\s+schema\b[^;]*;/g)) failures.push('a blanket grant on all tables or functions in a schema  — grant each object by name (Admin › Costs)')
+for (const m of sql.matchAll(/\balter\s+default\s+privileges\b[^;]*\bgrant\b[^;]*;/g)) failures.push('alter default privileges … grant  — grant each object by name (Admin › Costs)')
+const COSTS_IN_APP = { 'src/lib/db/schema-costs.ts': 'the tables', 'src/lib/admin/costs.ts': 'Costs\' reads and writes, each export re-checking ADMIN_ONLY' }
+for (const f of walk('src')) {
+  if (COSTS_IN_APP[f]) continue
+  const c = code(f)
+  if (/schema-costs(?:\.[jt]sx?)?['"]/.test(c)) failures.push(`${f}  imports the Costs tables — only src/lib/admin/costs.ts may (check:tenant § 10)`)
+  else if (COST_TABLE.test(c)) failures.push(`${f}  names a Costs table — only src/lib/db/schema-costs.ts and src/lib/admin/costs.ts may (check:tenant § 10)`)
 }
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
