@@ -72,7 +72,7 @@ export default {
         const { ctx, p } = await open('frata')
         await p.goto(CONSOLE + '/admin/costs')
         const rowOf = p.getByRole('table', { name: 'Due and overdue' }).getByRole('row', { name: new RegExp(NAME) })
-        await rowOf.getByText('Today').waitFor()
+        await rowOf.getByText('Today', { exact: true }).waitFor()
         await rowOf.getByRole('button', { name: 'Mark paid' }).click()
         const dlg = p.getByRole('dialog', { name: `Mark ${NAME} paid` })
         await dlg.locator('input[name="inr"]').fill('1,884')
