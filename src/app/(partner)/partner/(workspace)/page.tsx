@@ -47,7 +47,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     owner ? billSummary(auth).catch(failed('clients.bills')) : Promise.resolve([]),
     owner && SHARE_IN_RUPEES ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
     // A store's invitation to be its partner: the partner owner's only (the definer matches their confirmed email).
-    owner ? myPartnerRequests(auth.userId).catch(() => []) : Promise.resolve([]),
+    owner ? myPartnerRequests(auth).catch(() => []) : Promise.resolve([]),
   ])
   const invitations = <Invitations rows={asked.map((r) => ({ id: r.id, store: r.storeName, expires: dayMonthIN(r.expiresAt) }))} />
   const canCreate = partnerCan(role, 'createShop')

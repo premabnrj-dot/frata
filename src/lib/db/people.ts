@@ -1,5 +1,5 @@
 import 'server-only'
-import { desc, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { db, type Tx } from './index'
 import { withTenant } from './tenant'
 import { partnerRequests } from './schema-partners'
@@ -24,7 +24,7 @@ function code(err: unknown, tag: string): PeopleError {
   if (!c) console.error(`[${tag}]`, errName(err))
   return c ?? 'unknown'
 }
-async function savepointed(tx: Tx, _name: string, q: ReturnType<typeof sql>, tag: string): Promise<Done> {
+async function savepointed(tx: Tx, q: ReturnType<typeof sql>, tag: string): Promise<Done> {
   // A nested transaction is a savepoint: a refusal rolls back to it and the caller's transaction (and its audit) goes on.
   try {
     await tx.transaction((sp) => sp.execute(q))
@@ -35,15 +35,15 @@ async function savepointed(tx: Tx, _name: string, q: ReturnType<typeof sql>, tag
 }
 
 export const invitePerson = (tx: Tx, uid: string, email: string, role: string) =>
-  savepointed(tx, 'invite_person', sql`select app_invite_person(${uid}::uuid, ${email}, ${role})`, 'invitePerson')
+  savepointed(tx, sql`select app_invite_person(${uid}::uuid, ${email}, ${role})`, 'invitePerson')
 export const cancelPersonInvite = (tx: Tx, uid: string, invite: string) =>
-  savepointed(tx, 'cancel_invite', sql`select app_cancel_person_invite(${uid}::uuid, ${invite}::uuid)`, 'cancelPersonInvite')
+  savepointed(tx, sql`select app_cancel_person_invite(${uid}::uuid, ${invite}::uuid)`, 'cancelPersonInvite')
 export const removePerson = (tx: Tx, uid: string, member: string) =>
-  savepointed(tx, 'remove_person', sql`select app_remove_person(${uid}::uuid, ${member}::uuid)`, 'removePerson')
+  savepointed(tx, sql`select app_remove_person(${uid}::uuid, ${member}::uuid)`, 'removePerson')
 export const sendPartnerRequest = (tx: Tx, uid: string, email: string) =>
-  savepointed(tx, 'partner_request', sql`select app_partner_request_send(${uid}::uuid, ${email})`, 'sendPartnerRequest')
+  savepointed(tx, sql`select app_partner_request_send(${uid}::uuid, ${email})`, 'sendPartnerRequest')
 export const cancelPartnerRequest = (tx: Tx, uid: string) =>
-  savepointed(tx, 'partner_request_cancel', sql`select app_partner_request_cancel(${uid}::uuid)`, 'cancelPartnerRequest')
+  savepointed(tx, sql`select app_partner_request_cancel(${uid}::uuid)`, 'cancelPartnerRequest')
 
 export type PersonInvite = { id: string; email: string; role: string; expiresAt: Date }
 export type ShopPartnerRequest = { email: string; createdAt: Date; expiresAt: Date; acceptedAt: Date | null; declinedAt: Date | null; cancelledAt: Date | null }
@@ -57,7 +57,7 @@ export async function peopleView(tenantId: string, uid: string): Promise<PeopleV
       tx.execute<{ used: number; people_limit: number; plan_name: string | null }>(sql`select * from app_people_room(${uid}::uuid)`),
       tx.select({ email: partnerRequests.email, createdAt: partnerRequests.createdAt, expiresAt: partnerRequests.expiresAt, acceptedAt: partnerRequests.acceptedAt,
         declinedAt: partnerRequests.declinedAt, cancelledAt: partnerRequests.cancelledAt })
-        .from(partnerRequests).where(sql`${partnerRequests.createdAt} > now() - interval '30 days'`).orderBy(desc(partnerRequests.createdAt)).limit(1),
+        .from(partnerRequests).where(and(eq(partnerRequests.tenantId, tenantId), sql`${partnerRequests.createdAt} > now() - interval '30 days'`)).orderBy(desc(partnerRequests.createdAt)).limit(1),
     ])
     const r = room[0]
     return {
@@ -70,8 +70,8 @@ export async function peopleView(tenantId: string, uid: string): Promise<PeopleV
 export type PartnerInvitation = { id: string; storeName: string; createdAt: Date; expiresAt: Date }
 
 /** The partner owner's open invitations (empty for anyone else). */
-export async function myPartnerRequests(uid: string): Promise<PartnerInvitation[]> {
-  const rows = await db().execute<{ id: string; store_name: string; created_at: string; expires_at: string }>(sql`select * from app_partner_requests(${uid}::uuid)`)
+export async function myPartnerRequests(c: Caller): Promise<PartnerInvitation[]> {
+  const rows = await db().execute<{ id: string; store_name: string; created_at: string; expires_at: string }>(sql`select * from app_partner_requests(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup})`)
   return rows.map((r) => ({ id: r.id, storeName: r.store_name, createdAt: new Date(r.created_at), expiresAt: new Date(r.expires_at) }))
 }
 

@@ -259,18 +259,21 @@ end $$;
 --> statement-breakpoint
 -- The partner owner's invitations: matched on the caller's CONFIRMED sign-in email, never a typed one (tenancy H3).
 -- Open and unexpired only; no tenant id, no owner email.
-create or replace function app_partner_requests(p_uid uuid) returns table (id uuid, store_name text, created_at timestamptz, expires_at timestamptz)
-  language sql stable security definer set search_path = '' as $$
+create or replace function app_partner_requests(p_uid uuid, p_session uuid, p_stepup text) returns table (id uuid, store_name text, created_at timestamptz, expires_at timestamptz)
+  language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from public.app_pm_live(p_uid) x where x.role = 'owner') then return; end if;
+  perform public.app_partner_need(p_uid, p_session, p_stepup, false); -- the workspace's session check (tenancy audit M2)
+  return query
   select r.id, t.name, r.created_at, r.expires_at
-    from public.app_pm_live(p_uid) me
-    join auth.users u on u.id = p_uid and u.email_confirmed_at is not null
+    from auth.users u
     join public.partner_requests r on r.email = lower(u.email) and r.accepted_at is null and r.declined_at is null
                                   and r.cancelled_at is null and r.expires_at > now()
     join public.tenants t on t.id = r.tenant_id
-   where me.role = 'owner'
+   where u.id = p_uid and u.email_confirmed_at is not null
      and not exists (select 1 from public.partner_links l where l.tenant_id = r.tenant_id and l.removed_at is null)
-   order by r.created_at desc
-$$;
+   order by r.created_at desc;
+end $$;
 --> statement-breakpoint
 -- Accept or decline. Takes only the caller, their check, the request id and yes/no; the partner is the caller's own,
 -- the store the request's. Accept writes a link with no share (owner: "no revenue share"; share_months 1 only because
@@ -292,7 +295,7 @@ begin
   perform 1 from public.partner_requests pr where pr.id = r.id for update;
   select coalesce(nullif(pa.business_name, ''), pa.name) into v_name from public.partners pa where pa.id = me.partner_id;
   if not p_yes then
-    update public.partner_requests set declined_at = now(), partner_id = me.partner_id where id = r.id;
+    update public.partner_requests set declined_at = now() where id = r.id; -- no partner id: the store never learns which partner declined
     perform public.notice_write(r.tenant_id, 'needs_you', 'partner_request', r.id, 'Your partner invitation was declined',
       'You can add another partner from People.', '/console/settings/people', false, true, null, null);
     return null;
@@ -321,13 +324,13 @@ end $$;
 revoke all on function app_people_limit(uuid), app_people_members(uuid), app_people_open_invites(uuid), app_people_caller(uuid),
   app_people_may_give(text, text), app_people_mail(text, text, text, uuid, text), app_invite_person(uuid, text, text),
   app_cancel_person_invite(uuid, uuid), app_remove_person(uuid, uuid), app_person_invites(uuid), app_people_room(uuid),
-  app_claim_invites(uuid), app_partner_request_send(uuid, text), app_partner_request_cancel(uuid), app_partner_requests(uuid),
+  app_claim_invites(uuid), app_partner_request_send(uuid, text), app_partner_request_cancel(uuid), app_partner_requests(uuid, uuid, text),
   app_partner_answer_request(uuid, uuid, text, uuid, boolean)
   from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder;
 --> statement-breakpoint
 grant execute on function app_invite_person(uuid, text, text), app_cancel_person_invite(uuid, uuid), app_remove_person(uuid, uuid),
   app_person_invites(uuid), app_people_room(uuid), app_claim_invites(uuid), app_partner_request_send(uuid, text),
-  app_partner_request_cancel(uuid), app_partner_requests(uuid), app_partner_answer_request(uuid, uuid, text, uuid, boolean) to frata_app;
+  app_partner_request_cancel(uuid), app_partner_requests(uuid, uuid, text), app_partner_answer_request(uuid, uuid, text, uuid, boolean) to frata_app;
 --> statement-breakpoint
 -- People's notices are for owners and Managers only (as a partner's ask): same signature, its grants stay.
 create or replace function app_notice_members(p_notice uuid default null) returns table (user_id uuid, role text)

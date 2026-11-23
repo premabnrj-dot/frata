@@ -26,7 +26,8 @@ export function AddPerson({ roles, partnerOpen, gstOn, atLimit, room }: {
   const choices: Choice[] = [...roles, ...(partnerOpen ? ['partner' as const] : [])]
   const usable = (c: Choice) => c === 'partner' || (!atLimit && (c !== 'accountant' || gstOn))
   const [role, setRole] = useState<Choice | null>(null)
-  const pick = role && usable(role) ? role : choices.find(usable) ?? null
+  // Staff first, as drawn: the least a new person can need.
+  const pick = role && usable(role) ? role : choices.find((c) => c === 'staff' && usable(c)) ?? choices.find(usable) ?? null
   const [error, setError] = useState<{ text: string; field?: 'email' } | null>(null)
   const [pending, start] = useTransition()
   if (!choices.length) return null

@@ -6732,11 +6732,11 @@ do $$ declare i uuid; r uuid; t uuid; begin
   r := app_partner_request_send('10300000-0000-0000-0000-0000000000f1', 'po@p103.test');
   if (select partner_id from partner_requests where id = r) is not null then raise exception 'FAIL: 103 a request names its partner before an answer'; end if;
   -- Another partner, and a Lead of the right partner, see nothing and answer nothing.
-  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f5')) then raise exception 'FAIL: 103 another partner sees the request'; end if;
-  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f4')) then raise exception 'FAIL: 103 a Lead sees the request'; end if;
+  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f5', null, null)) then raise exception 'FAIL: 103 another partner sees the request'; end if;
+  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f4', null, null)) then raise exception 'FAIL: 103 a Lead sees the request'; end if;
   begin perform app_partner_answer_request('10300000-0000-0000-0000-0000000000f5', null, null, r, true); raise exception 'FAIL: 103 another partner accepted';
   exception when others then if sqlerrm <> 'no_request' then raise; end if; end;
-  if (select count(*) from app_partner_requests('10300000-0000-0000-0000-0000000000f3')) <> 1 then raise exception 'FAIL: 103 the partner owner does not see it'; end if;
+  if (select count(*) from app_partner_requests('10300000-0000-0000-0000-0000000000f3', null, null)) <> 1 then raise exception 'FAIL: 103 the partner owner does not see it'; end if;
   t := app_partner_answer_request('10300000-0000-0000-0000-0000000000f3', null, null, r, true);
   if t is distinct from '10300000-0000-0000-0000-0000000000a1' then raise exception 'FAIL: 103 accept returned another store'; end if;
 end $$;
