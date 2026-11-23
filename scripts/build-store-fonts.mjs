@@ -23,9 +23,20 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(join(ROOT, 'package.json'))
-const loader = require('next/dist/compiled/@next/font/dist/local/loader.js').default
-const nextFontPostcss = require('next/dist/build/webpack/loaders/next-font-loader/postcss-next-font.js').default
-const postcss = require('postcss')
+// next/font's internals (Next 15.5): its local loader and its postcss plugin, the two steps next-font-loader runs.
+let loader, nextFontPostcss, postcss
+try {
+  loader = require('next/dist/compiled/@next/font/dist/local/loader.js').default
+  nextFontPostcss = require('next/dist/build/webpack/loaders/next-font-loader/postcss-next-font.js').default
+  postcss = require('postcss')
+  if (typeof loader !== 'function' || typeof nextFontPostcss !== 'function') throw new Error('not functions')
+} catch (e) {
+  console.error(`store-fonts: next/font's loader moved in this Next (${require('next/package.json').version}): ${e instanceof Error ? e.message.split('\n')[0] : e}.\n` +
+    '  This script reads Next 15.5\'s internal files. Point it at their new paths, or put the eight faces back as localFont() calls\n' +
+    '  in src/components/shop-preview/fonts.ts (their options are below) and drop the generated stylesheet\n' +
+    '  (docs/plans/2026-11-23-page-weight.md § After the release).')
+  process.exit(1)
+}
 
 const DIR = 'src/components/shop-preview' // where the faces' paths are resolved from, as fonts.ts did
 const OUT = join(DIR, 'store-fonts.css')
