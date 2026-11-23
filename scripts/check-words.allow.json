@@ -262,5 +262,11 @@
     "rule": "W2",
     "text": "Bust or chest: around the fullest part, tape level.",
     "why": "A store's own Size help words the agent proposes, as drawn in the approved Studio redraw (16 Nov); store content, not Frrata's words; a test-only fixture"
+  },
+  {
+    "file": "src/domains/studio/words.ts",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Studio state 8, the owner-approved states mockup (2026-11-23): the brand's own code site, Website in the glossary's exception (owner 2026-11-15), said to a partner"
   }
 ]

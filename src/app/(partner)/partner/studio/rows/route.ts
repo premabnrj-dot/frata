@@ -1,0 +1,31 @@
+import { after, NextResponse } from 'next/server'
+import { requireStudio } from '@/lib/studio/with-studio'
+import { studioChat } from '@/lib/queries/studio'
+import { pollAdvance } from '@/lib/studio/sessions'
+import { errName } from '@/lib/log'
+
+// Studio's chat poll (plan docs/plans/2026-11-22-v3a-runtime.md § Advance, R7): the person's own chat after a keyset,
+// private and never stored; then, after the answer, their own open turn advanced (no id from the request: the turn is
+// read under their bind; skipped when an advance read it in the last 5 s). maxDuration 30: an answer send needs 15 s of
+// room after a read (the plan's 10 s could never answer a round; Deviations).
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
+const NO_STORE = { 'Cache-Control': 'private, no-store' }
+
+export async function GET(request: Request) {
+  const auth = await requireStudio()
+  if (!auth.ok) return NextResponse.json({ closed: true }, { status: 403, headers: NO_STORE })
+  const raw = new URL(request.url).searchParams.get('after')
+  const after = raw && /^\d{1,15}$/.test(raw) ? Number(raw) : null
+  try {
+    const chat = await studioChat(auth, after)
+    if (chat.turn?.state === 'running' || chat.turn?.state === 'sending') after_(() => pollAdvance(auth))
+    return NextResponse.json(chat, { headers: NO_STORE })
+  } catch (err) {
+    console.error('[studio] rows', errName(err))
+    return NextResponse.json({ error: 'unavailable' }, { status: 503, headers: NO_STORE })
+  }
+}
+
+const after_ = (work: () => Promise<void>) => { try { after(work) } catch { /* not in a request */ } }

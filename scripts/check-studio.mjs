@@ -72,7 +72,7 @@ const IMPORTERS = {
   'src/lib/studio/advance': ['src/app/api/cron/studio/route.ts', 'src/lib/studio/sessions.ts'],
   // Its cron side ends and cleans sessions with no person's bind (tenancy audit of R6, M): the Studio actions (the
   // person's own session, under withStudio) and the cron route only.
-  'src/lib/studio/sessions': ['src/app/(partner)/partner/studio/actions.ts', 'src/app/api/cron/studio/route.ts'],
+  'src/lib/studio/sessions': ['src/app/(partner)/partner/studio/actions.ts', 'src/app/(partner)/partner/studio/rows/route.ts', 'src/app/api/cron/studio/route.ts'],
   // asTurn and its bind step (withTurnBound) are reached only through this module: the advance, and the tools, which
   // only ever get the turn asTurn hands them (their exemption is this module's only).
   'src/lib/studio/as-turn': ['src/lib/studio/advance.ts'],

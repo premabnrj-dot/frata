@@ -206,6 +206,19 @@ export async function stop(auth: StudioOk, rt: StudioRuntime = managedRuntime): 
   return { ok: ended }
 }
 
+/** The chat's poll (src/app/(partner)/partner/studio/rows/route.ts, in after()): the person's own open turn, read under
+ *  their bind, advanced; skipped when an advance read it in the last 5 s (the lease statement checks, in the database). */
+export async function pollAdvance(auth: StudioOk, rt: StudioRuntime = managedRuntime): Promise<void> {
+  if (STUDIO_OPEN !== 'staff') return
+  const open = await withStudio(auth, (tx) => tx.select({ id: studioTurns.id }).from(studioTurns)
+    .innerJoin(studioSessions, and(eq(studioSessions.id, studioTurns.sessionId), eq(studioSessions.tenantId, studioTurns.tenantId)))
+    .where(and(eq(studioTurns.tenantId, auth.tenantId), eq(studioSessions.userId, auth.userId), isNull(studioSessions.endedAt),
+      isNull(studioTurns.endedAt), isNull(studioTurns.pausedAt), isNull(studioTurns.failedAt))).limit(1)).catch(() => [])
+  const turn = open[0]
+  if (!turn) return
+  await advance({ tenantId: auth.tenantId, turnId: turn.id }, { runtime: rt, minGapMs: 5_000, deadline: Date.now() + 25_000 }).catch((e) => console.error('[studio] poll', errName(e)))
+}
+
 // ── The cron's side: ids from app_studio_due only, each step in the session's own store transaction ─────────────────
 
 /** Ends a session for a reason the cron decides (no bind; its open turn settles at most its reserve). */

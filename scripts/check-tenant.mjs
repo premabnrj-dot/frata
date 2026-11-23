@@ -177,9 +177,10 @@ for (const file of walk('src')) {
   if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts). The one
+    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts); Studio's
+    // through withStudio (withTenant plus the database's partner bind, src/lib/studio/with-studio.ts). The one
     // pre-tenant query file: which shop a storefront key names (ADR-0018), through the definer, cached.
-    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant( or withActor(`)
+    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(|\bwithStudio\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant(, withActor( or withStudio(`)
   }
 }
 
