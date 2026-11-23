@@ -41,6 +41,12 @@ export async function deviceCodeGive(p: PartnerSession, codeHash: string, challe
   return rows[0]!.r
 }
 
+/** Give key while passkeys are off (drizzle/0171): the approval without a passkey; refused ("no_challenge") while on. */
+export async function deviceCodeGiveOff(p: PartnerSession, codeHash: string, netHash: string | null, mine: boolean): Promise<string> {
+  const rows = await db().execute<{ r: string }>(sql`select app_device_code_give_off(${p.userId}::uuid, ${p.sessionId}::uuid, ${p.stepup}, ${codeHash}, ${netHash}, ${mine}) as r`)
+  return rows[0]!.r
+}
+
 export type DeviceClaim = { state: 'pending' } | { state: 'approved'; tenantId: string; userId: string; role: string; email: string }
 /** The CLI's poll: pending, or the approved sign-in claimed ONCE (with the person as a member now), or null. */
 export async function deviceCodeClaim(deviceHash: string): Promise<DeviceClaim | null> {

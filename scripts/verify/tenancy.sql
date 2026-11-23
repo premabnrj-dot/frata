@@ -5914,6 +5914,22 @@ begin
   if (public.app_passkeys_state()->>'off')::boolean is not true or public.app_passkeys_state()->>'by' <> 'admin2@frata.test'
     then raise exception 'FAIL: 88b the state does not say who turned passkeys off'; end if;
   if (select prosrc from pg_proc where proname = 'app_studio_proved') !~ 'app_passkeys_off' then raise exception 'FAIL: 88b Studio ignores the switch'; end if;
+  -- Give key while off (§ 81's store and people): the Partner owner gives a key with no passkey and no step-up, once;
+  -- another network still needs "This is my computer"; a Builder still gets nothing; the store's audit says passkeys off.
+  perform public.app_device_code_start(repeat('a', 62) || '8b', repeat('b', 62) || '8b', 'proof-e81', repeat('9', 64));
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f3', 'e8100000-0000-0000-0000-0000000000d3', null, repeat('b', 62) || '8b', repeat('9', 64), true);
+    raise exception 'FAIL: 88b a Builder gave a key while passkeys are off';
+  exception when others then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('8', 64), false);
+    raise exception 'FAIL: 88b a code from another network given without This is my computer';
+  exception when others then if sqlerrm <> 'not_mine' then raise; end if; end;
+  if public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('9', 64), false) <> 'Proof E81'
+    then raise exception 'FAIL: 88b the Partner owner could not give a key while passkeys are off'; end if;
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('9', 64), false);
+    raise exception 'FAIL: 88b a code given twice while passkeys are off';
+  exception when others then if sqlerrm <> 'not_found' then raise; end if; end;
+  if not exists (select 1 from public.audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'build_key.device_confirmed' and detail->>'passkeys' = 'off')
+    then raise exception 'FAIL: 88b Give key while off left no audit row saying so'; end if;
   if public.app_admin_passkeys_set(adm, gen_random_uuid(), null, false) is not false then raise exception 'FAIL: 88b an Admin could not turn passkeys on'; end if;
   if public.app_passkeys_off() then raise exception 'FAIL: 88b passkeys still off after an Admin turned them on'; end if;
   begin perform public.app_device_code_give_off(adm, s, null, 'x', null, true); raise exception 'FAIL: 88b Give key without a passkey while passkeys are on';
@@ -6421,6 +6437,17 @@ do $$ declare t uuid; begin
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs past its staff check'; end if;
   update staff_stepups set expires_at = now() + interval '1 hour' where user_id = 'a9100000-0000-0000-0000-000000000002';
   if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
+  -- A turn opened while passkeys were off from Admin (0171) holds no step-up: it runs only while they stay off, and ends
+  -- at its next check once an Admin turns them on (orchestrator 2026-11-23: "that is the right direction").
+  create temp table k91 on commit drop as select turn_id, staff_stepup_id, partner_stepup_id from studio_turn_keys where turn_id = t;
+  update studio_turn_keys set staff_stepup_id = null, partner_stepup_id = null where turn_id = t;
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn with no step-up runs while passkeys are on'; end if;
+  insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', null, 'proof', 'proof 91 off from Admin');
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn opened while passkeys are off does not run'; end if;
+  delete from platform_switches where key = 'passkeys_off';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn opened while off still runs once passkeys are on'; end if;
+  update studio_turn_keys x set staff_stepup_id = k.staff_stepup_id, partner_stepup_id = k.partner_stepup_id from k91 k where x.turn_id = k.turn_id;
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the turn''s step-ups did not come back'; end if;
   -- Sign-out deletes the partner step-up (app_partner_pk_signout): the turn's person goes with it, switch or not.
   insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 day', 'proof', 'proof 91');
   delete from partner_stepups where user_id = 'a9100000-0000-0000-0000-000000000002';
