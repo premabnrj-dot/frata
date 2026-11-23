@@ -219,3 +219,16 @@ Part of `frata-integrations` (SKILL.md holds the dating rule and the rules for e
   windows [V developer.android.com, undated]. Instagram's in-app engine undocumented by Meta [U]; WhatsApp iOS in-app browser
   in development [S MacRumors 2026-10-20]. WebKit: same-site frames are first-party; 7-day deletion only for JS-made cookies
   and storage; CNAME-cloaked cookies capped at 7 days (top-navigation over-cap fixed in Safari 27.2, 2026-10-26) [V].
+
+## Reading vendors' bills by API — checked 2026-11-23 (`integration-researcher`; plan `docs/specs/2026-11-23-costs-autofill.md`)
+
+- **Supabase** [V-undated, supabase/supabase docs repo, master, read 2026-11-23; the live api.supabase.com spec could not be read]: no organisation-level
+  invoice, billing or cost endpoint in the Management API spec (only `/v1/projects/{ref}/billing/addons`); usage endpoints return request counts,
+  not money. Invoices are on the organisation's billing page and by email, **in USD, card only**; fixed fees for the current cycle in advance plus
+  usage for the previous cycle in arrears, the cycle starting on the organisation's creation day. Pro $25 a month with $10 of Compute Credits; spend cap
+  is Pro only. Tax only where Supabase is registered to collect it; GST invoices for India: not stated [U].
+- **Vercel** [not re-read 2026-11-23: vercel.com did not resolve in the research session; the lines in § Infrastructure usage stand]: no source
+  found that the sum of `/v1/billing/charges` equals the invoice (platform fee, credit, on-demand, tax), for its latency, or for an invoice list API [U].
+- **A USD charge on an Indian card** [U]: no current primary source found for the forex markup, GST on it or its timing; read the issuing bank's
+  current MITC before booking the rupee figure from an estimate. The recorded rupees are therefore always the card statement's.
+
