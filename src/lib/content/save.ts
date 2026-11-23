@@ -236,6 +236,9 @@ export async function decideBrand(input: unknown): Promise<BrandResult> {
   const parsed = DecideInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: NOTHING }
   const { id, decision, kind } = parsed.data
+  // A support visit is refused before asMember would audit it as an answer (as saveCheckout does).
+  const me = await requireMember(CAN_MANAGE)
+  if (me.ok && me.membership.supportSessionId) return { ok: false, error: BRAND_REFUSAL.support }
   return write({ action: `brand.${decision}`, roles: CAN_MANAGE, limit: LIMITS.brandSave }, async (tx, auth) => {
     if (!decidesBrand(auth.membership.role, auth.membership.supportSessionId)) return { error: auth.membership.supportSessionId ? BRAND_REFUSAL.support : 'Only the owner or a Manager can answer this change. Nothing was changed.' }
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
