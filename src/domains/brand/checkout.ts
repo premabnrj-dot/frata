@@ -186,7 +186,7 @@ export function designChangeRows(a: CheckoutDesign, b: CheckoutDesign, shopName:
     else if (f === 'trust') {
       const added = b.trust.filter((k) => !a.trust.includes(k)), gone = a.trust.filter((k) => !b.trust.includes(k))
       const said = [added.length ? `${names(added)} added` : '', gone.length ? `${names(gone)} removed` : ''].filter(Boolean)
-      rows.push(['Trust blocks', said.length ? said.join(' · ') : 'Order changed'])
+      rows.push(['Trust blocks', said.length ? said.join(' · ') : 'Blocks reordered'])
     } else if (f === 'heading') rows.push(['Checkout heading', `${q(a.heading, '“Checkout”')} → ${q(b.heading, '“Checkout”')}`])
     else rows.push(['Thank-you line', `${q(a.thanks, 'None')} → ${q(b.thanks, 'None')}`])
   }

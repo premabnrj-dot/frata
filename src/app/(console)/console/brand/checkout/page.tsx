@@ -48,6 +48,7 @@ export default async function BrandCheckoutPage() {
     shopSettingsFor(tenantId),
   ]).catch((err: unknown) => { console.error('[brand checkout page]', err instanceof Error ? err.name : err); return [null, [], null] as const })
   if (!page || !shop) return <Panel title="We couldn’t load this screen" action={<Link href="/console/brand/checkout" className={button({ variant: 'secondary' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel>
+  // Staff read the page only while a partner's change waits (four-screens § 4); refused, nothing loaded above is drawn.
   if (!builds && !page.waiting) return refused
   if (!page.brand) return <Panel title="Your store’s look is in Look" action={<Link href="/console/look" className={button({ variant: 'secondary' })}>Open Look</Link>} />
   const saver = brandSaver(role, supportSessionId, page.open)

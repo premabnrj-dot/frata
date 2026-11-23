@@ -95,7 +95,7 @@ describe('the owner’s review card rows (four-screens § 4)', () => {
       ['“Back to Kesar” link', 'On → Off'], ['Policy links', 'One row → Two rows'], ['Trust blocks', '“Pay on delivery”, “Secure payment by Razorpay” removed'],
       ['Checkout heading', '“Checkout” → “Almost yours”'], ['Thank-you line', 'None → “Hi”'],
     ])
-    expect(designChangeRows(drawn, { ...drawn, trust: [...drawn.trust].reverse() }, 'K')).toEqual([['Trust blocks', 'Order changed']])
+    expect(designChangeRows(drawn, { ...drawn, trust: [...drawn.trust].reverse() }, 'K')).toEqual([['Trust blocks', 'Blocks reordered']])
     expect(designChangeRows(drawn, drawn, 'K')).toEqual([])
   })
 })

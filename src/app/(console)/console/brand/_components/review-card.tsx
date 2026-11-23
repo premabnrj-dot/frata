@@ -5,7 +5,7 @@ import { Facts } from '@/components/data/facts'
 import { Badge } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/segmented'
 import { useNow } from '@/components/time/now'
-import { momentInLine } from '@/lib/format-date'
+import { momentIN } from '@/lib/format-date'
 import { BrandDecision } from '../../notices/brand-decision'
 
 // =============================================================================
@@ -25,11 +25,11 @@ export function ReviewCard({ proposer, proposedAt, rows, answer, onDone }: {
   onDone?: () => void
 }) {
   const now = useNow()
-  const sent: [string, React.ReactNode] = ['Sent', `${proposer ?? 'Your partner'} · ${momentInLine(proposedAt, now)}`]
+  const sent: [string, React.ReactNode] = ['Sent', `${proposer ?? 'Your partner'} · ${momentIN(proposedAt, now)}`]
   return (
     <Section className="border-warn-mark" title={<span className="flex flex-wrap items-center gap-2">Your partner’s change<Badge tone="warn">{answer ? 'Needs you' : 'Waiting for the owner'}</Badge></span>}>
       <Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={[sent, ...rows]} />
-      {answer && <BrandDecision id={answer.id} kind={answer.kind} onDone={onDone} />}
+      {answer && <BrandDecision id={answer.id} kind={answer.kind} onDone={onDone} className="flex flex-wrap gap-2" />}
     </Section>
   )
 }

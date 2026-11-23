@@ -224,7 +224,7 @@ const DECIDER_WORDS: Record<string, string> = { owner: 'the owner', admin: 'a Ma
 async function settledWords(tx: Tx, t: string, id: string, me: string, now: Date): Promise<string> {
   const [p] = await tx.select({ decision: brandProposals.decision, by: brandProposals.decidedBy, at: brandProposals.decidedAt }).from(brandProposals)
     .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id)))
-  if (!p?.at) return NOTHING
+  if (!p?.at) return 'That change is gone. Reload to see the page.'
   if (p.decision === 'replaced') return 'Your partner sent a newer change.'
   const [m] = p.by && p.by !== me ? await tx.select({ role: members.role }).from(members).where(and(eq(members.tenantId, t), eq(members.userId, p.by))) : []
   const who = p.by === me ? 'you' : (m && DECIDER_WORDS[m.role]) || 'someone else'

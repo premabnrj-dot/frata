@@ -115,6 +115,9 @@ export function CheckoutEditor({ mode, live, version: startVersion, waiting, dec
   // Live | Waiting (four-screens § 4), for anyone who sees a waiting change; the form's own edits win while unsaved.
   const [compare, setCompare] = useState<Version>('waiting')
   const shown = previewed({ live, draft, waiting: waiting?.design ?? null, dirty, compare })
+  // The first unsaved edit takes the preview over and hides the switch: say so once (design-system review).
+  const hasWaiting = !!waiting
+  useEffect(() => { if (hasWaiting && dirty) announce('The preview shows your edits.') }, [hasWaiting, dirty])
   const switcher = waiting && !dirty ? <VersionSwitch value={compare} onPick={setCompare} /> : null
   const cards = edit ? <>
     <Section title="Header">
