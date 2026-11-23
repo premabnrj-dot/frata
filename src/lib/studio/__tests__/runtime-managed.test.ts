@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-// @ts-expect-error — a test-only .mjs fake with no types
 import { startFakeAnthropic } from '../../../../e2e/fakes/anthropic.mjs'
 import type { StudioRuntime } from '../runtime'
 
