@@ -98,6 +98,9 @@ export default {
     await t.step('1a: both checks made, on another store: Open the test store, then Studio', async () => {
       const [{ id: other }] = await db`insert into tenants (slug, name) values (${'e2e-studio-other-' + Date.now().toString(36)}, 'Other shop') returning id`
       await db`insert into members (tenant_id, user_id, role) values (${other}, ${P.id}, 'staff')`
+      // One partner store, as drawn: earlier flows link this partner to their stores too (several read state 1).
+      const paused = await db`update partner_links l set removed_at = now() from partners p
+        where p.id = l.partner_id and p.user_id = ${P.id} and l.tenant_id <> ${S} and l.removed_at is null returning l.tenant_id`
       try {
         const { c, q } = await entry({}, other)
         await q.getByRole('heading', { name: 'Studio runs on Kesar test' }).waitFor()
@@ -107,7 +110,10 @@ export default {
         await q.waitForURL(/\/partner\/studio$/)
         await q.getByText('No requests yet').waitFor()
         await c.close()
-      } finally { await db`delete from members where tenant_id = ${other}`.catch(() => {}); await db`delete from tenants where id = ${other}`.catch(() => {}) }
+      } finally {
+        if (paused.length) await db`update partner_links set removed_at = null where tenant_id in ${db(paused.map((r) => r.tenant_id))} and removed_at > now() - interval '10 minutes'`
+        await db`delete from members where tenant_id = ${other}`.catch(() => {}); await db`delete from tenants where id = ${other}`.catch(() => {})
+      }
     })
     const { ctx, p } = await open({ width: 1280, height: 860 })
     const chat = p.getByRole('complementary', { name: 'Chat' }), insp = p.getByRole('complementary', { name: 'Inspector' })
