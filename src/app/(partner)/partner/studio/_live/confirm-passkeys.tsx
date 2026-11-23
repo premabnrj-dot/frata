@@ -14,13 +14,20 @@ export function ConfirmPasskeys({ staff, partner }: { staff: boolean; partner: b
   const [busy, setBusy] = useState(false)
   const go = async () => {
     setBusy(true); toast.dismiss()
-    const { passkeyClient } = await import('@/components/passkeys/passkey-client')
-    for (const endpoint of [...(staff ? [] : ['/admin/passkey' as const]), ...(partner ? [] : ['/partner/passkey' as const])]) {
-      const r = await passkeyClient(endpoint).confirmPasskey()
-      if (!r.ok) { toast.error(r.error); break }
+    try {
+      const { passkeyClient } = await import('@/components/passkeys/passkey-client')
+      const steps = [...(staff ? [] : [['/admin/passkey', 'Staff passkey confirmed.'] as const]), ...(partner ? [] : [['/partner/passkey', 'Partner passkey confirmed.'] as const])]
+      for (const [endpoint, done] of steps) {
+        const r = await passkeyClient(endpoint).confirmPasskey()
+        if (!r.ok) { toast.error(r.error); break }
+        toast.ok(done) // read out: the list below changes on refresh
+      }
+    } catch {
+      toast.error('Not confirmed. Try again.')
+    } finally {
+      router.refresh()
+      setBusy(false)
     }
-    router.refresh()
-    setBusy(false)
   }
   return <Button size="sm" busy={busy} onClick={go}>{staff ? 'Confirm partner passkey' : 'Confirm staff passkey'}</Button>
 }

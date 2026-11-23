@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
 import { Panel } from '@/components/ui/panel'
+import { Submit } from '@/components/ui/submit'
 import { Toaster } from '@/components/ui/toast'
 import { STUDIO_WORDS as W } from '@/domains/studio/words'
 import { switchStoreAction } from '@/app/choose/actions'
@@ -38,18 +39,19 @@ function Closed() {
 function Step({ step }: { step: StudioStep }) {
   const frame = (panel: React.ReactNode) => <Toaster><main data-neel="" className="grid min-h-dvh place-items-center bg-background p-4 text-sm text-foreground">{panel}</main></Toaster>
   if (step.kind === 'store') {
+    // Several partner stores: today's card, whose Open Clients lists them (a Deviation: the drawing shows one store).
     const one = step.stores.length === 1 ? step.stores[0]! : null
     if (!one) return <Closed />
     return frame(<Panel title={`Studio runs on ${one.name}`} action={
       <form action={switchStoreAction}>
         <input type="hidden" name="tenantId" value={one.tenantId} /><input type="hidden" name="to" value="/partner/studio" />
-        <button type="submit" className={button({ size: 'sm' })}>Open {one.name}</button>
+        <Submit size="sm">Open {one.name}</Submit>
       </form>} />)
   }
   if (step.kind === 'staff_passkey') return frame(<Panel title="Add a staff passkey" action={<Link href="/admin" className={button({ size: 'sm' })}>Add staff passkey</Link>} />)
   return frame(
     <Panel title="Confirm your passkeys" action={<ConfirmPasskeys staff={step.staff} partner={step.partner} />}>
-      <ol className="grid list-decimal gap-1.5 pl-5 text-muted-foreground">
+      <ol className="grid list-decimal gap-1.5 pl-5 text-left text-muted-foreground">
         <li>{step.staff ? 'Staff passkey: Done' : 'Staff passkey'}</li>
         <li>{step.partner ? 'Partner passkey: Done' : 'Partner passkey'}</li>
       </ol>
