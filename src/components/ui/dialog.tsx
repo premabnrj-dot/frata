@@ -50,7 +50,6 @@ export function Dialog({ open, onClose, onDismiss, title, description, children,
     if (open && !d.open) { d.showModal(); d.querySelector<HTMLElement>('[data-autofocus]')?.focus() }
     if (!open && d.open) d.close()
   }, [open])
-  const head = <h2 id={titleId} className="flex-1 text-section font-semibold">{title}</h2>
   return (
     <dialog ref={ref} data-dialog aria-labelledby={titleId} aria-describedby={description ? descId : undefined}
       onCancel={(e) => { e.preventDefault(); onClose() }}
@@ -58,7 +57,7 @@ export function Dialog({ open, onClose, onDismiss, title, description, children,
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] text-left rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
       <div data-dialog-body="" className="grid gap-4 p-5">
-        {onDismiss ? <div className="flex items-center gap-3">{head}<button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button></div> : head}
+        <div className="flex items-center gap-3"><h2 id={titleId} className="flex-1 text-section font-semibold">{title}</h2>{onDismiss && <button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button>}</div>
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}
         <DialogError error={error} />

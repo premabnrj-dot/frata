@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
+import dynamic from 'next/dynamic'
 import { FIELD } from '@/components/ui/field'
 import { Icon } from '@/components/icons/icon'
 import { Menu } from '@/components/ui/menu'
@@ -17,6 +17,8 @@ import { MENU_LIMITS, type MenuItem } from '@/domains/themes/site'
 import { saveMenuAction, undoContentAction } from '../actions'
 import { LinkSelect, type Target } from './link-select'
 import { refused } from './refused'
+// Closed until an edit is asked for: loaded then, so Content's first load stays inside its pin (O1·8).
+const Dialog = dynamic(() => import('@/components/ui/dialog').then((m) => m.Dialog))
 
 // =============================================================================
 // Content › Menus (final mockup § Menus): Main (3 levels), Footer (1), Phone tabs (≤ 5, each with an icon; shown when

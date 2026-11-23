@@ -5,9 +5,11 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import { createHash } from 'node:crypto'
 import { CONSOLE, PORTS, SHOP_DOMAIN, USERS, signedIn } from '../lib.mjs'
 
 const SLUG = 'noor-threads-e2e'
+const ANON_SLUG = 'noor-anon-e2e' // the signed-out path's store (O1·9)
 
 export default {
   name: 'signup',
@@ -16,7 +18,7 @@ export default {
     const F = USERS.founder
     await db`insert into auth.users (id, email, email_confirmed_at) values (${F.id}, ${F.email}, now()) on conflict (id) do nothing`
     const cleanup = async () => {
-      const ts = await db`select id from tenants where slug = ${SLUG}`
+      const ts = await db`select id from tenants where slug in (${SLUG}, ${ANON_SLUG})`
       for (const { id } of ts) await db.begin(async (x) => {
         await x`set local session_replication_role = replica`
         await x`delete from signup_codes where user_id = ${F.id}`
@@ -45,6 +47,117 @@ export default {
         assert.equal(await p.getByRole('button', { name: 'Use this name' }).isDisabled(), true, 'a taken address waits')
         await shot('name-taken')
       })
+      // O1·9: signed out, the name comes first; email and the code on one screen; the name survives a reload, never in
+      // the URL or localStorage. The first store is removed so the founder can make this one.
+      await cleanup()
+      const anon = await t.browser.newContext({ viewport: { width: 390, height: 844 } })
+      try {
+        const a = await anon.newPage(); a.setDefaultTimeout(10_000); a.on('pageerror', (e) => t.errors.push(e.message))
+        const urls = []; a.on('framenavigated', (f) => { if (f === a.mainFrame()) urls.push(f.url()) })
+        await t.step('O1·9 signed out: the name first, then email and code; the name is kept, never in the URL', async () => {
+          await a.goto(CONSOLE + '/start')
+          await a.getByRole('heading', { name: 'What is your brand called?' }).waitFor()
+          await a.getByRole('img', { name: 'Step 1 of 5' }).waitFor()
+          await a.getByRole('link', { name: 'Sign in' }).waitFor()
+          await a.getByText('Stuck?').waitFor()
+          await a.getByLabel('Brand name').fill('Noor Anon')
+          await a.getByRole('button', { name: 'Change web address' }).click()
+          await a.getByRole('dialog', { name: 'Your web address' }).getByLabel('Web address').fill(ANON_SLUG)
+          await a.getByRole('dialog').getByText('Available', { exact: true }).waitFor()
+          await a.getByRole('dialog').getByRole('button', { name: 'Use this address' }).click()
+          await a.getByRole('button', { name: 'Use this name' }).click()
+          await a.getByRole('heading', { name: 'Your email' }).waitFor()
+          await a.getByRole('img', { name: 'Step 2 of 5' }).waitFor()
+          await a.screenshot({ path: t.out('email-390'), fullPage: true })
+          await a.getByLabel('Email', { exact: true }).fill(F.email)
+          await a.getByRole('button', { name: 'Send code' }).click()
+          await a.getByRole('group', { name: 'Code from your email' }).waitFor()
+          await a.getByRole('button', { name: /^Send again in \d+ s$/ }).waitFor()
+          const asked = await (await fetch(`http://localhost:${PORTS.auth}/_test/otp`)).json()
+          assert.ok(asked.includes(F.email), 'the code was emailed')
+          for (const [i, d] of [...'135791'].entries()) await a.getByLabel(`Digit ${i + 1}`).fill(d)
+          await a.getByText('That code is wrong or has expired. Check the newest email, or ask for another.').waitFor()
+          assert.equal(await a.getByLabel('Digit 1').inputValue(), '', 'the boxes are cleared')
+          await a.screenshot({ path: t.out('email-wrong-390'), fullPage: true })
+          await a.setViewportSize({ width: 1280, height: 800 }); await a.screenshot({ path: t.out('email-wrong-1280'), fullPage: true }); await a.setViewportSize({ width: 390, height: 844 })
+          for (const [i, d] of [...'246810'].entries()) await a.getByLabel(`Digit ${i + 1}`).fill(d)
+          await a.getByRole('heading', { name: 'Choose your plan' }).waitFor()
+          await a.getByRole('img', { name: 'Step 3 of 5' }).waitFor() // the dots do not recount once signed in
+          assert.equal(await a.locator('.su-store-nm').textContent(), 'Noor Anon', 'the name is still in the preview')
+          await a.reload()
+          await a.locator('.su-store-nm', { hasText: 'Noor Anon' }).waitFor()
+          assert.ok(urls.every((u) => !/noor/i.test(u)), `the name never reaches the URL: ${urls.join(' ')}`)
+          assert.equal(await a.evaluate(() => localStorage.length), 0, 'nothing in localStorage')
+        })
+        await t.step('O1·9 signed out: on to Create store and the console; the store records "/start → created"', async () => {
+          // A reload starts the questions again with the answers kept: the name step, filled.
+          assert.equal(await a.getByLabel('Brand name').inputValue(), 'Noor Anon')
+          await a.getByRole('button', { name: 'Use this name' }).click()
+          await a.getByRole('heading', { name: 'Choose your plan' }).waitFor()
+          await a.getByRole('button', { name: 'Continue' }).click()
+          await a.getByLabel('Mobile number').fill('9829043212')
+          await a.getByRole('button', { name: 'Send code' }).click()
+          await a.getByLabel('Code from WhatsApp').waitFor()
+          const sent = await (await fetch(`http://localhost:${PORTS.meta}/_test/code?to=919829043212`)).json()
+          await a.getByLabel('Code from WhatsApp').fill(sent.code)
+          await a.getByRole('button', { name: 'Verify' }).click()
+          await a.getByRole('button', { name: 'Create store' }).click()
+          await a.getByRole('heading', { name: 'Noor Anon is ready to set up' }).waitFor()
+          await a.getByRole('link', { name: 'Set up store' }).click()
+          await a.waitForURL(/\/console$/)
+          const [row] = await db`select t.id, s.pickup_pincode from tenants t join shop_settings s on s.tenant_id = t.id where t.slug = ${ANON_SLUG}`
+          assert.ok(row, 'the store exists'); assert.equal(row.pickup_pincode, null)
+          assert.equal(await a.evaluate(() => sessionStorage.getItem('frrata:signup')), null, 'the answers are cleared after creation')
+        })
+      } finally { await anon.close() }
+
+      await t.step('O1·9: an owner signs in from the email step and lands on the console', async () => {
+        const o = await t.browser.newContext({ viewport: { width: 390, height: 844 } })
+        try {
+          const a = await o.newPage(); a.setDefaultTimeout(10_000)
+          await a.goto(CONSOLE + '/start')
+          await a.getByLabel('Brand name').fill('Riya Again')
+          await a.getByText('Available', { exact: true }).waitFor()
+          await a.getByRole('button', { name: 'Use this name' }).click()
+          await a.getByLabel('Email', { exact: true }).fill(USERS.owner.email)
+          await a.getByRole('button', { name: 'Send code' }).click()
+          for (const [i, d] of [...'246810'].entries()) await a.getByLabel(`Digit ${i + 1}`).fill(d)
+          await a.waitForURL(/\/console$/)
+        } finally { await o.close() }
+      })
+
+      await t.step('O1·9: with the check limited, nothing is said and the name goes on; creation still refuses a taken address', async () => {
+        const windowMs = 600_000, start = new Date(Math.floor(Date.now() / windowMs) * windowMs)
+        const key = createHash('sha256').update('address_open:all:all').digest('hex')
+        await db`insert into rate_limits (key, window_start, n) values (${key}, ${start}, 3000) on conflict (key, window_start) do update set n = 3000`
+        await db`delete from members where tenant_id in (select id from tenants where slug = ${ANON_SLUG})` // the founder has no store again
+        try {
+          const ctx2 = await signedIn(t.browser, 'founder', { viewport: { width: 390, height: 844 } })
+          const a = await ctx2.newPage(); a.setDefaultTimeout(10_000)
+          await a.goto(CONSOLE + '/start')
+          // seeded kesar-studio: taken, but the limited check says nothing. Wait for its answer, not a time.
+          const answered = a.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/start')
+          await a.getByLabel('Brand name').fill('Kesar Studio')
+          await answered
+          assert.equal(await a.locator('#su-addr .badge').count(), 0, 'no chip while limited')
+          assert.equal(await a.getByRole('button', { name: 'Use this name' }).isEnabled(), true)
+          await a.getByRole('button', { name: 'Use this name' }).click()
+          await a.getByRole('button', { name: 'Continue' }).click()
+          await a.getByLabel('Mobile number').fill('9829043213')
+          await a.getByRole('button', { name: 'Send code' }).click()
+          await a.getByLabel('Code from WhatsApp').waitFor()
+          const sent = await (await fetch(`http://localhost:${PORTS.meta}/_test/code?to=919829043213`)).json()
+          await a.getByLabel('Code from WhatsApp').fill(sent.code)
+          await a.getByRole('button', { name: 'Verify' }).click()
+          await a.getByRole('button', { name: 'Create store' }).click()
+          await a.getByRole('heading', { name: 'What is your brand called?' }).waitFor()
+          await a.getByText('Someone just took that address. Try another.').waitFor()
+          assert.equal(await a.getByLabel('Brand name').inputValue(), 'Kesar Studio', 'the name is kept')
+          await ctx2.close()
+        } finally { await db`delete from rate_limits where key = ${key}` }
+      })
+      await cleanup() // the signed-in path below makes the founder's store again
+
       await t.step('a person with no shop makes one through /start and lands in the console as its owner', async () => {
         await p.getByLabel('Brand name').fill('Noor Threads')
         await p.locator('#su-addr').getByText(`noor-threads.${SHOP_DOMAIN}`, { exact: true }).waitFor()
@@ -153,6 +266,7 @@ export default {
         await p.goto(CONSOLE + '/console')
         await p.getByText('Store paused · no new orders').waitFor()
       })
+
     } finally {
       await cleanup()
     }

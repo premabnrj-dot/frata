@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
+import dynamic from 'next/dynamic'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { Switch } from '@/components/ui/switch'
@@ -21,6 +21,8 @@ import { Eye, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import type { PreviewKey } from '@/lib/queries/storefront-api'
 import type { Target } from './link-select'
+// Closed until an edit is asked for: loaded then, so Content's first load stays inside its pin (O1·8).
+const Dialog = dynamic(() => import('@/components/ui/dialog').then((m) => m.Dialog))
 
 // =============================================================================
 // Content › Pages (final mockup § Pages): About and the store's other pages (the FAQ has its own tab). A page's words

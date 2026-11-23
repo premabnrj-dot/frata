@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
+import dynamic from 'next/dynamic'
 import { FIELD } from '@/components/ui/field'
 import { Icon } from '@/components/icons/icon'
 import { useToast } from '@/components/ui/toast'
@@ -13,6 +13,8 @@ import { BOUND_QUESTION, type Bound } from '@/domains/policies/answers'
 import { MAX_FAQ, type FaqItem } from '@/domains/pages/templates'
 import { saveFaqAction, undoPageAction } from '../actions'
 import { refused } from './refused'
+// Closed until an edit is asked for: loaded then, so Content's first load stays inside its pin (O1·8).
+const Dialog = dynamic(() => import('@/components/ui/dialog').then((m) => m.Dialog))
 
 // =============================================================================
 // Content › FAQ (final mockup § FAQ): the questions, in order, moved with ↑ ↓; an answer from Settings is read-only

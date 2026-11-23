@@ -17,17 +17,20 @@ http.createServer((req, res) => {
     })
     return
   }
-  // POST /auth/v1/verify with a token hash (the email link, /auth/confirm): `e2e-<who>-<anything>` signs <who> in, once.
+  // POST /auth/v1/verify with a token hash (the email link, /auth/confirm): `e2e-<who>-<anything>` signs <who> in, once;
+  // with { email, token } (the 6-digit code): token 246810 signs in the USERS person with that email, anything else is refused.
   if (req.method === 'POST' && req.url.startsWith('/auth/v1/verify')) {
     let body = ''
     req.on('data', (c) => { body += c; if (body.length > 10_000) req.destroy() })
     req.on('end', () => {
-      let hash = ''
-      try { hash = String(JSON.parse(body).token_hash ?? '') } catch { /* not JSON */ }
-      const who = /^e2e-([a-z]+)-/.exec(hash)?.[1]
+      let hash = '', email = '', code = ''
+      try { const j = JSON.parse(body); hash = String(j.token_hash ?? ''); email = String(j.email ?? '').toLowerCase(); code = String(j.token ?? '') } catch { /* not JSON */ }
+      // The emailed 6-digit code (O1·9): { email, token } signs in the USERS person with that email when token is 246810.
+      const byCode = !hash && email ? Object.entries(USERS).find(([, x]) => x.email === email) : null
+      const who = byCode ? (code === '246810' ? byCode[0] : undefined) : /^e2e-([a-z]+)-/.exec(hash)?.[1]
       const u = who && USERS[who]
-      if (!u || usedHashes.has(hash)) { res.writeHead(403, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Email link is invalid or has expired' })) }
-      usedHashes.add(hash)
+      if (!u || (hash && usedHashes.has(hash))) { res.writeHead(403, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Email link is invalid or has expired' })) }
+      if (hash) usedHashes.add(hash)
       const exp = Math.floor(Date.now() / 1000) + 3600
       const token = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: u.id, who, role: 'authenticated', aud: 'authenticated', exp, session_id: crypto.randomUUID() })}.sig`
       const now = new Date().toISOString()

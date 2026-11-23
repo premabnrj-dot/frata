@@ -10,15 +10,17 @@ import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-erro
 import { useToast } from '@/components/ui/toast'
 import { slugFor } from '@/domains/signup/slug'
 import { ADDRESS_WORDS, addressUsable, signupSteps, stepForRefusal, stepNumber, type AddressState, type Moment, type Step } from '@/domains/signup/steps'
+import { STORE_KEY, readStoredSignup } from '@/domains/signup/stored'
+import { afterVerify } from '@/domains/access/email-code'
 import { createMyShop } from './actions'
 import { SellTiles } from './create-shop-form'
 import { StorePreview } from './_components/store-preview'
 import { useAddressCheck } from './_components/use-address-check'
 
 // Loaded when opened or reached, so the name step's first load stays small (plan O1·8, speed).
-const AddressDialog = dynamic(() => import('./_components/address-dialog').then((m) => m.AddressDialog))
-const WhatsappStep = dynamic(() => import('./_components/whatsapp-step').then((m) => m.WhatsappStep))
-const SignInFlow = dynamic(() => import('../login/sign-in-flow').then((m) => m.SignInFlow))
+const AddressDialog = dynamic(() => import('./_components/later').then((m) => m.AddressDialog))
+const WhatsappStep = dynamic(() => import('./_components/later').then((m) => m.WhatsappStep))
+const EmailStep = dynamic(() => import('./_components/later').then((m) => m.EmailStep))
 
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
 export type SignupPlan = { code: string; name: string; price: string; fee: string }
@@ -42,7 +44,9 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
 }) {
   const router = useRouter()
   const toast = useToast()
-  const steps = signupSteps({ askEmail, codeOn })
+  // The steps are fixed at the first paint: signing in on the email step re-renders this page signed in, and the dots
+  // must not recount mid-flow.
+  const [steps] = useState(() => signupSteps({ askEmail, codeOn }))
   const [moment, setMoment] = useState<Moment>('name')
   const [dir, setDir] = useState<'forward' | 'back'>('forward')
   const [name, setName] = useState('')
@@ -60,6 +64,24 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
   const changeRef = useRef<HTMLButtonElement>(null)
   useErrorSummary(error ? { [error.field]: error.text } : {}, { attempt, scope: root })
   const check = useAddressCheck(slug)
+
+  // The name and its address live in sessionStorage only (never the URL, never localStorage): read once after mount,
+  // checked as if a stranger wrote them; the first arrival is kept for "/start → created" (O1·10).
+  const arrivedAt = useRef<number | null>(null)
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    try {
+      const now = Date.now() // clock-ok: after mount
+      const back = readStoredSignup(window.sessionStorage.getItem(STORE_KEY), now)
+      if (back) { if (back.name) setName(back.name); if (back.slug) { setSlug(back.slug); setSlugEdited(back.slugEdited) } else if (back.name) setSlug(slugFor(back.name)) }
+      arrivedAt.current = back?.arrivedAt ?? now
+    } catch { arrivedAt.current = Date.now() } // clock-ok: after mount (private mode: the page only)
+    setRestored(true)
+  }, [])
+  useEffect(() => {
+    if (!restored) return
+    try { window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ name, slug, slugEdited, arrivedAt: arrivedAt.current })) } catch { /* private mode */ }
+  }, [restored, name, slug, slugEdited])
 
   const go = (to: Moment, d: 'forward' | 'back' = 'forward') => { setDir(d); setError(null); setMoment(to) }
   const next = (from: Step) => { const i = steps.indexOf(from); go(steps[i + 1] ?? 'making') }
@@ -92,6 +114,7 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
       return
     }
     if (r.ok) {
+      try { window.sessionStorage.removeItem(STORE_KEY) } catch { /* private mode */ }
       const left = (reduce ? 0 : MAKING_MS) - (Date.now() - started) // clock-ok: in a handler
       if (left > 0) await new Promise((done) => setTimeout(done, left))
       setMoment('done')
@@ -148,8 +171,12 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
             </form>
           )}
 
-          {/* Until O1·9 draws the email step: today's sign-in block in the question column. */}
-          {moment === 'email' && <div className="su-st"><SignInFlow intent="start" /></div>}
+          {moment === 'email' && <EmailStep onVerified={(to) => {
+            const how = afterVerify(to)
+            if (how === 'assign') { window.location.assign(to); return }
+            if (how === 'replace') { router.replace(to); return }
+            next('email'); router.refresh() // signed in now: the server reads the person; this page keeps its answers
+          }} />}
 
           {moment === 'plan' && (
             <form className="su-st" noValidate onSubmit={(e) => { e.preventDefault(); next('plan') }}>

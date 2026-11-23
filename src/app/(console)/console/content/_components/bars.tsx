@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
+import dynamic from 'next/dynamic'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { Menu } from '@/components/ui/menu'
@@ -16,6 +16,8 @@ import { BAR_SCHEMES, BAR_TEXT_MAX, MAX_BARS } from '@/domains/content/kinds'
 import { deleteBarAction, endBarAction, saveBarAction, undoContentAction } from '../actions'
 import { LinkSelect, type Target } from './link-select'
 import { refused } from './refused'
+// Closed until an edit is asked for: loaded then, so Content's first load stays inside its pin (O1·8).
+const Dialog = dynamic(() => import('@/components/ui/dialog').then((m) => m.Dialog))
 
 // =============================================================================
 // Content › Announcement (final mockup § Announcement): up to 3 bars with dates; a live offer shows first (read-only

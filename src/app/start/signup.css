@@ -101,3 +101,5 @@
 }
 @keyframes su-fade { from { opacity: 0; } }
 .su[data-step="making"] .su-sweep { animation: going-live 1300ms var(--ease-standard) forwards; }
+/* The code's six boxes as drawn (mockup `.code input`): the page's line colour, 44 × 52, 600 weight. */
+.su-codebox input { width: 44px; height: 52px; border-color: var(--border); border-radius: 8px; font-weight: 600; font-size: 20px; }
