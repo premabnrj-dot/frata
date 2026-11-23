@@ -14,8 +14,9 @@ import { settle } from '@/lib/settle'
 // comes back into view the shell asks GET /api/console/tenant which shop this
 // request is for; if it is not the shop the shell was drawn for, everything is
 // refreshed, twice (settle: Next 15.5 can drop a refresh that starts while the
-// move's response still streams; page weight 2026-11-23). Merchants' access does not change mid-session (choosing another
-// shop is a full page load), so they skip it.
+// move's response still streams; page weight 2026-11-23). Merchants' access
+// does not change mid-session (choosing another shop is a full page load), so
+// they skip it.
 // =============================================================================
 export function TenantCheck({ tenantId, staff }: { tenantId: string; staff: boolean }) {
   const router = useRouter()
