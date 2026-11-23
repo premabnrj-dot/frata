@@ -6232,6 +6232,9 @@ delete from staff_stepups where token_hash like 'sh91-%'; delete from staff_pass
 delete from members where tenant_id in ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-000000000002');
 delete from partner_assignments where tenant_id = 'c9100000-0000-0000-0000-000000000001';
 delete from partner_links where tenant_id = 'c9100000-0000-0000-0000-000000000001';
+-- An approved partner gets lane C's billing row and its free credits (drizzle/0164's trigger): those go first.
+delete from partner_credit_entries where partner_id in (select id from partners where email like '%@p91.test');
+delete from partner_billing where partner_id in (select id from partners where email like '%@p91.test');
 delete from partner_members where email like '%@p91.test'; delete from partners where email like '%@p91.test';
 delete from platform_staff where email like '%@p91.test';
 delete from tenants where id in ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-000000000002');
