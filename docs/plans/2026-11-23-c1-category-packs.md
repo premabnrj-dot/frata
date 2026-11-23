@@ -487,6 +487,15 @@ Version 3.11.0 → 3.12.0. Verify: `node scripts/check-skills.mjs` clean.
   beside the form's own `SellIcon` paths.
 
 ## Open questions for the orchestrator
+As built, 2026-11-23 (C1a·0–5, C1a·7, C1c):
+- **C1a·6 waits for O1.** O1 is changing `src/app/start/*` in the main checkout now, and the task says "after O1 has merged its
+  form", so `<SellTiles>`, `start/page.tsx` and `create-shop-form.tsx` were not touched; `sell-tiles.test.ts` (C1a·6, and its
+  10-tile case in C1c·1) waits with it. The Zod enum already comes from the registry (`SELLS` re-exports `SELL_KEYS`), with no
+  edit to `start/actions.ts`.
+- **The e2e regression net (C1a·0) was not run here.** Another session's `npm run e2e` held the shared stack (ports 3077,
+  54340) and the runner kills a running stack's server at start. The characterization test, the unit suites and `npm run build`
+  are the proof run; `npm run e2e -- --only signup,products-pr0,neel-settings,owner-only,look` is owed before merge.
+
 Answered by architecture-reviewer, 2026-11-23 (the orchestrator accepted every answer; each still goes to the owner where it says so):
 1. Ask the owner on Store details: **yes**, as its own C1b task with `0170_ask_owner_store.sql` and tenancy-auditor on it.
 2. A hand-written returns page: **a line in the saved state**, drawn in C1b·0.
