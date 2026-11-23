@@ -74,6 +74,19 @@ describe('formValues', () => {
       expect(r.ok, sec.key).toBe(true)
       if (r.ok) for (const [k, v] of Object.entries(r.patch)) expect(v, `${sec.key}.${k}`).toEqual((stored as Record<string, unknown>)[k])
     }
+  })  // O2a·0: the whole-section save a popup must not change (O2a·2 adds a subset parser beside it). A registered store too:
+  // its GSTIN, scheme, state and the Regular switches come back as stored, for Regular and for Composition.
+  it('round-trips a registered store, Regular and Composition', () => {
+    const base = { legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', turnoverBand: 'under_5cr', gstFiling: 'quarterly', defaultHsn: '6204' }
+    const regular = { ...base, gstin: '29AAGCB7383J1Z4', gstScheme: 'regular', homeState: '29', pricesIncludeGst: false, b2bInvoices: true }
+    const composition = { ...base, gstin: '29AAGCB7383J1Z4', gstScheme: 'composition', homeState: '29', pricesIncludeGst: true, b2bInvoices: false }
+    for (const stored of [regular, composition]) {
+      const sec = sectionFor('business')!
+      const r = parseSection(sec, formValues(sec, stored))
+      expect(r.ok, stored.gstScheme).toBe(true)
+      if (r.ok) for (const [k, v] of Object.entries(r.patch)) expect(v, `${stored.gstScheme}.${k}`).toEqual((stored as Record<string, unknown>)[k])
+      if (r.ok) expect(Object.keys(r.patch)).toEqual(expect.arrayContaining(['gstin', 'gstScheme', 'homeState', 'legalName', 'address']))
+    }
   })
 })
 

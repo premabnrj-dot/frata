@@ -1,5 +1,5 @@
 # O2a · Setup: the next step on Home and three setup popups, no billing change (task plan)
-Status: draft
+Status: active
 **Mockup:** https://claude.ai/artifact/PzNfST7bdFvLiQsxy11mQT (`docs/mockups/2026-11-23-merchant-onboarding.html` § 2 Setup, phase "O2 · four steps", and its Pickup PIN code popup; the plan radios and charge line of "Open your store?" are O2b's)
 **Approved:** owner, 2026-11-23
 **Review:** architecture-reviewer findings from the O2 draft fixed, 2026-11-23

@@ -3,7 +3,7 @@
 import { refreshKeys } from '@/lib/queries/storefront-api'
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { readyToOpen, setupSteps, BUILT_PAGES, websiteBlocksOpening } from '@/domains/setup/checklist'
+import { notYet, setupSteps, BUILT_PAGES, websiteBlocksOpening } from '@/domains/setup/checklist'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_MANAGE } from '@/lib/auth/require-member'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
@@ -51,7 +51,8 @@ export async function openShop(): Promise<Result> {
       const [p] = await tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, t), eq(products.status, 'active')))
       const steps = setupSteps({ shopName: s.name, address: hostFor(s.slug), productCount: p?.n ?? 0, legalName: s.legalName, grievanceName: s.grievanceName, grievanceEmail: s.grievanceEmail, grievancePhone: s.grievancePhone, codOn: s.codOn, codMaxPaise: Number(s.codMax), paymentsConnected: canTakeOnline(await keysFor(tx, t)), publishedAt: null },
         BUILT_PAGES, String)
-      if (!readyToOpen(steps)) return `Not yet: ${steps.filter((x) => !x.done && x.key !== 'publish').map((x) => x.title.toLowerCase()).join(', ')}.`
+      const refusal = notYet(steps)
+      if (refusal) return refusal
       // Counted after the lock (a second statement sees a key committed while this one waited: security LOW-4).
       const [b] = await tx.execute<{ n: number }>(sql`select app_store_building_keys() as n`)
       if (websiteBlocksOpening({ siteOrigin: s.siteOrigin, buildingKeys: Number(b?.n ?? 0) })) return NOT_READY

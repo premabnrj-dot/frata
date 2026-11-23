@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readyToOpen, setupSteps, type SetupFacts } from '../checklist'
+import { notYet, readyToOpen, setupSteps, type SetupFacts } from '../checklist'
 
 const inr = (p: number) => `₹${p / 100}`
 const fresh: SetupFacts = { shopName: 'Kesar Studio', address: 'kesar.frata.store', productCount: 0, legalName: '', grievanceName: '', grievanceEmail: '', grievancePhone: '', codOn: true, codMaxPaise: 300000, paymentsConnected: false, publishedAt: null }
@@ -35,6 +35,28 @@ describe('setupSteps', () => {
     expect(done({ grievanceName: 'Riya' })).toBe(false) // a name alone opened a shop before 2026-11-07
     expect(done({ grievanceName: 'Riya', grievanceEmail: 'care@kesar.in' })).toBe(false)
     expect(done(officer)).toBe(true)
+  })
+})
+
+describe('the opening gate (O2a·0 regression net)', () => {
+  const built = { products: true, settings: true, publish: true }
+  const details = { legalName: 'Kesar Studio LLP', ...officer }
+  it('readyToOpen is false until a product, the details and a way to pay are all done', () => {
+    const ready = (f: Partial<SetupFacts>) => readyToOpen(setupSteps({ ...fresh, ...f }, built, inr))
+    expect(ready({})).toBe(false)
+    expect(ready({ productCount: 1 })).toBe(false)
+    expect(ready({ ...details })).toBe(false)
+    expect(ready({ productCount: 1, ...details, codOn: false })).toBe(false)
+    expect(ready({ productCount: 1, ...details })).toBe(true)
+    expect(ready({ productCount: 1, ...details, codOn: false, paymentsConnected: true })).toBe(true)
+  })
+  it('openShop’s refusal names each missing step, in order, and nothing once ready', () => {
+    const line = (f: Partial<SetupFacts>) => notYet(setupSteps({ ...fresh, ...f }, built, inr))
+    expect(line({ codOn: false })).toBe('Not yet: add your first product, business details and grievance officer, how shoppers pay.')
+    expect(line({})).toBe('Not yet: add your first product, business details and grievance officer.')
+    expect(line({ productCount: 1 })).toBe('Not yet: business details and grievance officer.')
+    expect(line({ ...details })).toBe('Not yet: add your first product.')
+    expect(line({ productCount: 1, ...details })).toBeNull()
   })
 })
 

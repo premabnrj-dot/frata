@@ -74,6 +74,10 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
 /** Every step before "Open your shop" is done: the button may be pressed (the action checks again on the server). */
 export const readyToOpen = (steps: SetupStep[]) => steps.filter((s) => s.key !== 'publish').every((s) => s.done)
 
+/** openShop's refusal while a step is open: "Not yet: " and each open step, in order; null when ready. */
+export const notYet = (steps: SetupStep[]): string | null =>
+  readyToOpen(steps) ? null : `Not yet: ${steps.filter((x) => !x.done && x.key !== 'publish').map((x) => x.title.toLowerCase()).join(', ')}.`
+
 /**
  * D0·3 (Studio workbench plan; mockup docs/mockups/2026-11-22-studio-workbench.html screen 2): Open my store refuses
  * while the brand's own website is being built with no proved address. Its Test keys stop the moment the store opens
