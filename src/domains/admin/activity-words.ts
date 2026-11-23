@@ -12,6 +12,7 @@ export const ACTIVITY_KINDS = {
   billing: { label: 'Billing', words: ['billing'] },
   costs: { label: 'Costs', words: ['costs'] },
   rate: { label: 'Dollar rate', words: ['credits'] },
+  cash: { label: 'Cashflow', words: ['cash'] },
   app: { label: 'Apps', words: ['module', 'addon'] },
   theme: { label: 'Themes', words: ['theme', 'look'] },
   support: { label: 'Support visits', words: ['support'] },
@@ -23,7 +24,7 @@ export type ActivityKind = keyof typeof ACTIVITY_KINDS
 export const ACTIVITY_KIND_KEYS = Object.keys(ACTIVITY_KINDS) as ActivityKind[]
 
 /** Rows only a master admin reads (money; the security review on the plan, M3). */
-export const MASTER_ONLY_WORDS: readonly string[] = ['billing', 'costs', 'credits']
+export const MASTER_ONLY_WORDS: readonly string[] = ['billing', 'costs', 'credits', 'cash']
 
 /** The kinds a person may filter Activity by: a kind with any master-only word is a master admin's (one rule, the page reads it). */
 export const visibleKindKeys = (master: boolean): ActivityKind[] =>
@@ -53,6 +54,13 @@ const SAID: Record<string, string> = {
   'costs.pay': 'marked a cost paid',
   'costs.unpay': 'removed a payment',
   'credits.rate.set': 'set the dollar rate',
+  'cash.balance.set': 'recorded a balance',
+  'cash.balance.undo': 'removed a balance',
+  'cash.entry.add': 'added a cash entry',
+  'cash.entry.edit': 'edited a cash entry',
+  'cash.entry.delete': 'removed a cash entry',
+  'cash.account.add': 'added a cash account',
+  'cash.settings.set': 'changed the floor or the main account',
   'theme.stage': 'added a pilot store',
   'theme.unstage': 'removed a pilot store',
   'theme.release': 'released a theme version',

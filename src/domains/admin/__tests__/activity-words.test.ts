@@ -18,12 +18,12 @@ describe('actionWords', () => {
 })
 
 describe('what only a master admin reads', () => {
-  it('money words are master-only: billing, costs and the dollar rate', () => {
-    expect([...MASTER_ONLY_WORDS].sort()).toEqual(['billing', 'costs', 'credits'])
+  it('money words are master-only: billing, costs, the dollar rate and cash', () => {
+    expect([...MASTER_ONLY_WORDS].sort()).toEqual(['billing', 'cash', 'costs', 'credits'])
   })
   it('support staff are offered no money kind in the filter, a master admin is offered every one', () => {
     const support = visibleKindKeys(false)
-    for (const k of ['billing', 'costs', 'rate'] as const) expect(support).not.toContain(k)
+    for (const k of ['billing', 'costs', 'rate', 'cash'] as const) expect(support).not.toContain(k)
     expect(support).toContain('plan')
     expect(visibleKindKeys(true)).toEqual(Object.keys(ACTIVITY_KINDS))
   })

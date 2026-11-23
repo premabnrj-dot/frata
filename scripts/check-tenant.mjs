@@ -286,6 +286,8 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 // on a real Postgres, including the catalog (pg_rewrite, pg_trigger, pg_depend, pg_publication_tables).
 const ADMIN_ONLY_FAMILIES = [
   { name: 'Costs', schema: 'schema-costs', files: ['src/lib/db/schema-costs.ts', 'src/lib/admin/costs.ts'], grants: { cost_items: 'select, insert, update', cost_payments: 'select, insert, delete' } },
+  // Admin › Cashflow (drizzle/0173): a balance is appended and deleted (Undo), an entry edited, the settings row seeded and only updated.
+  { name: 'Cash', schema: 'schema-cash', files: ['src/lib/db/schema-cash.ts', 'src/lib/admin/cash.ts'], grants: { cash_accounts: 'select, insert, update', cash_balances: 'select, insert, delete', cash_entries: 'select, insert, update, delete', cash_settings: 'select, update' } },
 ]
 const FAMILY_OF = Object.fromEntries(ADMIN_ONLY_FAMILIES.flatMap(f => Object.keys(f.grants).map(t => [t, f])))
 const FAMILY_GRANTS = Object.assign({}, ...ADMIN_ONLY_FAMILIES.map(f => f.grants))

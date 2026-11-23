@@ -6677,4 +6677,88 @@ do $$ begin
   if (select rate_e4 from admin_fx_rate_latest()) is distinct from 942000 then raise exception 'FAIL: 102 Admin cannot read the latest rate'; end if;
 end $$;
 rollback;
-\echo 'tenancy proof — all checks passed (through § 102)'
+-- 103. Admin › Cashflow (drizzle/0173; spec docs/specs/2026-11-23-admin-cashflow.md, reviews 2026-11-23): four platform tables only frata_admin
+-- touches, with exactly the privileges the spec lists, RLS on and one permissive policy each; nothing copies a row out of them.
+do $$ declare r text; t text; p text; tbls regclass[] := array['public.cash_accounts', 'public.cash_balances', 'public.cash_entries', 'public.cash_settings']::regclass[]; begin
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
+    foreach t in array array['cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings'] loop
+      foreach p in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+        if has_table_privilege(r, 'public.' || t, p) then raise exception 'FAIL: 103 % holds % on %', r, p, t; end if;
+      end loop;
+      if has_any_column_privilege(r, 'public.' || t, 'select') then raise exception 'FAIL: 103 % reads a column of %', r, t; end if;
+    end loop;
+  end loop;
+  -- exactly these grants, to frata_admin only, and no column-level grant
+  if (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_accounts'::regclass and a.grantee <> c.relowner) <> 'INSERT,SELECT,UPDATE'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_balances'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_entries'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT,UPDATE'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_settings'::regclass and a.grantee <> c.relowner) <> 'SELECT,UPDATE'
+     or exists (select 1 from pg_class c, aclexplode(c.relacl) a where c.oid = any(tbls) and a.grantee <> c.relowner and a.grantee <> 'frata_admin'::regrole)
+  then raise exception 'FAIL: 103 the Cash tables carry a grant beyond the spec'; end if;
+  if exists (select 1 from pg_attribute where attrelid = any(tbls) and attacl is not null) then raise exception 'FAIL: 103 a column-level grant on the Cash tables'; end if;
+  foreach t in array array['cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings'] loop
+    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 103 % without RLS', t; end if;
+    if (select count(*) from pg_policies where schemaname = 'public' and tablename = t) <> 1
+       or exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and (permissive <> 'PERMISSIVE' or roles <> '{frata_admin}'::name[]))
+    then raise exception 'FAIL: 103 % must have exactly one permissive policy, to frata_admin', t; end if;
+  end loop;
+  -- nothing copies a row out: no rule, no trigger, no dependent function, no publication
+  if exists (select 1 from pg_rewrite where ev_class = any(tbls)) then raise exception 'FAIL: 103 a rule on a Cash table'; end if;
+  if exists (select 1 from pg_trigger where tgrelid = any(tbls) and not tgisinternal) then raise exception 'FAIL: 103 a trigger on a Cash table'; end if;
+  if exists (select 1 from pg_depend where classid = 'pg_proc'::regclass and refobjid = any(tbls)) then raise exception 'FAIL: 103 a function depends on a Cash table'; end if;
+  if exists (select 1 from pg_publication_tables where schemaname = 'public' and tablename in ('cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings')) then raise exception 'FAIL: 103 a publication carries a Cash table'; end if;
+  if exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosrc ~ 'cash_(accounts|balances|entries|settings)') then raise exception 'FAIL: 103 a function reads a Cash table'; end if;
+  -- Billing's three new indexes (Cashflow reads money in by month through them)
+  if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('frrata_payments_captured', 'frrata_payments_refunded', 'frrata_invoices_test')) <> 3 then raise exception 'FAIL: 103 a Billing index for Cashflow is missing'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from cash_balances; raise exception 'FAIL: 103 frata_app read a balance'; exception when insufficient_privilege then null; end;
+  begin insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 1, '2026-11-01'); raise exception 'FAIL: 103 frata_app forged an entry'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_builder;
+do $$ begin begin perform 1 from cash_settings; raise exception 'FAIL: 103 frata_builder read the settings'; exception when insufficient_privilege then null; end; end $$;
+rollback;
+begin; set local role frata_admin;
+insert into cash_accounts (id, name) values ('00000000-0000-0000-0000-0000000d0001', 'Current account'), ('00000000-0000-0000-0000-0000000d0002', 'Reserve');
+-- two balances on one day made in one transaction (the same created_at): the later id is the latest
+insert into cash_balances (id, account_id, as_of, balance_paise) values ('00000000-0000-0000-0000-0000000e0001', '00000000-0000-0000-0000-0000000d0001', '2026-11-22', 17500000), ('00000000-0000-0000-0000-0000000e0002', '00000000-0000-0000-0000-0000000d0001', '2026-11-22', -5000);
+insert into cash_entries (id, kind, amount_paise, happened_on) values ('00000000-0000-0000-0000-0000000f0001', 'funding', 50000000, '2026-07-14');
+insert into cash_entries (id, kind, amount_paise, expected_on, account_id) values ('00000000-0000-0000-0000-0000000f0002', 'grant', 15000000, '2027-02-15', '00000000-0000-0000-0000-0000000d0002');
+do $$ declare bad text; begin
+  if (select id from cash_balances where account_id = '00000000-0000-0000-0000-0000000d0001' order by as_of desc, created_at desc, id desc limit 1) <> '00000000-0000-0000-0000-0000000e0002'
+  then raise exception 'FAIL: 103 the latest balance does not break a tie by id'; end if;
+  if (select count(*) from cash_settings) <> 1 then raise exception 'FAIL: 103 the settings row is not seeded once'; end if;
+  update cash_settings set floor_paise = 25000000, main_account_id = '00000000-0000-0000-0000-0000000d0001';
+  begin update cash_balances set balance_paise = 1; raise exception 'FAIL: 103 Admin edited a balance'; exception when insufficient_privilege then null; end;
+  begin delete from cash_accounts where id = '00000000-0000-0000-0000-0000000d0002'; raise exception 'FAIL: 103 Admin deleted an account'; exception when insufficient_privilege then null; end;
+  begin delete from cash_settings; raise exception 'FAIL: 103 Admin deleted the settings'; exception when insufficient_privilege then null; end;
+  begin insert into cash_settings (id) values (2); raise exception 'FAIL: 103 Admin added a second settings row'; exception when insufficient_privilege then null; end;
+  delete from cash_balances where id = '00000000-0000-0000-0000-0000000e0001';
+  update cash_entries set expected_on = null, happened_on = '2026-12-01' where id = '00000000-0000-0000-0000-0000000f0002';
+  foreach bad in array array[
+    $q$insert into cash_accounts (name) values ('   ')$q$,
+    $q$insert into cash_accounts (name) values (repeat('n', 61))$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise) values ('00000000-0000-0000-0000-0000000d0001', '2026-11-22', 100000000001)$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise) values ('00000000-0000-0000-0000-0000000d0001', '2101-01-01', 1)$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise, note) values ('00000000-0000-0000-0000-0000000d0001', '2026-11-22', 1, repeat('n', 301))$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise) values (gen_random_uuid(), '2026-11-22', 1)$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('salary', 1, '2026-11-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 0, '2026-11-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 100000000001, '2026-11-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise) values ('funding', 1)$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on, expected_on) values ('funding', 1, '2026-11-01', '2026-12-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 1, '2019-12-31')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on, note) values ('funding', 1, '2026-11-01', repeat('n', 301))$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on, account_id) values ('funding', 1, '2026-11-01', gen_random_uuid())$q$,
+    $q$update cash_settings set floor_paise = -1$q$,
+    $q$update cash_settings set floor_paise = 100000000001$q$,
+    $q$update cash_settings set main_account_id = gen_random_uuid()$q$
+  ] loop
+    begin execute bad; raise exception 'FAIL: 103 a bad Cash row was accepted: %', bad;
+    exception when check_violation or foreign_key_violation then null; end;
+  end loop;
+end $$;
+rollback;
+\echo 'tenancy proof — all checks passed (through § 103)'

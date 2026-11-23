@@ -1212,6 +1212,13 @@
       "when": 1795442556635,
       "tag": "0172_admin_costs",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1795459374237,
+      "tag": "0173_admin_cash",
+      "breakpoints": true
     }
   ]
 }
