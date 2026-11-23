@@ -148,21 +148,23 @@ export const brandPage = (t: string, now: Date) => withTenant(t, async (tx): Pro
 
 /** Console › Brand › Checkout (one-address P2·6), in one snapshot: the live record, the live design (Frrata's default
  *  until one is saved), its version, whether the store is open, and the store's waiting checkout change. */
-export type CheckoutPageData = { brand: ShopBrand | null; design: CheckoutDesign; saved: boolean; version: number | null; open: boolean; waiting: { id: string; design: CheckoutDesign } | null }
+export type CheckoutPageData = { brand: ShopBrand | null; design: CheckoutDesign; saved: boolean; version: number | null; open: boolean; waiting: { id: string; design: CheckoutDesign; proposedAt: string; proposer: string | null } | null }
 export const checkoutPage = (t: string, now: Date) => withTenant(t, async (tx): Promise<CheckoutPageData> => {
-  const [brand, design, [meta], [open], [w]] = await Promise.all([
+  const [brand, design, [meta], [open], [w], people] = await Promise.all([
     shopBrandWith(tx, t, now),
     checkoutDesignWith(tx, t),
     tx.select({ version: checkoutDesign.version }).from(checkoutDesign).where(eq(checkoutDesign.tenantId, t)),
     tx.select({ at: shopSettings.publishedAt }).from(shopSettings).where(eq(shopSettings.tenantId, t)),
-    tx.select({ id: brandProposals.id, record: brandProposals.record }).from(brandProposals)
+    tx.select({ id: brandProposals.id, record: brandProposals.record, by: brandProposals.proposedBy, at: brandProposals.proposedAt }).from(brandProposals)
       .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.kind, 'checkout'), isNull(brandProposals.decidedAt))).limit(1),
+    tx.execute<{ user_id: string; partner_name: string | null }>(sql`select user_id, partner_name from app_shop_people()`),
   ])
   const waiting = w ? readDesign(w.record) : null
+  const proposer = w ? [...people].find((p) => p.user_id === w.by)?.partner_name ?? null : null
   return {
     brand: brand ? { record: brand.record, saved: brand.saved, seasons: brand.seasons } : null,
     design: design ?? DEFAULT_DESIGN, saved: !!design, version: meta?.version ?? null, open: !!open?.at,
-    waiting: w && waiting ? { id: w.id, design: waiting } : null,
+    waiting: w && waiting ? { id: w.id, design: waiting, proposedAt: w.at.toISOString(), proposer } : null,
   }
 }, { snapshot: true })
 

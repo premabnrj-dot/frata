@@ -17,18 +17,21 @@ import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { useToast } from '@/components/ui/toast'
 import dynamic from 'next/dynamic'
 import type { PreviewData } from '@/components/shop-preview/checkout-preview'
-import { designChanges, checkoutProblems, HEADING_MAX, MAX_TRUST, THANKS_MAX, trustBlocks, trustOrder, trustWords, TRUST_NAMES, type CheckoutDesign, type TrustFacts, type TrustKey } from '@/domains/brand/checkout'
+import { designChangeRows, designChanges, checkoutProblems, HEADING_MAX, MAX_TRUST, THANKS_MAX, trustBlocks, trustOrder, trustWords, TRUST_NAMES, type CheckoutDesign, type TrustFacts, type TrustKey } from '@/domains/brand/checkout'
 import { PREVIEW_PAGES, PREVIEW_STATES, type PreviewPage, type PreviewState } from '@/domains/brand/checkout-sample'
 import type { BrandRecord } from '@/domains/brand/record'
 import { cn } from '@/lib/utils'
 import { announce } from '@/components/shell/announce'
 import { saveCheckoutAction, undoCheckoutAction } from '../actions'
+import { previewed, ReviewCard, VersionSwitch, type Version } from './review-card'
 
 // =============================================================================
 // Console › Brand › Checkout (one-address plan P2·6; owner-approved mockup docs/mockups/2026-11-16-p2-checkout.html,
 // screens 8–10). One draft of the checkout design; the preview redraws from it at once and the save bar counts its
 // changes. Save: live (toast "Saved." with Undo), or, for the store's partner once it is open, sent to the owner (chip
-// "Waiting for the owner", toast "Sent to the owner."; the owner answers in Notices). The two lines are checked as typed,
+// "Waiting for the owner", toast "Sent to the owner."). The owner and a Manager answer it on the review card at the top,
+// as on Brand, or in Notices; staff and a support visit read the card; anyone who sees it compares Live and Waiting on
+// the preview (four-screens mockup § 4). The two lines are checked as typed,
 // with the server's own rule (src/domains/brand/checkout.ts), each refusal at its field; Save counts them in one toast.
 // A Builder and a support visit read the tab as facts beside the preview ("Preview only"). Who may do what is the
 // server's (src/domains/brand/who.ts); `mode` only draws it.
@@ -42,16 +45,18 @@ const CheckoutPreview = dynamic(() => import('@/components/shop-preview/checkout
   ssr: false, loading: () => <div className="h-[640px] rounded-md border border-border bg-sunk" aria-hidden="true" />,
 })
 
-export function CheckoutEditor({ mode, live, version: startVersion, waiting, record, shopName, facts, data, tabs }: {
+export type WaitingDesign = { id: string; design: CheckoutDesign; proposedAt: string; proposer: string | null }
+
+export function CheckoutEditor({ mode, live, version: startVersion, waiting, decides, record, shopName, facts, data, tabs }: {
   mode: CheckoutMode; live: CheckoutDesign; version: number | null
-  /** The partner's own change waiting for the owner: its form starts from it. */
-  waiting: CheckoutDesign | null
+  /** The store's waiting change: the partner's form starts from it; the owner and a Manager answer it. */
+  waiting: WaitingDesign | null; decides: boolean
   record: BrandRecord; shopName: string; facts: TrustFacts; data: PreviewData; tabs: React.ReactNode
 }) {
   const router = useRouter()
   const toast = useToast()
   const edit = mode !== 'preview'
-  const start = mode === 'waits' && waiting ? waiting : live
+  const start = mode === 'waits' && waiting ? waiting.design : live
   const [saved, setSaved] = useState(start)
   const [draft, setDraft] = useState(start)
   const [version, setVersion] = useState(startVersion)
@@ -106,6 +111,14 @@ export function CheckoutEditor({ mode, live, version: startVersion, waiting, rec
 
   const chip = mode === 'preview' ? <Badge tone="neutral">Preview only</Badge> : sent && mode === 'waits' ? <Badge tone="warn">Waiting for the owner</Badge> : null
   const back = `“Back to ${shopName}” link`
+  const review = waiting && mode !== 'waits' ? <ReviewCard proposer={waiting.proposer} proposedAt={waiting.proposedAt} rows={designChangeRows(live, waiting.design, shopName)} answer={decides ? { id: waiting.id, kind: 'checkout' } : null} onDone={focusTop} /> : null
+  // Live | Waiting (four-screens § 4), for anyone who sees a waiting change; the form's own edits win while unsaved.
+  const [compare, setCompare] = useState<Version>('waiting')
+  const shown = previewed({ live, draft, waiting: waiting?.design ?? null, dirty, compare })
+  // The first unsaved edit takes the preview over and hides the switch: say so once (design-system review).
+  const hasWaiting = !!waiting
+  useEffect(() => { if (hasWaiting && dirty) announce('The preview shows your edits.') }, [hasWaiting, dirty])
+  const switcher = waiting && !dirty ? <VersionSwitch value={compare} onPick={setCompare} /> : null
   const cards = edit ? <>
     <Section title="Header">
       <div className="flex flex-col gap-1.5"><span className="text-label font-medium">Logo</span>
@@ -135,11 +148,14 @@ export function CheckoutEditor({ mode, live, version: startVersion, waiting, rec
       <PageHeader title="Brand" badges={chip} />
       {tabs}
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_340px]">
-        <div className="lg:hidden"><PreviewCard record={record} design={draft} facts={facts} data={data} /></div>
-        <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}
-          {edit && dirty && <SaveBar placement="bottom" count={changes.length} pending={pending} keys="Ctrl+S" onSave={() => void save()} onDiscard={() => { setDraft(saved); setServerErrors({}); setAttempt(0) }} />}
-        </form>
-        <aside className="sticky top-4 hidden min-w-0 lg:block"><PreviewCard record={record} design={draft} facts={facts} data={data} /></aside>
+        {/* Phone: the card first, then the switch and preview, then the editor (four-screens § 4). */}
+        <div className="flex min-w-0 flex-col gap-4">{review}
+          <div className="lg:hidden"><PreviewCard record={record} design={shown} facts={facts} data={data} switcher={switcher} /></div>
+          <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}
+            {edit && dirty && <SaveBar placement="bottom" count={changes.length} pending={pending} keys="Ctrl+S" onSave={() => void save()} onDiscard={() => { setDraft(saved); setServerErrors({}); setAttempt(0) }} />}
+          </form>
+        </div>
+        <aside className="sticky top-4 hidden min-w-0 lg:block"><PreviewCard record={record} design={shown} facts={facts} data={data} switcher={switcher} /></aside>
       </div>
       <LeaveDialog open={!!guard.leaveTo} what="the checkout" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(draft))} />
     </div>
@@ -203,13 +219,13 @@ function LineField({ name, label, value, max, error, area = false, onChange }: {
   )
 }
 
-function PreviewCard({ record, design, facts, data }: { record: BrandRecord; design: CheckoutDesign; facts: TrustFacts; data: PreviewData }) {
+function PreviewCard({ record, design, facts, data, switcher }: { record: BrandRecord; design: CheckoutDesign; facts: TrustFacts; data: PreviewData; switcher: React.ReactNode }) {
   const [page, setPage] = useState<PreviewPage>('checkout')
   const [state, setState] = useState<PreviewState>('ready')
   // Two cards draw (phone first, computer beside): each its own id.
   const sel = useId()
   return (
-    <Section title="Preview" action={<Tag>Sample data</Tag>}>
+    <Section title="Preview" action={<span className="flex flex-wrap items-center justify-end gap-2">{switcher}<Tag>Sample data</Tag></span>}>
       <Segmented label="Preview" value={page} options={PREVIEW_PAGES} onPick={setPage} className="self-start" />
       <div className="flex items-center gap-2"><label htmlFor={sel} className="text-label font-medium">Show</label>
         <select id={sel} className={cn(FIELD, 'flex-1')} value={state} disabled={page !== 'checkout'} onChange={(e) => setState(e.target.value as PreviewState)}>
