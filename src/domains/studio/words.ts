@@ -36,7 +36,7 @@ export function refusedWords(why: string): string | null {
     case 'person_day':
     case 'platform_day': return 'Studio reached today’s limit. Ask again from 12:00 am.'
     case 'turn_open': return 'The agent is still working. Send this when it finishes.'
-    case 'limit': return 'Too many requests this hour. Try again in a few minutes.'
+    case 'limit': return 'You sent 60 requests this hour. Ask again in an hour.'
     case 'busy': return 'That didn’t go through. Try again.'
     case 'input': return 'Type a request.'
     case 'closed': return 'Studio isn’t open yet.'

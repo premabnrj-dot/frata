@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import { members, shopSettings } from '@/lib/db/schema'
 import { studioProposals, studioSessions } from '@/lib/db/schema-studio'
 import { saveBrand } from '@/lib/content/save'
+import { requireMember } from '@/lib/auth/require-member'
 import { storeSvgLogo } from '@/lib/media/brand-files'
 import { errName } from '@/lib/log'
 import { LOGO_SLOT } from '@/domains/studio/proposals'
@@ -17,8 +18,8 @@ import { withStudio, type StudioOk } from './with-studio'
 // V3b adds the partner's passkey check to Apply (fails closed). The outcome is recorded on the card.
 // =============================================================================
 
-export const OWNER_STORE = 'Only the owner applies changes on this store. Nothing was changed.'
-const GONE = 'This change is no longer here. Nothing was changed.'
+export const OWNER_STORE = 'Change this in the store’s own console. Nothing was changed.'
+const GONE = 'This change is already applied or set aside. Nothing was changed.'
 
 type Proposal = { id: string; kind: string; value: unknown; decided: boolean; ownerOrOpen: boolean }
 
@@ -36,9 +37,11 @@ async function proposalOf(auth: StudioOk, id: string): Promise<Proposal | null> 
   }).catch((e) => { console.error('[studio] proposal', errName(e)); return null })
 }
 
+/** Records the card's outcome: on this person's own session only (tenancy audit of R7: never by the id alone). */
 async function mark(auth: StudioOk, id: string, set: Partial<typeof studioProposals.$inferInsert>): Promise<void> {
   await withStudio(auth, (tx) => tx.update(studioProposals).set(set)
-    .where(and(eq(studioProposals.tenantId, auth.tenantId), eq(studioProposals.id, id), isNull(studioProposals.appliedAt), isNull(studioProposals.dismissedAt))))
+    .where(and(eq(studioProposals.tenantId, auth.tenantId), eq(studioProposals.id, id), isNull(studioProposals.appliedAt), isNull(studioProposals.dismissedAt),
+      sql`${studioProposals.sessionId} in (select s.id from studio_sessions s where s.tenant_id = ${auth.tenantId} and s.user_id = ${auth.userId})`)))
 }
 
 export type ApplyResult = { ok: true } | { ok: false; error: string }
@@ -47,22 +50,25 @@ export async function applyProposal(auth: StudioOk, id: string, version: number 
   const p = await proposalOf(auth, id)
   if (!p || p.decided) return { ok: false, error: GONE }
   if (p.ownerOrOpen) return { ok: false, error: OWNER_STORE }
+  // saveBrand finds its store again (requireMember, cached for this request): it must be the one Studio bound.
+  const who = await requireMember(['partner'])
+  if (!who.ok || who.membership.tenantId !== auth.tenantId) return { ok: false, error: GONE }
   let patch: Record<string, unknown>
   if (p.kind === 'logo') {
     const svg = (p.value as { svg?: unknown } | null)?.svg
     if (typeof svg !== 'string') return { ok: false, error: GONE }
     const stored = await storeSvgLogo(auth.tenantId, svg)
-    if (!stored.ok) { await mark(auth, id, { refusedAt: sql`now()` as never, refusedReason: stored.error.slice(0, 300) }); return { ok: false, error: stored.error } }
+    if (!stored.ok) { await mark(auth, id, { refusedAt: new Date(), refusedReason: stored.error.slice(0, 300) }); return { ok: false, error: stored.error } }
     patch = { logos: { [LOGO_SLOT]: stored.url } }
   } else {
     patch = p.value as Record<string, unknown>
   }
   const r = await saveBrand({ version, patch })
   if (!r.ok) {
-    await mark(auth, id, { refusedAt: sql`now()` as never, refusedReason: r.error.slice(0, 300) })
+    await mark(auth, id, { refusedAt: new Date(), refusedReason: r.error.slice(0, 300) })
     return { ok: false, error: r.error }
   }
-  await mark(auth, id, { appliedAt: sql`now()` as never, appliedBy: auth.userId, refusedAt: null, refusedReason: null })
+  await mark(auth, id, { appliedAt: new Date(), appliedBy: auth.userId, refusedAt: null, refusedReason: null })
   return { ok: true }
 }
 
@@ -70,6 +76,6 @@ export async function applyProposal(auth: StudioOk, id: string, version: number 
 export async function dismissProposal(auth: StudioOk, id: string): Promise<{ ok: boolean }> {
   const p = await proposalOf(auth, id)
   if (!p) return { ok: false }
-  await mark(auth, id, { dismissedAt: sql`now()` as never })
+  await mark(auth, id, { dismissedAt: new Date() })
   return { ok: true }
 }

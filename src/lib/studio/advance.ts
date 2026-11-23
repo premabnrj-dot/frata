@@ -133,7 +133,8 @@ async function storeEvents(ref: AdvanceRef, lease: Lease, events: StudioEvent[])
         const input = storable(ev.input ?? {})
         const fits = bytes(input) <= INPUT_MAX
         const refusal = !accepted ? TOOL_ERRORS.window : !fits ? TOOL_ERRORS.input : null
-        const row = { tenantId, partnerId, sessionId, turnId: ref.turnId, toolUseId: ev.id, name: noNul(ev.name).slice(0, NAME_MAX) }
+        // Each call its own time, in the order the events came (one transaction's now() ties: the chat's work lines).
+        const row = { tenantId, partnerId, sessionId, turnId: ref.turnId, toolUseId: ev.id, name: noNul(ev.name).slice(0, NAME_MAX), seenAt: sql`clock_timestamp()` as never }
         const refused = { executedAt: sql`now()`, result: { error: refusal ?? TOOL_ERRORS.input }, isError: true }
         let stored = false
         await one('call', async (sp) => {

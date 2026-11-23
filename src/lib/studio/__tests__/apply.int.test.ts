@@ -3,7 +3,7 @@
 // is mocked here (its own tests hold it): what Apply hands it is checked, and what Apply records after. Skipped unless
 // INT_DB_HOST is set, as in CI.
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { makeStudioStore, type StudioFixture } from './studio-fixture'
+import { addLead, makeStudioStore, type StudioFixture } from './studio-fixture'
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
@@ -11,6 +11,9 @@ const pass = process.env.INT_DB_PASSWORD ?? 'x'
 
 const save = { calls: [] as unknown[], answer: { ok: true, outcome: 'live', version: 2 } as Record<string, unknown> }
 vi.mock('@/lib/content/save', () => ({ saveBrand: vi.fn(async (input: unknown) => { save.calls.push(input); return save.answer }) }))
+// Apply checks saveBrand will act on the bound store (requireMember, which reads the request): the person's store here.
+const store = { tenant: '' }
+vi.mock('@/lib/auth/require-member', () => ({ requireMember: vi.fn(async () => ({ ok: true, membership: { tenantId: store.tenant } })) }))
 vi.mock('@/lib/media/brand-files', () => ({ storeSvgLogo: vi.fn(async () => ({ ok: true, url: 'https://blob.example/brand/logo.svg' })) }))
 
 describe.skipIf(!host)('Apply, Not this and the chat', () => {
@@ -43,6 +46,7 @@ describe.skipIf(!host)('Apply, Not this and the chat', () => {
     su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 2, onnotice: () => {} })
     f = await makeStudioStore(su, stamp)
     other = await makeStudioStore(su, stamp + 'b')
+    store.tenant = f.tenant
     ;({ session, turn, tokens, logo } = await chatFor(f))
     A = await import('../apply')
     Q = await import('@/lib/queries/studio')
@@ -62,8 +66,17 @@ describe.skipIf(!host)('Apply, Not this and the chat', () => {
 
   it('another person, even on another store of theirs, reads none of it and applies none of it', async () => {
     expect((await Q.studioChat(other.auth, null)).sessionId).toBeNull()
-    expect(await A.applyProposal(other.auth, tokens, null)).toEqual({ ok: false, error: 'This change is no longer here. Nothing was changed.' })
+    expect(await A.applyProposal(other.auth, tokens, null)).toEqual({ ok: false, error: 'This change is already applied or set aside. Nothing was changed.' })
     expect(save.calls).toHaveLength(0)
+  })
+
+  it('another person of the same partner on the same store reads and changes none of it', async () => {
+    const lead = await addLead(su, f, stamp)
+    expect((await Q.studioChat(lead, null)).sessionId).toBeNull()
+    expect(await A.applyProposal(lead, tokens, null)).toEqual({ ok: false, error: 'This change is already applied or set aside. Nothing was changed.' })
+    expect(await A.dismissProposal(lead, tokens)).toEqual({ ok: false })
+    expect(save.calls).toHaveLength(0)
+    expect((await su`select applied_at, dismissed_at from studio_proposals where id = ${tokens}`)[0]).toEqual({ applied_at: null, dismissed_at: null })
   })
 
   it('Apply: the console’s own save with the version the person holds; then the card reads Applied', async () => {

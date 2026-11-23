@@ -33,7 +33,7 @@ export async function applyAction(input: unknown): Promise<ApplyResult> {
   const auth = await requireStudio()
   if (!auth.ok) return { ok: false, error: auth.message }
   const p = ApplyInput.safeParse(input)
-  if (!p.success) return { ok: false, error: 'We couldn’t apply that. Nothing was changed.' }
+  if (!p.success) return { ok: false, error: 'That didn’t go through. Try again.' }
   return applyProposal(auth, p.data.id, p.data.version)
 }
 

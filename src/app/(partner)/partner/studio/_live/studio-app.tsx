@@ -16,7 +16,7 @@ import type { Chat, ChatCard, ChatLine } from '@/lib/queries/studio'
 import { applyAction, dismissAction, sendAction, stopAction } from '../actions'
 import dynamic from 'next/dynamic'
 // A card loads when the chat first shows one (the page's script pin).
-const ProposalCard = dynamic(() => import('./card').then((m) => m.ProposalCard))
+const ProposalCard = dynamic(() => import('./card').then((m) => m.ProposalCard), { loading: () => <span className="block h-24 rounded-lg border border-border bg-card" aria-hidden="true" /> })
 
 // =============================================================================
 // STUDIO, LIVE (plan docs/plans/2026-11-22-v3a-runtime.md R7; workbench mockup 2026-11-22 screen 1; states mockup
@@ -49,6 +49,7 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
   const [pending, start] = useTransition()
   const tries = useRef(0)
   const feedEnd = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLInputElement>(null)
   const working = chat.turn?.state === 'sending' || chat.turn?.state === 'running'
 
   // The poll: after the last line, while a turn runs; each answer resets the wait when something new came.
@@ -95,23 +96,26 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
     tries.current = 0
     await poll()
   })
-  const stop = () => start(async () => { await stopAction(); await poll() })
+  const stop = () => start(async () => { await stopAction(); await poll(); box.current?.focus() })
   const lastAsk = [...chat.lines].reverse().find((l) => l.kind === 'person')?.text ?? ''
+  /** After Apply or Not this, its buttons leave: focus stays on the card (design-system review of R7). */
+  const keepFocus = (id: string) => requestAnimationFrame(() => document.getElementById(`card-${id}-frame`)?.focus())
 
   const apply = (c: ChatCard) => start(async () => {
     setBusyCard(c.id)
     const r = await applyAction({ id: c.id, version })
     setBusyCard(null)
     setCards((m) => new Map(m).set(c.id, r.ok ? { ...c, state: 'applied', reason: null } : { ...c, state: 'refused', reason: r.error }))
+    keepFocus(c.id)
     if (r.ok) { toast.ok('Applied to Brand.'); router.refresh() }
   })
   const dismiss = (c: ChatCard) => start(async () => {
     const r = await dismissAction({ id: c.id })
-    if (r.ok) setCards((m) => new Map(m).set(c.id, { ...c, state: 'dismissed' }))
+    if (r.ok) { setCards((m) => new Map(m).set(c.id, { ...c, state: 'dismissed' })); keepFocus(c.id) }
   })
 
   const feed = () => (
-    <div className="grid content-start gap-3 overflow-auto p-3" aria-live="polite" aria-relevant="additions">
+    <div className="grid content-start gap-3 overflow-auto p-3 outline-none focus-visible:ring-3 focus-visible:ring-halo" aria-live="polite" aria-relevant="additions" tabIndex={0} aria-label="Chat messages">
       {chat.lines.length === 0 && !working ? empty.feed : null}
       {chat.lines.map((l) => {
         if (l.kind === 'person') return <Person key={l.id}>{l.text}</Person>
@@ -123,7 +127,7 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
         ? <Agent><WorkLines lines={chat.turn.work.some((w) => !w.done) ? chat.turn.work : [...chat.turn.work, { words: 'Working', done: false }]} /></Agent>
         : null}
       {chat.turn?.state === 'paused'
-        ? <Agent><StopCard tone="warn" title={W.paused.title} line={W.paused.line} action={<Button size="sm" variant="secondary" busy={pending} onClick={() => send('Continue')}>{W.paused.action}</Button>} /></Agent>
+        ? <Agent><StopCard tone="warn" title={W.paused.title} line={W.paused.line} action={<Button size="sm" variant="secondary" busy={pending} onClick={() => send('Continue the request')}>{W.paused.action}</Button>} /></Agent>
         : null}
       {chat.turn?.state === 'paused' && dayLimit ? <Agent><StopCard tone="warn" title={W.day.title} line={W.day.line} /></Agent> : null}
       {chat.turn?.state === 'failed'
@@ -136,14 +140,13 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
   const composer = () => (
     <form className="grid gap-2 border-t border-line-soft px-3 py-2.5" onSubmit={(e) => { e.preventDefault(); if (!working && text.trim()) send(text) }}>
       {working ? <p className="text-label text-muted-foreground">{W.working}</p> : null}
-      <label className="flex items-center gap-1.5 rounded-md border border-input bg-card py-1 pr-1 pl-2.5 focus-within:border-ring focus-within:ring-3 focus-within:ring-halo">
-        <span className="sr-only">Ask for a change</span>
-        <input name="ask" value={text} onChange={(e) => { setText(e.target.value); if (refused) setRefused(null) }} maxLength={2000} placeholder="Ask for a change"
+      <div className="flex items-center gap-1.5 rounded-md border border-input bg-card py-1 pr-1 pl-2.5 focus-within:border-ring focus-within:ring-3 focus-within:ring-halo">
+        <input ref={box} name="ask" aria-label="Ask for a change" value={text} onChange={(e) => { setText(e.target.value); if (refused) setRefused(null) }} maxLength={2000} placeholder="Ask for a change"
           {...fieldProps('ask', refused)} className="min-h-8 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-text-3" />
         {working
           ? <Button type="button" size="sm" variant="secondary" busy={pending} onClick={stop}>Stop</Button>
           : <Button type="submit" size="sm" busy={pending}>Send</Button>}
-      </label>
+      </div>
       <FieldError name="ask" message={refused} />
     </form>
   )

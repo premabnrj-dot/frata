@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { isStudioConfigured } from '@/lib/env'
-import { runStudioCron } from '@/lib/studio/sessions'
+import { runStudioCron } from '@/lib/studio/cron'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // Studio's per-minute net (plan docs/plans/2026-11-22-v3a-runtime.md § Advance, § Session end): ids only from

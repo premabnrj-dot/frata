@@ -36,7 +36,7 @@ export function ProposalCard({ card, busy, onApply, onDismiss, onReload }: {
   const open = card.state === 'open' || card.state === 'refused'
   const left = open ? 1 : 0
   return (
-    <section aria-label={title} className="grid gap-2 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm">
+    <section id={`card-${card.id}-frame`} tabIndex={-1} aria-label={title} className="grid gap-2 rounded-lg border border-border bg-card px-3 py-2.5 outline-none focus-visible:ring-3 focus-visible:ring-halo">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-label font-semibold">{title}</h3>
         <span className="text-small text-muted-foreground">{left ? `${left} to apply` : 'Done'}</span>

@@ -165,7 +165,7 @@ export function WorkbenchShell({ slots }: { slots: ShellSlots }) {
                     tabs={tabs.map((t) => ({ id: t, label: t === 'checks' && toFix ? <>Checks <Badge tone="warn">{toFix}<span className="sr-only"> to fix</span></Badge></> : TAB_WORDS[t] }))} />
                   {phone ? null : <button type="button" aria-label="Hide inspector" aria-expanded="true" aria-controls={`${base}-inspector`} onClick={() => fold('inspector')} className={cn(ICON_BUTTON, 'mb-1.5 self-center')}><Icon name={STUDIO_ICONS.inspector} className="size-4" /></button>}
                 </div>
-                <div className="min-h-0 overflow-auto p-3">
+                <div className="min-h-0 overflow-auto p-3 outline-none focus-visible:ring-3 focus-visible:ring-halo" tabIndex={0} aria-label="Inspector panel">
                   <TabPanel base={base} id="design" value={shownTab}>{slots.inspector.design(api)}</TabPanel>
                   {tabs.includes('code') ? <TabPanel base={base} id="code" value={shownTab}>{seen.has('code') ? <PanelError>{slots.inspector.code(api)}</PanelError> : null}</TabPanel> : null}
                   <TabPanel base={base} id="checks" value={shownTab}>{seen.has('checks') ? <PanelError>{slots.inspector.checks(api)}</PanelError> : null}</TabPanel>

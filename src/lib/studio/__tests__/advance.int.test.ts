@@ -89,7 +89,7 @@ describe.skipIf(!host)('advance: a turn through asTurn and the tools', () => {
     const facts = JSON.stringify(calls[1]!.result)
     expect(facts).toContain('Indigo kurta')
     expect(facts).not.toMatch(/stock|cost|cogs|order|email|phone/i)
-    expect(calls[0]).toMatchObject({ is_error: true, result: { error: 'This is not available yet.' } })
+    expect(calls[0]).toMatchObject({ is_error: true, result: { error: 'This is not available yet. Tell the person so.' } })
     expect(await mod.advance(ref(turn))).toBe('ended')
     const tr = await turnRow(turn)
     expect(tr.ended_at).not.toBeNull()
@@ -187,7 +187,7 @@ describe.skipIf(!host)('advance: a turn through asTurn and the tools', () => {
     ;[...sess().events].reverse().find((x) => x.type === 'agent.custom_tool_use')!.input = { n: Array.from({ length: 30_000 }, () => 0) }
     expect(await mod.advance(ref(turn))).toBe('answered')
     const [big] = await su`select input, result from studio_tool_calls where turn_id = ${turn}`
-    expect(big).toMatchObject({ input: {}, result: { error: 'The input did not match the tool. Nothing was changed.' } })
+    expect(big).toMatchObject({ input: {}, result: { error: 'The input did not match the tool. Fix it and call again. Nothing was changed.' } })
     expect(await mod.advance(ref(turn))).toBe('ended')
   })
 

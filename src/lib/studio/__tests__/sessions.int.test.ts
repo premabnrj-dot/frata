@@ -15,10 +15,10 @@ type Fake = { url: string; key: string; state: FakeState; close: () => Promise<v
 
 describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
   let su: import('postgres').Sql, fake: Fake, f: StudioFixture
-  let S: typeof import('../sessions'), rt: import('../runtime').StudioRuntime
+  let S: typeof import('../sessions'), C: typeof import('../cron'), rt: import('../runtime').StudioRuntime
   const stamp = 's' + Date.now().toString(36)
   const deps = () => ({ runtime: rt, starter: () => ({ bytes: new Uint8Array([1, 2, 3]), sha256: 'abc' }), follow: false })
-  const cron = () => S.runStudioCron(Date.now() + 40_000, rt, f.tenant)
+  const cron = () => C.runStudioCron(Date.now() + 40_000, rt, f.tenant)
   const openSession = async () => (await su`select id, runtime_id, vault_id, file_id, build_key_id from studio_sessions where user_id = ${f.user} and ended_at is null`)[0]
   const reserved = async () => Number((await su`select coalesce(sum(reserved_micro), 0)::bigint as n from studio_spend_people where user_id = ${f.user}`)[0]!.n)
   const liveKeys = async () => Number((await su`select count(*)::int as n from storefront_keys where tenant_id = ${f.tenant} and kind = 'build' and revoked_at is null`)[0]!.n)
@@ -39,6 +39,7 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     await su`update studio_spend_days set measured_micro = 0 where day = to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD')`
     rt = (await import('../runtime-managed')).managedRuntime
     S = await import('../sessions')
+    C = await import('../cron')
   })
   // The cron and the caps are platform-wide: this store's sessions end with the file, so a rerun on the same database
   // starts under the open-session cap.
@@ -242,8 +243,8 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     const s = (await openSession())!
     const before = await reserved()
     // One run ends it (the work list is read before), the next revokes its key.
-    await S.runStudioCron(Date.now() + 40_000, rt, f.tenant, false)
-    await S.runStudioCron(Date.now() + 40_000, rt, f.tenant, false)
+    await C.runStudioCron(Date.now() + 40_000, rt, f.tenant, false)
+    await C.runStudioCron(Date.now() + 40_000, rt, f.tenant, false)
     const [e] = await su`select end_reason, cleaned_at from studio_sessions where id = ${s.id}`
     expect(e).toMatchObject({ end_reason: 'switch', cleaned_at: null })
     expect(await liveKeys()).toBe(0)

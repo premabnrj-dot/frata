@@ -5319,7 +5319,7 @@ do $$ declare who uuid := '99999999-9999-9999-9999-999999999999'; begin
   exception when check_violation then null; end;
 end $$;
 rollback;
--- § 91 · Studio's agent V3a (drizzle/0166–0164; docs/plans/2026-11-22-v3a-runtime.md R2; ADR-0020 § 4–5 as amended;
+-- § 91 · Studio's agent V3a (drizzle/0166–0167; docs/plans/2026-11-22-v3a-runtime.md R2; ADR-0020 § 4–5 as amended;
 -- the R2 tenancy audits and security review folded in). A store and a partner read only their own sessions. The lock is
 -- held by the database: app_current_partner() answers only for a bind row of THIS transaction (a token replayed in
 -- another, or a bind rolled back with its savepoint, binds nothing), written only by app_studio_partner (the signed-in

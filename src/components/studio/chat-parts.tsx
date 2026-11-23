@@ -2,7 +2,7 @@ import { Spinner } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 // The chat's parts (workbench mockup 2026-11-22 screen 1 `.feed`; states mockup 2026-11-22, approved 2026-11-23:
-// `.me`, `.msg`/`.who`, `.prog`, `.stop`): shared by the live chat and the fixture page's. The agent's line wears its
+// `.me`, `.msg`/`.who`, `.prog`, `.stop`): the live chat's (the fixture page keeps its own, as screen 1 draws them). The agent's line wears its
 // mark and name; a limit or a failure is a card with its edge in the state's colour, one title, one line, one action.
 
 export function Agent({ children }: { children: React.ReactNode }) {

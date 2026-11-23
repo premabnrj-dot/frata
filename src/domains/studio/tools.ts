@@ -47,9 +47,9 @@ export function parseToolInput<T extends ToolName>(name: T, input: unknown): Too
 
 /** What the agent is told when a call is refused: our words, short, never a vendor's or a database's. */
 export const TOOL_ERRORS = {
-  input: 'The input did not match the tool. Nothing was changed.',
+  input: 'The input did not match the tool. Fix it and call again. Nothing was changed.',
   window: 'This call belongs to a request that has ended. Nothing was changed.',
   actor: 'The person who asked can no longer use Studio here. Nothing was changed.',
-  unavailable: 'This is not available yet.',
+  unavailable: 'This is not available yet. Tell the person so.',
   failed: 'That did not work on Frrata’s side. Nothing was changed.',
 } as const

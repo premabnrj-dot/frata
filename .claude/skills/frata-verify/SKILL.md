@@ -71,7 +71,9 @@ INT_DB_HOST=localhost:54330 ADMIN_URL=postgres://postgres@localhost:54330/frata_
 npm run e2e -- --only studio-agent,studio     # the live screen on the fake, and the workbench fixture
 ```
 The int tests share one database: `runStudioCron(…, onlyStore)` keeps a file's cron to its own store, and each file ends
-its store's sessions after (the open-session cap is platform-wide). Live runs happen only in `frata-studio-eval`.
+its store's sessions after (the open-session cap is platform-wide). Run them on a **fresh** database: a reused one keeps ended
+sessions of earlier runs whose fake is gone, their clean-up fails every minute and fills the cron's 20 a kind, so this
+run's sessions are never cleaned (the plan's residual, seen in a test). Live runs happen only in `frata-studio-eval`.
 
 ## Live proof on Supabase (nothing kept)
 

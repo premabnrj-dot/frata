@@ -19,8 +19,8 @@
 //            runtime, or to a cached loader from src/lib/queries (a reader that takes the transaction, `…With(tx, …)`,
 //            is fine). A cached loader inside a transaction deadlocks the pool; a network call holds a connection.
 //   doors    a Studio action or route that does not start with requireStudio(); the Studio cron without
-//            isCronRequest(; a file importing the advance (only the cron route and sessions.ts), asTurn (only the
-//            advance) or sessions.ts (only the Studio actions and the cron route), so a turn or session id comes from
+//            isCronRequest(; a file importing the advance (only cron.ts and sessions.ts), asTurn (only the
+//            advance), sessions.ts (only the Studio actions and rows) or cron.ts (only the cron route), so a turn or session id comes from
 //            the cron's work list or the person's own session, never a request.
 //   inputs   a tool input schema with an id-shaped key (a tool's input never names a store, person or row).
 // Comment lines are skipped everywhere (and in a Markdown file all but its fenced code), so this header and the records
@@ -60,19 +60,21 @@ const DEFINERS = {
   app_studio_open_turn: ['src/lib/studio/sessions.ts'],
   app_studio_spend_of: ['src/lib/studio/sessions.ts', 'src/lib/studio/advance.ts'],
   app_studio_close_turn: ['src/lib/studio/advance.ts', 'src/lib/studio/sessions.ts'],
-  app_studio_end_session: ['src/lib/studio/sessions.ts'],
-  app_studio_session_facts: ['src/lib/studio/sessions.ts'],
-  app_studio_cleanup_of: ['src/lib/studio/sessions.ts'],
-  app_studio_delete_of: ['src/lib/studio/sessions.ts'],
-  app_studio_mark: ['src/lib/studio/sessions.ts'],
+  app_studio_end_session: ['src/lib/studio/sessions.ts', 'src/lib/studio/cron.ts'],
+  app_studio_session_facts: ['src/lib/studio/cron.ts'],
+  app_studio_cleanup_of: ['src/lib/studio/cron.ts'],
+  app_studio_delete_of: ['src/lib/studio/cron.ts'],
+  app_studio_mark: ['src/lib/studio/cron.ts'],
 }
 /** Who may import the turn's doors (tenancy audit of R5, M): a turn id reaches them only from the cron's ids-only work
  *  list or from the person's own open session read under withStudio (sessions.ts), never from a request. */
 const IMPORTERS = {
-  'src/lib/studio/advance': ['src/app/api/cron/studio/route.ts', 'src/lib/studio/sessions.ts'],
+  'src/lib/studio/advance': ['src/lib/studio/cron.ts', 'src/lib/studio/sessions.ts'],
   // Its cron side ends and cleans sessions with no person's bind (tenancy audit of R6, M): the Studio actions (the
   // person's own session, under withStudio) and the cron route only.
-  'src/lib/studio/sessions': ['src/app/(partner)/partner/studio/actions.ts', 'src/app/(partner)/partner/studio/rows/route.ts', 'src/app/api/cron/studio/route.ts'],
+  'src/lib/studio/sessions': ['src/app/(partner)/partner/studio/actions.ts', 'src/app/(partner)/partner/studio/rows/route.ts'],
+  // The cron's side acts without a person's bind (tenancy audits of R6 and R7): the cron route only.
+  'src/lib/studio/cron': ['src/app/api/cron/studio/route.ts'],
   // asTurn and its bind step (withTurnBound) are reached only through this module: the advance, and the tools, which
   // only ever get the turn asTurn hands them (their exemption is this module's only).
   'src/lib/studio/as-turn': ['src/lib/studio/advance.ts'],

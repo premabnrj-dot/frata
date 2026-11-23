@@ -29,3 +29,19 @@ export async function makeStudioStore(su: Sql, stamp: string): Promise<StudioFix
     auth: { ok: true, userId: u.u, email, tenantId: t.id, tenantName: 'Int Studio', authSession: u.b, staffHash: 'sh-' + stamp, partnerHash: 'ph-' + stamp },
   }
 }
+
+/** A second person of the same partner on the same store: a Lead assigned to it, staff, with their own live checks.
+ *  The partner lock in the database is the partner's; only the person filters keep the two apart (tenancy audit of R7). */
+export async function addLead(su: Sql, f: StudioFixture, stamp: string): Promise<StudioFixture['auth']> {
+  const [u] = await su<[{ u: string; b: string }]>`select gen_random_uuid() as u, gen_random_uuid() as b`
+  const email = `lead-${stamp}@int.test`
+  const [pm] = await su<[{ id: string }]>`insert into partner_members (partner_id, user_id, email, role, accepted_at) values (${f.partner}, ${u.u}, ${email}, 'lead', now()) returning id`
+  await su`insert into partner_assignments (partner_member_id, tenant_id) values (${pm.id}, ${f.tenant})`
+  await su`insert into members (tenant_id, user_id, role, partner_member_id) values (${f.tenant}, ${u.u}, 'partner', ${pm.id})`
+  await su`insert into platform_staff (user_id, email, role) values (${u.u}, ${email}, 'support')`
+  const [sk] = await su<[{ id: string }]>`insert into staff_passkeys (user_id, credential_id, public_key, name) values (${u.u}, ${'intl-' + stamp}, 'k', 'Int') returning id`
+  await su`insert into staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at) values (${u.u}, ${u.b}, ${sk.id}, ${'shl-' + stamp}, now() + interval '1 hour')`
+  const [pk] = await su<[{ id: string }]>`insert into partner_passkeys (partner_member_id, user_id, credential_id, public_key, name) values (${pm.id}, ${u.u}, ${'intlp-' + stamp}, 'k', 'Int') returning id`
+  await su`insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at) values (${pm.id}, ${u.u}, ${u.b}, ${pk.id}, ${'phl-' + stamp}, now() + interval '1 hour')`
+  return { ok: true, userId: u.u, email, tenantId: f.tenant, tenantName: 'Int Studio', authSession: u.b, staffHash: 'shl-' + stamp, partnerHash: 'phl-' + stamp }
+}
