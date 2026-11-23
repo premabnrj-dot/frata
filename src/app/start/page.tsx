@@ -8,6 +8,7 @@ import { frataWhatsappLink } from '@/lib/site'
 import { SignupFlow } from './signup-flow'
 import { signupCodeOn } from '@/lib/trials/signup-code'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
+import { SELL_TILES } from '@/domains/catalogue/packs'
 import './signup.css'
 
 export const metadata = { title: 'Start your store' }
@@ -29,7 +30,7 @@ export default async function StartPage() {
   return (
     <main id="content" tabIndex={-1} data-shell data-signup className={`outline-none ${SHELL_FONT_VARS}`}>
       <a href="#su-q" className="sr-only text-sm font-medium text-ink focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-ink-foreground focus:px-3 focus:py-2">Skip to content</a>
-      <SignupFlow shopDomain={SHOP_DOMAIN} plans={plans} trialDays={trialDays} codeOn={signupCodeOn()} askEmail={!auth.ok} hasStore={owner}
+      <SignupFlow shopDomain={SHOP_DOMAIN} plans={plans} trialDays={trialDays} codeOn={signupCodeOn()} askEmail={!auth.ok} hasStore={owner} tiles={SELL_TILES}
         stuck={<p className="su-stuck">Stuck? <a href={frataWhatsappLink()} target="_blank" rel="noopener">WhatsApp us</a></p>} />
     </main>
   )

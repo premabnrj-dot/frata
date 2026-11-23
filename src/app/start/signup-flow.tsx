@@ -13,7 +13,8 @@ import { ADDRESS_WORDS, addressUsable, signupMs, signupSteps, stepForRefusal, st
 import { STORE_KEY, readStoredSignup } from '@/domains/signup/stored'
 import { afterVerify } from '@/domains/access/email-code'
 import { createMyShop } from './actions'
-import { SellTiles } from './create-shop-form'
+import { SellTiles } from '@/components/catalogue/sell-tiles'
+import type { Tile } from '@/domains/catalogue/packs'
 import { StorePreview } from './_components/store-preview'
 import { useAddressCheck } from './_components/use-address-check'
 
@@ -33,8 +34,10 @@ const MAKING_MS = 1300 // the store's own opening line (animate-going-live)
  * from it and checked as it is typed), the plan, the WhatsApp code while it is on, what the store sells; the store draws
  * itself beside the questions (a strip above them on a phone). Nothing typed is lost on a refusal.
  */
-export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, hasStore = false, stuck }: {
+export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, hasStore = false, tiles, stuck }: {
   shopDomain: string; plans: SignupPlan[]; trialDays: number; codeOn: boolean
+  /** "What do you sell?": the category packs' tiles, handed over by the server page (C1a·6). */
+  tiles: readonly Tile[]
   /** Signed out: the email and code step after the name. */
   askEmail: boolean
   /** This person already owns a store: before any answer, they go to its console. */
@@ -203,7 +206,7 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
           {moment === 'sells' && (
             <div className="su-st">
               <h1 tabIndex={-1}>What do you sell?</h1>
-              <SellTiles sells={sells} onChange={setSells} />
+              <SellTiles tiles={tiles} value={sells} onChange={setSells} />
               <button type="button" className="su-go" onClick={() => { void create() }}>Create store</button>
             </div>
           )}

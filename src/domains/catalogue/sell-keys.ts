@@ -5,5 +5,5 @@ import { pure } from './packs/define'
 
 export { SELL_KEYS, sellsSized, startingHsn, type SellKey } from './packs'
 
-/** As sign-up shows them, in order. Debt: a test is its only reader once sign-up reads SELL_TILES (C1a·6). */
+/** As sign-up shows them, in order. Debt: since sign-up reads SELL_TILES (C1a·6) a test is its only reader; it goes with C1b's field. */
 export const SELL_LABELS: readonly (readonly [SellKey, string])[] = /*#__PURE__*/ pure(() => SELL_TILES.map((t) => [t.key, t.label] as const))
