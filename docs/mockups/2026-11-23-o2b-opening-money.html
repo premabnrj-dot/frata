@@ -110,7 +110,7 @@ tr:last-child td { border-bottom:0 } td b { font-weight:600 }
       <div class="tw"><table style="min-width:0"><tr><th>State</th><th>When</th></tr>
         <tr><td><b>With a trial</b></td><td>A new store opening for the first time. The line follows the plan picked.</td></tr>
         <tr><td><b>No trial</b></td><td>The store was refused a trial, or opens after its trial's last day.</td></tr>
-        <tr><td><b>Partner-built</b></td><td>The trial started when the partner made the store. The date is that trial's own.</td></tr>
+        <tr><td><b>Partner-built</b></td><td>Reads exactly like "With a trial". The trial starts at first opening (your decision, 23 Nov).</td></tr>
         <tr><td><b>Plan set with Frrata</b></td><td>A price agreed with Frrata, a plan Frrata's staff set, or a change Frrata scheduled. No choice.</td></tr>
         <tr><td><b>Reopening</b></td><td>The store was open before and was closed. No plan, no line.</td></tr>
         <tr><td><b>Refused</b></td><td>The plan changed while the popup was open. Nothing is changed.</td></tr>
@@ -170,8 +170,7 @@ const paint = () => {
   const price = PRICE[$('#radios input:checked').id], fixed = state === 'fixed' || state === 'refused', none = state === 'reopen'
   $('#radios').hidden = fixed || none; $('#fixed').hidden = !fixed; $('#err').hidden = state !== 'refused'; $('#line').hidden = none
   $('#line').textContent = state === 'notrial' ? `${price} a month + GST from today.`
-    : state === 'partner' ? `Your plan is free until 9 Dec. Then ${price} a month + GST.`
-    : fixed ? 'Your plan is free until 23 Dec. Then ₹4,999 a month + GST.'
+        : fixed ? 'Your plan is free until 23 Dec. Then ₹4,999 a month + GST.'
     : `Your plan is free until 23 Dec. Then ${price} a month + GST.`
 }
 $$('[data-st]').forEach((b) => b.onclick = () => { state = b.dataset.st; $$('[data-st]').forEach((x) => x.setAttribute('aria-pressed', x === b)); paint() })
