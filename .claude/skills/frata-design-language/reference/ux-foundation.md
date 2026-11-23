@@ -107,7 +107,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     words still in the page.
 21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
     Inter in the shell's own stack (`--font-shell` on `[data-shell]`, never on
-    `html`), committed files (`next/font/local`, OFL) with `preload: false` and
+    `html`), committed files (`next/font/local`, OFL; a shop's `--font-store-deva` is the generated `store-fonts.css`) with `preload: false` and
     each script's unicode-range, downloaded only when a glyph needs it. A name
     renders through `<Name>`, which sets `data-script` from `scriptOf()` for line
     height 1.8. Mono has `font-variant-ligatures: none`.
