@@ -4432,9 +4432,10 @@ begin
   perform set_config('proof.gr89b', gr::text, true); perform set_config('proof.yr89b', yr::text, true);
   -- G starts Studio Plus: its renewal can't be claimed while the start is open; Y's can
   select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  -- a start sent to the gateway holds the claim (an abandoned one, never sent, doesn't: 2nd review L5)
+  perform app_pc_purchase_order(p.id, 'order_proof89m0002', false);
   if app_pc_claim(gr) then raise exception 'FAIL: B · a renewal claimed while a start is open'; end if;
   -- a second start while the first is with the gateway waits
-  perform app_pc_purchase_order(p.id, 'order_proof89m0002', false);
   t := null;
   begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 500, 'plus', 'card', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
   exception when sqlstate 'P0001' then t := sqlerrm; end;
@@ -4537,6 +4538,47 @@ do $$ begin
   if exists (select 1 from pg_proc where proname like 'app_pc_%' or proname like 'app_partner_credit%' group by proname having count(*) > 1)
   then raise exception 'FAIL: B · two versions of a credits definer'; end if;
 end $$;
+-- C1·B, second security review: a refund booked is final (the renewal failing later never turns it into Studio Plus);
+-- the queue never offers the live mandate; a cancelled token settles its queue row; a failed seat's retry with the bank
+-- makes the banner's Pay wait.
+update partner_seats set period_end = now() + interval '1 day' where partner_id = current_setting('proof.yb89p')::uuid and ended_at is null;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; yp uuid := current_setting('proof.yb89p')::uuid; p record; r record; r2 uuid; begin
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0005', false);
+  select * into r from app_pc_renewals(100, null, null) x where x.partner_id = yp;
+  r2 := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if r2 is null then raise exception 'FAIL: B2 · Y''s second renewal'; end if;
+  perform set_config('proof.yr2', r2::text, true);
+end $$;
+reset role;
+update partner_credit_purchases set claimed_at = now() + interval '1 second', gateway_order_id = 'order_proof89q0006' where id = current_setting('proof.yr2')::uuid;
+set local role frata_app;
+do $$ declare yp uuid := current_setting('proof.yb89p')::uuid; begin
+  if app_pc_apply('order_proof89q0005', 'pay_proof89q0005', true, 1179882, 'INR', true, null, 'token_proof89q0005') <> 'refund_due' then raise exception 'FAIL: B2 · the start not refunded'; end if;
+  if app_pc_apply('order_proof89q0006', 'pay_proof89q0006', false, 353882, 'INR', true, 'declined', null) <> 'failed' then raise exception 'FAIL: B2 · the renewal''s failure'; end if;
+  if app_pc_apply('order_proof89q0005', 'pay_proof89q0005', true, 1179882, 'INR', true, null, 'token_proof89q0005') = 'applied' then raise exception 'FAIL: B2 · a booked refund bought Studio Plus'; end if;
+  if exists (select 1 from app_pc_token_cancels(100) x where x.partner_id = yp and x.token_id = 'token_proof89q0001') then raise exception 'FAIL: B2 · the live mandate offered for cancelling'; end if;
+  if not app_pc_token_event('token_proof89q0005', 'cancelled') then raise exception 'FAIL: B2 · a cancelled token event'; end if;
+end $$;
+reset role;
+insert into partner_mandate_cancels (partner_id, token_id) values (current_setting('proof.yb89p')::uuid, 'token_proof89q0001');
+do $$ begin
+  if (select plan from partner_seats where partner_id = current_setting('proof.yb89p')::uuid and ended_at is null) <> 'studio' then raise exception 'FAIL: B2 · Y moved by a refunded start'; end if;
+  if (select cancelled_at from partner_mandate_cancels where token_id = 'token_proof89q0005') is null then raise exception 'FAIL: B2 · a cancelled token''s queue row left open'; end if;
+end $$;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; yp uuid := current_setting('proof.yb89p')::uuid; r record; r3 uuid; t text; begin
+  if exists (select 1 from app_pc_token_cancels(100) x where x.token_id = 'token_proof89q0001') then raise exception 'FAIL: B2 · the live mandate offered for cancelling'; end if;
+  -- the seat failed; a retry is with the bank; the banner's Pay waits
+  select * into r from app_pc_renewals(100, null, null) x where x.partner_id = yp;
+  r3 := app_pc_renewal_begin(r.seat_id, r.period_end, 2, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if r3 is null or not app_pc_claim(r3) then raise exception 'FAIL: B2 · the retry'; end if;
+  begin perform app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'renewal_paying' then raise exception 'FAIL: B2 · Pay while a retry is with the bank (%)', t; end if;
+end $$;
+reset role;
 -- a suspended partner reads and buys nothing
 update partners set suspended_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
 set local role frata_app;

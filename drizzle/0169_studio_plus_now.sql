@@ -104,8 +104,9 @@ begin
     -- failed (the banner's Pay). Every other move waits for the renewal (security L1).
     if s.id is not null and s.failed_at is null and not (s.plan = 'studio' and p_plan = 'plus') then
       raise exception 'has_seat' using errcode = 'P0001'; end if;
-    -- Studio's renewal for this period already with the bank: the move waits, so two months are never taken (B2, security M3).
-    if s.id is not null and s.failed_at is null and exists (select 1 from public.partner_credit_purchases x
+    -- Studio's renewal for this period already with the bank (a failed seat's retry too): the move or the banner's Pay
+    -- waits, so two months are never taken (B2, security M3; 2nd review M2).
+    if s.id is not null and exists (select 1 from public.partner_credit_purchases x
         where x.partner_id = o.partner_id and x.seat_id = s.id and x.kind = 'seat_renewal' and x.for_period_end = s.period_end
           and x.claimed_at is not null and x.paid_at is null and x.failed_at is null and x.closed_at is null and x.refund_due_at is null) then
       raise exception 'renewal_paying' using errcode = 'P0001'; end if;
@@ -140,7 +141,7 @@ begin
     set local lock_timeout = '2s';
     perform pg_advisory_xact_lock(hashtextextended(p.partner_id::text || ':credits', 0));
     if exists (select 1 from public.partner_credit_purchases x where x.partner_id = p.partner_id and x.kind = 'seat_start'
-        and x.paid_at is null and x.failed_at is null and x.closed_at is null and x.refund_due_at is null
+        and x.gateway_order_id is not null and x.paid_at is null and x.failed_at is null and x.closed_at is null and x.refund_due_at is null
         and x.created_at > now() - interval '30 minutes') then return false; end if;
   end if;
   update public.partner_credit_purchases set claimed_at = now()
@@ -182,7 +183,9 @@ begin
     end if;
     return 'failed';
   end if;
-  v_buys := p.paid_at is null and p_amount = p.total and p_currency = 'INR' and p_test = p.test;
+  -- A payment whose refund is booked never buys later (the hourly settle or a confirm asking again; security 2nd review H1).
+  -- Another payment on the same attempt still can (a wrong amount refunded, then the right one).
+  v_buys := p.paid_at is null and p.refund_payment_id is distinct from p_payment and p_amount = p.total and p_currency = 'INR' and p_test = p.test;
   if v_buys and p.kind = 'seat_start' then
     v_buys := v_token  -- a seat moves only with its mandate (security M2)
       -- a newer seat started after this attempt (another start won)
@@ -190,7 +193,8 @@ begin
       -- the old seat's renewal claimed after this attempt began, still at the bank or paid: two months are never taken (B2, H1)
       and not exists (select 1 from public.partner_seats os join public.partner_credit_purchases r
                         on r.partner_id = os.partner_id and r.seat_id = os.id and r.kind = 'seat_renewal'
-                       where os.partner_id = p.partner_id and os.ended_at is null and r.claimed_at >= p.created_at
+                       where os.partner_id = p.partner_id and os.ended_at is null
+                         and (r.claimed_at >= p.created_at or r.paid_at >= p.created_at)
                          and r.failed_at is null and r.closed_at is null and r.refund_due_at is null);
   elsif v_buys and p.kind = 'seat_renewal' then
     -- A renewal buys only its own live period: the seat is live and still at the period it was noticed for (tenancy M1, L2).
@@ -285,6 +289,7 @@ create or replace function app_pc_token_cancels(p_limit integer) returns table (
   select m.partner_id, b.customer_id, m.token_id from public.partner_mandate_cancels m
     left join public.partner_billing b on b.partner_id = m.partner_id
    where m.cancelled_at is null and m.due_at <= now()
+     and m.token_id is distinct from b.token_id  -- never the mandate the live seat pays with (security 2nd review H1)
    order by m.due_at limit least(p_limit, 100)
 $$;
 --> statement-breakpoint
@@ -302,17 +307,38 @@ create or replace function app_pc_token_cancel_tried(p_partner uuid, p_token tex
 $$;
 --> statement-breakpoint
 
+-- A token event by its id (tokens are unique: partner_billing_token). A cancelled one also settles its row on the cancel
+-- queue, so "Cancelling" clears even when the gateway answers a second cancel with an error (2nd review L4).
+create or replace function app_pc_token_event(p_token text, p_status text) returns boolean
+  language plpgsql volatile security definer set search_path = '' as $$
+declare n integer; q integer := 0;
+begin
+  if p_status = 'confirmed' then
+    update public.partner_billing set mandate_at = coalesce(mandate_at, now()), updated_at = now() where token_id = p_token and mandate_revoked_at is null;
+  elsif p_status in ('cancelled', 'rejected', 'paused') then
+    update public.partner_billing set mandate_revoked_at = coalesce(mandate_revoked_at, now()), updated_at = now() where token_id = p_token;
+  else return false;
+  end if;
+  get diagnostics n = row_count;
+  if p_status in ('cancelled', 'rejected') then
+    update public.partner_mandate_cancels set cancelled_at = now(), error = null where token_id = p_token and cancelled_at is null;
+    get diagnostics q = row_count;
+  end if;
+  return n + q > 0;
+end $$;
+--> statement-breakpoint
+
 -- ═══ GRANTS: 0164's, re-run for every function redefined here, and the new ones (tenancy H2) ═══
 revoke all on function app_partner_credits_overview(uuid, uuid, text, boolean), app_partner_credits_payments(uuid, uuid, text),
   app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text),
   app_pc_claim(uuid), app_pc_apply(text, text, boolean, bigint, text, boolean, text, text), app_pc_close(uuid, text),
   app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
-  app_pc_token_cancel_tried(uuid, text, text), app_pc_cancel_mandate(uuid, text)
+  app_pc_token_cancel_tried(uuid, text, text), app_pc_cancel_mandate(uuid, text), app_pc_token_event(text, text)
   from public, anon, authenticated, service_role, frata_builder, frata_app, frata_admin;
 --> statement-breakpoint
 grant execute on function app_partner_credits_overview(uuid, uuid, text, boolean), app_partner_credits_payments(uuid, uuid, text),
   app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text),
   app_pc_claim(uuid), app_pc_apply(text, text, boolean, bigint, text, boolean, text, text), app_pc_close(uuid, text),
   app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
-  app_pc_token_cancel_tried(uuid, text, text)
+  app_pc_token_cancel_tried(uuid, text, text), app_pc_token_event(text, text)
   to frata_app;
