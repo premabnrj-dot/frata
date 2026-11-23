@@ -205,6 +205,9 @@ create or replace function app_studio_set_vendor(p_session uuid, p_kind text, p_
   language plpgsql volatile security definer set search_path = '' as $$
 declare s public.studio_sessions := public.app_studio_own_session(p_session); n integer;
 begin
+  -- An ended session takes no new vendor id (security review of R6, MED-1): a Stop or a cron end during the start
+  -- would otherwise leave a vault, a file or a runtime session that clean-up never sees. The caller deletes what it made.
+  if s.ended_at is not null then return false; end if;
   if p_value is null or length(p_value) not between 4 and 200 or p_value !~ '^[A-Za-z0-9_-]+$' then raise exception 'bad_input' using errcode = 'P0001'; end if;
   if p_kind = 'runtime' then update public.studio_sessions set runtime_id = p_value where id = s.id and runtime_id is null;
   elsif p_kind = 'vault' then update public.studio_sessions set vault_id = p_value where id = s.id and vault_id is null;
@@ -370,7 +373,9 @@ begin
   if p_what = 'cleaned' then
     update public.studio_sessions set cleaned_at = now() where id = p_session and tenant_id = public.app_current_tenant() and ended_at is not null and cleaned_at is null;
   elsif p_what = 'deleted' then
-    update public.studio_sessions set deleted_at = now() where id = p_session and tenant_id = public.app_current_tenant() and cleaned_at is not null and deleted_at is null;
+    -- Only a session due for deletion (impact review of R6): never a live or a recent one, whoever calls.
+    update public.studio_sessions set deleted_at = now() where id = p_session and tenant_id = public.app_current_tenant()
+      and cleaned_at is not null and deleted_at is null and ended_at < now() - interval '30 days';
   else raise exception 'bad_input' using errcode = 'P0001'; end if;
   get diagnostics n = row_count;
   return n = 1;
@@ -378,7 +383,7 @@ end $$;--> statement-breakpoint
 
 -- ── A session's runtime id once it is due for deletion at Anthropic (ended over 30 days, cleaned, not yet deleted):
 --    the delete step's only input (cleanup_of answers nothing once a session is cleaned). ──
-create or replace function app_studio_delete_of(p_session uuid) returns text
+create or replace function app_studio_delete_of(p_session uuid) returns table (runtime_id text)
   language sql stable security definer set search_path = '' as $$
   select s.runtime_id from public.studio_sessions s
    where s.id = p_session and s.tenant_id = public.app_current_tenant() and s.ended_at < now() - interval '30 days'

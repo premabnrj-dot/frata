@@ -219,6 +219,41 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     expect(await reserved()).toBe(500_000)
   })
 
+  it('Stop pressed during each start step: what the start made is deleted, nothing runs, nothing stays live', async () => {
+    for (const step of ['createVault', 'uploadStarter', 'start'] as const) {
+      const vaults = fake.state.vaults.size, files = fake.state.files.size, held = await reserved()
+      const live = [...fake.state.sessions.values()].filter((x) => !x.archived).length
+      const racing = new Proxy(rt, { get(target, k) {
+        const fn = (target as unknown as Record<string, unknown>)[k as string]
+        if (k !== step || typeof fn !== 'function') return fn
+        return async (...a: unknown[]) => { const v = await (fn as (...x: unknown[]) => Promise<unknown>).apply(target, a); await S.stop(f.auth, rt); return v }
+      } })
+      const r = await S.send(f.auth, 'hello', { ...deps(), runtime: racing as typeof rt })
+      expect({ step, r }).toEqual({ step, r: { ok: false, why: 'start' } })
+      await cron()
+      const stillLive = [...fake.state.sessions.values()].filter((x) => !x.archived).length
+      expect({ step, vaults: fake.state.vaults.size, files: fake.state.files.size, live: stillLive, keys: await liveKeys(), reserved: await reserved() })
+        .toEqual({ step, vaults, files, live, keys: 0, reserved: held })
+    }
+  })
+
+  it('Studio unconfigured: the cron still ends open sessions as `switch` and revokes their keys; the rest waits', async () => {
+    expect((await S.send(f.auth, 'hello', deps())).ok).toBe(true)
+    const s = (await openSession())!
+    const before = await reserved()
+    // One run ends it (the work list is read before), the next revokes its key.
+    await S.runStudioCron(Date.now() + 40_000, rt, f.tenant, false)
+    await S.runStudioCron(Date.now() + 40_000, rt, f.tenant, false)
+    const [e] = await su`select end_reason, cleaned_at from studio_sessions where id = ${s.id}`
+    expect(e).toMatchObject({ end_reason: 'switch', cleaned_at: null })
+    expect(await liveKeys()).toBe(0)
+    expect(fake.state.vaults.has(s.vault_id)).toBe(true) // Anthropic's side waits for a key
+    expect(await reserved()).toBe(before) // an unbound end keeps the turn's reserve counted
+    await cron()
+    expect(fake.state.vaults.has(s.vault_id)).toBe(false)
+    expect((await su`select cleaned_at from studio_sessions where id = ${s.id}`)[0]!.cleaned_at).not.toBeNull()
+  })
+
   it('the cron ends a session at 23 hours and deletes it at Anthropic 30 days after its end', async () => {
     let s = await openSession()
     if (!s) { await S.send(f.auth, 'hello', deps()); await cron(); s = await openSession() }

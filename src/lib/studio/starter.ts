@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { tarOf, type ArchiveFile } from '@/domains/studio/archive'
 
@@ -25,8 +25,10 @@ export function starterArchive(): { bytes: Uint8Array; sha256: string } {
     for (const n of readdirSync(dir).sort()) {
       if (skipped(n)) continue
       const p = join(dir, n)
-      if (statSync(p).isDirectory()) walk(p)
-      else files.push({ path: relative(ROOT, p).split('\\').join('/'), bytes: new Uint8Array(readFileSync(p)) })
+      const st = lstatSync(p)
+      if (st.isSymbolicLink()) continue // never follows a link out of the kit (security review of R6, LOW-2)
+      if (st.isDirectory()) walk(p)
+      else if (st.isFile()) files.push({ path: relative(ROOT, p).split('\\').join('/'), bytes: new Uint8Array(readFileSync(p)) })
     }
   }
   walk(ROOT)

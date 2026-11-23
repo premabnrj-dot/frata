@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new NextResponse(null, { status: 401 })
-  // Without the key nothing at Anthropic can be read or cleaned; sessions wait (none can start either).
-  if (!isStudioConfigured()) return NextResponse.json({ skipped: 'not_configured' })
-  return NextResponse.json(await runStudioCron(Date.now() + 50_000))
+  // Without the key nothing at Anthropic can be read or cleaned, but the database half still runs: open sessions end
+  // as `switch` and their build keys are revoked (security review of R6, MED-2).
+  return NextResponse.json(await runStudioCron(Date.now() + 50_000, undefined, undefined, isStudioConfigured()))
 }

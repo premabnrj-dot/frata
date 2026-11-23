@@ -32,7 +32,7 @@ import { StudioUnbound, withStudio, type StudioOk } from './with-studio'
 // =============================================================================
 
 /** `busy`: a lock wait or a Send at the same moment (try again); `limit`: too many Sends this hour (slow down). */
-export type SendWhy = 'closed' | 'input' | 'busy' | 'limit' | 'person_day' | 'platform_day' | 'sessions' | 'turn_open' | 'start' | 'send' | 'budget'
+export type SendWhy = 'closed' | 'input' | 'busy' | 'limit' | 'person_day' | 'platform_day' | 'sessions' | 'turn_open' | 'start' | 'send' | 'budget' | 'error'
 export type SendResult = { ok: true; sessionId: string; turnId: string } | { ok: false; why: SendWhy }
 export type Deps = { runtime: StudioRuntime; starter: () => { bytes: Uint8Array; sha256: string }; follow: boolean }
 const DEFAULT: Deps = { runtime: managedRuntime, starter: starterArchive, follow: true }
@@ -48,7 +48,10 @@ function refusalOf(err: unknown): SendWhy {
   if (c?.code === 'P0001' && REFUSALS.has(c.message as SendWhy)) return c.message as SendWhy
   if (c?.code === 'P0001' && (c.message === 'not_bound' || c.message === 'not_found')) return 'closed'
   if (c?.code === '55P03' || c?.code === '23505') return 'busy' // a lock wait over 2 s; a second first Send at once
-  throw err
+  // Anything else: its class only, never the error (a query error's message carries its parameters: the person's text,
+  // the step-up hashes; security review of R6, LOW-1). Nothing was sent: the transaction rolled back.
+  console.error('[studio] send', errName(err))
+  return 'error'
 }
 
 const one = <T>(rows: unknown) => (rows as T[])[0]
@@ -220,8 +223,9 @@ async function dueEnd(tenantId: string, sessionId: string, turnOpen: boolean): P
 }
 
 /** An ended session's key revoked, its vault and file deleted and the session archived; then marked cleaned. A failure
- *  leaves it for the next run (each step is safe to repeat). */
-export async function cleanSession(tenantId: string, sessionId: string, rt: StudioRuntime = managedRuntime): Promise<boolean> {
+ *  leaves it for the next run (each step is safe to repeat). `vendor` false (Studio unconfigured: no key to reach
+ *  Anthropic): the key is revoked and the rest waits. */
+export async function cleanSession(tenantId: string, sessionId: string, rt: StudioRuntime = managedRuntime, vendor = true): Promise<boolean> {
   const ids = await withTenant(tenantId, async (tx) => {
     const r = one<{ runtime_id: string | null; vault_id: string | null; file_id: string | null; build_key_id: string | null }>(
       await tx.execute(sql`select runtime_id, vault_id, file_id, build_key_id from app_studio_cleanup_of(${sessionId}::uuid)`))
@@ -232,7 +236,7 @@ export async function cleanSession(tenantId: string, sessionId: string, rt: Stud
     }
     return r
   })
-  if (!ids) return false
+  if (!ids || !vendor) return false
   try {
     if (ids.vault_id) await rt.deleteVault(ids.vault_id)
     if (ids.file_id) await rt.deleteFile(ids.file_id)
@@ -246,7 +250,9 @@ export async function cleanSession(tenantId: string, sessionId: string, rt: Stud
 
 /** A session 30 days past its end deleted at Anthropic, then marked deleted. */
 async function deleteSession(tenantId: string, sessionId: string, rt: StudioRuntime): Promise<boolean> {
-  const runtimeId = await withTenant(tenantId, async (tx) => one<{ id: string | null }>(await tx.execute(sql`select app_studio_delete_of(${sessionId}::uuid) as id`))?.id ?? null)
+  const due = await withTenant(tenantId, async (tx) => one<{ runtime_id: string | null }>(await tx.execute(sql`select runtime_id from app_studio_delete_of(${sessionId}::uuid)`)))
+  if (!due) return false // not due (the mark refuses it too)
+  const runtimeId = due.runtime_id
   if (runtimeId) {
     try { await rt.remove(runtimeId) } catch (err) { console.error('[studio] delete', err instanceof RuntimeError ? err.code : errName(err)); return false }
   }
@@ -257,7 +263,7 @@ export type CronReport = { advanced: number; ended: number; cleaned: number; del
 
 /** The per-minute net (src/app/api/cron/studio/route.ts): each open turn advanced, sessions ended for the switch, a gone
  *  person, age or idleness, ended ones cleaned up, old ones deleted at Anthropic. No step starts past the deadline. */
-export async function runStudioCron(deadline: number, rt: StudioRuntime = managedRuntime, onlyStore?: string): Promise<CronReport> {
+export async function runStudioCron(deadline: number, rt: StudioRuntime = managedRuntime, onlyStore?: string, vendor = true): Promise<CronReport> {
   const out: CronReport = { advanced: 0, ended: 0, cleaned: 0, deleted: 0, errors: 0 }
   const room = (ms: number) => Date.now() + ms < deadline
   await sweepStudioBinds().catch((e) => { out.errors++; console.error('[studio] sweep', errName(e)) })
@@ -266,6 +272,10 @@ export async function runStudioCron(deadline: number, rt: StudioRuntime = manage
   for (const d of due) {
     if (!room(20_000)) break
     try {
+      // Studio unconfigured (the key removed is half the switch: security review of R6, MED-2): the database half still
+      // runs. Every open session ends as `switch` and its key is revoked; Anthropic's side waits for a key.
+      if (!vendor && (d.kind === 'advance' || d.kind === 'end')) { if (await endUnbound(d.tenantId, d.sessionId, 'switch')) out.ended++; continue }
+      if (!vendor && d.kind === 'delete') continue
       if (d.kind === 'advance' || d.kind === 'end') {
         const why = await dueEnd(d.tenantId, d.sessionId, d.kind === 'advance')
         if (why) { if (await endUnbound(d.tenantId, d.sessionId, why)) out.ended++; continue }
@@ -276,7 +286,7 @@ export async function runStudioCron(deadline: number, rt: StudioRuntime = manage
           else out.advanced++
         }
       } else if (d.kind === 'clean') {
-        if (await cleanSession(d.tenantId, d.sessionId, rt)) out.cleaned++
+        if (await cleanSession(d.tenantId, d.sessionId, rt, vendor)) out.cleaned++
       } else if (d.kind === 'delete') {
         if (await deleteSession(d.tenantId, d.sessionId, rt)) out.deleted++
       }
