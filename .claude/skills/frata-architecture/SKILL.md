@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.11.0
+  version: 3.12.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -235,10 +235,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   new owner's verified email for the shop's trial or ends it (one trial per business). A partner shop's trial starts at
   creation and it cannot be published until it has an owner (trigger in 0066). A partner's cap counts its
   shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
-- **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0164, proof § 89): ten
-  platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
+- **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0165 and 0168–0169, proof
+  § 89): eleven platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
   `partner_credit_uses`, `partner_credit_entries`, `partner_client_budgets`, `partner_credit_notices`, `partner_credit_tries`,
-  `fx_rates`) that NO Frrata role reads (P2's pattern; `check:tenant` names them). The ledger is `partner_credit_entries`,
+  `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them). The ledger is `partner_credit_entries`,
   append-only lots and draws; a balance is a sum, never stored. Rows that point at each other carry the partner in a
   composite foreign key on `(partner_id, id)` (`partner_links` and `partner_members` gained that key), and those keys are
   RESTRICT: a tenant or partner person with Studio uses can't be deleted until an erase flow decides what happens to them.
@@ -250,7 +250,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   free 20 are granted by a trigger on `partners` (approval is a plain update). The SQL restates the pure rules in
   `src/domains/studio/credits.ts`; `sql-drift.test.ts` pins the numbers. Their background work runs hourly in `/api/cron/credits`
   (`src/lib/studio/run.ts`): stragglers, seat renewals and their notices, renewal orders, refunds, mandate cancels and the
-  partner's emails, never in the daily outbox job. ONE billing inbox serves both families (drizzle/0165):
+  partner's emails, never in the daily outbox job. A mandate no longer used goes on `partner_mandate_cancels` (a queue,
+  never one overwritten slot) and the run cancels it with retries. Studio → Studio Plus starts at once (C1·B, 0169):
+  a start buys only with a token, and never on a day the old seat's renewal is also taken (the claim waits for an open
+  start; a start captured after a renewal was claimed is refunded). ONE billing inbox serves both families (drizzle/0165):
   `/api/webhooks/billing` and `app_apply_billing_event` route a partner's payment by OUR stored order id, a token event to
   both merchant and partner mandates, and a refund Frrata didn't make or a dispute to a clawback (what was spent becomes a
   debt, `app_pc_debt`, paid from bought credits). A change to the merchant billing webhook is a change to partner credits:

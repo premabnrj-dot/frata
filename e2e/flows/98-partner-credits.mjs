@@ -30,8 +30,10 @@ export default {
       await db`delete from partner_client_budgets where partner_id = ${pid}`
       await db`delete from partner_credit_purchases where partner_id = ${pid}`
       await db`delete from partner_seats where partner_id = ${pid}`
+      await db`delete from partner_mandate_cancels where partner_id = ${pid}`
       await db`delete from partner_credit_tries where user_id = ${P.id}`
-      await db`insert into partner_billing (partner_id) values (${pid}) on conflict (partner_id) do update set legal_name = null, gstin = null, pan = null, state_code = null, address = null, details_at = null`
+      await db`insert into partner_billing (partner_id) values (${pid}) on conflict (partner_id) do update set legal_name = null, gstin = null, pan = null, state_code = null, address = null, details_at = null,
+        token_id = null, mandate_method = null, mandate_max = null, mandate_at = null, mandate_revoked_at = null`
       await db`insert into partner_credit_entries (partner_id, kind, credits, expires_at) values (${pid}, 'grant', 20, now() + interval '90 days')`
     }
     await clean()
@@ -111,6 +113,29 @@ export default {
         assert.match(await csv.text(), /^"When","Client"/)
       })
 
+      await t.step('Studio, then Studio Plus at once: its credits stay, the old AutoPay is cancelled (C1·B)', async () => {
+        await pia.goto(CONSOLE + '/partner/credits?tab=plan')
+        await pia.getByRole('button', { name: 'Start Studio', exact: true }).click()
+        await pia.getByRole('dialog', { name: 'Start Studio' }).getByRole('button', { name: 'Pay ₹3,538.82' }).click()
+        await expectToast(pia, 'Studio started. 150 credits added.', 'ok')
+        await pia.goto(CONSOLE + '/partner/credits?tab=plan')
+        await pia.getByRole('button', { name: 'Move to Studio Plus' }).click()
+        const d = pia.getByRole('dialog', { name: 'Move to Studio Plus' })
+        await d.getByText('Studio credits left').waitFor()
+        await d.getByText('150 stay').waitFor()
+        await d.getByText('₹1,799.82').waitFor()
+        await pia.screenshot({ path: t.out('move-plus') })
+        await d.getByRole('button', { name: 'Pay ₹11,798.82' }).click()
+        await expectToast(pia, 'Studio Plus started. 500 credits added.', 'ok')
+        const seats = await db`select plan from partner_seats where partner_id = ${pid} and ended_at is null`
+        assert.deepEqual(seats.map((x) => x.plan), ['plus'])
+        const [q] = await db`select count(*)::int n from partner_mandate_cancels where partner_id = ${pid} and cancelled_at is null`
+        assert.equal(q.n, 1, 'the old Studio mandate is queued for cancelling')
+        await pia.goto(CONSOLE + '/partner/credits?tab=payments')
+        await pia.getByText('Old Studio AutoPay').waitFor()
+        await pia.getByText('Cancelling', { exact: true }).waitFor()
+      })
+
       await t.step('phone: the tabs scroll, Buy credits is a sheet', async () => {
         const phone = await open('partner', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
         await phone.goto(CONSOLE + '/partner/credits')
@@ -140,6 +165,8 @@ export default {
       await pia.context().close()
     } finally {
       await db`delete from partner_assignments where partner_member_id in (select id from partner_members where user_id = ${L.id})`
+      // Every store's seat for the Lead (80-partner-team, run before, gives the same Lead other stores), then Kesar's.
+      await db`delete from members where partner_member_id in (select id from partner_members where user_id = ${L.id})`
       await db`delete from members where user_id = ${L.id} and tenant_id = ${KESAR}`
       await db`delete from partner_members where user_id = ${L.id}`
       await clean()
