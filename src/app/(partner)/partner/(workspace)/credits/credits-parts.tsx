@@ -240,7 +240,7 @@ export function RaiseBudget({ linkId, client }: { linkId: string; client?: strin
   return <Button size="sm" busy={busy} onClick={async () => {
     setBusy(true); const r = await freshly(() => raiseBudgetAction({ linkId })); setBusy(false)
     if (!r.ok) { toast.error(r.error); return } toast.ok(r.text); settle(router)
-  }} aria-label={client ? `Raise ${client}’s budget by 50` : undefined}>Raise by 50</Button>
+  }} aria-label={client ? `Raise by 50 for ${client}` : undefined}>Raise by 50</Button>
 }
 
 function NumberDialog({ open, onClose, title, label, start, save, saveLabel, undo = false }: { open: boolean; onClose: () => void; title: string; label: string; start: number | null
@@ -276,7 +276,7 @@ function NumberDialog({ open, onClose, title, label, start, save, saveLabel, und
 export function SetBudget({ linkId, client, kind, budget }: { linkId: string; client: string; kind: string; budget: number | null }) {
   const [open, setOpen] = useState(false)
   return <>
-    <Button size="sm" variant="secondary" onClick={() => setOpen(true)} aria-label={`Set ${client}’s budget`}>Set budget</Button>
+    <Button size="sm" variant="secondary" onClick={() => setOpen(true)} aria-label={`Set budget for ${client}`}>Set budget</Button>
     {open && <NumberDialog open onClose={() => setOpen(false)} title={`${client}’s budget`} label={kind} start={budget} saveLabel="Save budget" undo
       save={(credits) => setBudgetAction({ linkId, credits, client })} />}
   </>
