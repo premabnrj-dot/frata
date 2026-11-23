@@ -1,4 +1,4 @@
-<title>Studio door states</title>
+<title>Studio entry states</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Cormorant+Garamond:wght@500;600&display=swap">
 <style>
@@ -250,8 +250,8 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 </style>
 <div class="doc">
 <div class="head">
-  <h1>Studio door states</h1>
-  <p>What Studio shows a Frrata staff member who is also the test store's partner, but is missing one step. 23 Nov 2026 · Draft for the owner. Everyone else keeps today's card, unchanged.</p>
+  <h1>Studio entry states</h1>
+  <p>What Studio shows staff who are also the test store's partners and miss one step. Draft, 23 Nov.</p>
 </div>
 <nav aria-label="Sections">
   <a href="#in-short">In short</a><a href="#states">The states</a><a href="#calls">Your calls</a>
@@ -260,10 +260,10 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <section id="in-short">
   <h2>In short</h2>
   <div class="cards">
-    <div class="card"><h3>What this is</h3><p>Today one card hides five reasons: the wrong store, no staff check, no partner check, the two checks on different sign-ins, and Studio off. Staff who are allowed in can't tell what to do.</p></div>
-    <div class="card"><h3>What changes</h3><p>For staff who are also a partner, the card names the one missing step and offers it. Anyone else sees today's card, word for word.</p></div>
-    <div class="card"><h3>What it costs</h3><p>Nothing new to run. The buttons use the passkey checks and the store switch that already exist.</p></div>
-    <div class="card"><h3>What I need</h3><p>Your yes on the four states and the two calls.</p></div>
+    <div class="card"><h3>What this is</h3><p>Today one card covers five cases. Staff who may enter can't tell what to do.</p></div>
+    <div class="card"><h3>What changes</h3><p>Staff who are partners see the missing step and a button for it. Others see today's card.</p></div>
+    <div class="card"><h3>What it costs</h3><p>Nothing new to run.</p></div>
+    <div class="card"><h3>What I need</h3><p>Say yes or no to the four states and three calls.</p></div>
   </div>
 </section>
 
@@ -280,16 +280,16 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
     </div></div>
 
     <div class="screen"><div class="cap">1b · A check is missing</div><div class="in">
-      <div class="panel"><h4>Confirm it's you</h4>
+      <div class="panel"><h4>Confirm your passkeys</h4>
         <ol class="line" style="margin:8px 0 12px;padding-left:18px;display:grid;gap:6px">
-          <li>Staff passkey · Done</li>
+          <li>Staff passkey: Done</li>
           <li>Partner passkey</li>
         </ol>
-        <button class="btn sm pri">Confirm with passkey</button></div>
+        <button class="btn sm pri">Confirm partner passkey</button></div>
     </div></div>
 
     <div class="screen"><div class="cap">1c · No staff passkey yet</div><div class="in">
-      <div class="panel"><h4>Add a staff passkey</h4><p>Studio needs one, even while passkeys are off for sign-in.</p><a class="btn sm" href="#states">Open Admin</a></div>
+      <div class="panel"><h4>Add a staff passkey</h4><a class="btn sm pri" href="#states">Add staff passkey</a></div>
     </div></div>
 
   </div>
@@ -298,9 +298,10 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
 <section id="calls">
   <h2>Your calls</h2>
   <div class="cards">
-    <div class="card"><h3>1 · Show the missing step to staff only</h3><p>Only a person who is Frrata staff and a partner sees 1a–1c. Others learn nothing about who may use Studio. <b>Recommended: yes.</b></p></div>
-    <div class="card"><h3>2 · One confirm for both checks</h3><p>1b confirms the staff passkey, then the partner passkey, one after the other, each with its own prompt. A check already made shows Done. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>1 · Show the missing step to staff only</h3><p>Only staff who are also partners see 1a–1c. Others see today's card. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>2 · One button, two passkey prompts</h3><p>1b asks for the staff passkey, then the partner passkey. A passkey already made shows Done. The button names the next one. <b>Recommended: yes.</b></p></div>
+    <div class="card"><h3>3 · A first staff passkey while passkeys are off</h3><p>Today Admin offers it only while passkeys are on. Add staff passkey opens Admin's own ask-and-approve, with passkeys off too. <b>Recommended: yes.</b></p></div>
   </div>
-  <p class="line">Not changed: Studio still asks for both passkeys, made on this sign-in, even while passkeys are off for sign-in.</p>
+  <p class="line">Unchanged: Studio asks for both passkeys on this sign-in.</p>
 </section>
 </div>
