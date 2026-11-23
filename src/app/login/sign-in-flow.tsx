@@ -1,15 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { FieldError, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { EMAIL_SHAPE, emailTypo } from '@/domains/signup/slug'
-import { sendCode, verifyCode } from './actions'
+import { afterVerify } from '@/domains/access/email-code'
+import { useEmailCode } from './use-email-code'
 import { CodeInput } from './code-input'
-
-const RESEND_SECONDS = 60 // Supabase refuses a second email to one address within a minute.
 
 /**
  * Email → the 6-digit code from the same email. The link in that email works
@@ -31,16 +30,8 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
   const codeRef = useRef<HTMLDivElement>(null)
   useErrorSummary({ [step]: error }, { attempt, scope: step === 'email' ? formRef : codeRef })
   const fieldError = (e: string) => { setError(e); setAttempt((a) => a + 1) }
-  const [sentAt, setSentAt] = useState<number | null>(null)
-  const [now, setNow] = useState(0) // read only once a code is sent (sentAt), never while the page first renders
+  const { sentAt, wait, send: sendEmail, verify } = useEmailCode()
   const [pending, start] = useTransition()
-
-  useEffect(() => {
-    if (!sentAt) return
-    const t = setInterval(() => setNow(Date.now()), 1000) // clock-ok: a timer, after mount
-    return () => clearInterval(t)
-  }, [sentAt])
-  const wait = sentAt ? Math.max(0, RESEND_SECONDS - Math.floor((now - sentAt) / 1000)) : 0
 
   function send(e?: React.FormEvent) {
     e?.preventDefault()
@@ -50,9 +41,9 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
     if (typo) return fieldError(`Did you mean ${typo}?`)
     setError(null)
     start(async () => {
-      const r = await sendCode({ email: v })
+      const r = await sendEmail(v)
       if (!r.sent) return r.field ? fieldError(r.error) : toast.error(r.error)
-      setEmail(r.email); setCode(''); setSentAt(Date.now()); setNow(Date.now()); setBack(false); setStep('code') // clock-ok: in the send handler
+      setEmail(r.email); setCode(''); setBack(false); setStep('code')
     })
   }
 
@@ -61,7 +52,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
     if (c.length !== 6 || !EMAIL_SHAPE.test(email.trim())) return
     setError(null)
     start(async () => {
-      const r = await verifyCode({ email, code: c })
+      const r = await verify(email, c)
       if (!r.ok) {
         setCode('')
         if (r.field) fieldError(r.error)
@@ -72,7 +63,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
       if (intent === 'partner' && r.to !== '/partner' && r.to !== '/handover' && r.to !== '/join' && r.to !== '/admin' && r.to !== '/choose') { router.refresh(); return }
       // The partner workspace and a team invite may ask for a passkey, which this page's policy refuses: a full page load
       // gives them their own (next.config.ts, T1b).
-      if (r.to === '/partner' || r.to === '/join') { window.location.assign(r.to); return }
+      if (afterVerify(r.to) === 'assign') { window.location.assign(r.to); return }
       router.replace(r.to)
       router.refresh()
     })

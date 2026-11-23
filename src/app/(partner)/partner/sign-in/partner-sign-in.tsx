@@ -8,9 +8,7 @@ import { FieldError } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { EMAIL_SHAPE } from '@/domains/signup/slug'
 import { maskEmail } from '@/domains/partners/passkeys'
-import { sendCode, verifyCode } from '@/app/login/actions'
-
-const RESEND_SECONDS = 60 // Supabase refuses a second email to one address within a minute.
+import { useEmailCode } from '@/app/login/use-email-code'
 
 /**
  * Screens 1–2: "Work email" → "Continue with email" → "Check your email", one code box that takes a paste and the
@@ -24,17 +22,10 @@ export function PartnerSignIn({ next, signedOut = false, backLabel = null }: { n
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [sentAt, setSentAt] = useState<number | null>(null)
-  const [now, setNow] = useState(0)
+  const { wait, send: sendEmail, verify } = useEmailCode()
   const [pending, start] = useTransition()
   const codeRef = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (!sentAt) return
-    const t = setInterval(() => setNow(Date.now()), 1000) // clock-ok: a timer, after mount
-    return () => clearInterval(t)
-  }, [sentAt])
   useEffect(() => { if (step === 'code') codeRef.current?.focus() }, [step])
-  const wait = sentAt ? Math.max(0, RESEND_SECONDS - Math.floor((now - sentAt) / 1000)) : 0
 
   function send(e?: React.FormEvent) {
     e?.preventDefault()
@@ -42,9 +33,9 @@ export function PartnerSignIn({ next, signedOut = false, backLabel = null }: { n
     if (!EMAIL_SHAPE.test(v)) return setError('Enter your work email.')
     setError(null)
     start(async () => {
-      const r = await sendCode({ email: v })
+      const r = await sendEmail(v)
       if (!r.sent) return r.field ? setError(r.error) : toast.error(r.error)
-      setEmail(r.email); setCode(''); setSentAt(Date.now()); setNow(Date.now()); setStep('code') // clock-ok: in the send handler
+      setEmail(r.email); setCode(''); setStep('code')
     })
   }
   function check(e?: React.FormEvent) {
@@ -52,7 +43,7 @@ export function PartnerSignIn({ next, signedOut = false, backLabel = null }: { n
     if (!/^\d{6}$/.test(code)) return setError('Enter the 6-digit code from the email.')
     setError(null)
     start(async () => {
-      const r = await verifyCode({ email, code })
+      const r = await verify(email, code)
       // A wrong code stays in the box to be corrected; focus goes back to it.
       if (!r.ok) { codeRef.current?.focus(); return r.field ? setError(r.error) : toast.error(r.error) }
       router.replace(r.to === '/partner' ? next : r.to)
