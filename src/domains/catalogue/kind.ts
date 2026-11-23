@@ -8,7 +8,7 @@
 // "What are you selling?" step; this stays as its default.
 // =============================================================================
 
-import { PRESETS, sizeKey } from './size-charts'
+import { PRESETS, sizeKey, type PresetKey } from './size-charts'
 
 export const KINDS = ['sized', 'footwear', 'kids', 'one_size'] as const
 export type Kind = (typeof KINDS)[number]
@@ -37,7 +37,7 @@ export function kindOf(title: string): Kind {
   return 'sized'
 }
 
-const first3 = (k: string, from = 0) => PRESETS[k]!.chart.rows.slice(from, from + 3).map((r) => r.size)
+const first3 = (k: PresetKey, from = 0) => PRESETS[k].chart.rows.slice(from, from + 3).map((r) => r.size)
 /** The sizes a new product of this kind starts with: three of the starting chart's own rows (size-charts.ts). */
 export const startSizes: Record<Kind, string[]> = { kids: first3('kids'), footwear: first3('footwear', 2), one_size: [], sized: first3('womens_kurta', 1) }
 

@@ -280,5 +280,17 @@
     "rule": "W4",
     "text": "websites",
     "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
+  },
+  {
+    "file": "src/domains/catalogue/packs/shared.ts",
+    "rule": "W1",
+    "text": "Beauty, personal care and wellness products can be returned only unopened",
+    "why": "The returns page's legal sentence, moved unchanged from src/domains/policies/render.ts (shopper-facing and legal, outside N3's scope) into its category pack (plan 2026-11-23-c1-category-packs); the policies keep their wording"
+  },
+  {
+    "file": "src/domains/catalogue/packs/shared.ts",
+    "rule": "W2",
+    "text": "Beauty, personal care and wellness products can be returned only unopened",
+    "why": "The returns page's legal sentence, moved unchanged from src/domains/policies/render.ts (shopper-facing and legal, outside N3's scope) into its category pack (plan 2026-11-23-c1-category-packs); the policies keep their wording"
   }
 ]

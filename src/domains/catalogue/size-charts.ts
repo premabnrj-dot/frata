@@ -18,7 +18,7 @@ const rows = (sizes: string[], cols: number[][]) => sizes.map((size, i) => ({ si
 
 const HOW_TOP = 'Measure bust or chest around the fullest part, tape level. Measure the waist at its narrowest and the hips at their fullest. Measure over light clothing.'
 
-export const PRESETS: Record<string, Preset> = {
+export const PRESETS = {
   womens_kurta: { name: 'Kurta set · Women', chart: { columns: ['Bust', 'Waist', 'Hip'], howToMeasure: HOW_TOP,
     rows: rows(['XS', 'S', 'M', 'L', 'XL', 'XXL'], [[81, 86, 91, 97, 102, 107], [66, 71, 76, 81, 86, 91], [89, 94, 99, 104, 109, 114]]) } },
   mens_shirt: { name: 'Shirt · Men', chart: { columns: ['Chest', 'Waist', 'Shoulder'], howToMeasure: `${HOW_TOP} Measure the shoulder across the back, seam to seam.`,
@@ -28,11 +28,13 @@ export const PRESETS: Record<string, Preset> = {
   footwear: { name: 'Footwear', chart: { columns: ['Foot length'], howToMeasure: 'Stand on paper, mark the heel and the longest toe, measure between the marks. Between two sizes, take the larger.',
     rows: rows(['UK 4', 'UK 5', 'UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10'], [[22.8, 23.5, 24.4, 25.2, 26.0, 26.8, 27.6]]) } },
   one_size: { name: 'One size', chart: { columns: [], rows: [], howToMeasure: '' } },
-}
+} satisfies Record<string, Preset>
+/** A starting chart's key: what a category pack names in its `charts` (packs/types.ts). */
+export type PresetKey = keyof typeof PRESETS
 
 /** Which starting charts a shop gets, from what it said it sells (or all of the common ones if it skipped). */
 export function presetsFor(sells: readonly (typeof SELL_KEYS)[number][]): Preset[] {
-  const keys = new Set<string>()
+  const keys = new Set<PresetKey>()
   for (const s of sells) {
     if (s === 'women' || s === 'ethnic') keys.add('womens_kurta')
     if (s === 'men') keys.add('mens_shirt')
@@ -41,9 +43,9 @@ export function presetsFor(sells: readonly (typeof SELL_KEYS)[number][]): Preset
     if (s === 'accessories' || s === 'jewellery' || s === 'beauty' || s === 'wellness') keys.add('one_size')
   }
   // Skipped the question: the common ones. A shop of jewellery or beauty only gets no garment charts.
-  if (!sells.length) ['womens_kurta', 'mens_shirt', 'one_size'].forEach((k) => keys.add(k))
+  if (!sells.length) (['womens_kurta', 'mens_shirt', 'one_size'] as const).forEach((k) => keys.add(k))
   keys.add('one_size')
-  return [...keys].map((k) => PRESETS[k]!)
+  return [...keys].map((k) => PRESETS[k])
 }
 
 /** One size however it is typed: case, spaces and dashes don't count ("2-3 y" is "2–3 Y"). */
