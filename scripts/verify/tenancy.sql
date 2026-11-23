@@ -4142,7 +4142,7 @@ begin
   if not app_pc_refund_claim(u2) then raise exception 'FAIL: a refund not claimed'; end if;
   if app_pc_refund_claim(u2) then raise exception 'FAIL: a refund claimed twice'; end if;
   -- the emails carry the owner (and a Lead for its client's 80%), never someone else
-  if exists (select 1 from app_pc_notices_claim(100) x where x.partner_id = G and ('y89@yarn.test' = any (x.owners) or 'y89@yarn.test' = any (x.leads))) then raise exception 'FAIL: Y got G''s email'; end if;
+  if exists (select 1 from app_pc_notices_claim(100, null) x where x.partner_id = G and ('y89@yarn.test' = any (x.owners) or 'y89@yarn.test' = any (x.leads))) then raise exception 'FAIL: Y got G''s email'; end if;
   perform app_pc_refund_done(u2, 'rfnd_proof89');
   if exists (select 1 from app_pc_refunds_due(10) x where x.id = u2) then raise exception 'FAIL: a refund done stays due'; end if;
   -- a failed payment, then a late capture of the same attempt still buys (architecture M7)
@@ -4194,7 +4194,7 @@ begin
   if app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27') is not null
   then raise exception 'FAIL: two open renewal attempts'; end if;
   if exists (select 1 from app_pc_renewals_notified(50) x where x.id = v) then raise exception 'FAIL: an order before the email went'; end if;
-  select * into n from app_pc_notices_claim(100) x where x.kind = 'predebit' and x.partner_id = gp;
+  select * into n from app_pc_notices_claim(100, null) x where x.kind = 'predebit' and x.partner_id = gp;
   if n.id is null or (n.data->>'total')::bigint <> 353882 or n.data->>'mandateRef' <> '0001' or not ('g@nook.test' = any (n.owners) or cardinality(n.owners) = 1)
   then raise exception 'FAIL: the pre-debit notice (%)', n; end if;
   perform app_pc_notice_done(n.id, true, null);
@@ -4420,7 +4420,7 @@ do $$ declare r text; f text; begin
     'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
     'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
     'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',
-    'app_pc_dispute(text)', 'app_pc_notices_claim(integer)', 'app_pc_notice_done(uuid, boolean, text)',
+    'app_pc_dispute(text)', 'app_pc_notices_claim(integer, uuid[])', 'app_pc_notice_done(uuid, boolean, text)',
     'app_fx_rate_latest()', 'app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean)', 'app_pc_settle(uuid, bigint)', 'app_pc_return(uuid, text)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin'] loop
       if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run %', r, f; end if;

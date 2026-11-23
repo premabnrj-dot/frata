@@ -264,16 +264,29 @@ begin
   select x.* into me from public.app_pm_live(p_uid) x where x.role in ('owner', 'lead');
   if me.member_id is null then raise exception 'not_owner' using errcode = 'P0001'; end if;
   perform public.app_partner_need(p_uid, p_session, p_stepup, false);
+  -- One grouped statement for every store (speed review 2026-11-23: a definer call per store was 339 ms at 10×): each
+  -- store's uses in its window, less what came back to them; the same sum as app_pc_link_used.
   return query
-  select l.id, t.name, w.kind, b.credits, public.app_pc_link_used(me.partner_id, l.id), b.warned_at is not null,
+  with k as (
+    select l.id, t.name, w.kind, w.starts_at, l.tenant_id from public.partner_links l
+      join public.tenants t on t.id = l.tenant_id
+      cross join lateral public.app_pc_window(l.id) w
+     where l.partner_id = me.partner_id and l.removed_at is null
+       and (me.role = 'owner' or exists (select 1 from public.partner_assignments a where a.partner_member_id = me.member_id and a.tenant_id = l.tenant_id))),
+  back as (
+    select e.use_id, sum(e.credits) as credits from public.partner_credit_entries e
+     where e.partner_id = me.partner_id and e.kind in ('release', 'return') group by e.use_id),
+  used as (
+    select u.link_id, (sum(u.reserved) - coalesce(sum(bk.credits), 0))::integer as n from public.partner_credit_uses u
+      join k on k.id = u.link_id and u.created_at >= k.starts_at
+      left join back bk on bk.use_id = u.id
+     where u.partner_id = me.partner_id group by u.link_id)
+  select k.id, k.name, k.kind, b.credits, coalesce(us.n, 0), b.warned_at is not null,
          case when me.role = 'owner' then (select pb.new_site_budget from public.partner_billing pb where pb.partner_id = me.partner_id) end
-  from public.partner_links l
-  join public.tenants t on t.id = l.tenant_id
-  cross join lateral public.app_pc_window(l.id) w
-  left join public.partner_client_budgets b on b.partner_id = me.partner_id and b.link_id = l.id
-  where l.partner_id = me.partner_id and l.removed_at is null
-    and (me.role = 'owner' or exists (select 1 from public.partner_assignments a where a.partner_member_id = me.member_id and a.tenant_id = l.tenant_id))
-  order by t.name;
+  from k
+  left join used us on us.link_id = k.id
+  left join public.partner_client_budgets b on b.partner_id = me.partner_id and b.link_id = k.id
+  order by k.name;
 end $$;
 --> statement-breakpoint
 
@@ -827,12 +840,14 @@ end $$;
 -- ── Emails (C1·6; tenancy H4): claimed by the hourly run with the recipients and the figures resolved NOW (the owner;
 --    for a client's 80% also the Leads assigned to it today), so an unassigned Lead never gets one. Never read by
 --    frata_admin. Five tries, then failed. ──
-create or replace function app_pc_notices_claim(p_limit integer) returns table (id uuid, kind text, partner_id uuid, owners text[], leads text[], owner_name text, data jsonb)
+-- p_skip: notices this run already tried (speed review 2026-11-23: a second claim in one run never spends a second try).
+create or replace function app_pc_notices_claim(p_limit integer, p_skip uuid[]) returns table (id uuid, kind text, partner_id uuid, owners text[], leads text[], owner_name text, data jsonb)
   language plpgsql volatile security definer set search_path = '' as $$
 begin
   return query
   with due as (
     select n.* from public.partner_credit_notices n where n.sent_at is null and n.failed_at is null
+       and not (n.id = any (coalesce(p_skip, '{}'::uuid[])))
      order by n.created_at limit least(p_limit, 100) for update skip locked),
   bumped as (update public.partner_credit_notices n set tries = n.tries + 1 from due where n.id = due.id returning n.*)
   select d.id, d.kind, d.partner_id,
@@ -1063,7 +1078,7 @@ revoke all on function app_pc_owner(uuid, uuid, text, boolean, boolean), app_pc_
   app_pc_renewals(integer, timestamptz, uuid), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
-  app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer), app_fx_rate_latest(),
+  app_pc_notices_claim(integer, uuid[]), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer), app_fx_rate_latest(),
   app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_give_back(uuid, integer), app_pc_settle(uuid, bigint),
   app_pc_return(uuid, text), app_pc_stale_uses(interval, integer), app_pc_owed(uuid), admin_partner_gst_rows(timestamptz, timestamptz)
   from public, anon, authenticated, service_role, frata_builder, frata_app, frata_admin;
@@ -1081,7 +1096,7 @@ grant execute on function app_partner_credit_try(uuid, uuid, text, text),
   app_pc_renewals(integer, timestamptz, uuid), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
-  app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_latest(),
+  app_pc_notices_claim(integer, uuid[]), app_pc_notice_done(uuid, boolean, text), app_fx_rate_latest(),
   app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_settle(uuid, bigint), app_pc_return(uuid, text),
   app_pc_stale_uses(interval, integer)
   to frata_app;

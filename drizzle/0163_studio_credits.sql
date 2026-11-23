@@ -310,5 +310,6 @@ create index partner_credit_uses_day on partner_credit_uses (created_at) include
 create index partner_credit_entries_clawbacks on partner_credit_entries (purchase_id) include (credits, lot_id) where kind = 'clawback';--> statement-breakpoint
 create index partner_credit_entries_use_back on partner_credit_entries (use_id) include (kind, credits) where use_id is not null;--> statement-breakpoint
 create index partner_credit_purchases_seat on partner_credit_purchases (seat_id, for_period_end) where seat_id is not null;--> statement-breakpoint
+create index partner_credit_entries_back on partner_credit_entries (partner_id) include (use_id, credits) where kind in ('release', 'return');--> statement-breakpoint
 -- A notice names a link of its own partner only (impact review: every cross-reference carries the partner).
 alter table partner_credit_notices add constraint partner_credit_notices_link_fk foreign key (partner_id, link_id) references partner_links (partner_id, id) on delete restrict;

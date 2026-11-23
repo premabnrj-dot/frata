@@ -226,7 +226,7 @@ export async function sendCreditEmails(now: Date, live: () => boolean): Promise<
   // Claim again while there is time (speed review: a fixed 30 a run is 720 a day), never the same notice twice a run.
   const seen = new Set<string>()
   for (;;) {
-  const batch = (await system.noticesClaim(30)).filter((n) => !seen.has(n.id))
+  const batch = (await system.noticesClaim(30, [...seen])).filter((n) => !seen.has(n.id))
   if (!batch.length) break
   for (const n of batch) {
     seen.add(n.id)

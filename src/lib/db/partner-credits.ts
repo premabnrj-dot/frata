@@ -293,8 +293,9 @@ export const system = {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_dispute(${paymentId}) as ok`)
     return r?.ok === true
   },
-  async noticesClaim(limit: number): Promise<NoticeRow[]> {
-    const rows = await db().execute<Record<string, unknown>>(sql`select * from app_pc_notices_claim(${limit})`)
+  /** `skip`: notices this run already tried, so a second claim never spends a second try on them. */
+  async noticesClaim(limit: number, skip: string[] = []): Promise<NoticeRow[]> {
+    const rows = await db().execute<Record<string, unknown>>(sql`select * from app_pc_notices_claim(${limit}, ${`{${skip.join(',')}}`}::uuid[])`)
     return rows.map((r) => ({ id: r.id as string, kind: r.kind as NoticeKind, partnerId: r.partner_id as string, owners: (r.owners as string[] | null) ?? [],
       leads: (r.leads as string[] | null) ?? [], ownerName: (r.owner_name as string | null) ?? '', data: (r.data as Record<string, any>) ?? {} }))
   },
