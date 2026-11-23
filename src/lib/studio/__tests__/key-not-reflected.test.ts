@@ -1,7 +1,8 @@
 // The build key the session's vault injects as Frrata-Key is never reflected (plan docs/plans/2026-11-22-v3a-runtime.md R5;
 // security review of the plan): not in a body or a header of any answer of the header tree (found, not found, busy, an
 // error, an oversized key), no header-tree route answers OPTIONS or TRACE itself (Next's automatic answers carry no
-// request header), and a storefront API path on any host but the API host is refused before a route runs.
+// request header), and a storefront API path on any host but the API host is refused before a route runs. Next's own
+// OPTIONS answer and the gateway are not run here: what the edge does with a wrong Host is R8's probe.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomBytes } from 'node:crypto'
@@ -53,8 +54,10 @@ describe('Frrata-Key is never reflected', () => {
     answers.push(await ok(req(huge), noKey)) // oversized
     plan.busy = true; answers.push(await ok(req(BUILD), noKey)); plan.busy = false
     plan.lookupFails = true; answers.push(await ok(req(BUILD), noKey)); plan.lookupFails = false
-    answers.push(await throws(req(BUILD), noKey).catch(() => new Response(null, { status: 500 })))
-    answers.push(await badShape(req(BUILD), noKey).catch(() => new Response(null, { status: 500 })))
+    answers.push(await throws(req(BUILD), noKey))
+    answers.push(await badShape(req(BUILD), noKey))
+    // What each answer is (security review of R5, LOW-3): a rejection would fail here, never pass as a clean 500.
+    expect(answers.map((r) => r.status)).toEqual([200, 404, 404, 429, 500, 500, 500])
     for (const r of answers) {
       expect(await reflects(r.clone(), BUILD)).toBe(false)
       expect([...r.headers.keys()].filter((k) => k.startsWith('access-control-'))).toEqual([])

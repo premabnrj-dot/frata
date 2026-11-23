@@ -134,6 +134,72 @@ describe.skipIf(!host)('advance: a turn through asTurn and the tools', () => {
     expect([a, b].sort()).toEqual(['busy', 'ended'])
   })
 
+  it('another store’s advance of this turn binds nothing and writes nothing', async () => {
+    const [b] = await su<[{ id: string }]>`insert into tenants (slug, name) values (${'int-studio-b-' + stamp}, 'Int Studio B') returning id`
+    const turn = await openTurn()
+    await rt.send(ids.runtime, 'facts please')
+    const before = await su`select count(*)::int as n from studio_tool_calls where session_id = ${ids.session}`
+    expect(await mod.advance({ tenantId: b.id, turnId: turn })).toBe('actor')
+    expect(await su`select count(*)::int as n from studio_tool_calls where session_id = ${ids.session}`).toEqual(before)
+    expect((await su`select advancing_until from studio_sessions where id = ${ids.session}`)[0]!.advancing_until).toBeNull()
+    // This store's advance carries on.
+    expect(await mod.advance(ref(turn))).toBe('answered')
+    expect(await mod.advance(ref(turn))).toBe('ended')
+  })
+
+  it('an answer that fails to send is sent again with the stored results; the call is not run twice', async () => {
+    const turn = await openTurn()
+    await rt.send(ids.runtime, 'facts please')
+    ;(fake.state as unknown as { failNext: Record<string, number> }).failNext['POST /v1/sessions/sesn_*/events'] = 1
+    expect(await mod.advance(ref(turn))).toBe('error')
+    const [first] = await su`select executed_at, answered_at, result from studio_tool_calls where turn_id = ${turn}`
+    expect(first!.executed_at).not.toBeNull()
+    expect(first!.answered_at).toBeNull() // kept until its send succeeds
+    expect(await mod.advance(ref(turn))).toBe('answered')
+    const [again] = await su`select executed_at, answered_at, result from studio_tool_calls where turn_id = ${turn}`
+    expect(again!.executed_at).toEqual(first!.executed_at)
+    expect(again!.result).toEqual(first!.result)
+    expect(again!.answered_at).not.toBeNull()
+    expect(await mod.advance(ref(turn))).toBe('ended')
+  })
+
+  it('model data the database would refuse (NUL, an input that grows as jsonb) never sticks the session', async () => {
+    type Ev = Record<string, unknown> & { type: string; input?: unknown }
+    const sess = () => (fake.state as unknown as { sessions: Map<string, { events: Ev[] }> }).sessions.get(ids.runtime)!
+    let turn = await openTurn()
+    await rt.send(ids.runtime, 'facts please')
+    const call = [...sess().events].reverse().find((x) => x.type === 'agent.custom_tool_use')!
+    call.input = { note: 'a\u0000b' }
+    const line = [...sess().events].reverse().find((x) => x.type === 'session.status_idle')!
+    sess().events.splice(sess().events.indexOf(line), 0, { id: 'sevt_nul_line', type: 'agent.message', created_at: line.created_at, processed_at: line.processed_at, content: [{ type: 'text', text: 'x\u0000y' }] })
+    expect(await mod.advance(ref(turn))).toBe('answered')
+    const [c] = await su`select input, is_error from studio_tool_calls where turn_id = ${turn}`
+    expect(c!.input).toEqual({ note: 'ab' }) // NUL dropped; store_facts takes no input, so it is refused unrun
+    expect(c!.is_error).toBe(true)
+    expect((await su`select text from studio_messages where event_id = 'sevt_nul_line'`)[0]?.text).toBe('xy')
+    expect(await mod.advance(ref(turn))).toBe('ended')
+
+    turn = await openTurn()
+    await rt.send(ids.runtime, 'facts please')
+    ;[...sess().events].reverse().find((x) => x.type === 'agent.custom_tool_use')!.input = { n: Array.from({ length: 30_000 }, () => 0) }
+    expect(await mod.advance(ref(turn))).toBe('answered')
+    const [big] = await su`select input, result from studio_tool_calls where turn_id = ${turn}`
+    expect(big).toMatchObject({ input: {}, result: { error: 'The input did not match the tool. Nothing was changed.' } })
+    expect(await mod.advance(ref(turn))).toBe('ended')
+  })
+
+  it('a queued message opens the turn only once the runtime takes it; the cursor never passes it', async () => {
+    const turn = await openTurn()
+    ;(fake.state as unknown as { queueNext: number }).queueNext = 1
+    await rt.send(ids.runtime, 'facts please')
+    expect(await mod.advance(ref(turn))).toBe('waiting') // listed queued: not this turn's start yet
+    expect((await turnRow(turn)).started_at).toBeNull()
+    const [cur] = await su`select event_cursor from studio_sessions where id = ${ids.session}`
+    expect(cur!.event_cursor).toBeTruthy()
+    expect(await mod.advance(ref(turn))).toBe('answered')
+    expect(await mod.advance(ref(turn))).toBe('ended')
+  })
+
   it('at the budget the turn pauses and settles what was measured', async () => {
     const turn = await openTurn()
     await rt.send(ids.runtime, 'make it expensive with a warmer accent')

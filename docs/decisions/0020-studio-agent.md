@@ -46,6 +46,9 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
      role; a write takes its `*In(tx)` form inside its own `withTenant`. A cached loader never runs inside a
      transaction (it would deadlock the pool);
    - every id in a tool's input is matched with `where tenant_id = turn.tenant`.
+   *(As built, 2026-11-23, V3a R5: `asTurn(turn, work)`, with no `cap`: a tool gets `ctx.reads`, a frata_builder Actor, and
+   `ctx.write((tx, partnerId) => …)`, a store transaction the database binds to the turn's person again; no tool input
+   carries an id at all, `check:studio`.)*
 5. **A third Postgres setting, `app.partner_id`,** *(as first written; superseded by the amendment below: the partner
    is bound by a database-held row, not a setting)* beside `app.tenant_id` and `app.member_role`, set only by
    `requireMember`/`requireCapability` from `app_access_for` and carried in the Actor. Every `studio_*` table has a

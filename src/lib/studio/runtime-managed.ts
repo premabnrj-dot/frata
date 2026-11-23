@@ -48,24 +48,24 @@ const textOf = (blocks: unknown): string => Array.isArray(blocks)
 
 /** One vendor event as ours. Unknown kinds are `other` (read past, never acted on). */
 export function toStudioEvent(ev: Record<string, unknown>): StudioEvent {
-  const id = String(ev.id ?? ''), at = String(ev.processed_at ?? '')
+  const s = { id: String(ev.id ?? ''), at: String(ev.created_at ?? ev.processed_at ?? ''), processed: ev.processed_at != null && ev.processed_at !== '' }
   switch (ev.type) {
-    case 'user.message': return { id, at, kind: 'user_message' }
-    case 'agent.custom_tool_use': return { id, at, kind: 'tool_use', name: String(ev.name ?? ''), input: ev.input ?? {} }
-    case 'agent.message': return { id, at, kind: 'agent_message', text: textOf(ev.content) }
+    case 'user.message': return { ...s, kind: 'user_message' }
+    case 'agent.custom_tool_use': return { ...s, kind: 'tool_use', name: String(ev.name ?? ''), input: ev.input ?? {} }
+    case 'agent.message': return { ...s, kind: 'agent_message', text: textOf(ev.content) }
     case 'span.model_request_end': {
       const caps = studioCaps()
       const u = (ev.model_usage ?? {}) as Parameters<typeof requestCost>[0]
-      return { id, at, kind: 'request_end', cost: caps ? requestCost(u, caps.rates) : (0 as MicroUsd) }
+      return { ...s, kind: 'request_end', cost: caps ? requestCost(u, caps.rates) : (0 as MicroUsd) }
     }
     case 'session.status_idle': {
       const r = (ev.stop_reason ?? {}) as { type?: string; event_ids?: unknown }
       const stop = r.type === 'requires_action' || r.type === 'budget_reached' || r.type === 'refusal' || r.type === 'retries_exhausted' ? r.type : 'end_turn'
-      return { id, at, kind: 'idle', stop, pending: Array.isArray(r.event_ids) ? r.event_ids.map(String) : [] }
+      return { ...s, kind: 'idle', stop, pending: Array.isArray(r.event_ids) ? r.event_ids.map(String) : [] }
     }
-    case 'session.error': return { id, at, kind: 'error' }
-    case 'session.status_terminated': return { id, at, kind: 'terminated' }
-    default: return { id, at, kind: 'other' }
+    case 'session.error': return { ...s, kind: 'error' }
+    case 'session.status_terminated': return { ...s, kind: 'terminated' }
+    default: return { ...s, kind: 'other' }
   }
 }
 

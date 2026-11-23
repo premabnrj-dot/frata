@@ -36,10 +36,14 @@ async function actorLive(t: TurnRef): Promise<boolean> {
   return r?.session_id === t.sessionId
 }
 
-/** Binds the turn's person inside a store transaction (the advance and asTurn's writes). Null: the person is gone. */
-export async function bindTurn(tx: Tx, turnId: string): Promise<string | null> {
-  const rows = await tx.execute(sql`select app_studio_bind_turn(${turnId}::uuid) as p`)
-  return (rows as unknown as { p: string | null }[])[0]?.p ?? null
+/** The one bind step for a turn: a store transaction in which the database binds the turn's person, then the work;
+ *  null (nothing run) when it won't bind. The advance's steps and asTurn's writes both go through it. */
+export function withTurnBound<T>(tenantId: string, turnId: string, work: (tx: Tx, partnerId: string) => Promise<T>): Promise<T | null> {
+  return withTenant(tenantId, async (tx) => {
+    const rows = await tx.execute(sql`select app_studio_bind_turn(${turnId}::uuid) as p`)
+    const partnerId = (rows as unknown as { p: string | null }[])[0]?.p ?? null
+    return partnerId ? work(tx, partnerId) : null
+  })
 }
 
 export async function asTurn<T>(turn: TurnRef, work: (ctx: TurnContext) => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; why: TurnRefusal }> {
@@ -48,11 +52,15 @@ export async function asTurn<T>(turn: TurnRef, work: (ctx: TurnContext) => Promi
   const ctx: TurnContext = {
     turn,
     reads: builderActor(turn.tenantId),
-    write: (w) => withTenant(turn.tenantId, async (tx) => {
-      const partnerId = await bindTurn(tx, turn.turnId)
-      if (!partnerId) throw new TurnUnbound('not bound')
-      return w(tx, partnerId)
-    }),
+    write: async (w) => {
+      const r = await withTurnBound(turn.tenantId, turn.turnId, async (tx, partnerId) => ({ v: await w(tx, partnerId) }))
+      if (!r) throw new TurnUnbound('not bound')
+      return r.v
+    },
   }
-  return { ok: true, value: await work(ctx) }
+  // The person gone between the check and a write (impact review H1): the same answer as gone before it.
+  try { return { ok: true, value: await work(ctx) } } catch (err) {
+    if (err instanceof TurnUnbound) return { ok: false, why: 'actor' }
+    throw err
+  }
 }

@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.6.1
+  version: 3.7.0
   owner: owner
-  verified: 2026-11-22
+  verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
   covers: ["src/middleware.ts", "src/lib/db/tenant.ts"]
 ---
@@ -252,7 +252,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `accessFor` puts its stores in `builds`, so `requireMember`/`asMember` can never carry one and every tuple refuses it
   in words (`BUILDER_REFUSED`, drawn once by `Panel`). A Builder enters only through `requireCapability(cap)` in the
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
-  read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
+  read (Studio's `asTurn` is the one other maker: a partner person's tool reads as frata_builder, § Studio's agent); `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
   column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0155), the live
   `brand_tokens` columns and `shop_settings.logo_url`, and, for Brand › Checkout's preview (one-address P2, drizzle/0161), the live
   `checkout_design` columns and `shop_settings`' seven public delivery, returns and Pay on delivery facts, and nothing else, with
@@ -431,28 +431,38 @@ console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are 
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
 
-## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a)
+## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a, docs/plans/2026-11-22-v3a-runtime.md)
 
 - **The loop runs outside the sandbox, code inside it, anything that touches Frrata on Frrata's server.** The runtime is
-  Managed Agents behind one adapter (runtime.ts under src/lib/studio, V3a·4): start, send, interrupt, stop, budget,
-  usage. Nothing else calls Anthropic for a session.
-- **Every custom tool runs through `asTurn(turn, cap, work)`**, the second Actor maker beside `require-capability.ts`.
-  The turn is Frrata's own open-turn row (one a session), never an id from a webhook or a tool's input. The person is
-  re-checked by `app_turn_actor` in its own short transaction, which closes; reads then run outside any transaction as
-  `frata_builder`, whatever the role; a write takes its `*In(tx)` form in its own `withTenant`. Every id in a tool's
-  input is matched with `where tenant_id = turn.tenant`.
-- **Tools call the console's own saves**, never a second writer: the agent's content, brand words, tokens and logos are
-  proposals a person applies; Apply runs that save as the person. No tool publishes, hands over, opens a store, touches
-  a domain or a key, or reads orders, shoppers, costs or members. A Builder's turn proposes nothing.
-- **`app.partner_id`** is a third setting beside `app.tenant_id` and `app.member_role`, set only by `requireMember` /
-  `requireCapability`; every `studio_*` table has a restrictive policy on tenant and partner and composite foreign keys
-  to its session. Credits and costs live in partner-scope definer-only tables, never a tenant row.
-- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, sent as a header
-  (ADR-0018's build-key amendment), looked up uncached.
-- Anthropic's webhooks are stored in `webhook_events` (`anthropic:<session>:<event>`) and each tool runs in that webhook's
-  `after()`, once per tool-use id, with a per-minute Studio cron as the net; never the shared outbox drain.
-- **`check:studio`** (V3a·10, to be written) holds the shape: executors through `asTurn`, never `db()`; no cached loader
-  inside a transaction; the agent file pins its model, web tools off, hosts equal to the policy.
+  Managed Agents behind one adapter (`src/lib/studio/runtime.ts`, `runtime-managed.ts`; the client only in `client.ts`,
+  `check:config`): vaults, files, start (always with a budget), budget, send, answer, interrupt, events, usage, archive,
+  remove. Nothing else calls Anthropic for a session. Tests use `e2e/fakes/anthropic.mjs`, never the live API.
+- **A person enters through `requireStudio()`** (`with-studio.ts`): `STUDIO_OPEN=staff`, Frrata staff with a live staff
+  check who is also a live partner person with their check, both on one browser session, on the switcher's store where
+  they are the partner (never a support visit). `withStudio` then asks the database to bind them.
+- **The partner is a database-held bind, never a setting:** `app_current_partner()` answers only for a `studio_binds` row
+  of THIS transaction whose token is in `app.studio_bind`, written only by `app_studio_partner` (withStudio) or
+  `app_studio_bind_turn` (asTurn, the advance). The bind proves a person (user, membership, the two step-up rows).
+  Every `studio_*` shop table has a restrictive `partner_only` policy on tenant and bound partner and composite foreign
+  keys to its session; spend, turn keys and binds are platform-scope, definer-only tables (drizzle/0164, proof § 91).
+- **Every custom tool runs through `asTurn(turn, work)`** (`as-turn.ts`), the second Actor maker beside
+  `require-capability.ts` (`check:capabilities`). The turn is Frrata's own open-turn row, from the cron's ids-only work
+  list or the person's own session, never an id from a request, an event or a tool's input (`check:studio` pins who
+  imports the advance and asTurn). The person is re-checked by `app_turn_actor` in its own short transaction, which
+  closes; reads then run outside any transaction as `frata_builder` through `ctx.reads` (`src/lib/queries/builder.ts`,
+  one connection per advance: `withBuilderScope`); a write is `ctx.write((tx, partnerId) => …)`, a store transaction the
+  database bound again. The person gone at either point answers `actor`.
+- **Tools propose, a person applies:** tokens and logos are checked with saveBrand's own rules before a card shows them
+  and stored as `studio_proposals` (one per call); Apply runs the console's save as the person. No tool publishes, hands
+  over, opens a store, touches a domain or a key, or reads stock, orders, shoppers, costs or members.
+- **The advance** (`advance.ts`): a 90 s lease a session, events read by cursor (ids stored once; an idle before this
+  turn's `user.message` is the last turn's), calls accepted only inside the turn's window, a round answered in ONE send
+  with results kept until it succeeds, then the turn closed ended, paused or failed and the measured list cost settled.
+  No transaction is held across a runtime call.
+- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, a header credential for
+  `api.frrata.shop` only (ADR-0018's build-key amendment), looked up uncached; never reflected in an answer.
+- **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors,
+  no runtime call or cached loader inside a transaction, no id-shaped tool input.
 
 ## Reference files — open the one for the work in hand
 

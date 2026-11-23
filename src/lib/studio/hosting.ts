@@ -11,7 +11,7 @@ import 'server-only'
 // console only. The repository token and the instruction-file check are V3a·7's, not hosting's.
 // =============================================================================
 
-export type TurnRef = { tenantId: string; sessionId: string; turnId: string }
+import type { TurnRef } from './as-turn'
 export type GateVerdict = { passed: boolean; checks: { name: string; ok: boolean }[] }
 export type EditableField = { key: string; label: string }
 

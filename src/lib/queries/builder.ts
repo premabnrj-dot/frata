@@ -48,6 +48,7 @@ export function builderCheckout(actor: BuilderActor) {
  *  (title, handle, type, price range in paise, variant count) and the collections. Never stock, a cost, an order or a
  *  person (ADR-0020 § 6). */
 export function builderStoreFacts(actor: BuilderActor) {
+  // It reads the brand too (builderBrand's grant), so it needs both capabilities; withActor asserts the second.
   assertCan(actor, 'preview.read')
   return withActor(actor, 'catalogue.read', async (tx, tenantId) => {
     const [brand, list, cols] = await Promise.all([
@@ -62,4 +63,3 @@ export function builderStoreFacts(actor: BuilderActor) {
     }
   })
 }
-export type StoreFacts = Awaited<ReturnType<typeof builderStoreFacts>>

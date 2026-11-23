@@ -1,13 +1,14 @@
 import 'server-only'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { callAccepted } from '@/domains/studio/turn'
+import { inCallWindow } from '@/domains/studio/turn'
+import { cursorAfter, opensTurn } from '@/domains/studio/events'
 import { TOOL_ERRORS } from '@/domains/studio/tools'
 import type { MicroUsd } from '@/domains/money/usd'
 import type { Tx } from '@/lib/db'
-import { withTenant } from '@/lib/db/tenant'
 import { withBuilderScope } from '@/lib/db/actor'
+import { STUDIO_OPEN } from '@/lib/env'
 import { LINE_MAX, studioMessages, studioSessions, studioToolCalls, studioTurns } from '@/lib/db/schema-studio'
-import { asTurn, bindTurn, type TurnRef } from './as-turn'
+import { asTurn, withTurnBound, type TurnRef } from './as-turn'
 import { CALL_MS } from './client'
 import { managedRuntime } from './runtime-managed'
 import { RuntimeError, type StudioEvent, type StudioRuntime } from './runtime'
@@ -47,24 +48,37 @@ export type AdvanceOptions = {
 const LEASE_S = 90
 const PAGE = 100
 const NAME_MAX = 64
-const INPUT_MAX = 70 * 1024
+/** A tool input as stored: jsonb's text form can be ~1.43× JSON.stringify's (`[0,0]` → `[0, 0]`), and drizzle/0163
+ *  checks 72 kB of that, so 48 kB measured here always fits (security review of R5, MED-1). */
+const INPUT_MAX = 48 * 1024
+/** Ruling e: at most this many lines a session; the agent's further text is not stored. */
+const LINES_MAX = 5000
 
-type Lease = { sessionId: string; runtimeId: string; cursor: string | null; startedAt: Date | null; userMessageEventId: string | null }
-type Batch = { idle: Extract<StudioEvent, { kind: 'idle' }> | null; terminal: 'error' | 'terminated' | null; moving: boolean; largest: MicroUsd; last: string | null }
+type Lease = { sessionId: string; runtimeId: string; cursor: string | null; sentAt: Date; startedAt: Date | null; userMessageEventId: string | null }
+type Batch = { idle: Extract<StudioEvent, { kind: 'idle' }> | null; terminal: 'error' | 'terminated' | null; moving: boolean; largest: MicroUsd }
 
 const bytes = (v: unknown) => new TextEncoder().encode(JSON.stringify(v ?? null)).length
+/** What the model sends, made storable: Postgres refuses NUL in text (22021) and \u0000 in jsonb (22P05). */
+const noNul = (t: string) => t.replace(/\u0000/g, '')
+function storable(v: unknown, depth = 0): unknown {
+  if (depth > 32) return null
+  if (typeof v === 'string') return noNul(v)
+  if (Array.isArray(v)) return v.map((x) => storable(x, depth + 1))
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [noNul(k), storable(x, depth + 1)]))
+  return v
+}
+/** A database error's class only (its message carries parameters: ids and model data). */
+const codeOf = (err: unknown) => {
+  const c = (err as { code?: unknown; cause?: { code?: unknown } } | null)
+  return String(c?.cause?.code ?? c?.code ?? (err instanceof Error ? err.name : 'error')).slice(0, 40)
+}
 
 /** A store transaction with the turn's person bound by the database; null when the person is gone. */
-function bound<T>(ref: AdvanceRef, work: (tx: Tx, partnerId: string) => Promise<T>): Promise<T | null> {
-  return withTenant(ref.tenantId, async (tx) => {
-    const partnerId = await bindTurn(tx, ref.turnId)
-    return partnerId ? work(tx, partnerId) : null
-  })
-}
+const bound = <T>(ref: AdvanceRef, work: (tx: Tx, partnerId: string) => Promise<T>) => withTurnBound(ref.tenantId, ref.turnId, work)
 
 async function takeLease(ref: AdvanceRef, minGapMs: number): Promise<Lease | 'busy' | 'not_started' | 'actor'> {
   const r = await bound(ref, async (tx) => {
-    const [t] = await tx.select({ sessionId: studioTurns.sessionId, startedAt: studioTurns.startedAt, userMessageEventId: studioTurns.userMessageEventId })
+    const [t] = await tx.select({ sessionId: studioTurns.sessionId, sentAt: studioTurns.sentAt, startedAt: studioTurns.startedAt, userMessageEventId: studioTurns.userMessageEventId })
       .from(studioTurns).where(and(eq(studioTurns.tenantId, ref.tenantId), eq(studioTurns.id, ref.turnId)))
     if (!t) return 'busy' as const
     const gap = minGapMs > 0 ? sql`and (${studioSessions.lastReadAt} is null or ${studioSessions.lastReadAt} < now() - make_interval(secs => ${minGapMs / 1000}))` : sql``
@@ -77,7 +91,7 @@ async function takeLease(ref: AdvanceRef, minGapMs: number): Promise<Lease | 'bu
       const [x] = await tx.select({ runtimeId: studioSessions.runtimeId }).from(studioSessions).where(and(eq(studioSessions.tenantId, ref.tenantId), eq(studioSessions.id, t.sessionId)))
       return x && x.runtimeId === null ? 'not_started' as const : 'busy' as const
     }
-    return { sessionId: t.sessionId, runtimeId: s.runtime_id, cursor: s.event_cursor, startedAt: t.startedAt, userMessageEventId: t.userMessageEventId }
+    return { sessionId: t.sessionId, runtimeId: s.runtime_id, cursor: s.event_cursor || null, sentAt: t.sentAt, startedAt: t.startedAt, userMessageEventId: t.userMessageEventId }
   })
   return r ?? 'actor'
 }
@@ -87,34 +101,55 @@ async function releaseLease(ref: AdvanceRef, sessionId: string): Promise<void> {
     .where(and(eq(studioSessions.tenantId, ref.tenantId), eq(studioSessions.id, sessionId)))).catch(() => null)
 }
 
-/** Stores what the events say, once each, and moves the cursor. Returns where the turn stands. */
+/** Stores what the events say, once each, and moves the cursor. Returns where the turn stands. Each event is stored in its
+ *  own savepoint: one the database refuses is passed over (logged by class), so the cursor still moves. */
 async function storeEvents(ref: AdvanceRef, lease: Lease, events: StudioEvent[]): Promise<Batch | null> {
   return bound(ref, async (tx, partnerId) => {
     const { tenantId } = ref, sessionId = lease.sessionId
-    const batch: Batch = { idle: null, terminal: null, moving: false, largest: 0 as MicroUsd, last: null }
+    const batch: Batch = { idle: null, terminal: null, moving: false, largest: 0 as MicroUsd }
+    const one = async (what: string, work: (sp: Tx) => Promise<unknown>) => {
+      try { await tx.transaction((sp) => work(sp as unknown as Tx)) } catch (err) { console.error('[studio] store', what, codeOf(err)) }
+    }
+    const [lines] = await tx.select({ n: sql<number>`count(*)::int` }).from(studioMessages).where(and(eq(studioMessages.tenantId, tenantId), eq(studioMessages.sessionId, sessionId)))
+    let room = LINES_MAX - (lines?.n ?? 0)
     for (const ev of events) {
-      batch.last = ev.at
       if (ev.kind === 'user_message') {
-        // The first user.message after the cursor while the turn has not started is this turn's: its call window opens.
+        // This turn's message: processed, created no earlier than the turn was sent, held by no earlier turn.
         if (!lease.userMessageEventId) {
-          await tx.update(studioTurns).set({ startedAt: sql`now()`, userMessageEventId: ev.id })
-            .where(and(eq(studioTurns.tenantId, tenantId), eq(studioTurns.id, ref.turnId), isNull(studioTurns.userMessageEventId)))
-          lease.userMessageEventId = ev.id
-          lease.startedAt = new Date()
+          const [held] = await tx.select({ id: studioTurns.id }).from(studioTurns)
+            .where(and(eq(studioTurns.tenantId, tenantId), eq(studioTurns.sessionId, sessionId), eq(studioTurns.userMessageEventId, ev.id)))
+          if (opensTurn(ev, { sentAt: lease.sentAt, heldByAnotherTurn: !!held })) {
+            await tx.update(studioTurns).set({ startedAt: sql`now()`, userMessageEventId: ev.id })
+              .where(and(eq(studioTurns.tenantId, tenantId), eq(studioTurns.id, ref.turnId), isNull(studioTurns.userMessageEventId)))
+            lease.userMessageEventId = ev.id
+            lease.startedAt = new Date()
+          }
         }
         batch.idle = null; batch.moving = true
       } else if (ev.kind === 'tool_use') {
-        const accepted = callAccepted({ sentAt: new Date(0), startedAt: lease.startedAt, endedAt: null, pausedAt: null, failedAt: null }, lease.userMessageEventId !== null)
-        const fits = bytes(ev.input) <= INPUT_MAX
+        // The bind proves the turn open; started and after its user.message are what this read has seen.
+        const accepted = inCallWindow({ open: true, started: lease.startedAt !== null, afterUserMessage: lease.userMessageEventId !== null })
+        const input = storable(ev.input ?? {})
+        const fits = bytes(input) <= INPUT_MAX
         const refusal = !accepted ? TOOL_ERRORS.window : !fits ? TOOL_ERRORS.input : null
-        await tx.insert(studioToolCalls).values({
-          tenantId, partnerId, sessionId, turnId: ref.turnId, toolUseId: ev.id, name: ev.name.slice(0, NAME_MAX), input: fits ? (ev.input ?? {}) : {},
-          ...(refusal ? { executedAt: sql`now()`, result: { error: refusal }, isError: true } : {}),
-        }).onConflictDoNothing({ target: [studioToolCalls.sessionId, studioToolCalls.toolUseId] })
+        const row = { tenantId, partnerId, sessionId, turnId: ref.turnId, toolUseId: ev.id, name: noNul(ev.name).slice(0, NAME_MAX) }
+        const refused = { executedAt: sql`now()`, result: { error: refusal ?? TOOL_ERRORS.input }, isError: true }
+        let stored = false
+        await one('call', async (sp) => {
+          await sp.insert(studioToolCalls).values({ ...row, input: fits ? input : {}, ...(refusal ? refused : {}) })
+            .onConflictDoNothing({ target: [studioToolCalls.sessionId, studioToolCalls.toolUseId] })
+          stored = true
+        })
+        // Refused by the database all the same: stored empty and refused, so the round can still be answered.
+        if (!stored) await one('call-refused', (sp) => sp.insert(studioToolCalls).values({ ...row, name: 'refused', input: {}, ...refused })
+          .onConflictDoNothing({ target: [studioToolCalls.sessionId, studioToolCalls.toolUseId] }))
         batch.idle = null; batch.moving = true
       } else if (ev.kind === 'agent_message') {
-        const text = ev.text.trim().slice(0, LINE_MAX)
-        if (text) await tx.insert(studioMessages).values({ tenantId, partnerId, sessionId, kind: 'agent', text, eventId: ev.id }).onConflictDoNothing()
+        const text = noNul(ev.text).trim().slice(0, LINE_MAX)
+        if (text && room > 0) {
+          room -= 1
+          await one('line', (sp) => sp.insert(studioMessages).values({ tenantId, partnerId, sessionId, kind: 'agent', text, eventId: ev.id }).onConflictDoNothing())
+        }
         batch.idle = null; batch.moving = true
       } else if (ev.kind === 'request_end') {
         if (ev.cost > batch.largest) batch.largest = ev.cost
@@ -125,17 +160,18 @@ async function storeEvents(ref: AdvanceRef, lease: Lease, events: StudioEvent[])
         batch.terminal = ev.kind
       }
     }
-    await tx.update(studioSessions).set({ ...(batch.last ? { eventCursor: batch.last } : {}), lastReadAt: sql`now()` })
+    lease.cursor = cursorAfter(events, lease.cursor)
+    await tx.update(studioSessions).set({ ...(lease.cursor ? { eventCursor: lease.cursor } : {}), lastReadAt: sql`now()` })
       .where(and(eq(studioSessions.tenantId, tenantId), eq(studioSessions.id, sessionId)))
     return batch
   })
 }
 
-type Pending = { id: string; toolUseId: string; name: string; input: unknown; result: unknown; isError: boolean | null }
+type Pending = { id: string; turnId: string; toolUseId: string; name: string; input: unknown; result: unknown; isError: boolean | null }
 
 async function pendingCalls(ref: AdvanceRef, sessionId: string, toolUseIds: string[]): Promise<Pending[] | null> {
   if (!toolUseIds.length) return []
-  return bound(ref, (tx) => tx.select({ id: studioToolCalls.id, toolUseId: studioToolCalls.toolUseId, name: studioToolCalls.name, input: studioToolCalls.input,
+  return bound(ref, (tx) => tx.select({ id: studioToolCalls.id, turnId: studioToolCalls.turnId, toolUseId: studioToolCalls.toolUseId, name: studioToolCalls.name, input: studioToolCalls.input,
     result: studioToolCalls.result, isError: studioToolCalls.isError }).from(studioToolCalls)
     .where(and(eq(studioToolCalls.tenantId, ref.tenantId), eq(studioToolCalls.sessionId, sessionId), inArray(studioToolCalls.toolUseId, toolUseIds), isNull(studioToolCalls.answeredAt))))
 }
@@ -154,6 +190,8 @@ async function answerRound(ref: AdvanceRef, lease: Lease, rt: StudioRuntime, pen
   let refusedWhy: 'actor' | 'switch' | null = null
   for (const c of calls) {
     if (c.result !== null) { results.set(c.toolUseId, { answer: c.result, isError: c.isError ?? true }); continue }
+    // A call an earlier turn stored but never ran never runs as this turn's (security review of R5, LOW-1).
+    if (c.turnId !== ref.turnId) { results.set(c.toolUseId, { answer: { error: TOOL_ERRORS.window }, isError: true }); continue }
     const r = await asTurn(turn, (ctx) => runCall(ctx, { id: c.id, name: c.name, input: c.input }))
     if (!r.ok) { refusedWhy = r.why; break }
     results.set(c.toolUseId, r.value)
@@ -195,6 +233,8 @@ export function advance(ref: AdvanceRef, opts: AdvanceOptions = {}): Promise<Adv
 }
 
 async function advanceIn(ref: AdvanceRef, opts: AdvanceOptions): Promise<AdvanceOutcome> {
+  // Switched off: nothing is read, stored or closed; the cron ends the sessions (security review of R5, LOW-2).
+  if (STUDIO_OPEN !== 'staff') return 'switch'
   const rt = opts.runtime ?? managedRuntime
   const deadline = opts.deadline ?? Date.now() + 50_000
   const room = (ms: number) => Date.now() + ms < deadline
@@ -209,19 +249,18 @@ async function advanceIn(ref: AdvanceRef, opts: AdvanceOptions): Promise<Advance
       let events: StudioEvent[]
       try { events = await rt.events(lease.runtimeId, lease.cursor, PAGE) } catch (err) {
         console.error('[studio] events', err instanceof RuntimeError ? err.code : 'error')
-        if (err instanceof RuntimeError && err.code === 'not_found') { await closeTurn(ref, lease, rt, 'failed', largest); return 'failed' }
+        if (err instanceof RuntimeError && err.code === 'not_found') return (await closeTurn(ref, lease, rt, 'failed', largest)) ? 'failed' : 'waiting'
         return 'error'
       }
       const batch = await storeEvents(ref, lease, events)
       if (!batch) return 'actor'
-      if (batch.last) lease.cursor = batch.last
       if (batch.largest > largest) largest = batch.largest
-      if (batch.terminal) { await closeTurn(ref, lease, rt, 'failed', largest); return 'failed' }
+      if (batch.terminal) return (await closeTurn(ref, lease, rt, 'failed', largest)) ? 'failed' : 'waiting'
       const idle = batch.idle
       if (idle && !batch.moving) {
-        if (idle.stop === 'end_turn') { await closeTurn(ref, lease, rt, 'ended', largest); return 'ended' }
-        if (idle.stop === 'budget_reached') { await closeTurn(ref, lease, rt, 'paused', largest); return 'paused' }
-        if (idle.stop === 'refusal' || idle.stop === 'retries_exhausted') { await closeTurn(ref, lease, rt, 'failed', largest); return 'failed' }
+        const how = idle.stop === 'end_turn' ? 'ended' : idle.stop === 'budget_reached' ? 'paused' : idle.stop === 'refusal' || idle.stop === 'retries_exhausted' ? 'failed' : null
+        // Closed by someone else first (a Stop, the cron): nothing of ours to report.
+        if (how) return (await closeTurn(ref, lease, rt, how, largest)) ? how : 'waiting'
         if (idle.stop === 'requires_action' && idle.pending.length) {
           if (!room(CALL_MS.control * 2)) return outcome
           const r = await answerRound(ref, lease, rt, idle.pending)
@@ -232,6 +271,10 @@ async function advanceIn(ref: AdvanceRef, opts: AdvanceOptions): Promise<Advance
       if (Date.now() >= followUntil || !room(CALL_MS.events + (opts.pauseMs ?? 1500))) return outcome
       await sleep(opts.pauseMs ?? 1500)
     }
+  } catch (err) {
+    // Never the error itself: a database error's message carries its parameters (ids, model data).
+    console.error('[studio] advance', codeOf(err))
+    return 'error'
   } finally {
     await releaseLease(ref, lease.sessionId)
   }

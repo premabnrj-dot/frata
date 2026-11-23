@@ -7,7 +7,8 @@
 //     raising the budget resumes the paused work (so Studio interrupts before its next message);
 //   - one `requires_action` idle per round of custom tool calls; answering a round one call at a time raises an extra
 //     idle for the calls still pending (spike);
-//   - events are listed ascending by `processed_at`, filtered by `created_at[gte]`.
+//   - events are listed ascending by `processed_at`, filtered by `created_at[gte]`; with `state.queueNext` the next
+//     user.message is listed queued (no `processed_at`) once, and taken on the next read.
 // The agent is scripted by words in the person's message: "accent" → tokens_propose; "facts" → store_facts; "logo" →
 // logo_propose; "preview" → preview_build; "two" → store_facts and preview_build in one round; "expensive" → each model
 // request costs 40¢ (else 2¢); anything else → one line and the end of the turn.
@@ -34,12 +35,14 @@ export function startFakeAnthropic({ port = 0, key = 'sk-ant-fake' } = {}) {
     agent: structuredClone(POLICY_AGENT), env: structuredClone(POLICY_ENV),
     /** Tests may make the next N calls of a path fail (e.g. { 'POST /v1/vaults': 1 }). */
     failNext: {},
+    /** The next N person messages are listed queued (processed_at null) once, then taken on the next events read. */
+    queueNext: 0,
   }
   let clock = Date.now()
   const at = () => new Date(++clock).toISOString()
   const id = (p) => `${p}_${randomBytes(9).toString('hex')}`
 
-  function push(s, ev) { const e = { id: id('sevt'), processed_at: at(), ...ev }; s.events.push(e); return e }
+  function push(s, ev) { const t = at(); const e = { id: id('sevt'), created_at: t, processed_at: t, ...ev }; s.events.push(e); return e }
   function costOf(s) { return s.expensive ? 40 : 2 }
   /** One model request, if the budget allows it: false when the session pauses at its budget. */
   function modelRequest(s) {
@@ -136,7 +139,9 @@ export function startFakeAnthropic({ port = 0, key = 'sk-ant-fake' } = {}) {
       if (req.method === 'GET' && m[2] === '/events') {
         const since = url.searchParams.get('created_at[gte]')
         const limit = Math.min(Number(url.searchParams.get('limit') ?? 100) || 100, 1000)
-        const data = s.events.filter((e) => !since || e.processed_at >= since).slice(0, limit)
+        const data = s.events.filter((e) => !since || e.created_at >= since).slice(0, limit).map((e) => ({ ...e }))
+        // A queued message is taken after this read lists it: processed now, and the agent starts.
+        if (s.queued) { const q = s.queued; s.queued = null; q.ev.processed_at = at(); think(s, q.text) }
         return send(res, 200, { data, next_page: null })
       }
       if (req.method === 'POST' && m[2] === '/events') {
@@ -148,8 +153,8 @@ export function startFakeAnthropic({ port = 0, key = 'sk-ant-fake' } = {}) {
             const text = (e.content ?? []).map((b) => b.text ?? '').join('\n')
             s.messages += 1
             if (text.toLowerCase().includes('expensive')) s.expensive = true
-            push(s, { type: 'user.message', content: e.content })
-            think(s, text)
+            const ev = push(s, { type: 'user.message', content: e.content })
+            if (state.queueNext > 0) { state.queueNext -= 1; ev.processed_at = null; s.queued = { ev, text } } else think(s, text)
           } else if (e.type === 'user.custom_tool_result') {
             if (!s.pending.includes(e.custom_tool_use_id)) return bad(res, 400, 'invalid_request_error', 'no such pending call')
             s.pending = s.pending.filter((x) => x !== e.custom_tool_use_id)

@@ -10,15 +10,18 @@ import type { MicroUsd } from '@/domains/money/usd'
 // as data. Never a vendor's error words (they can quote content): failures surface as RuntimeError with our code.
 // =============================================================================
 
-export type StudioEvent =
-  | { id: string; at: string; kind: 'user_message' }
-  | { id: string; at: string; kind: 'tool_use'; name: string; input: unknown }
-  | { id: string; at: string; kind: 'agent_message'; text: string }
-  | { id: string; at: string; kind: 'request_end'; cost: MicroUsd }
-  | { id: string; at: string; kind: 'idle'; stop: 'end_turn' | 'requires_action' | 'budget_reached' | 'refusal' | 'retries_exhausted'; pending: string[] }
-  | { id: string; at: string; kind: 'error' }
-  | { id: string; at: string; kind: 'terminated' }
-  | { id: string; at: string; kind: 'other' }
+/** `at`: when the runtime created the event (the list's filter); `processed`: the runtime has taken it (a queued message
+ *  is listed before it is). */
+type Stamp = { id: string; at: string; processed: boolean }
+export type StudioEvent = Stamp & (
+  | { kind: 'user_message' }
+  | { kind: 'tool_use'; name: string; input: unknown }
+  | { kind: 'agent_message'; text: string }
+  | { kind: 'request_end'; cost: MicroUsd }
+  | { kind: 'idle'; stop: 'end_turn' | 'requires_action' | 'budget_reached' | 'refusal' | 'retries_exhausted'; pending: string[] }
+  | { kind: 'error' }
+  | { kind: 'terminated' }
+  | { kind: 'other' })
 
 export type ToolAnswer = { toolUseId: string; text: string; isError: boolean }
 
@@ -51,7 +54,7 @@ export interface StudioRuntime {
   /** Every pending call of a round in ONE send (spike: answering one by one raises an extra idle each). */
   answer(runtimeId: string, answers: ToolAnswer[]): Promise<void>
   interrupt(runtimeId: string): Promise<void>
-  /** Events processed at or after `since` (ascending), at most `limit`; the caller skips ids it already stored. */
+  /** Events created at or after `since` (in processing order), at most `limit`; the caller skips ids it already stored. */
   events(runtimeId: string, since: string | null, limit: number): Promise<StudioEvent[]>
   /** The session's cumulative list cost (whole cents, as micro-dollars) and whether it still runs. */
   usage(runtimeId: string): Promise<{ listCost: MicroUsd; status: 'running' | 'idle' | 'terminated' | 'other' }>

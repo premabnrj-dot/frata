@@ -45,6 +45,8 @@ describe('requireStudio', () => {
     Object.assign(s, structuredClone(base)); (s.member.membership as { supportSessionId: string | null }).supportSessionId = 'sv1'
     expect((await requireStudio()).ok).toBe(false)
   })
+  // Both proofs read the session from sign-in today, so the last two cases guard the code's own comparison; the database's
+  // match on session and hash (app_studio_partner, proof § 91) is the real check.
   it('refuses without a real step-up cookie, or checks on another browser session', async () => {
     s.staffProof = null
     expect((await requireStudio()).ok).toBe(false)

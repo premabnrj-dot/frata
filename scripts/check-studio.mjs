@@ -19,7 +19,8 @@
 //            runtime, or to a cached loader from src/lib/queries (a reader that takes the transaction, `…With(tx, …)`,
 //            is fine). A cached loader inside a transaction deadlocks the pool; a network call holds a connection.
 //   doors    a Studio action or route that does not start with requireStudio(); the Studio cron without
-//            isCronRequest(.
+//            isCronRequest(; a file importing the advance (only the cron route and sessions.ts) or asTurn (only the
+//            advance), so a turn id comes from the cron's work list or the person's own session, never a request.
 //   inputs   a tool input schema with an id-shaped key (a tool's input never names a store, person or row).
 // Comment lines are skipped everywhere (and in a Markdown file all but its fenced code), so this header and the records
 // that describe the gate cannot fail it: `node scripts/check-studio.mjs <file>` runs the source rules on one file, and
@@ -48,7 +49,7 @@ const SETTING = /set_config\s*\(\s*['"`]app\.(studio_bind|partner_id)['"`]/
 /** Each Studio definer and the only files that may call it. */
 const DEFINERS = {
   app_studio_partner: ['src/lib/studio/with-studio.ts'],
-  app_studio_bind_turn: ['src/lib/studio/as-turn.ts', 'src/lib/studio/advance.ts'],
+  app_studio_bind_turn: ['src/lib/studio/as-turn.ts'],
   app_turn_actor: ['src/lib/studio/as-turn.ts'],
   app_studio_due: ['src/lib/db/studio.ts'],
   app_studio_sweep_binds: ['src/lib/db/studio.ts'],
@@ -62,6 +63,15 @@ const DEFINERS = {
   app_studio_session_facts: ['src/lib/studio/sessions.ts'],
   app_studio_cleanup_of: ['src/lib/studio/sessions.ts'],
   app_studio_mark: ['src/lib/studio/sessions.ts'],
+}
+/** Who may import the turn's doors (tenancy audit of R5, M): a turn id reaches them only from the cron's ids-only work
+ *  list or from the person's own open session read under withStudio (sessions.ts), never from a request. */
+const IMPORTERS = {
+  '@/lib/studio/advance': ['src/app/api/cron/studio/route.ts', 'src/lib/studio/sessions.ts'],
+  // asTurn and its bind step (withTurnBound) are reached only through this module: the advance, and the tools, which
+  // only ever get the turn asTurn hands them.
+  '@/lib/studio/as-turn': ['src/lib/studio/advance.ts'],
+  './as-turn': ['src/lib/studio/advance.ts'],
 }
 const TX_OPENERS = /\b(withTenant|withStudio|write)\s*\(/g
 const RUNTIME_CALL = /\b(runtime|managedRuntime|rt)\s*\.\s*\w+\s*\(/
@@ -83,6 +93,10 @@ function sourceRules(file, text) {
   if (SETTING.test(text)) fail(file, 'bind: writes the partner bind setting — only the database\'s definers bind (drizzle/0164)')
   for (const [fn, allowed] of Object.entries(DEFINERS)) {
     if (new RegExp(`\\b${fn}\\s*\\(`).test(text) && !allowed.includes(file)) fail(file, `definers: calls ${fn}( — only ${allowed.join(', ')}`)
+  }
+  for (const m of text.matchAll(/import\s+(type\s+)?[^'"]*?from\s+['"]([^'"]+)['"]/g)) {
+    const allowed = IMPORTERS[m[2]]
+    if (!m[1] && allowed && !allowed.includes(file) && !file.startsWith('src/lib/studio/tools/')) fail(file, `doors: imports ${m[2]} — only ${allowed.join(', ')} (a turn id never comes from a request)`)
   }
   if (file.startsWith('src/lib/studio/')) {
     const cached = [...text.matchAll(/import\s+\{([^}]*)\}\s+from\s+['"]@\/lib\/queries\/[\w/-]+['"]/g)]

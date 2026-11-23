@@ -23,8 +23,10 @@ export const turnOpen = (t: TurnTimes) => !t.endedAt && !t.pausedAt && !t.failed
  * `user.message` event in the session's event order (the runtime lists events in order; the caller compares positions).
  */
 export function callAccepted(t: TurnTimes, afterUserMessage: boolean): boolean {
-  return turnOpen(t) && t.startedAt !== null && afterUserMessage
+  return inCallWindow({ open: turnOpen(t), started: t.startedAt !== null, afterUserMessage })
 }
+/** The same rule from facts a caller already holds (the advance: the bind proves the turn open). */
+export const inCallWindow = (w: { open: boolean; started: boolean; afterUserMessage: boolean }) => w.open && w.started && w.afterUserMessage
 
 /** Why a turn failed: our codes only, never a vendor's words (they can quote content). */
 export const FAIL_REASONS = ['start', 'send', 'budget', 'runtime', 'actor', 'switch', 'expired', 'workspace'] as const

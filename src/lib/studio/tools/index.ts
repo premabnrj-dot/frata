@@ -1,9 +1,8 @@
 import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { isToolName, parseToolInput, TOOL_ERRORS, type ToolName } from '@/domains/studio/tools'
-import type { TokensValue } from '@/domains/studio/proposals'
 import { studioMessages, studioProposals, studioToolCalls } from '@/lib/db/schema-studio'
-import type { TurnContext } from '@/lib/studio/as-turn'
+import { TurnUnbound, type TurnContext } from '@/lib/studio/as-turn'
 import { storeFacts } from './store-facts'
 import { tokensPropose } from './tokens-propose'
 import { logoPropose } from './logo-propose'
@@ -25,30 +24,35 @@ export type CallResult = { answer: unknown; isError: boolean }
 /** The most a stored result holds (drizzle/0163's check is 16 kB). */
 const RESULT_MAX = 15 * 1024
 
+const BAD = refused(TOOL_ERRORS.input)
 async function execute(ctx: TurnContext, name: ToolName, input: unknown): Promise<ToolOutcome> {
-  const parsed = parseToolInput(name, input)
-  if (parsed === null) return refused(TOOL_ERRORS.input)
   switch (name) {
-    case 'store_facts': return storeFacts(ctx)
-    case 'tokens_propose': return tokensPropose(ctx, parsed as TokensValue)
-    case 'logo_propose': return logoPropose(ctx, parsed as { svg: string })
-    case 'preview_build': return previewBuild(ctx)
+    case 'store_facts': return parseToolInput(name, input) ? storeFacts(ctx) : BAD
+    case 'tokens_propose': { const p = parseToolInput(name, input); return p ? tokensPropose(ctx, p) : BAD }
+    case 'logo_propose': { const p = parseToolInput(name, input); return p ? logoPropose(ctx, p) : BAD }
+    case 'preview_build': return parseToolInput(name, input) ? previewBuild(ctx) : BAD
   }
 }
 
 const fits = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length <= RESULT_MAX
 
-/** Runs the call (or answers it with an error) and stores its result once; returns what is stored. */
-export async function runCall(ctx: TurnContext, call: StoredCall): Promise<CallResult> {
+/** What a call answers, never throwing: an unknown tool or a bad input refused unrun, a failure in our words, an answer
+ *  over the stored cap refused. */
+export async function outcomeOf(ctx: TurnContext, call: Omit<StoredCall, 'id'>): Promise<ToolOutcome> {
   let out: ToolOutcome
   try {
-    out = isToolName(call.name) ? await execute(ctx, call.name, call.input) : refused(TOOL_ERRORS.input)
+    out = isToolName(call.name) ? await execute(ctx, call.name, call.input) : BAD
   } catch (err) {
-    console.error('[studio] tool', call.name, err instanceof Error ? err.name : 'error')
+    if (err instanceof TurnUnbound) throw err
+    console.error('[studio] tool', isToolName(call.name) ? call.name : 'unknown', err instanceof Error ? err.name : 'error')
     out = refused(TOOL_ERRORS.failed)
   }
-  if (!fits(out.answer)) out = refused(TOOL_ERRORS.failed)
-  return storeResult(ctx, call.id, out)
+  return fits(out.answer) ? out : refused(TOOL_ERRORS.failed)
+}
+
+/** Runs the call and stores its result once; returns what is stored. */
+export async function runCall(ctx: TurnContext, call: StoredCall): Promise<CallResult> {
+  return storeResult(ctx, call.id, await outcomeOf(ctx, call))
 }
 
 /** Stores a call's answer (and its proposal and card) in one transaction; a call already answered keeps its first result. */
