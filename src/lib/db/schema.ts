@@ -221,7 +221,8 @@ export const tenantPlans = pgTable('tenant_plans', {
 export const BRAND_ACCENTS = ['oxide', 'indigo', 'moss', 'wine', 'ink'] as const
 export const DISPLAY_FONTS = ['fraunces', 'cormorant', 'inter'] as const
 export const RETURN_KINDS = ['exchange_or_refund', 'exchange_only', 'refund_only', 'none'] as const
-export { SELL_KEYS as SELLS } from '@/domains/catalogue/sell-keys'
+import { SELL_KEYS } from '@/domains/catalogue/sell-keys'
+export { SELL_KEYS as SELLS }
 
 /**
  * One row per shop: everything a merchant sets in Settings. The storefront,
@@ -318,7 +319,8 @@ export const shopSettings = pgTable('shop_settings', {
   check('shop_settings_site', sql`(${t.siteOrigin} is null) = (${t.siteDomainId} is null) and (${t.siteOrigin} is null or ${t.siteOrigin} ~ '^https://[a-z0-9.-]+$')`),
   check('shop_settings_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
   check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
-  check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear','jewellery','beauty','wellness']::text[]`),
+  // From the category packs (src/domains/catalogue/packs/list.ts); a new pack widens it with a generated migration (check:packs).
+  check('shop_settings_sells', sql`${t.sells} <@ array[${sql.raw(sqlList(SELL_KEYS))}]::text[]`),
   check('shop_settings_gst_scheme', sql`${t.gstScheme} in ('regular','composition')`),
   check('shop_settings_home_state', sql`${t.homeState} is null or ${t.homeState} ~ '^[0-9]{2}$'`),
   check('shop_settings_turnover', sql`${t.turnoverBand} in ('under_5cr','5_to_10cr','over_10cr')`),
