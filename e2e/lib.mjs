@@ -87,8 +87,14 @@ export const FAKE_CHECKOUT = `window.Razorpay = function (o) { this.o = o; this.
 window.Razorpay.prototype.on = function (e, f) { this.h[e] = f };
 window.Razorpay.prototype.open = function () { var o = this.o;
   if (window.__rzpMode === 'dismiss') { setTimeout(function () { o.modal && o.modal.ondismiss && o.modal.ondismiss() }, 50); return }
-  fetch('${RZP}/_test/pay', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: o.order_id }) })
-    .then(function (r) { return r.json() }).then(function (p) { window.__lastPay = p; o.handler({ razorpay_payment_id: p.payment_id, razorpay_signature: p.signature, razorpay_order_id: o.order_id }) }) };`
+  var pay = function () { fetch('${RZP}/_test/pay', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: o.order_id }) })
+    .then(function (r) { return r.json() }).then(function (p) { window.__lastPay = p; o.handler({ razorpay_payment_id: p.payment_id, razorpay_signature: p.signature, razorpay_order_id: o.order_id }) }) };
+  // 'frame': a full-screen Checkout the person must click, as the real one is (a dialog left on top of it hides it).
+  if (window.__rzpMode === 'frame') { var f = document.createElement('div'); f.setAttribute('data-fake-checkout', '');
+    f.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#fff;display:grid;place-items:center';
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Pay in the fake Checkout'; f.appendChild(b); document.body.appendChild(f);
+    b.onclick = function () { f.remove(); pay() }; return }
+  pay() };`
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 

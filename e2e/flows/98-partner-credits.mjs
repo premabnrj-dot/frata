@@ -79,10 +79,17 @@ export default {
         assert.deepEqual([b.legal_name, b.state_code], ['Pia Studio LLP', '27'])
       })
 
-      await t.step('a pack: credits arrive only after the server saw the payment; its invoice is a PDF', async () => {
+      await t.step('a pack: Checkout opens in front of our dialog; credits arrive only after the server saw the payment; its invoice is a PDF', async () => {
         await pia.goto(CONSOLE + '/partner/credits')
+        await pia.evaluate(() => { window.__rzpMode = 'frame' })
         await pia.getByRole('button', { name: 'Buy credits' }).first().click()
         await pia.getByRole('dialog', { name: 'Buy credits' }).getByRole('button', { name: 'Pay ₹2,358.82' }).click()
+        // The owner's bug (2026-11-23): our modal stayed in the top layer, over Checkout, and the page behind it was inert.
+        const frame = pia.getByRole('button', { name: 'Pay in the fake Checkout' })
+        await frame.waitFor()
+        assert.equal(await pia.locator('dialog[open]').count(), 0, 'no dialog of ours is open over Checkout')
+        await frame.click({ timeout: 3_000 })
+        await pia.evaluate(() => { window.__rzpMode = '' })
         await expectToast(pia, '100 credits added.', 'ok')
         await pia.getByText('120 credits').waitFor()
         const [p] = await db`select paid_at, total, test, payment_id from partner_credit_purchases where partner_id = ${pid} and kind = 'pack'`

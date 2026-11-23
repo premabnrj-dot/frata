@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import { flushSync } from 'react-dom'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -62,6 +63,10 @@ function usePay(done: (credits: string) => string) {
   const router = useRouter(), toast = useToast()
   const [pay, setPay] = useState<Pay>({ state: 'idle' })
   const [error, setError] = useState<string | null>(null)
+  // Razorpay's Checkout is open: our dialog steps aside. A native modal dialog sits in the top layer and makes the page
+  // behind it inert, Checkout's frame included, so it must be closed (never cancelled) while Checkout is up, and comes
+  // back with the wait when Checkout closes (owner's bug report, 2026-11-23; the console's autopay does the same).
+  const [checkout, setCheckout] = useState(false)
   const live = useRef(false)
   const run = async (input: object, close: () => void) => {
     setError(null); setPay({ state: 'busy' }); live.current = true
@@ -83,12 +88,15 @@ function usePay(done: (credits: string) => string) {
         await new Promise((res) => setTimeout(res, 4_000))
       }
     }
+    const back = () => { setCheckout(false); void look() }
     const rz = new window.Razorpay({ key: s.key, order_id: s.order, name: 'Frrata', ...(s.recurring && s.customer ? { customer_id: s.customer, recurring: '1' } : {}),
-      handler: (_a: Answer) => { void look() },
-      modal: { ondismiss: () => { void look() } } })
+      handler: (_a: Answer) => back(),
+      modal: { ondismiss: back } })
+    // Our dialog closes first (its effect runs inside flushSync), so Checkout opens on a page that isn't inert.
+    flushSync(() => setCheckout(true))
     rz.open()
   }
-  return { pay, error, run, reset: () => { live.current = false; setPay({ state: 'idle' }); setError(null) } }
+  return { pay, error, run, checkout, reset: () => { live.current = false; setCheckout(false); setPay({ state: 'idle' }); setError(null) } }
 }
 
 /** While the server waits for the bank, the dialog is titled by the wait and holds one line (as drawn, 22 and 23 Nov):
@@ -118,7 +126,7 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
   const n = any ? Number(typed.replace(/\D/g, '')) || 0 : PACK.credits
   const taxable = any ? n * CREDIT_PRICE : PACK.price
   const total = taxable + GST(taxable)
-  const { pay, error, run, reset } = usePay(() => `${n.toLocaleString('en-IN')} credits added.`)
+  const { pay, error, run, reset, checkout } = usePay(() => `${n.toLocaleString('en-IN')} credits added.`)
   const close = () => { setOpen(false); reset(); setField(null) }
   const go = () => {
     if (any && !typedCreditsValid(n)) { setField(`Enter ${TYPED_MIN} to ${TYPED_MAX.toLocaleString('en-IN')} credits.`); typedRef.current?.focus(); return }
@@ -128,7 +136,7 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
   return <>
     <Button size={size} variant={variant} onClick={() => (needDetails ? setAsking(true) : setOpen(true))}>{label}</Button>
     {asking && <DetailsDialog open d={NO_DETAILS} onClose={() => setAsking(false)} onSaved={() => { setAsking(false); setNeedDetails(false); setOpen(true) }} />}
-    <Dialog open={open} onClose={close} title={waitTitle(pay) ?? 'Buy credits'} error={payError(pay, error)}
+    <Dialog open={open && !checkout} onClose={close} title={waitTitle(pay) ?? 'Buy credits'} error={payError(pay, error)}
       actions={pay.state === 'waiting' ? null : pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
         : <><Button variant="secondary" onClick={close} data-autofocus className="max-md:hidden">Not now</Button>
           <Button busy={waiting} onClick={go} className="max-md:w-full">{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
@@ -159,7 +167,7 @@ export function StartSeat({ plan, renews, label, primary = true, move }: { plan:
   const [open, setOpen] = useState(false)
   const [method, setMethod] = useState<'upi' | 'card'>('upi')
   const total = withGst(p.price)
-  const { pay, error, run, reset } = usePay(() => `${p.name} started. ${p.credits} credits added.`)
+  const { pay, error, run, reset, checkout } = usePay(() => `${p.name} started. ${p.credits} credits added.`)
   const close = () => { setOpen(false); reset() }
   const waiting = pay.state === 'waiting' || pay.state === 'busy'
   return <>
@@ -168,7 +176,7 @@ export function StartSeat({ plan, renews, label, primary = true, move }: { plan:
       actions={<Button variant="secondary" onClick={close} data-autofocus>Close</Button>}>
       <p className="text-sm text-muted-foreground">{move.from}’s <span className="font-num">{inr(move.renewal.total)}</span> is being paid. Try again once it’s paid.</p>
     </Dialog> :
-    <Dialog open={open} onClose={close} title={waitTitle(pay) ?? `${move ? 'Move to' : 'Start'} ${p.name}`}
+    <Dialog open={open && !checkout} onClose={close} title={waitTitle(pay) ?? `${move ? 'Move to' : 'Start'} ${p.name}`}
       error={pay.state === 'declined' && move ? `${payError(pay, error)} You’re still on ${move.from}.` : payError(pay, error)}
       actions={pay.state === 'waiting' ? null : pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
         : <><Button variant="secondary" onClick={close} data-autofocus>Not now</Button>
