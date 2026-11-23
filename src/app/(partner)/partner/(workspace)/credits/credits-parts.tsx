@@ -9,7 +9,7 @@ import { FieldError } from '@/components/ui/field-error'
 import { InfoTip } from '@/components/ui/info-tip'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/toast'
-import { freshly } from '@/components/passkeys/fresh'
+import { CONFIRM_AGAIN } from '@/domains/partners/passkeys'
 import { loadRazorpay, type Answer } from '@/components/billing/razorpay'
 import { settle } from '@/lib/settle'
 import { formatInr } from '@/lib/format'
@@ -17,6 +17,16 @@ import { paise } from '@/domains/money/paise'
 import { CREDIT_PRICE, PACK, SEAT_PLANS, TYPED_MAX, TYPED_MIN, typedCreditsValid, withGst, type SeatPlan } from '@/domains/studio/prices'
 import { STATES } from '@/domains/checkout/states'
 import { confirmBuyAction, raiseBudgetAction, seatAction, setAlertsAction, setBudgetAction, setDetailsAction, setSiteBudgetAction, startBuyAction, type Opened } from './actions'
+
+/** `freshly` (src/components/passkeys/fresh.ts) with the passkey code loaded only when the device must confirm: the
+ *  page's first load stays under its 150 kB script budget (check:storefront-build). */
+async function freshly<R>(fn: () => Promise<R>): Promise<R | { ok: false; error: string }> {
+  const r = await fn()
+  if ((r as { error?: unknown } | undefined)?.error !== CONFIRM_AGAIN) return r
+  const { passkeyClient } = await import('@/components/passkeys/passkey-client')
+  const c = await passkeyClient('/partner/passkey').confirmPasskey()
+  return c.ok ? fn() : { ok: false, error: c.error }
+}
 
 // =============================================================================
 // FILE: credits/credits-parts.tsx — Credits and billing's controls (C1·4; mockups docs/mockups/2026-11-22-four-screens.html
