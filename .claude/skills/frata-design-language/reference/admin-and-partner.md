@@ -115,3 +115,9 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 - A due or overdue cost leads the page in a `NeedsBand`; every due row has one action, **Mark paid**, opening a prefilled dialog. A cost opens in the shared quick look by `?id=` (a page of its own on a phone), the list stays usable and ↑ ↓ move to the next cost.
 - A cost that varies shows "about" and a `varies` tag; its Mark paid opens on the amount. A dollar cost shows dollars, and rupees where a person reads a total.
 - Add is one dialog with a Repeats or Once switch. A payment's Undo is a toast action.
+
+## Admin › Cashflow (owner-approved 2026-11-23; `docs/mockups/2026-11-23-admin-cashflow.html`)
+
+- Master admin only. Tabs Overview, Movements, Accounts; one primary (Update balance). The chart shows six months, the last marked "*" for so far, in `bg-chart` and `bg-warn-mark`.
+- A typed balance shows "Our books say" and "Difference" in an always-mounted `role="status"`; zero is a "Matches" badge. Planned entries are dimmed and carry their own Mark received or Mark paid.
+- Shared by Costs and Cashflow: `admin/_components/field-parts` (Row, Day, Money) and `admin/_components/chip-link` (`aria-current="page"`).

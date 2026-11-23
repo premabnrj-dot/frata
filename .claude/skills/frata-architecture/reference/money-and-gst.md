@@ -214,3 +214,10 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   role), imported only by `src/lib/admin/costs.ts` (and `today.ts`). Support staff share the `frata_admin` connection, so every export
   there re-checks `ADMIN_ONLY` itself. Due dates, next due, overdue and burn are derived in `src/domains/admin/costs.ts`, never stored;
   USD is micro-dollars. Editing an amount, currency or anchor, and undoing a payment older than 10 minutes, need `confirmedRecently`.
+
+## Admin › Cashflow (R1 built 2026-11-23; spec docs/specs/2026-11-23-admin-cashflow.md, plan docs/plans/2026-11-23-admin-cashflow.md)
+
+- `cash_accounts`, `cash_balances`, `cash_entries` and `cash_settings` are platform-scope tables in 0093's shape (drizzle/0173, proof § 103, `check:tenant`
+  § 10 Cash family), named only by `src/lib/admin/cash.ts`, which re-checks `ADMIN_ONLY` in every export. Billing and Costs are read only through
+  `billingIn` and `costOut` / `costPaymentsBetween`. Every figure is derived in `src/domains/admin/cash.ts`: the books' number exists for the main
+  account only, GST on billing uses `GST_BPS`, and an audit row never holds a balance.
