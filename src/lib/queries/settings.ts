@@ -4,7 +4,9 @@ import { and, eq, getTableColumns, gte } from 'drizzle-orm'
 import { members, pincodes, planVersions, shopPolicies, shopSettings, tenantPlans, tenants } from '@/lib/db/schema'
 import { notices } from '@/lib/db/schema-email'
 import { istDayStart } from '@/domains/time/day'
-import type { AskPage } from '@/domains/settings/owner-only'
+import { lockedFor, lockOf, type AskPage } from '@/domains/settings/owner-only'
+import { formValues, sectionFor, SETUP_FIELDS, type SectionKey, type SetupPopup, type Values } from '@/domains/settings/sections'
+import { moduleAccessIn } from './modules'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import type { ShipCosts } from '@/domains/settings/ship-costs'
@@ -159,4 +161,37 @@ export async function shopSells(tenantId: string): Promise<string[]> {
 /** A new shop's starting HSN, from what it sells (sign-up, plan 2026-11-09-gst-core-and-categories): a prefill for new products. */
 export async function setStartingHsn(tenantId: string, hsn: string) {
   await withTenant(tenantId, (tx) => tx.update(shopSettings).set({ defaultHsn: hsn }).where(eq(shopSettings.tenantId, tenantId)))
+}
+
+export type SetupPopupRead = {
+  /** The popup's fields as its form draws them (rupees as text; the Registration choice). */
+  values: Values
+  version: number
+  /** Business details are the owner's page once the store has an owner (PP1): the popup shows them as facts. */
+  locked: boolean
+  /** Pay on delivery's limit is Delivery Zones' while it is usable: the popup shows it as text. */
+  held: boolean
+}
+
+/**
+ * What a setup popup reads when it opens (plan 2026-11-23-o2a-setup-card O2a·5), in one transaction: its own columns
+ * (SETUP_FIELDS), the row's version, customer care's email (the grievance email's prefill), whether the details are
+ * locked for this caller, and for payments whether Delivery Zones holds the limit. No cost column.
+ */
+export async function setupPopupFor(tenantId: string, role: MemberRole, support: boolean, popup: SetupPopup): Promise<SetupPopupRead | null> {
+  return withTenant(tenantId, async (tx) => {
+    const [row] = await tx.select({ name: tenants.name, settings: settingsColumns }).from(tenants)
+      .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).limit(1)
+    if (!row) return null
+    const stored: Record<string, unknown> = { ...row.settings, name: row.name }
+    const values: Values = {}
+    for (const [key, keys] of Object.entries(SETUP_FIELDS[popup]) as [SectionKey, readonly string[]][]) {
+      const form = formValues(sectionFor(key)!, stored)
+      for (const k of keys) values[k] = form[k]!
+    }
+    if (popup === 'details' && !String(values.grievanceEmail ?? '').trim()) values.grievanceEmail = row.settings.supportEmail
+    const locked = popup === 'details' && lockOf(lockedFor(role, await hasOwnerIn(tx, tenantId), support), 'business')?.whole === true
+    const held = popup === 'payments' && (await moduleAccessIn(tx, tenantId, new Date())).delivery_zones.usable
+    return { values, version: row.settings.version, locked, held }
+  })
 }
