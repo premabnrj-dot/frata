@@ -196,8 +196,8 @@ ceiling kept beside the own-files one), declined B for now and put the faces aft
   `src/components/shop-preview/store-fonts.css`, written by `scripts/build-store-fonts.mjs` with next/font's own local
   loader and its own postcss plugin, so the output is next/font's to the character; `check:store-fonts` (gates) fails a
   stale file. **Proved identical** on the built CSS against a baseline saved from the build before: all 18 `@font-face`
-  rules (src aside: `font-display: swap`, weights, unicode-ranges, the fallback faces' `local()` and overrides) and all
-  10 `--font-store-*` values match; none of the eight was or is preloaded; Inter and DM Sans (preloaded) stay on next/font.
+  rules of these family names (the 17 store faces, and the console's own Devanagari face, which shares the name `deva`) (src aside: `font-display: swap`, weights, unicode-ranges, the fallback faces' `local()` and overrides) and all
+  10 `--font-store-*` values match (the family names were plain before too: next/font 15 doesn't hash them); none of the eight was or is preloaded; Inter and DM Sans (preloaded) stay on next/font.
   e2e `shop-look`'s screenshot baselines match. Saves 0.32 kB of own script on About/FAQ, 0.26 on checkout, 0.4 on the
   product page and Console › Brand; the shop's CSS 15.9 → 15.8 kB.
 - **The rest of the double loads.** Three more cache groups in `next.config.ts`, each limited to one surface's pages and
