@@ -31,7 +31,7 @@ export function MovementsView({ mv, today, kind }: { mv: Movements; today: strin
       </dl>
       {shown.length === 0 ? <NoMatch title="No money moved here" /> : (
         <DataTable label="Movements">
-          <DataTableHead><th>What</th><th>Day</th><th>From</th><th className="text-right">Amount</th><th><span className="sr-only">Actions</span></th></DataTableHead>
+          <DataTableHead><th>What</th><th>Date</th><th>From</th><th className="text-right">Amount</th><th><span className="sr-only">Actions</span></th></DataTableHead>
           <DataTableBody>
             {shown.map((l) => {
               const entry = l.entryId !== null
@@ -45,7 +45,7 @@ export function MovementsView({ mv, today, kind }: { mv: Movements; today: strin
                   <Td cell="d" className={`text-right font-num ${l.amount > 0 ? 'text-ok-text' : ''}`}>{inrText(l.amount, true)}</Td>
                   <Td cell="f" className="text-right">{entry ? (
                     <span className="inline-flex items-center gap-1">
-                      {l.source === 'Planned' ? <MarkReceivedButton id={l.entryId!} expectedOn={l.date} outgoing={l.amount < 0} /> : null}
+                      {l.source === 'Planned' ? <MarkReceivedButton id={l.entryId!} expectedOn={l.date} outgoing={l.amount < 0} name={name} /> : null}
                       <EntryMore today={today} e={{ id: l.entryId!, name, amount: String(Math.abs(l.amount) / 100), date: l.date, planned: l.source === 'Planned', note: l.sub ?? '' }} />
                     </span>
                   ) : null}</Td>

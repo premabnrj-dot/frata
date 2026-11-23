@@ -4,7 +4,7 @@
 // paise. ONE function, `monthRow`, makes every month's row (a past month from what happened, a coming month from what is due), so the
 // table, the runway, the floor and the Today item all read the same series and no formula is written twice. Nothing here is stored.
 // =============================================================================
-import { cleanText, dueDates, usdToPaise, type CostItem } from './costs'
+import { dueDates, usdToPaise, type CostItem } from './costs'
 import { monthKey, monthRange } from '@/domains/time/month'
 
 export const CASH_KINDS = ['funding', 'loan', 'grant', 'owner_capital', 'other_in', 'gst_paid', 'tds_paid', 'tax_paid', 'loan_repayment', 'owner_draw', 'other_out'] as const
@@ -106,7 +106,7 @@ export type CashModel = {
   today: string
   /** Billing money in by month, net of refunds (actual). */
   billingByMonth: Readonly<Record<string, number>>
-  /** Costs paid by month, in rupees (actual). */
+  /** Costs paid by month, in paise (actual). */
   costsByMonth: Readonly<Record<string, number>>
   /** What the repeating costs come to in each coming month (`dueCostsByMonth`). */
   dueCosts: Readonly<Record<string, number>>
@@ -203,5 +203,3 @@ export function parseCashAmount(text: string, allowZero = false): number | null 
   return v
 }
 
-/** A person's text for storage: trimmed, control and direction characters removed, spaces collapsed (the Costs cleaner, one copy). */
-export const cleanTextLocal = cleanText

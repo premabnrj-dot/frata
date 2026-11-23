@@ -58,13 +58,16 @@ export function BalanceFields({ accounts, floor, today }: { accounts: AcctOption
         <Money name="balance" label="Balance" value={bal} onChange={setBal} autoFocus />
         <Day label="As of" name="asOf" value={today} today={today} max={today} onChange={setAsOf} />
       </div>
-      {books ? (
-        <div className="grid gap-1.5 rounded-lg border border-line-soft p-3 text-sm" aria-live="polite">
-          <div className="flex items-center gap-2"><span className="text-muted-foreground">Our books say</span><b className="ml-auto font-num font-semibold">{inrText(books.books)}</b></div>
-          <div className="flex items-center gap-2"><span className="text-muted-foreground">Difference</span>
-            {books.difference === 0 ? <span className="ml-auto"><Badge tone="ok">Matches</Badge></span> : <b className={`ml-auto font-num font-semibold ${books.difference < 0 ? 'text-danger-text' : ''}`}>{inrText(books.difference, true)}</b>}</div>
-        </div>
-      ) : null}
+      <div role="status">
+        {books ? (
+          <div className="grid gap-1.5 rounded-lg border border-line-soft p-3 text-sm">
+            <div className="flex items-center gap-2"><span className="text-muted-foreground">Our books say</span><b className="ml-auto font-num font-semibold">{inrText(books.books)}</b></div>
+            <div className="flex items-center gap-2"><span className="text-muted-foreground">Difference</span>
+              {books.difference === 0 ? <span className="ml-auto"><Badge tone="ok">Matches</Badge></span> : <b className={`ml-auto font-num font-semibold ${books.difference < 0 ? 'text-danger-text' : ''}`}>{inrText(books.difference, true)}</b>}</div>
+            {books.difference !== 0 ? <p className="text-small text-muted-foreground">Razorpay pays out about two working days after a payment, less its fee.</p> : null}
+          </div>
+        ) : null}
+      </div>
       <Money name="floor" label="Keep at least" placeholder="Optional" defaultValue={floor !== null ? inputRupees(floor) : ''} />
     </>
   )

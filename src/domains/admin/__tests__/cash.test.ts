@@ -4,6 +4,7 @@ import {
   openingOf, OUT_KINDS, parseBalance, parseCashAmount, runRate, runwayEnd, unpaidCostsToMonthEnd, type Balance, type CashModel, type Entry,
 } from '../cash'
 import type { CostItem } from '../costs'
+import { GST_BPS } from '@/domains/billing/gst-rate'
 import { monthKey } from '@/domains/time/month'
 
 const R = 100 // paise to a rupee, so a test reads in rupees
@@ -11,7 +12,7 @@ const bal = (id: string, accountId: string, asOf: string, rupees: number, create
 const entry = (id: string, kind: Entry['kind'], rupees: number, happenedOn: string | null, expectedOn: string | null = null): Entry => ({ id, kind, amount: rupees * R, happenedOn, expectedOn, accountId: null })
 const cost = (id: string, o: Partial<CostItem> = {}): CostItem => ({ id, name: id, kind: 'recurring', cadence: 'monthly', amount: 1_000_00, currency: 'INR', varies: false, anchorOn: '2026-11-26', endsOn: null, category: 'software', ...o })
 const model = (o: Partial<CashModel> = {}): CashModel => ({
-  today: '2026-11-23', billingByMonth: {}, costsByMonth: {}, dueCosts: {}, entries: [], gstActual: { thisMonth: null, nextMonth: null }, gstBps: 1800, ...o,
+  today: '2026-11-23', billingByMonth: {}, costsByMonth: {}, dueCosts: {}, entries: [], gstActual: { thisMonth: null, nextMonth: null }, gstBps: GST_BPS, ...o,
 })
 
 describe('the kinds', () => {

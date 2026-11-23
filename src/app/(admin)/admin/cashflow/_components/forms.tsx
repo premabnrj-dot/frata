@@ -65,12 +65,12 @@ export function AddAccountButton() {
 }
 
 /** Undo the latest balance of an account, from the Accounts tab. */
-export function UndoBalanceButton({ accountId, balanceId }: { accountId: string; balanceId: string }) {
+export function UndoBalanceButton({ accountId, balanceId, name }: { accountId: string; balanceId: string; name: string }) {
   const toast = useToast()
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   return (
-    <Button type="button" variant="ghost" size="sm" busy={busy} aria-label="Undo balance" onClick={async () => {
+    <Button type="button" variant="ghost" size="sm" busy={busy} aria-label={`Undo ${name} balance`} onClick={async () => {
       setBusy(true)
       const r = await undoWith(accountId, balanceId, router)
       setBusy(false)
@@ -80,12 +80,12 @@ export function UndoBalanceButton({ accountId, balanceId }: { accountId: string;
 }
 
 /** A planned entry that has now happened, on the day it was expected: free of the passkey (a different day or amount is an Edit). */
-export function MarkReceivedButton({ id, expectedOn, outgoing }: { id: string; expectedOn: string; outgoing: boolean }) {
+export function MarkReceivedButton({ id, expectedOn, outgoing, name }: { id: string; expectedOn: string; outgoing: boolean; name: string }) {
   const toast = useToast()
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   return (
-    <Button type="button" variant="secondary" size="sm" busy={busy} onClick={async () => {
+    <Button type="button" variant="secondary" size="sm" busy={busy} aria-label={`${outgoing ? 'Mark paid' : 'Mark received'}, ${name}`} onClick={async () => {
       setBusy(true)
       const f = new FormData(); f.set('id', id); f.set('happenedOn', expectedOn); f.set('expectedOn', '')
       const r = await editEntryAction(f)
@@ -98,9 +98,9 @@ export function MarkReceivedButton({ id, expectedOn, outgoing }: { id: string; e
 /** An entry's own actions: Edit and Remove. */
 export function EntryMore({ e, today }: { e: EditableEntry & { name: string }; today: string }) {
   const specs: DialogSpec[] = [
-    { label: 'Edit…', title: `Edit ${e.name}`, action: editEntryAction, confirm: true, keep: 'Cancel', go: 'Save', fields: <EditEntryFields e={e} today={today} /> },
+    { label: 'Edit…', title: `Edit ${e.name}`, action: editEntryAction, confirm: true, keep: 'Cancel', go: 'Save entry', fields: <EditEntryFields e={e} today={today} /> },
     {
-      label: 'Remove…', title: 'Remove this entry?', description: 'It stops counting in your cash.', action: deleteEntryAction, danger: true, confirm: true, keep: 'Keep it', go: 'Remove entry',
+      label: 'Remove…', title: `Remove ${e.name}?`, description: 'It no longer counts in cash in bank.', action: deleteEntryAction, danger: true, confirm: true, keep: 'Keep it', go: 'Remove entry',
       fields: <input type="hidden" name="id" value={e.id} />,
     },
   ]

@@ -293,7 +293,7 @@ export async function dueCostItems(staff: StaffOk, today: string): Promise<Today
 
 // ── Admin › Cashflow reads Costs only through these exports (check:tenant § 10: no other file names the cost tables) ────────────────
 
-/** What was paid between two days (`from` inclusive, `to` exclusive), in rupees, by month or as one total (key ''). */
+/** What was paid between two days (`from` inclusive, `to` exclusive), in paise, by month or as one total (key ''). */
 export async function costOut(staff: StaffOk, from: string, to: string, by: 'month' | 'total'): Promise<Record<string, number>> {
   adminOnly(staff)
   const where = and(gte(costPayments.paidOn, from), sql`${costPayments.paidOn} < ${to}::date`)

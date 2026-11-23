@@ -49,3 +49,7 @@ Regression net first; every task ends with its tests and `impact-reviewer` on it
 | A loading skeleton | The shared top progress bar, no `loading.tsx` | frata-design-language § Console patterns | Told in the 2026-11-23 build report |
 | A phone bottom bar with a Money item | The shared bar; Cashflow is under More | The Admin shell is shared | Told in the 2026-11-23 build report |
 | The nav count on Cashflow in R1 | It arrives with R2 | It reads the Today source, which ships after the tables are live | Told in the 2026-11-23 build report |
+| "Keep at least" with a Change link on the Overview | The figure and "set it in Update balance" | The floor is one field in that dialog; a second entry point waits for R2 | Told in the build report, 2026-11-23 |
+| Toast "Balance saved · ₹X in all" | "Balance saved." with Undo | A balance never goes in a message the audit trail or a log could keep | Told in the build report, 2026-11-23 |
+| Remove, Mark paid, Mark received, Undo and a "None" account (not drawn) | Built as secondary or ghost buttons and menu items | The spec's flows need them; each has an aria-label naming its row | Told in the build report, 2026-11-23 |
+| Update balance phone sheet with a single "Difference" row | "Our books say" and "Difference", plus one line that settlement lag and fees can explain it | frata-integrations: Razorpay pays out about two working days after capture, less its fee (checked 2026-11-23) | Told in the build report, 2026-11-23 |

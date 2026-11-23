@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { CASH_KINDS, cleanTextLocal, parseBalance, parseCashAmount, type CashKind } from '@/domains/admin/cash'
+import { cleanText } from '@/domains/admin/costs'
+import { CASH_KINDS, parseBalance, parseCashAmount, type CashKind } from '@/domains/admin/cash'
 import type { BalanceInput, EntryInput, EntryPatch } from '@/lib/admin/cash'
 
 // =============================================================================
@@ -15,7 +16,7 @@ export const FIELD_WORDS = {
   name: 'Add a name.', other: 'Check this field.',
 } as const
 
-const clean = (max: number) => z.string().max(max * 4).transform(cleanTextLocal).pipe(z.string().max(max))
+const clean = (max: number) => z.string().max(max * 4).transform(cleanText).pipe(z.string().max(max))
 const orNull = (max: number) => clean(max).transform((s) => (s === '' ? null : s)).optional().transform((v) => v ?? null)
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
 const plusYears = (day: string, n: number) => `${Number(day.slice(0, 4)) + n}${day.slice(4)}`

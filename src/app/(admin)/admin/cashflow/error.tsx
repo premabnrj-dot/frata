@@ -8,8 +8,7 @@ export default function CashflowError({ reset }: { error: Error & { digest?: str
   return (
     <>
       <PageHeader title="Cashflow" />
-      <Empty picto="payments" title="We couldn’t read cashflow">
-        <p className="w-full text-small text-muted-foreground">Nothing was changed.</p>
+      <Empty picto="payments" title="We couldn’t load Cashflow. Nothing was changed.">
         <Button variant="secondary" onClick={reset}>Try again</Button>
       </Empty>
     </>

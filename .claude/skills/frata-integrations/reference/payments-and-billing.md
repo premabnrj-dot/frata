@@ -148,6 +148,19 @@ rebuilds 2026-10-08 and 2026-11-12T08:15Z: a lastmod on those days is not proof 
   fails" [V docs; a live ₹3,538.82 / ₹11,798.82 authorisation untested, U] [V, upi/create-authorization-transaction.md,
   payment-gateway/s2s-integration/recurring-payments/upi.md, undated, 2026-11-22]. Card: only the ₹1 minimum is stated;
   first charge at registration not stated [U]. eMandate order amount 0. Nothing says a ₹1 authorisation is refunded [U].
+- Settlement (checked 2026-11-23, integration-researcher): domestic default T+2 working days from capture, "subject to bank approval and
+  can vary based on your business vertical, risk factors" [V, payments/settlements/faqs.md + payments/settlements, undated]. None on
+  Sundays, 2nd/4th Saturdays or bank holidays; credited the next working day [V, faqs.md]. A cash page may not treat the capture day
+  or one fixed lag as the bank day. A blog's T+1 is [S], rejected.
+- Fee: 2% on every domestic method incl. UPI, plus 18% GST on the fee, deducted before the bank credit [V, razorpay.com/pricing
+  "Last updated: May 2026" + settlements page, undated]. Subscription cards 0.9% + platform fee; subscription UPI/NACH/e-mandate and
+  Payment Links fees unpublished [U]. Instant Settlement: on request via Support, 24x7, fee + tax come out of the amount, rate not
+  published [V, settlements/instant.md, undated].
+- Reconciliation: `GET /v1/settlements/recon/combined` (year, month required; day optional; count ≤ 1000); rows carry type
+  payment/refund/transfer/adjustment, fee, tax, settlement_id, settled_at, settlement_utr [V, api/settlements/fetch-recon, lastmod
+  2026-10-08]. `settlement_id` is not on the payment entity [V]. Refunds and chargebacks come out of the same balance; disputes are
+  deducted at onset and returned if won [V, undated]; the recon row type for a dispute [U]. Cashflow R1 does not call it: the Billing
+  figure is captured money, and settlement lag and fees can explain a Difference.
 - token.max_amount (UPI, "All other MCCs"): ≤ ₹25,000 as_presented, ≤ ₹1,00,000 other frequencies; AFA-free ₹15,000 a
   debit; lower caps for MCCs 4722, 5944, 7322, 7409, 7410, 9311, 9400; Frrata's MCC unknown [U]. frequency (UPI): daily,
   weekly, fortnightly, bimonthly, monthly, quarterly, half_yearly, yearly, as_presented (cards: weekly, monthly, yearly,

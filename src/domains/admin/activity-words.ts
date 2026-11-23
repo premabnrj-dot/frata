@@ -60,7 +60,7 @@ const SAID: Record<string, string> = {
   'cash.entry.edit': 'edited a cash entry',
   'cash.entry.delete': 'removed a cash entry',
   'cash.account.add': 'added a cash account',
-  'cash.settings.set': 'changed the floor or the main account',
+  'cash.settings.set': 'changed the minimum cash or the main account',
   'theme.stage': 'added a pilot store',
   'theme.unstage': 'removed a pilot store',
   'theme.release': 'released a theme version',

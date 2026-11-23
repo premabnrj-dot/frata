@@ -7,6 +7,7 @@ import {
 } from '@/domains/admin/cash'
 import { addMonths, monthKey, monthRange } from '@/domains/time/month'
 import { ADMIN_ONLY, confirmedRecently, type StaffOk } from '@/lib/auth/require-staff'
+import { GST_BPS } from '@/domains/billing/gst-rate'
 import { adminDb } from '@/lib/db/admin'
 import { cashAccounts, cashBalances, cashEntries, cashSettings } from '@/lib/db/schema-cash'
 import { errName } from '@/lib/log'
@@ -18,7 +19,7 @@ import { costOut, costPaymentsBetween, UNDO_FREE_MS } from './costs'
 // FILE: src/lib/admin/cash.ts — ADMIN › CASHFLOW'S reads and writes (spec docs/specs/2026-11-23-admin-cashflow.md; plan
 // docs/plans/2026-11-23-admin-cashflow.md task 4). frata_admin only through adminDb(); the four cash tables are named nowhere else
 // (check:tenant § 10, the Cash family). Support staff share the frata_admin connection, so EVERY export checks ADMIN_ONLY itself. Billing and
-// Costs are read ONLY through their exports. Reads are plain statements, one cached load per request keyed by the day (never an object): the page
+// Costs are read ONLY through their exports. Reads are plain statements, one cached load per request (the staff object is the same within a request's render): the page
 // and, in R2, the Today item share it. A write is one transaction calling only `tx.*` and `auditStaff(tx)`.
 // AUDIT DETAIL (kept forever; spec § Who may): a balance row carries `{accountId, asOf}`, never the amount; a done entry's edit or delete carries the
 // old `{kind, amountPaise, happenedOn}` (a record that reaches the CA must survive); everything else carries field names only.
@@ -63,16 +64,18 @@ const toEntry = (r: typeof cashEntries.$inferSelect): EntryRow => ({
 const loadCash = cache(async (staff: StaffOk, today: string): Promise<CashData> => {
   const db = adminDb()
   const from = `${monthKey(today, -SIX)}-01`, to = `${monthKey(today, 1)}-01`
-  const [accounts, balances, entries, [settings], billing, costs] = await Promise.all([
+  const [accounts, balances, [settings], billing, costs] = await Promise.all([
     db.select().from(cashAccounts).orderBy(asc(cashAccounts.createdAt), asc(cashAccounts.id)),
     db.select().from(cashBalances).orderBy(desc(cashBalances.asOf), desc(cashBalances.createdAt), desc(cashBalances.id)).limit(400),
-    db.select().from(cashEntries).where(or(gte(cashEntries.happenedOn, from), isNull(cashEntries.happenedOn))).orderBy(desc(cashEntries.createdAt)).limit(501),
     db.select().from(cashSettings).where(eq(cashSettings.id, 1)),
     billingIn(staff, from, to, 'month'),
     costOut(staff, from, to, 'month'),
   ])
   const bals = balances.map(toBalance)
   const main = latestBalances(bals).find((b) => b.accountId === settings?.mainAccountId) ?? null
+  // The books' roll-forward needs every entry after the main balance's day, however old that balance is, so the read reaches back to it.
+  const entriesFrom = main && main.asOf < from ? main.asOf : from
+  const entries = await db.select().from(cashEntries).where(or(gte(cashEntries.happenedOn, entriesFrom), isNull(cashEntries.happenedOn))).orderBy(desc(cashEntries.createdAt)).limit(2001)
   const window: Window = main && main.asOf < today
     ? { billingIn: (await billingIn(staff, dayAfter(main.asOf), dayAfter(today), 'total'))[''] ?? 0, costsOut: (await costOut(staff, dayAfter(main.asOf), dayAfter(today), 'total'))[''] ?? 0 }
     : { billingIn: 0, costsOut: 0 }
@@ -101,7 +104,7 @@ export type CashOverview = {
 }
 
 const modelOf = (d: CashData, today: string): CashModel => ({
-  today, billingByMonth: d.billingByMonth, costsByMonth: d.costsByMonth, dueCosts: {}, entries: d.entries, gstActual: { thisMonth: null, nextMonth: null }, gstBps: 1800,
+  today, billingByMonth: d.billingByMonth, costsByMonth: d.costsByMonth, dueCosts: {}, entries: d.entries, gstActual: { thisMonth: null, nextMonth: null }, gstBps: GST_BPS,
 })
 
 export async function cashOverview(staff: StaffOk, today: string): Promise<CashOverview> {
@@ -118,7 +121,9 @@ export async function cashOverview(staff: StaffOk, today: string): Promise<CashO
   const m = modelOf(d, today)
   const rows: MonthRow[] = []
   let bal = 0
-  for (let i = SIX; i >= 0; i--) { const r = monthRow(monthKey(today, -i), bal, { ...m, today: i === 0 ? addMonths(new Date(`${today}T00:00:00Z`), 1).toISOString().slice(0, 10) : today }); rows.push(r); bal = r.closing }
+  // This month so far is shown as actuals: the engine calls a month "actual" when it is before the month of its `today`, so that row is read with today one month on.
+  const thisMonthAsPast = addMonths(new Date(`${today}T00:00:00Z`), 1).toISOString().slice(0, 10)
+  for (let i = SIX; i >= 0; i--) { const r = monthRow(monthKey(today, -i), bal, { ...m, today: i === 0 ? thisMonthAsPast : today }); rows.push(r); bal = r.closing }
   return {
     today, accounts, cash: latest.length ? cashToday(latest, d.settings.mainAccountId, d.window, d.entries, today) : null,
     asOf: latest.length ? latest.map((b) => b.asOf).sort()[0]! : null, floor: d.settings.floor, net: averageNet(m), rows,
