@@ -75,7 +75,7 @@ export default {
       await pia.getByText('Make your first client store').waitFor()
       await pia.getByRole('link', { name: 'New client store' }).first().click()
       await pia.getByLabel('Brand’s store name').fill('Mitti Handloom')
-      await pia.getByText('Free', { exact: true }).waitFor()
+      await pia.getByText('Available', { exact: true }).waitFor()
       await pia.getByLabel('Pickup PIN code', { exact: true }).fill('302001')
       await pia.getByRole('button', { name: 'Create Mitti Handloom' }).click()
       await pia.getByText('Building for Mitti Handloom').waitFor()

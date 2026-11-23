@@ -9,12 +9,10 @@ import { useToast } from '@/components/ui/toast'
 import { InfoTip } from '@/components/ui/info-tip'
 import { slugProblem } from '@/domains/signup/slug'
 import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
-import type { AddressCheck } from '@/app/start/actions'
+import { ADDRESS_WORDS, addressUsable, type AddressCheck } from '@/domains/signup/steps'
 import { changeAddress, checkShopAddress } from '../actions'
 import { addShopNameAction } from './domain-actions'
 import { Section } from '@/components/layout/section'
-
-const WORDS: Record<AddressCheck['state'], string> = { ok: 'Available', taken: 'Taken', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Taken' }
 
 /**
  * The shop's frrata.shop address (shop addresses D·1; spec § Words on screen: the address, its state, the limit, nothing
@@ -79,7 +77,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   })
   const line = frozen ? 'Address changes paused by Frrata'
     : twoStep && adding ? 'One new address at a time'
-    : state ? WORDS[state.state]
+    : state ? ADDRESS_WORDS[state.state]
     : left === null ? null : left === 0 ? 'No changes left' : `${left} ${left === 1 ? 'change' : 'changes'} left`
 
   return (
@@ -105,7 +103,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
         {!locked && (
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" disabled={!changed || pending} onClick={() => setSlug(current)}>Keep {current}</Button>
-            <Button type="button" disabled={!changed || state?.state !== 'ok' || pending}
+            <Button type="button" disabled={!changed || !state || !addressUsable(state.state) || pending}
               onClick={() => (left === null ? change() : setConfirming(true))}>{pending ? (twoStep ? 'Adding…' : 'Changing…') : `${twoStep ? 'Add' : 'Change to'} ${slug || '…'}`}</Button>
           </div>
         )}

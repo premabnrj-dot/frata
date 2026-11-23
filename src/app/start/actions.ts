@@ -6,6 +6,7 @@ import { startingHsn } from '@/domains/catalogue/sell-keys'
 import { setStartingHsn } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
 import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
+import type { AddressCheck } from '@/domains/signup/steps'
 import { requireUser } from '@/lib/auth/require-user'
 import { hostFor, refreshHosts } from '@/lib/queries/storefront'
 import { createShop, placeForPincode, slugAvailable } from '@/lib/db/platform'
@@ -19,15 +20,14 @@ import { checkCode, sendCode, signupCodeOn } from '@/lib/trials/signup-code'
 // Creating a shop: the signed-in person (requireUser → getUser) becomes its
 // owner through app_create_shop, which re-checks everything in one transaction.
 
-export type AddressCheck = { state: 'ok' } | { state: 'taken' | 'too_short' | 'shape' | 'reserved' }
-
 export async function checkAddress(slug: string): Promise<AddressCheck> {
   const auth = await requireUser()
   if (!auth.ok) return { state: 'shape' }
   const s = String(slug ?? '').toLowerCase()
   const problem = slugProblem(s)
   if (problem) return { state: problem }
-  if (!(await withinLimit(LIMITS.checkAddressUser, auth.userId))) return { state: 'taken' }
+  // Over the limit the check says nothing (`limited`), never a false "taken"; creation checks the address again.
+  if (!(await withinLimit(LIMITS.checkAddressUser, auth.userId))) return { state: 'limited' }
   return (await slugAvailable(s)) ? { state: 'ok' } : { state: 'taken' }
 }
 

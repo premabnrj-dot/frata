@@ -7,13 +7,10 @@ import { InfoTip } from '@/components/ui/info-tip'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
-import { checkAddress, lookupPincode, type AddressCheck } from '@/app/start/actions'
+import { checkAddress, lookupPincode } from '@/app/start/actions'
+import { ADDRESS_WORDS, addressUsable, type AddressCheck } from '@/domains/signup/steps'
 import { createClientStoreAction } from './actions'
 import { FIELD } from '@/components/ui/field'
-
-const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
-  ok: 'Free', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.',
-}
 
 /** One screen, three fields (the same as /start): name, its address (derived, editable), pickup PIN code. */
 export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
@@ -50,7 +47,7 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return fail({ field: 'name', text: 'The store needs a name.' })
-    if (address?.state !== 'ok') return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
+    if (!address || !addressUsable(address.state)) return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
     if (!PINCODE_SHAPE.test(pickup)) return fail({ field: 'pickup', text: 'A PIN code is 6 digits.' })
     setError(null)
     start(async () => {

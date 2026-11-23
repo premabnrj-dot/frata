@@ -6,17 +6,14 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
-import { checkAddress, createMyShop, lookupPincode, sendSignupCode, verifySignupCode, type AddressCheck } from './actions'
+import { checkAddress, createMyShop, lookupPincode, sendSignupCode, verifySignupCode } from './actions'
+import { ADDRESS_WORDS, addressUsable, type AddressCheck } from '@/domains/signup/steps'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 
 type Step = 'name' | 'pickup' | 'plan' | 'phone' | 'sells'
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
 export type SignupPlan = { code: string; name: string; price: string; fee: string }
-
-const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
-  ok: 'Available', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.',
-}
 
 /** Shop name (address derived live) → pickup pincode → plan (trials TR1) → optional "what do you sell" → the console. */
 export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopDomain: string; plans: SignupPlan[]; trialDays: number; codeOn: boolean }) {
@@ -95,7 +92,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
         <form key="name" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
           e.preventDefault()
           if (!name.trim()) return fail({ field: 'name', text: 'Your shop needs a name. You can change it later.' })
-          if (address?.state !== 'ok') return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
+          if (!address || !addressUsable(address.state)) return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
           go('pickup')
         }}>
           <h1 className="text-2xl font-semibold tracking-tight">What is your shop called?</h1>
