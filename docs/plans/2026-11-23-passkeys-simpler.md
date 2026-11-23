@@ -1,5 +1,5 @@
 # Passkeys, simpler: the task plan (lane G)
-Status: active · Date: 2026-11-23 · Spec: `docs/specs/2026-11-23-passkeys-simpler.md` · P0 building.
+Status: paused by the owner, 2026-11-23 (approved, not built; resume from P0) · Date: 2026-11-23 · Spec: `docs/specs/2026-11-23-passkeys-simpler.md` · P0 on the branch, paused.
 **Mockup:** https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`)
 **Approved:** owner, 2026-11-23 (mockup version 2; call 8 reversed, the switch stays)
 **Review:** security-reviewer FIX THE SPEC (2 high, 5 medium, 2 low; all folded into the spec), 2026-11-23
@@ -10,6 +10,15 @@ Status: active · Date: 2026-11-23 · Spec: `docs/specs/2026-11-23-passkeys-simp
 **Review:** impact-reviewer P0 FIX BEFORE COMMIT (1 medium, test gaps; fixed in 38cb932), 2026-11-23
 **Review:** design-system-reviewer P0 FAIL minor (6; fixed or in Deviations), 2026-11-23
 **Review:** mockup-parity-reviewer P0 FAIL on one unlisted row (the browser's own sheet; now in Deviations), 2026-11-23
+
+**Paused by the owner, 2026-11-23: approved, not built; resume from P0.** Owner: "for the passkey rework/simplification, please put a pause and park it. it's a long plan. we don't have much tokens budget for it. I would want switch to be live in order to turn it on/off for now. can resume passkey work later?"
+
+Where it stands:
+1. On `claude/lane-g-passkeys`: spec, approved mockup (v2), this plan, and P0's code (shared screens 1–3 in `src/components/passkeys/confirm-steps.tsx`, both gates, lazy-loaded gates, staff passkeys named by password manager, the B6 heading fix, tests). Not merged, not released.
+2. P0's last verified state: 38cb932 passed e2e 75, 80, 86, 40 (39/39). 475d9a8, cb62d17 and 1f80132 (words fix, plan, lazy gates) pass gates, typecheck and unit tests; their e2e run and the budget measurement were stopped by the pause, so rerun e2e 75 80 86 40 97 and `SHOW_BUDGETS=1 node scripts/check-storefront-build.mjs` first.
+3. Next: finish P0's report (owner sees the two Deviations rows), then P1 (the one-way rule, screen 2's list) and P2 (no calls), after merging main.
+4. Lane D's passkeys switch control and its migration 0170 land on main first; P1 and P2 take migration numbers after it.
+5. While passkeys are off: no prompt or nag anywhere; the 7-day first-passkey window and a Lead's 24-hour wait count only time with passkeys on (spec § C6).
 
 History: parked by the owner earlier on 2026-11-23 ("on passkey, could you please park the plan and just add option in admin to disable passkeys … it's too early for passkeys in the system, let it be just email and password login. I don't understand the need of passkey system … just wish to get started for now"), then approved the same day (below). The mockup and the reviews stay as they are for when this is picked up again.
 
