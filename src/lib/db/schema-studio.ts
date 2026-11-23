@@ -168,8 +168,9 @@ export const studioMessages = pgTable('studio_messages', {
 export const studioTurnKeys = pgTable('studio_turn_keys', {
   turnId: uuid('turn_id').primaryKey().references(() => studioTurns.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull(),
-  staffStepupId: uuid('staff_stepup_id').notNull().references(() => staffStepups.id, { onDelete: 'cascade' }),
-  partnerStepupId: uuid('partner_stepup_id').notNull().references(() => partnerStepups.id, { onDelete: 'cascade' }),
+  // Null for a turn sent while passkeys are off (0171): it re-checks the person only, and ends once they are back on.
+  staffStepupId: uuid('staff_stepup_id').references(() => staffStepups.id, { onDelete: 'cascade' }),
+  partnerStepupId: uuid('partner_stepup_id').references(() => partnerStepups.id, { onDelete: 'cascade' }),
   createdAt: createdAt(),
 })
 

@@ -115,14 +115,15 @@ export const staffNotices = pgTable('staff_notices', {
  */
 export const platformSwitches = pgTable('platform_switches', {
   key: text('key').primaryKey(),
-  until: at('until').notNull(),
+  /** Null: until an Admin turns it back off (owner 2026-11-23: passkeys off for the pilot, from Admin › Staff). */
+  until: at('until'),
   setAt: createdAt(),
   setBy: text('set_by').notNull(),
   reason: text('reason').notNull(),
 }, (t) => [
   check('platform_switches_key', sql`${t.key} in ('passkeys_off')`),
   check('platform_switches_reason', sql`length(${t.reason}) between 1 and 200`),
-  // At most 30 days a time (owner, 2026-11-16: "extend passkey for 30 days"; was 7, security review M2): a switch can't
-  // be set to last for ever.
-  check('platform_switches_until', sql`${t.until} <= ${t.setAt} + interval '30 days'`),
+  // At most 30 days a time when it has an end (owner, 2026-11-16; was 7, security review M2); none when set from Admin
+  // › Staff (owner, 2026-11-23: "let it be just email … just wish to get started for now"), its banner on every page.
+  check('platform_switches_until', sql`${t.until} is null or ${t.until} <= ${t.setAt} + interval '30 days'`),
 ])
