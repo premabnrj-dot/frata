@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { announce } from '@/components/shell/announce'
 import { deviceLabel } from '@/domains/partners/passkeys'
 import { NO_PASSKEY_HERE, passkeyClient, type PasskeyEndpoint } from './passkey-client'
 import { PasskeyTile } from './partner-frame'
@@ -20,7 +21,7 @@ import { PasskeyTile } from './partner-frame'
 
 type Step = 'confirm' | 'none' | 'save'
 
-export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass }: {
+export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass, tile = true, focusOnMount = false }: {
   endpoint: PasskeyEndpoint
   /** "Ask for a new passkey": the gate's own ask flow. */
   onAsk: () => void
@@ -29,6 +30,10 @@ export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass }:
   /** Fewer than 10 passkeys: screen 3 may offer this device its own. */
   canSave: boolean
   headingClass: string
+  /** Screen 3's fingerprint tile; off where the frame already draws an icon (Frrata Admin's key). */
+  tile?: boolean
+  /** Back from the ask flow ("Use my passkey"): focus the heading at once, as a step change does. */
+  focusOnMount?: boolean
 }) {
   const { addPasskey, confirmPasskey } = passkeyClient(endpoint)
   const toast = useToast()
@@ -36,7 +41,7 @@ export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass }:
   const [busy, setBusy] = useState(false)
   const head = useRef<HTMLHeadingElement>(null)
   const noneLink = useRef<HTMLButtonElement>(null)
-  const first = useRef(true)
+  const first = useRef(!focusOnMount)
   // Each step replaces the focused control: focus moves to the new heading, which a screen reader reads.
   useEffect(() => { if (first.current) { first.current = false; return } head.current?.focus() }, [step])
 
@@ -45,7 +50,9 @@ export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass }:
     const r = await confirmPasskey()
     setBusy(false)
     if (r.ok) { if (r.value?.crossDevice && canSave) setStep('save'); else onDone(); return }
-    if (r.error === NO_PASSKEY_HERE) { if (step === 'confirm') noneLink.current?.focus(); return }
+    // Closed, or nothing here: not an error. Said politely; on screen 1 focus moves to "No passkey here?", on screen 2 it
+    // stays on "Use another device" (busy kept it there).
+    if (r.error === NO_PASSKEY_HERE) { announce('Not confirmed.'); if (step === 'confirm') noneLink.current?.focus(); return }
     toast.error(r.error)
   }
   const save = async () => {
@@ -53,7 +60,7 @@ export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass }:
     const r = await addPasskey(deviceLabel(navigator.userAgent) ?? 'My passkey', false, false)
     setBusy(false)
     if (!r.ok) { toast.error(r.error); return }
-    toast.ok(r.value?.name ? `Passkey saved to ${r.value.name}` : 'Passkey saved')
+    // No ok toast: the reload replaces the gate and its Toaster, and the page that opens is the confirmation.
     onDone()
   }
 
@@ -61,7 +68,7 @@ export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass }:
   if (step === 'save') {
     return (
       <>
-        <PasskeyTile />
+        {tile && <PasskeyTile />}
         {heading('Save a passkey on this device')}
         <p className="text-sm text-muted-foreground">Anyone who can unlock this device can sign in.</p>
         <Button size="lg" busy={busy} onClick={save}>Save passkey</Button>

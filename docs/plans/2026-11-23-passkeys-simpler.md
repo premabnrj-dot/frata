@@ -42,4 +42,6 @@ definers, `mockup-parity-reviewer` against the mockup, and the docs in spec § P
 ## Deviations
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
-| — | — | — | — |
+| Screen 2's list of saved passkeys (password manager, saved, used, Partner/Staff tag) | P0: the heading and both actions, no list | The list needs a definer that answers before a check: a migration, which waits for lane D's (P1 adds it) | yes — told the orchestrator 2026-11-23 for the owner; closes in P1 |
+| Screen 3's fingerprint tile in Frrata Admin | Admin keeps its key icon, no second tile | Admin's frame already draws an icon ("the same card in its own frame") | no — to show with P0's report |
+| A toast "Passkey saved to …" after screen 3 | none | The reload replaces the gate and its toaster; the page that opens is the confirmation (none is drawn after screen 3) | not a deviation (not drawn) |

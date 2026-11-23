@@ -35,6 +35,7 @@ export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey'
   const [busy, setBusy] = useState(false)
   const [code, setCode] = useState<string | null>(null)
   const [asking, setAsking] = useState(false)
+  const [back, setBack] = useState(false)
   const [name, setName] = useState('')
   const request = state?.request ?? null
   const waiting = !!request && !request.approved
@@ -83,11 +84,11 @@ export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey'
             {waiting ? 'Show a new code' : 'Ask to add a passkey'}
           </Button>
         )}
-        {state.passkeys > 0 && <button type="button" className="justify-self-start text-sm underline underline-offset-4" onClick={() => { setAsking(false); setCode(null) }}>Use my passkey</button>}
+        {state.passkeys > 0 && <button type="button" className="justify-self-start text-sm underline underline-offset-4" onClick={() => { setAsking(false); setCode(null); setBack(true) }}>Use my passkey</button>}
       </>
     )
   } else {
-    body = <ConfirmSteps endpoint={endpoint} canSave={state.passkeys < 10} headingClass="text-xl font-semibold"
+    body = <ConfirmSteps endpoint={endpoint} canSave={state.passkeys < 10} headingClass="text-xl font-semibold" tile={false} focusOnMount={back}
       onDone={() => router.refresh()} onAsk={() => setAsking(true)} />
   }
   return (

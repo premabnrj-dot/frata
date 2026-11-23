@@ -130,6 +130,22 @@ export default {
       await lead.screenshot({ path: t.out('passkeys') })
     })
 
+    await t.step('Passkeys, simpler P0: No passkey here? → No passkey on this browser → Ask for a new passkey → Use my passkey → in', async () => {
+      await db`delete from partner_stepups where user_id = ${L.id}`
+      await lead.goto(CONSOLE + '/partner')
+      await lead.getByRole('heading', { name: 'Confirm it’s you' }).waitFor()
+      await lead.getByRole('button', { name: 'No passkey here?' }).click()
+      await lead.getByRole('heading', { name: 'No passkey on this browser' }).waitFor()
+      assert.equal(await lead.evaluate(() => document.activeElement?.textContent), 'No passkey on this browser', 'focus moves to the new heading')
+      await lead.screenshot({ path: t.out('no-passkey-here') })
+      await lead.getByRole('button', { name: 'Ask for a new passkey' }).click()
+      await lead.getByRole('heading', { name: /^Ask .+ to call you$/ }).waitFor()
+      await lead.getByRole('button', { name: 'Use my passkey' }).click()
+      await lead.getByRole('heading', { name: 'Confirm it’s you' }).waitFor()
+      await lead.getByRole('button', { name: 'Use passkey' }).click()
+      await lead.getByRole('table', { name: 'Clients' }).waitFor()
+    })
+
     await t.step('the owner gives another store, deletes the lead\'s passkeys (a lost phone), then removes the lead', async () => {
       await pia.goto(CONSOLE + '/partner/team')
       const row = pia.getByRole('listitem').filter({ hasText: L.email })

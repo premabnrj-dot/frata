@@ -54,12 +54,15 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
   const [lost, setLost] = useState(false)
   const [now, setNow] = useState<number | null>(null)
   const [done, setDone] = useState<{ name: string } | null>(null)
+  const [back, setBack] = useState(false)
   const asked = useRef(false)
   const owner = state?.role === 'owner'
   const request = state?.request ?? null
   const firstTime = (state?.passkeys ?? 0) === 0
   const waiting = !!request && !request.approved && !request.declined
-  const wantsCode = !!state && !done && (firstTime || lost || waiting) && !request?.approved && !request?.declined
+  // "Use my passkey" from an ask screen: back to screens 1–3 while a request may still wait (P2 ends it on a check).
+  const [mine, setMine] = useState(false)
+  const wantsCode = !!state && !done && !mine && (firstTime || lost || waiting) && !request?.approved && !request?.declined
 
   const ask = useCallback(async () => {
     setBusy(true); toast.dismiss()
@@ -151,6 +154,7 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
           : <Button size="lg" busy={busy} onClick={() => void ask()}>Request a call</Button>}
         {opens ? <p className="text-sm text-muted-foreground">Opens <span className="font-num">{dateTimeIN(new Date(opens))}</span></p>
           : request && <p className="text-sm text-muted-foreground">{minutesLeft(request.expiresAt, now)}</p>}
+        {!firstTime && <Button variant="link" className="justify-self-start" onClick={() => { setMine(true); setLost(false); setBack(true) }}>Use my passkey</Button>}
       </>
     )
   } else if (wantsCode) {
@@ -166,14 +170,15 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
           <span className="flex-1" />
           <Button variant="link" busy={busy} onClick={() => void ask()}>Get a new code</Button>
         </div>
+        {!firstTime && <Button variant="link" className="justify-self-start" onClick={() => { setMine(true); setLost(false); setBack(true) }}>Use my passkey</Button>}
       </>
     )
   } else {
     // Passkeys, simpler screens 1–3 (shared with Frrata Admin's gate).
     body = <ConfirmSteps endpoint="/partner/passkey" canSave={(state.passkeys ?? 0) < 10} headingClass="font-display text-title font-semibold"
-      onDone={() => router.refresh()}
+      onDone={() => router.refresh()} focusOnMount={back}
       // "Ask for a new passkey": a Lead's code at once (screen 7); an owner presses "Request a call" first (screen 21).
-      onAsk={() => { setLost(true); asked.current = owner }} />
+      onAsk={() => { setLost(true); setMine(false); setBack(false); asked.current = owner }} />
   }
   return <>{body}{signOut}</>
 }

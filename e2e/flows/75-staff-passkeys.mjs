@@ -177,6 +177,16 @@ export default {
         await phone.p.getByRole('heading', { name: 'Confirm it’s you' }).waitFor()
         assert.ok(await phone.p.evaluate(() => document.documentElement.scrollWidth <= 390))
         await phone.p.screenshot({ path: t.out('phone') })
+        // Passkeys, simpler P0: the same every-day screens as the partner gate, then the ask flow and back.
+        await phone.p.getByRole('button', { name: 'No passkey here?' }).click()
+        await phone.p.getByRole('heading', { name: 'No passkey on this browser' }).waitFor()
+        assert.ok(await phone.p.evaluate(() => document.documentElement.scrollWidth <= 390))
+        await phone.p.screenshot({ path: t.out('no-passkey-here') })
+        await phone.p.getByRole('button', { name: 'Ask for a new passkey' }).click()
+        await phone.p.getByRole('heading', { name: 'Add a passkey' }).waitFor()
+        await phone.p.getByRole('button', { name: 'Use my passkey' }).click()
+        await phone.p.getByRole('heading', { name: 'Confirm it’s you' }).waitFor()
+        assert.equal(await phone.p.evaluate(() => document.activeElement?.tagName), 'H1', 'back from the ask flow, focus is on the heading')
       })
     } finally {
       await db`delete from platform_staff where user_id in (${O.id}, ${USERS.accountant.id})`
