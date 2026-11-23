@@ -6,66 +6,125 @@ import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
 import { shopPeople } from '@/lib/db/partners'
+import { peopleView } from '@/lib/db/people'
 import { dayIN } from '@/lib/format-date'
 import { RemovePartner } from './remove-partner'
-import { AccountantCard } from './accountant'
-import { accountantInvites } from '@/lib/db/accountants'
+import { AddPerson } from './add-person'
+import { InviteButton, RemovePerson } from './row-actions'
 import { shopModules } from '@/lib/queries/modules'
-import { CONSOLE_HOST } from '@/lib/public-env'
 import { BUILDER_LABEL, ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
+import { mayGive, requestState, ROLES_GIVEN_BY } from '@/domains/tenancy/people'
 import { InfoTip } from '@/components/ui/info-tip'
 
 export const metadata = { title: 'People' }
 
-
-/** Settings › People: who works on this shop. Owners and admins see it; only the owner removes the partner. */
+/** Settings › People (approved mockup 2026-11-23, docs/mockups/2026-11-23-add-partner.html): the store's own people with
+ *  Add a person, and the partner. Owners and Managers see it; a support visit reads it and changes nothing. */
 export default async function PeoplePage() {
   const auth = await requireMember(pageRoles('people'))
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can see people' : auth.message} />
-  const [people, invites, gstOn] = await Promise.all([
-    shopPeople(auth.membership.tenantId).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
-    accountantInvites(auth.membership.tenantId, auth.userId).catch(() => []),
-    // The accountant's login is part of the GST app: offered while GST is on; one already there can still be removed.
-    shopModules(auth.membership.tenantId, new Date().toISOString()).then((m) => m.access.gst.usable).catch(() => false),
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a Manager can see people' : auth.message} />
+  const t = auth.membership.tenantId
+  const [people, view, gstOn] = await Promise.all([
+    shopPeople(t).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
+    peopleView(t, auth.userId).catch((err) => { console.error('[people] view', err instanceof Error ? err.name : err); return null }),
+    // The Accountant's login is part of the GST app: offered while GST is on.
+    shopModules(t, new Date().toISOString()).then((m) => m.access.gst.usable).catch(() => false),
   ])
-  if (!people) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const canRemove = auth.membership.role === 'owner' && !auth.membership.supportSessionId
+  if (!people || !view) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
+  const visit = !!auth.membership.supportSessionId
+  const me = auth.membership.role
+  const acts = !visit && (me === 'owner' || me === 'admin')
+  const now = new Date()
+  const own = people.filter((p) => p.role !== 'partner' && p.role !== 'builder')
+  const partnerPeople = people.filter((p) => p.role === 'partner' || p.role === 'builder')
+  const req = view.request
+  const reqState = req ? requestState(req, now) : null
+  const hasPartner = partnerPeople.length > 0
+  const room = view.limit ? `Your ${view.planName ?? ''} plan has room for ${view.limit} ${view.limit === 1 ? 'person' : 'people'}.`.replace('  ', ' ') : null
+  const roles = acts && (me === 'owner' || me === 'admin') ? [...ROLES_GIVEN_BY[me]] : []
+  const showPartnerCard = hasPartner || reqState === 'open' || reqState === 'declined' || reqState === 'expired'
   return (
     <div className="max-w-3xl space-y-4">
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
-      <SettingsHead page="people" role={auth.membership.role} />
-      <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
-        {people.map((p) => {
-          // A partner's people are listed with their partner and their place in it (T1a, security review: the brand sees
-          // each person, not only the partner). A Builder (T1c) the same, with what it reaches in an (i). Removing the
-          // partner ends every one of them.
-          const person = (p.role === 'partner' && p.partnerRole === 'lead') || p.role === 'builder'
-          // A partner Frrata paused has no access; it is listed so the owner can still remove it (admin_end_partner's notice).
-          const role = p.partnerPaused ? { label: 'Partner · Paused', tone: 'warn' as const }
-            : p.role === 'builder' ? { label: `Partner · ${BUILDER_LABEL}`, tone: 'info' as const }
-            : { label: person ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
-          const you = p.userId === auth.userId
-          return (
-            <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{person ? p.partnerName ?? 'A partner person' : p.partnerName ?? p.email ?? 'Unknown'}</p>
-                {p.email && <p className="truncate font-num text-xs text-muted-foreground">{p.email}</p>}
-              </div>
-              <span className="inline-flex items-center gap-1">
-                <Badge tone={role.tone}>{role.label}</Badge>
-                {p.role === 'builder' && <InfoTip about={`Partner · ${BUILDER_LABEL}`}>Sees products and the store preview. No orders, shoppers or costs.</InfoTip>}
-              </span>
-              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : person ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
-              {p.role === 'partner' && !person && canRemove && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
-            </li>
-          )
-        })}
-      </ul></Section>
-      {!auth.membership.supportSessionId && (() => {
-        const acc = people.find((p) => p.role === 'accountant')
-        if (!gstOn && !acc && !invites.length) return null
-        return <Section flush ariaLabel="Accountant"><AccountantCard member={acc ? { userId: acc.userId, email: acc.email } : null} invites={invites.map((i) => ({ id: i.id, email: i.email, expires: dayIN(i.expiresAt) }))} consoleUrl={CONSOLE_HOST} /></Section>
-      })()}
+      <SettingsHead page="people" role={me} />
+      <Section flush ariaLabel="People">
+        <div className="flex flex-wrap items-center gap-2 px-4 pt-3 pb-1">
+          <h2 className="font-semibold">People</h2>
+          {view.limit > 0 && <span className="rounded-full bg-neutral px-2 font-num text-xs text-neutral-text">{view.used} of {view.limit} people{view.planName ? ` on ${view.planName}` : ''}</span>}
+          <span className="flex-1" />
+          {acts && <AddPerson roles={roles} partnerOpen={me === 'owner' && !hasPartner && reqState !== 'open'} gstOn={gstOn} atLimit={view.used >= view.limit} room={room} />}
+        </div>
+        <ul data-list className="divide-y divide-border">
+          {own.map((p) => {
+            const you = p.userId === auth.userId
+            return (
+              <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{p.email ?? 'Unknown'}</p>
+                  <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><Badge tone="neutral">{ROLE_LABEL[p.role as MemberRole] ?? p.role}</Badge><span>{you ? 'You' : `Since ${dayIN(p.since)}`}</span></p>
+                </div>
+                {acts && !you && mayGive(me, p.role) && <RemovePerson member={p.userId} name={p.email ?? 'this person'} />}
+              </li>
+            )
+          })}
+          {view.invites.map((i) => {
+            const expired = i.expiresAt <= now
+            const label = ROLE_LABEL[i.role as MemberRole] ?? i.role
+            return (
+              <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-num font-medium">{i.email}</p>
+                  <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <Badge tone={expired ? 'neutral' : 'warn'}>{`${label} · ${expired ? 'Expired' : 'Invited'}`}</Badge>
+                    {!expired && <span>Expires {dayIN(i.expiresAt)}</span>}
+                  </p>
+                </div>
+                {acts && mayGive(me, i.role) && (expired ? <InviteButton kind="again" email={i.email} role={i.role} /> : <InviteButton kind="cancel" id={i.id} />)}
+              </li>
+            )
+          })}
+        </ul>
+      </Section>
+      {showPartnerCard && (
+        <Section flush ariaLabel="Partner">
+          <h2 className="px-4 pt-3 pb-1 font-semibold">Partner</h2>
+          <ul data-list className="divide-y divide-border">
+            {hasPartner ? partnerPeople.map((p) => {
+              // A partner's people are listed with their partner and their place in it (T1a); removing the partner ends
+              // every one of them. A partner Frrata paused is listed so the owner can still remove it.
+              const person = (p.role === 'partner' && p.partnerRole === 'lead') || p.role === 'builder'
+              const role = p.partnerPaused ? { label: 'Partner · Paused', tone: 'warn' as const }
+                : p.role === 'builder' ? { label: `Partner · ${BUILDER_LABEL}`, tone: 'info' as const }
+                : { label: person ? 'Partner · Lead' : 'Partner', tone: 'info' as const }
+              return (
+                <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{person ? p.partnerName ?? 'A partner person' : p.partnerName ?? p.email ?? 'Unknown'}</p>
+                    <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <Badge tone={role.tone}>{role.label}</Badge>
+                      {p.role === 'builder' && <InfoTip about={`Partner · ${BUILDER_LABEL}`}>Sees products and the store preview. No orders, shoppers or costs.</InfoTip>}
+                      <span>{p.partnerPaused ? 'Paused by Frrata' : `Since ${dayIN(p.since)}`}</span>
+                    </p>
+                  </div>
+                  {p.role === 'partner' && !person && me === 'owner' && !visit && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
+                </li>
+              )
+            }) : req && (
+              <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-num font-medium">{reqState === 'open' ? req.email : 'No partner'}</p>
+                  <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    {reqState === 'open' && <><Badge tone="warn">Partner · Invited</Badge><span>Expires {dayIN(req.expiresAt)}</span></>}
+                    {reqState === 'declined' && <Badge tone="neutral">{`${req.email} declined`}</Badge>}
+                    {reqState === 'expired' && <Badge tone="neutral">Invitation expired</Badge>}
+                  </p>
+                </div>
+                {reqState === 'open' && me === 'owner' && !visit && <InviteButton kind="cancel_partner" />}
+              </li>
+            )}
+          </ul>
+        </Section>
+      )}
     </div>
   )
 }

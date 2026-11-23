@@ -133,6 +133,8 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 }
 
 function shareWords(c: ReturnType<typeof buildClients>[number], lastMonth: string, ends: string | null): React.ReactNode {
+  // A store whose owner added this partner carries no share (owner 2026-11-23): say so, never PARTNER_TERMS' 20%.
+  if (c.shareBps === 0) return 'No share'
   const pct = `${(c.shareBps ?? PARTNER_TERMS.shareBps) / 100}%`
   if (!c.shareStarted) return `${pct} from opening`
   if (c.share?.kind === 'paid') return <>{pct} · <Money paise={c.share.amount} decimals={c.share.amount % 100 !== 0} /> in {lastMonth}</>

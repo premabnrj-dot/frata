@@ -57,7 +57,7 @@ export function buildClients(rows: ClientRow[], billing: ClientBilling[], shares
     const w = row.shareMonths !== null && row.noticeDays !== null ? shareWindow({ shareMonths: row.shareMonths, noticeDays: row.noticeDays }, row.firstOpenedAt, row.removedAt) : null
     return {
       row, stage, next, deal, bills, holdsBook,
-      share: role === 'owner' ? visibleShare(monthShare(s?.month ?? null, s?.bps ?? 0), SHARE_IN_RUPEES) : null, shareBps: s?.bps ?? null,
+      share: role === 'owner' && row.linkShareBps !== 0 ? visibleShare(monthShare(s?.month ?? null, s?.bps ?? 0), SHARE_IN_RUPEES) : null, shareBps: row.linkShareBps ?? s?.bps ?? null,
       shareEnds: w && w !== 'not_started' ? w.endsAt : null, shareStarted: !!w && w !== 'not_started',
     }
   })

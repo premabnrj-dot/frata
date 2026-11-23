@@ -19,6 +19,8 @@ import { istDayKey } from '@/domains/time/day'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients } from '@/lib/db/partners'
+import { myPartnerRequests } from '@/lib/db/people'
+import { Invitations } from './invitations'
 import { billSummary, clientShares } from '@/lib/db/partner-bills'
 import { shopHost } from '@/lib/public-env'
 import { dayMonthIN } from '@/lib/format-date'
@@ -40,20 +42,23 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const role = auth.partner.memberRole
   const owner = partnerCan(role, 'billing')
   const now = new Date()
-  const [rows, billing, shares] = await Promise.all([
+  const [rows, billing, shares, asked] = await Promise.all([
     partnerClients(auth).catch(failed('clients')),
     owner ? billSummary(auth).catch(failed('clients.bills')) : Promise.resolve([]),
     owner && SHARE_IN_RUPEES ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
+    // A store's invitation to be its partner: the partner owner's only (the definer matches their confirmed email).
+    owner ? myPartnerRequests(auth.userId).catch(() => []) : Promise.resolve([]),
   ])
+  const invitations = <Invitations rows={asked.map((r) => ({ id: r.id, store: r.storeName, expires: dayMonthIN(r.expiresAt) }))} />
   const canCreate = partnerCan(role, 'createShop')
   const newStore = canCreate ? <Link href="/partner/new" className={button()}><Plus aria-hidden="true" className="size-4" />New client store</Link> : undefined
   if (!rows || !billing || !shares) {
-    return (<><PageHeader title="Clients" actions={newStore} />
+    return (<><PageHeader title="Clients" actions={newStore} />{invitations}
       <Panel title="We couldn’t load your clients" action={<Link href="/partner" className={button({ variant: 'secondary', size: 'sm' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel></>)
   }
   if (!rows.length) {
-    if (!canCreate) return (<><PageHeader title="Clients" /><Panel title="No client stores yet" /></>)
-    return (<><PageHeader title="Clients" />
+    if (!canCreate) return (<><PageHeader title="Clients" />{invitations}<Panel title="No client stores yet" /></>)
+    return (<><PageHeader title="Clients" />{invitations}
       <Section className="max-w-xl" ariaLabel="First client store"><PictoTile name="build" tone="haldi" />
         <h2 className="text-section font-semibold">Make your first client store</h2>{newStore}</Section></>)
   }
@@ -82,6 +87,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader title="Clients" actions={newStore} meta={meta} />
+      {invitations}
       {many && <ViewTabs label="Client views" tabs={tabs} scroll />}
       {many && <LiveSearchField path="/partner" params={{ view }} label="Search clients" placeholder="Search clients" value={rawQ} />}
       {!shown.length ? (q

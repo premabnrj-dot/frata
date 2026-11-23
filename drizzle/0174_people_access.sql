@@ -164,9 +164,11 @@ create or replace function app_person_invites(p_uid uuid) returns table (id uuid
 $$;
 --> statement-breakpoint
 -- The store's limit and count, for People's "3 of 3 people on Launch".
-create or replace function app_people_room(p_uid uuid) returns table (used integer, people_limit integer)
+create or replace function app_people_room(p_uid uuid) returns table (used integer, people_limit integer, plan_name text)
   language sql stable security definer set search_path = '' as $$
-  select public.app_people_members(t) + public.app_people_open_invites(t), public.app_people_limit(t)
+  select public.app_people_members(t) + public.app_people_open_invites(t), public.app_people_limit(t),
+    (select p.name from public.tenant_plans tp join public.plan_versions pv on pv.id = tp.plan_version_id join public.plans p on p.id = pv.plan_id
+      where tp.tenant_id = t and tp.starts_at <= now() order by tp.starts_at desc limit 1)
     from (select public.app_current_tenant() as t) x where public.app_people_caller(p_uid) is not null
 $$;
 --> statement-breakpoint
@@ -239,7 +241,7 @@ begin
     perform public.app_people_mail('store_partner_invite', v_email, v_name, p_uid, null);
   end if;
   perform public.notice_write(v_t, 'security', 'partner_request', v_id, 'You invited a partner to your store',
-    v_email || ' sees your orders and shoppers if they accept. Not you? Cancel the invitation in People.', '/console/settings/people', true, true, null, p_uid);
+    v_email || ' sees your orders and shoppers if they accept. Not you? Cancel the invitation in People.', '/console/settings/people', true, true, null, null); -- by nobody: the owner is told even of their own send (a stolen session)
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target)
     values (v_t, p_uid, (select u.email from auth.users u where u.id = p_uid), 'member', 'shop.partner_invited', v_email);
   return v_id;
@@ -326,3 +328,60 @@ revoke all on function app_people_limit(uuid), app_people_members(uuid), app_peo
 grant execute on function app_invite_person(uuid, text, text), app_cancel_person_invite(uuid, uuid), app_remove_person(uuid, uuid),
   app_person_invites(uuid), app_people_room(uuid), app_claim_invites(uuid), app_partner_request_send(uuid, text),
   app_partner_request_cancel(uuid), app_partner_requests(uuid), app_partner_answer_request(uuid, uuid, text, uuid, boolean) to frata_app;
+--> statement-breakpoint
+-- People's notices are for owners and Managers only (as a partner's ask): same signature, its grants stay.
+create or replace function app_notice_members(p_notice uuid default null) returns table (user_id uuid, role text)
+  language sql stable security definer set search_path = '' as $$
+  select m.user_id, m.role from public.members m where m.tenant_id = public.app_current_tenant()
+     and m.role in ('owner', 'admin', 'staff', 'partner')
+     and (m.role in ('owner', 'admin') or not exists (select 1 from public.notices n where n.tenant_id = m.tenant_id and n.id = p_notice and n.source_kind in ('ask_owner', 'brand', 'partner_request'))) $$;
+
+--> statement-breakpoint
+-- app_partner_clients as 0147, plus the link's own share_bps (owner only): a store an owner added its partner to
+-- carries 0, and the partner's pages must say so instead of falling back to PARTNER_TERMS (unit-economics review).
+drop function if exists app_partner_clients(uuid, uuid, text);--> statement-breakpoint
+create function app_partner_clients(p_uid uuid, p_session uuid, p_stepup text) returns table (
+  tenant_id uuid, name text, slug text, linked_at timestamptz, share_starts_at timestamptz, removed_at timestamptz,
+  share_months integer, notice_days integer, owner_email text, invite_email text, invite_expires_at timestamptz, plan_name text,
+  has_owner boolean, link_id uuid, owner_since timestamptz, invite_sent_at timestamptz, share_bps integer)
+  language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from public.app_pm_live(p_uid)) then return; end if;
+  perform public.app_partner_need(p_uid, p_session, p_stepup, false);
+  return query
+  select l.tenant_id, t.name,
+    case when l.removed_at is null then t.slug end,
+    l.created_at,
+    l.share_starts_at, l.removed_at,
+    case when me.role = 'owner' then l.share_months end, case when me.role = 'owner' then l.notice_days end,
+    case when me.role = 'owner' and l.removed_at is null then o.email end,
+    case when me.role = 'owner' and l.removed_at is null then i.email end,
+    case when l.removed_at is null then i.expires_at end,
+    case when me.role = 'owner' and l.removed_at is null then (select p.name from public.tenant_plans tp
+                                           join public.plan_versions pv on pv.id = tp.plan_version_id
+                                           join public.plans p on p.id = pv.plan_id
+                                          where tp.tenant_id = l.tenant_id and tp.starts_at <= now()
+                                          order by tp.starts_at desc limit 1) end,
+    o.member_since is not null,
+    l.id,
+    case when me.role <> 'builder' and l.removed_at is null then o.member_since end,
+    case when me.role <> 'builder' and l.removed_at is null then i.created_at end,
+    case when me.role = 'owner' then l.share_bps end
+  from public.app_pm_live(p_uid) me
+  join public.partner_links l on l.partner_id = me.partner_id
+  join public.tenants t on t.id = l.tenant_id
+  left join lateral (select u.email::text as email, m.created_at as member_since from public.members m join auth.users u on u.id = m.user_id
+                      where m.tenant_id = l.tenant_id and m.role = 'owner' order by m.created_at limit 1) o on true
+  left join lateral (select i.email, i.expires_at, i.created_at from public.invites i
+                      where i.tenant_id = l.tenant_id and i.role = 'owner' and i.accepted_at is null
+                        and i.revoked_at is null and i.expires_at > now()
+                      order by i.created_at desc limit 1) i on true
+  where me.role = 'owner'
+     or (me.role in ('lead', 'builder') and l.removed_at is null
+         and exists (select 1 from public.partner_assignments a where a.partner_member_id = me.member_id and a.tenant_id = l.tenant_id))
+  order by l.removed_at nulls first, t.name;
+end $$;
+--> statement-breakpoint
+revoke all on function app_partner_clients(uuid, uuid, text) from public, anon, authenticated, service_role, frata_admin, frata_builder;
+--> statement-breakpoint
+grant execute on function app_partner_clients(uuid, uuid, text) to frata_app;
