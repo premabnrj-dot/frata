@@ -9,8 +9,8 @@ import { Dialog, DialogError } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
-import { addPasskey, approve, confirmPasskey, removeOne } from '@/components/passkeys/passkey-client'
-import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
+import { addPasskey, approve, removeOne } from '@/components/passkeys/passkey-client'
+import { confirmWhenAsked } from '../_components/form-dialog'
 
 // =============================================================================
 // FILE: src/app/(admin)/admin/staff/staff-passkeys.tsx — Admin › Staff's passkey controls (staff passkeys spec;
@@ -97,17 +97,7 @@ export function AddOwnPasskey() {
   )
 }
 
-/** A server-action form that confirms with a passkey before it posts (adding or removing staff). An <ActionForm>: the
- *  browser's rules first, then the passkey, then the action; a refusal from either is its error toast. */
-/** The action first; the passkey only when the server asks for a fresh one (never while passkeys are off for everyone,
- *  Admin › Staff, drizzle/0171), then the same form again. */
-const confirmWhenAsked = (action: (form: FormData) => Promise<ActionResult>) => async (form: FormData): Promise<ActionResult> => {
-  const r = await action(form)
-  if (!r || !('error' in r) || r.error !== STAFF_CONFIRM_FIRST) return r
-  const c = await confirmPasskey()
-  return c.ok ? action(form) : { error: c.error }
-}
-
+/** A server-action form for adding or removing staff: the action first, the passkey only when the server asks. */
 export function ConfirmFirst({ action, children, className }: { action: (form: FormData) => Promise<ActionResult>; children: React.ReactNode; className?: string }) {
   return <ActionForm action={confirmWhenAsked(action)} className={className}>{children}</ActionForm>
 }

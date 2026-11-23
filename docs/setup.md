@@ -124,6 +124,8 @@ Passkeys belong to the console's host (`NEXT_PUBLIC_CONSOLE_HOST`). When the con
 adds passkeys again through steps 1–5.
 
 ### Passkeys off, for testing (owner, 2026-11-16; ADR-0007 amendment)
+Since 2026-11-23 a master admin turns passkeys off and on in Frrata Admin › Staff, with no end date (`until` null;
+`docs/plans/2026-11-23-passkeys-off.md`); the SQL below stays for an operator.
 On the owner's word, Frrata's operator runs one of these in the Supabase SQL editor (project `frata`). Off for up to 30
 days (owner, 2026-11-16: "extend passkey for 30 days"; was 7, drizzle/0152):
 ```sql

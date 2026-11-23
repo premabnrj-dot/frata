@@ -29,8 +29,8 @@ export function staffSecurityWords(n: { kind: StaffNoticeKind; about: string; by
     // T1c: the detail is the new role's word (Lead or Builder).
     case 'partner_role_changed': return { subject: `${n.about} is now a ${n.detail ?? 'new role'}`, body: `${by} made ${n.about} a ${n.detail ?? 'new role'}. Their stores stay the same.` }
     // Passkeys off or on for everyone from Admin › Staff (drizzle/0171); `about` is the master admin who did it.
-    case 'passkeys_off': return { subject: 'Passkeys are off for Frrata', body: `${n.about} turned passkeys off. Staff and partners now sign in with an email code alone.` }
-    case 'passkeys_on': return { subject: 'Passkeys are on for Frrata', body: `${n.about} turned passkeys on. Staff and partners confirm with a passkey again.` }
+    case 'passkeys_off': return { subject: 'Passkeys are off for all staff and partners', body: `${n.about} turned passkeys off. Staff and partners now sign in with an email code alone.` }
+    case 'passkeys_on': return { subject: 'Passkeys are on for all staff and partners', body: `${n.about} turned passkeys on. Staff and partners confirm with a passkey again.` }
     case 'partner_request_approved': return { subject: `A new passkey was approved for ${n.about}`, body: `${by} approved a new passkey for ${n.about}. ${n.about} can create it on the same device within 10 minutes.` }
   }
 }

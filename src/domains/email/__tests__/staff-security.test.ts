@@ -15,7 +15,7 @@ describe('staff security emails', () => {
   })
   it('passkeys off or on for everyone name the master admin (drizzle/0171)', () => {
     expect(staffSecurityWords({ kind: 'passkeys_off', about: 'asha@frrata.com', by: 'asha@frrata.com', detail: null }))
-      .toEqual({ subject: 'Passkeys are off for Frrata', body: expect.stringMatching(/^asha@frrata.com turned passkeys off\. .*email code alone/) })
+      .toEqual({ subject: 'Passkeys are off for all staff and partners', body: expect.stringMatching(/^asha@frrata.com turned passkeys off\. .*email code alone/) })
     expect(staffSecurityWords({ kind: 'passkeys_on', about: 'asha@frrata.com', by: null, detail: null }).body).toMatch(/^asha@frrata.com turned passkeys on\./)
   })
   it('a role change names the new role and that the stores stay (T1c)', () => {

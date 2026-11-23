@@ -141,6 +141,11 @@ export default {
     } finally {
       await db`delete from platform_switches where key = 'passkeys_off'`
       await db`delete from platform_staff where user_id = ${S.id}`
+      // Pia is the shared partner of 97-developer and 99-studio-agent: leave her no key, no code and no extra store.
+      await db`delete from storefront_keys where tenant_id = ${T}`
+      await db`delete from build_key_device_codes where store_slug = ${SLUG}`
+      await db`delete from members where tenant_id = ${T}`
+      await db`delete from partner_links where tenant_id = ${T}`
     }
   },
 }

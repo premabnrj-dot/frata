@@ -19,9 +19,8 @@ import { Toaster } from '@/components/ui/toast'
 import { Banner } from '@/components/ui/banner'
 import { Icon } from '@/components/icons/icon'
 import { isMasterAdmin } from '@/domains/tenancy/staff-words'
-import { Submit } from '@/components/ui/submit'
 import { passkeys } from '@/lib/auth/session'
-import { turnPasskeysOnAction } from './staff/actions'
+import { TurnPasskeysOn } from './staff/passkeys-switch'
 
 export const dynamic = 'force-dynamic'
 
@@ -99,7 +98,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Passkeys off from Admin › Staff (owner 2026-11-23, docs/mockups/2026-11-23-admin-passkeys-switch.html § Off):
           on every Admin page until an Admin turns them on; Support staff see it without the button. */}
       {pk.off && <Banner tone="warn" title={<span className="inline-flex items-center gap-2.5"><Icon name="key" className="size-4" />Passkeys are off</span>} action={isMasterAdmin(staff.role)
-        ? <form action={turnPasskeysOnAction}><Submit size="sm">Turn passkeys on</Submit></form> : undefined} />}
+        ? <TurnPasskeysOn /> : undefined} />}
       {children}
     </AppShell>
   )
