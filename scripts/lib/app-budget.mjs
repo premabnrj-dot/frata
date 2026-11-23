@@ -68,7 +68,9 @@ export function appBudgetProblems(build, gz, show = () => {}, budget = APP_BUDGE
   return out
 }
 
-/** Pages under their limit by less than `margin` (a page over it fails on its own line).
+/** Pages under their limit by less than `margin` (a page over it fails on its own line). The whole page only: a shop
+ * page's own-files ceiling (`own`) has no margin, since Vercel's extra weight lands in the framework files it leaves out
+ * (a NEXT_DEPLOYMENT_ID build, 2026-11-23); that ceiling's 0.5 kB above measured is its own tripwire.
  * @param {{ page: string, kb: number, limit: number }[]} rows */
 export function marginProblems(rows, margin = VERCEL_MARGIN_KB) {
   return rows.filter((r) => r.kb <= r.limit && r.limit - r.kb < margin).map((r) =>
@@ -111,4 +113,34 @@ export function closest(rows, n = 3) {
   return [...rows].sort((a, b) => room(a) - room(b)).slice(0, n)
     .map((r) => `${r.page} ${r.kb.toFixed(1)}/${r.limit} kB (${(r.limit - r.kb).toFixed(1)} kB room)` +
       (r.own ? `, own files ${r.own.kb.toFixed(2)}/${r.own.limit} kB (${(r.own.limit - r.own.kb).toFixed(2)} kB room)` : '')).join('; ')
+}
+
+// The owner's option E (2026-11-23): a shop page's OWN files are its first load minus build-manifest's rootMainFiles
+// (webpack's runtime, React, Next's router, main-app). They still include the next/link chunk (Next's app-dir link.js,
+// about 3.3 kB of About/FAQ's 8.1), so a Next upgrade can move this number too.
+/** kB gzipped of a page's first-load script that isn't in `rootMain`. */
+export function ownKb(files, rootMain, gz) {
+  return files.filter((f) => f.endsWith('.js') && !rootMain.has(f)).reduce((a, f) => a + gz(f), 0) / 1024
+}
+
+/** Shop pages over their own-files ceiling, and ceilings (whole or own) naming a page the build no longer has.
+ * @param {{ page: string, own?: { kb: number, limit: number } }[]} rows
+ * @param {string[]} ceilingKeys every page named in check-storefront-build's TIGHT and SHOP_OWN */
+export function ownProblems(rows, ceilingKeys) {
+  const out = rows.filter((r) => r.own && r.own.kb > r.own.limit).map((r) =>
+    `${r.page}  ships ${r.own.kb.toFixed(2)} kB of its own script gzipped (React, Next's router and webpack's runtime aside; ceiling ${r.own.limit} kB): the shop's own code only comes down — split what the first paint does not need. If no shop file changed, a Next upgrade may have grown next/link's chunk (app-dir/link)`)
+  const built = new Set(rows.map((r) => r.page))
+  for (const k of new Set(ceilingKeys)) if (!built.has(k)) out.push(`${k}  has a shop ceiling (TIGHT or SHOP_OWN) but no longer builds: move its ceiling to the page's new name`)
+  return out
+}
+
+/** Option A (next.config.ts): webpack's runtime lists each lazy chunk by an 8-character hash. Fails a runtime that lists
+ * a longer one (Next's chunkFilename changed and the override no longer applies), or that lists none of 8 while the app
+ * has lazy chunks (the runtime's format changed and this check could no longer see either). Calibrated on Next 15.5's
+ * runtime, `{504:"15cac9d4",…}`.
+ * @param {string} runtimeText @param {number} lazyFiles how many files react-loadable-manifest.json lists */
+export function runtimeHashProblems(runtimeText, lazyFiles, name = 'the webpack runtime') {
+  if (/\d+:"[0-9a-f]{9,}"/.test(runtimeText)) return [`${name}  lists lazy chunks by hashes longer than 8 characters: next.config.ts's chunkFilename override (option A) no longer applies — Next's default name pattern probably changed`]
+  if (lazyFiles > 0 && !/\d+:"[0-9a-f]{8}"/.test(runtimeText)) return [`${name}  lists no lazy chunk by an 8-character hash although the app has ${lazyFiles} lazy files: the runtime's format changed, so this check no longer sees the hashes`]
+  return []
 }

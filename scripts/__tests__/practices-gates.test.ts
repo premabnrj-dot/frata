@@ -181,6 +181,26 @@ describe('the margin under a limit (Vercel builds a page ~0.3 kB heavier)', asyn
   })
 })
 
+describe('the shop\'s own files and the runtime\'s hashes (the owner\'s options E and A)', async () => {
+  const { ownKb, ownProblems, runtimeHashProblems } = await import('../lib/app-budget.mjs')
+  const kb = (n: number) => n * 1024
+  it('counts a page\'s own files without the framework (rootMainFiles) and without CSS', () => {
+    const sizes: Record<string, number> = { 'webpack-a.js': kb(2.3), 'react.js': kb(53), 'shop.js': kb(4), 'page.js': kb(1.5), 'a.css': kb(9) }
+    expect(ownKb(['webpack-a.js', 'react.js', 'shop.js', 'page.js', 'a.css'], new Set(['webpack-a.js', 'react.js']), (f: string) => sizes[f])).toBe(5.5)
+  })
+  it('fails a page over its own ceiling, and a ceiling naming a page the build no longer has', () => {
+    const rows = [{ page: '/s/a', kb: 100, limit: 110, own: { kb: 8.8, limit: 8.7 } }, { page: '/s/b', kb: 100, limit: 120, own: { kb: 8, limit: 8.7 } }]
+    expect(ownProblems(rows, ['/s/a', '/s/b', '/s/a'])).toEqual([expect.stringMatching(/^\/s\/a {2}ships 8\.80 kB of its own script .*ceiling 8\.7 kB.*next\/link/)])
+    expect(ownProblems(rows, ['/s/b', '/s/renamed'])).toEqual([expect.stringMatching(/^\/s\/a {2}ships/), expect.stringMatching(/^\/s\/renamed {2}has a shop ceiling .* no longer builds/)])
+  })
+  it('passes 8-character lazy chunk hashes, fails 16, and fails a runtime where it can see none', () => {
+    expect(runtimeHashProblems('a.u=e=>"static/chunks/"+e+"."+({504:"15cac9d4",815:"bfbf5123"})[e]+".js"', 2)).toEqual([])
+    expect(runtimeHashProblems('({504:"15cac9d43764ab1a"})', 1)).toEqual([expect.stringMatching(/longer than 8 characters/)])
+    expect(runtimeHashProblems('({"504":"15cac9d4"})', 1)).toEqual([expect.stringMatching(/format changed/)])
+    expect(runtimeHashProblems('no lazy chunks at all', 0)).toEqual([])
+  })
+})
+
 describe('what a first load may not carry (zod; the shell twice)', async () => {
   const { zodProblems, appShellProblems } = await import('../lib/app-budget.mjs')
   const text: Record<string, string> = { 'r.js': 'react', 'z.js': 'c=u("ZodError",x)', 'm.js': 'n=u("$ZodError",x)', 'p.js': 'page', 'app-shell-0a1b.js': 'shell' }

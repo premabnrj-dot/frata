@@ -9,6 +9,7 @@ Status: active (points 1, 2 and 4 built; point 3's A and E built on the owner's 
 **Review:** impact-reviewer CLEAR (2 MED folded in: check:layers keeps each browser half zod-free at commit; a test that each half and its original are one value), 2026-11-23
 **Review:** security-reviewer SAFE (every action validates with the same schema; no client file ever ran zod; nothing server-only moved), 2026-11-23
 **Review:** design-system-reviewer PASS (nothing a person sees changed), 2026-11-23
+**Review:** speed-reviewer WITHIN BUDGET, approved on A and E (4 LOW, folded in), 2026-11-23; impact-reviewer FIX BEFORE COMMIT on A and E (3 MED: helpers and tests, stale ceilings, this paragraph), folded in, 2026-11-23
 
 ## The problem
 On 2026-11-23 five production builds failed on Vercel, each on a different page a fraction of a kB over its first-load
@@ -139,6 +140,10 @@ explained). Files: `src/components/shell/tenant-check.tsx`, `src/components/nav/
   added in the console no longer fails a shop page; and **whole page** at measured + 1.5, never over 120 (About/FAQ
   110.6, checkout stays 120), so the runtime and the framework can't grow unseen. A successful build prints both for the
   three closest pages. The local 0.5 kB margin applies to the whole page only: Vercel's extra weight is in the framework.
+  The own number still counts the next/link chunk (Next's `app-dir/link.js`, 3.3 kB of About/FAQ's 8.1), so a Next
+  upgrade can move it; the failure line says so. A ceiling naming a page that no longer builds fails, as a stale pin does.
+  The checks are pure helpers in `app-budget.mjs` (`ownKb`, `ownProblems`, `runtimeHashProblems`) with tests; the
+  runtime check also fails if it can see no 8-character hash while the app has lazy files (Next changed its format).
   **Proved:** a build with a Vercel-style `NEXT_DEPLOYMENT_ID` (skew protection appends it to chunk URLs) weighs 0.23 kB
   more on every page, all of it in Next's router chunk (`1255`: 45.32 → 45.55); the shop's own files are the same size to
   the byte (About/FAQ 8.13, checkout 17.59).
@@ -177,12 +182,9 @@ next/font, and a plain stylesheet would drop the preload, so text would swap in 
 Only the eight theme faces, none preloaded, can move to a plain stylesheet: 0.34 kB on About/FAQ. It is how text looks on
 every theme shop, so it is listed here, not built.
 
-**Recommendation:** A now, with this change (About/FAQ to about 0.73 kB of local room, so one stray lazy chunk no longer
-fails builds); E for the owner; the theme faces' stylesheet after. A and the theme faces put About/FAQ at about 108.7
-local. **No option reaches the 1.5 kB goal for About/FAQ at a 109.5 ceiling** (A + B + the theme faces: about 0.95 kB on
-Vercel). The ceiling can come back to 109.5 only after A and the faces land, and then with less room than the other
-pages; E is the way to the goal for the shop's About/FAQ page. Until the owner decides, it stays at 109.8 with 0.5 kB
-local room.
+**What was recommended, and what the owner chose:** A now; E for the owner; the theme faces' stylesheet after, since no
+option alone reached the 1.5 kB goal for About/FAQ at a 109.5 ceiling. The owner chose A and E (with a whole-page
+ceiling kept beside the own-files one), declined B for now and put the faces after this release: § Point 3 · built.
 
 ## Regression net
 The flows the change touches, run on the branch before the release report: checkout, shop-look (its screenshot

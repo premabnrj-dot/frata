@@ -9,7 +9,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
-import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, VERCEL_MARGIN_KB, zodProblems } from './lib/app-budget.mjs'
+import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, ownKb as ownFilesKb, ownProblems, runtimeHashProblems, VERCEL_MARGIN_KB, zodProblems } from './lib/app-budget.mjs'
 
 // Next 15 + React 19's shared framework script is ~103 kB gzipped on its own; a shop page may add ~17 kB.
 const BUDGET_KB = 120
@@ -44,7 +44,7 @@ const BUDGET_KB = 120
 // TWO NUMBERS for the shop's two closest pages (the owner's option E, 2026-11-23; docs/plans/2026-11-23-page-weight.md
 // § Point 3). WHOLE (TIGHT, or the 120 budget): everything the page loads first, React, Next and webpack's runtime
 // included — what a shopper's phone downloads, so the runtime and the framework can't grow without anyone seeing; set at
-// what the page measured that day + 1.5 kB, never above the budget. OWN (SHOP_OWN): only the files this app adds, the
+// what the page measured that day + 1.5 kB, never above the budget. OWN (SHOP_OWN): the files beside the framework, the
 // first load minus build-manifest's rootMainFiles (webpack's runtime, React and Next's router: every page loads them,
 // and a lazy chunk added anywhere grows the runtime by ~16 bytes); set at measured + 0.5, so the shop's own code still
 // only comes down, and a console page's next/dynamic no longer fails a shop page nobody touched. Two because neither
@@ -56,6 +56,7 @@ const BUDGET_KB = 120
 // because it now holds a different thing: the runtime's room; the page's own code is held at 8.7.
 const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 110.6 }
 const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.7, '/s/[host]/(checkout)/checkout/page': 18.1 }
+// (OWN still counts the next/link chunk, Next's app-dir link.js: a Next upgrade can move it. scripts/lib/app-budget.mjs.)
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
@@ -94,8 +95,9 @@ if (!rootMain.size) failures.push('build-manifest.json lists no rootMainFiles: t
 // Option A (next.config.ts): the runtime lists each lazy chunk's hash in 8 hex characters, not Next's 16.
 {
   const runtime = [...rootMain].find((f) => /(^|\/)webpack-[0-9a-f]+\.js$/.test(f))
+  const lazy = existsSync('.next/react-loadable-manifest.json') ? new Set(Object.values(read('react-loadable-manifest.json')).flatMap((m) => m.files ?? [])).size : 0
   if (!runtime) failures.push('no webpack runtime in rootMainFiles')
-  else if (/\d+:"[0-9a-f]{9,}"/.test(readFileSync(join('.next', runtime), 'utf8'))) failures.push(`${runtime}  lists lazy chunks by hashes longer than 8 characters: next.config.ts's chunkFilename (option A) no longer applies`)
+  else for (const p of runtimeHashProblems(readFileSync(join('.next', runtime), 'utf8'), lazy, runtime)) failures.push(p)
 }
 const sizes = new Map()
 const gz = (f) => sizes.get(f) ?? sizes.set(f, gzipSync(readFileSync(join('.next', f))).length).get(f)
@@ -128,10 +130,9 @@ for (const [k, files] of Object.entries(build)) {
   if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
   const ownLimit = SHOP_OWN[k]
-  const ownKb = all.filter((f) => f.endsWith('.js') && !rootMain.has(f)).reduce((a, f) => a + gz(f), 0) / 1024
+  const ownKb = ownLimit ? ownFilesKb(all, rootMain, gz) : 0
   rows.push({ page: k, kb, limit, ...(ownLimit ? { own: { kb: ownKb, limit: ownLimit } } : {}) })
   if (process.env.SHOW_BUDGETS && ownLimit) console.log(`  ${k}: own files ${ownKb.toFixed(2)} kB JS (ceiling ${ownLimit})`)
-  if (ownLimit && ownKb > ownLimit) failures.push(`${k}  ships ${ownKb.toFixed(2)} kB of its own script gzipped (the framework and runtime aside; ceiling ${ownLimit} kB) — the shop's own code only comes down: split what the first paint does not need`)
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }
 
@@ -178,6 +179,7 @@ const CUSTOMIZER_KB = 149.7
   }
 }
 
+for (const p of ownProblems(rows, [...Object.keys(TIGHT), ...Object.keys(SHOP_OWN)])) failures.push(p)
 for (const p of appBudgetProblems(build, gz, process.env.SHOW_BUDGETS ? console.log : () => {})) failures.push(p)
 rows.push(...appBudgetRows(build, gz))
 // Off Vercel, a page within VERCEL_MARGIN_KB of its limit fails here, before a deploy meets it (scripts/lib/app-budget.mjs).
@@ -198,5 +200,5 @@ if (failures.length) {
   for (const f of failures) console.error('  ' + f)
   process.exit(1)
 }
-console.log(`check:storefront-build — clean (${shopPages.length} shop routes cached per path, script under ${BUDGET_KB} kB${process.env.VERCEL ? '' : `, every page at least ${VERCEL_MARGIN_KB} kB under its limit`})`)
+console.log(`check:storefront-build — clean (${shopPages.length} shop routes cached per path, script under ${BUDGET_KB} kB${process.env.VERCEL ? '' : `, every page's whole first load at least ${VERCEL_MARGIN_KB} kB under its limit`})`)
 console.log(`  closest to their limits: ${closest(rows)}`)
