@@ -6,6 +6,7 @@ import { Badge, Tag } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Segmented } from '@/components/ui/segmented'
 import { Dialog } from '@/components/ui/dialog'
+import { PictoTile } from '@/components/brand/illustrations'
 import { Menu } from '@/components/ui/menu'
 import { SaveBar } from '@/components/ui/unsaved'
 import { ViewTabs } from '@/components/ui/view-tabs'
@@ -38,6 +39,7 @@ export function Gallery({ today }: { today: string }) {
   const [on, setOn] = useState(true)
   const [seg, setSeg] = useState<'day' | 'week' | 'month'>('week')
   const [open, setOpen] = useState(false)
+  const [setup, setSetup] = useState(false)
   const toast = useToast()
   const [qty, setQty] = useState(2)
   const [code, setCode] = useState('4819')
@@ -123,6 +125,7 @@ export function Gallery({ today }: { today: string }) {
           <Button variant="secondary" onClick={() => toast.ok('Saved.')}>Show a toast</Button>
           <Button variant="secondary" onClick={() => toast.error('Could not reach the courier.', { action: { label: 'Try again', run: () => {} } })}>Show an error</Button>
           <Button variant="secondary" onClick={() => setOpen(true)}>Open a dialog</Button>
+          <Button variant="secondary" onClick={() => setSetup(true)}>Open a setup popup</Button>
           <span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Loading</span>
         </div>
         <SaveBar onSave={() => {}} onDiscard={() => {}} pending={false} count={3} keys="Ctrl+S" />
@@ -205,6 +208,11 @@ export function Gallery({ today }: { today: string }) {
       </Section>
       <ConfirmDelete open={few} count={2} noun={['draft', 'drafts']} consequence="Banarasi silk saree and Gulnar jhumka earrings. This can't be undone." keep="Keep them" onConfirm={() => setFew(false)} onClose={() => setFew(false)} />
       <ConfirmDelete open={many} count={12} noun={['product', 'products']} consequence="This can't be undone." onConfirm={() => setMany(false)} onClose={() => setMany(false)} />
+      {/* A setup popup (O2a·4): its pictogram, the ✕, its first field focused; a sheet on a phone. */}
+      <Dialog open={setup} onClose={() => setSetup(false)} onDismiss={() => setSetup(false)} picto={<PictoTile name="details" tone="haldi" size="sm" />} title="Business details"
+        actions={<><Button variant="secondary" onClick={() => setSetup(false)}>Not now</Button><Button onClick={() => setSetup(false)}>Add grievance officer</Button></>}>
+        <label className="grid gap-1.5"><span className="text-label font-medium">Legal name</span><input data-autofocus className={`${FIELD} w-full`} defaultValue="Kesar Studio LLP" /></label>
+      </Dialog>
       <Dialog open={open} onClose={() => setOpen(false)} title="Delete Mehr lehenga?" description="It leaves your store and cannot come back."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep it</Button><Button variant="destructive" onClick={() => setOpen(false)}>Delete</Button></>} />
     </div>

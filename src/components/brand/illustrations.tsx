@@ -44,8 +44,10 @@ export function BuyerJourney({ className }: { className?: string }) {
   )
 }
 
-/** A pictogram on its tile: the one way a pictogram sits in a card, a step or an empty state. */
-export function PictoTile({ name, tone = 'paper' }: { name: PictogramName; tone?: 'paper' | 'haldi' | 'indigo' }) {
+/** A pictogram on its tile: the one way a pictogram sits in a card, a step or an empty state. `sm`: 44 px, radius 10,
+ *  the pictogram at 28 — a setup popup's header (Dialog's `picto`, O2a·4). */
+export function PictoTile({ name, tone = 'paper', size = 'md' }: { name: PictogramName; tone?: 'paper' | 'haldi' | 'indigo'; size?: 'md' | 'sm' }) {
   const bg = tone === 'haldi' ? 'bg-illo-haldi-soft' : tone === 'indigo' ? 'bg-illo-indigo-soft' : 'bg-illo-fill'
-  return <span aria-hidden="true" className={`inline-grid size-16 shrink-0 place-items-center rounded-xl ${bg}`}><Pictogram name={name} size={40} /></span>
+  const box = size === 'sm' ? 'size-11 rounded-[10px]' : 'size-16 rounded-xl'
+  return <span aria-hidden="true" data-picto="" className={`inline-grid ${box} shrink-0 place-items-center ${bg}`}><Pictogram name={name} size={size === 'sm' ? 28 : 40} /></span>
 }

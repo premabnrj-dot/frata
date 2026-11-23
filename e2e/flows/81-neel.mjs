@@ -149,6 +149,22 @@ export default {
         await p.screenshot({ path: `e2e/.out/81-neel-${size}.png`, fullPage: true })
       })
 
+      // O2a·4: a setup popup (design-language § Feedback 4): its pictogram on a 44 px tile before the title, the ✕ closes
+      // it, focus returns to the button that opened it, axe clean; on a phone it is the sheet.
+      await t.step(`${size}: a setup popup as drawn`, async () => {
+        const opener = p.getByRole('button', { name: 'Open a setup popup' }); await opener.click()
+        const d = p.getByRole('dialog', { name: 'Business details' }); await d.waitFor()
+        const tile = d.locator('[data-picto]')
+        const box = await tile.evaluate((x) => { const r = x.getBoundingClientRect(), s = getComputedStyle(x); return { w: Math.round(r.width), h: Math.round(r.height), radius: s.borderTopLeftRadius, svg: !!x.querySelector('svg path') } })
+        assert.deepEqual(box, { w: 44, h: 44, radius: '10px', svg: true })
+        assert.ok(await tile.evaluate((x) => x.compareDocumentPosition(x.closest('dialog').querySelector('h2')) & Node.DOCUMENT_POSITION_FOLLOWING), 'the tile comes before the title')
+        assert.equal(await p.evaluate(() => document.activeElement?.labels?.[0]?.textContent), 'Legal name', 'the first field takes focus')
+        assert.deepEqual(await audit(p), [])
+        await p.screenshot({ path: `e2e/.out/81-neel-setup-popup-${size}.png` })
+        await d.getByRole('button', { name: 'Close' }).click(); await d.waitFor({ state: 'hidden' })
+        assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Open a setup popup', 'focus returns to the opener')
+      })
+
       if (size === 'desktop') await t.step('the dialog and the menu as drawn', async () => {
         await p.getByRole('button', { name: 'Open a dialog' }).click()
         const d = p.getByRole('dialog', { name: 'Delete Mehr lehenga?' }); await d.waitFor()

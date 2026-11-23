@@ -11,7 +11,7 @@ import type { ReactNode } from 'react'
 // website, brand empty states and the illustrations built from them.
 // =============================================================================
 
-export const PICTOGRAMS = ['store', 'build', 'handover', 'earn', 'delivered', 'clients', 'owner', 'calendar', 'shield', 'apply', 'payments', 'risk', 'returned', 'tally'] as const
+export const PICTOGRAMS = ['store', 'build', 'handover', 'earn', 'delivered', 'clients', 'owner', 'calendar', 'shield', 'apply', 'payments', 'risk', 'returned', 'tally', 'product', 'details'] as const
 export type PictogramName = (typeof PICTOGRAMS)[number]
 
 const line = 'stroke-illo-line'
@@ -86,8 +86,8 @@ const DRAW: Record<PictogramName, ReactNode> = {
     <circle cx="35" cy="34" r="7" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} />
     <path d="M32 34h6M36 31l3 3-3 3" {...L} />
   </>),
-  // Visual changes (owner-approved 2026-11-08), for brand moments only.
-  // A card paying into a bank: online payments.
+  // Visual changes (owner-approved 2026-11-08).
+  // A card paying into a bank. Online payments: a brand moment, and the setup step (O2a·4).
   payments: (<>
     <rect x="6" y="12" width="28" height="18" rx="3" className="fill-illo-paper stroke-illo-line" strokeWidth={2} />
     <path d="M6 18h28M11 25h7" {...L} />
@@ -107,6 +107,18 @@ const DRAW: Record<PictogramName, ReactNode> = {
     <path d="M6 14h10" {...L} />
     <circle cx="10" cy="34" r="5" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} />
     <path d="M8 34h4M10 32l-2 2 2 2" {...L} />
+  </>),
+  // A parcel with a haldi tag: a product (Home's first setup step, mockup § 2; not risk's question mark).
+  product: (<>
+    <path d="M8 16l16-8 16 8v18l-16 8-16-8z" className="fill-illo-paper stroke-illo-line" strokeWidth={2} strokeLinejoin="round" />
+    <path d="M8 16l16 8 16-8M24 24v18" {...L} />
+    <circle cx="24" cy="24" r="4" className="fill-illo-haldi" />
+  </>),
+  // A page with a folded corner and one haldi line: business details (mockup § 2).
+  details: (<>
+    <path d="M12 6h18l8 8v28H12z" className="fill-illo-paper stroke-illo-line" strokeWidth={2} strokeLinejoin="round" />
+    <path d="M30 6v8h8" {...L} />
+    <rect x="17" y="24" width="14" height="4" rx="1" className="fill-illo-haldi" />
   </>),
   // Tally marks with the last still to come: too few to judge yet.
   tally: (<>

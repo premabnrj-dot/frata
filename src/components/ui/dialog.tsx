@@ -6,9 +6,10 @@ import { cn } from '@/lib/utils'
 // =============================================================================
 // FILE: src/components/ui/dialog.tsx
 //
-// A DIALOG ONLY FOR WHAT LOSES WORK, MONEY OR STOCK (design-language § Work
-// queues 4); routine actions get Undo instead. The caller writes the sentences
-// and names both buttons by their outcome ("Cancel order" / "Keep the order").
+// A DIALOG CONFIRMS WHAT LOSES WORK, MONEY OR STOCK, OR IS A SETUP POPUP
+// (design-language § Feedback 4). Never one inside another. Routine actions get
+// Undo instead. The caller writes the sentences and names both buttons by their
+// outcome ("Cancel order" / "Keep the order").
 // Native <dialog> with showModal(): the page behind is inert, focus is held
 // inside and returns to the button that opened it, Esc and a click on the
 // backdrop close it (as "keep"). Motion: dialog[data-dialog] in globals.css.
@@ -20,7 +21,7 @@ import { cn } from '@/lib/utils'
 // activation since the last one) still reaches onClose through `close`.
 // =============================================================================
 
-export function Dialog({ open, onClose, onDismiss, title, description, children, actions, error, className }: {
+export function Dialog({ open, onClose, onDismiss, picto, title, description, children, actions, error, className }: {
   open: boolean
   /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
@@ -29,6 +30,12 @@ export function Dialog({ open, onClose, onDismiss, title, description, children,
    * confirm of what loses something). It must set `open` to false, as onClose; it may be the same function.
    */
   onDismiss?: () => void
+  /**
+   * A setup popup's pictogram before the title (mockup § 2 `.dh .picto.sm`, O2a·4): pass
+   * `<PictoTile name=… tone="haldi" size="sm" />`. A node, not a name, so a page with a Dialog never loads the
+   * pictograms' drawings (they come with the popup's own chunk).
+   */
+  picto?: React.ReactNode
   title: string
   description?: React.ReactNode
   children?: React.ReactNode
@@ -57,7 +64,7 @@ export function Dialog({ open, onClose, onDismiss, title, description, children,
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] text-left rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
       <div data-dialog-body="" className="grid gap-4 p-5">
-        <div className="flex items-center gap-3"><h2 id={titleId} className="flex-1 text-section font-semibold">{title}</h2>{onDismiss && <button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button>}</div>
+        <div className="flex items-center gap-3">{picto}<h2 id={titleId} className="flex-1 text-section font-semibold">{title}</h2>{onDismiss && <button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button>}</div>
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}
         <DialogError error={error} />
