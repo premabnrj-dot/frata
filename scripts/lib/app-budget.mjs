@@ -12,17 +12,18 @@ export const APP_BUDGET_KB = 150
 // 2026-11-23 (page weight, docs/plans/2026-11-23-page-weight.md): the shell loads once (next.config's appShell) and zod,
 // the GST rate table and the discount maths left these pages' first load; each pin came down to what it measured + 2.
 // Several now sit under the 150 budget: they hold what was won (before → after: Content 194.4 → 155.8, a product 208.3
-// → 176.0, Orders 159.0 → 146.7).
+// → 176.0, Orders 159.0 → 146.7). Lowered again the same day after the 8-character hashes and the theme faces'
+// stylesheet (each page 0.2–0.4 kB lighter): measured + 2.
 export const APP_PINNED = {
-  '/(console)/console/content/page': 157.8,
-  '/(console)/console/products/[handle]/page': 178,
-  '/(console)/console/settings/[section]/page': 151.7,
-  '/(console)/console/orders/page': 148.7,
-  '/(console)/console/offers/[id]/page': 144.5,
-  '/(console)/console/collections/[handle]/page': 146.9,
-  '/(console)/console/collections/new/page': 145.6,
-  '/(console)/console/offers/new/page': 141.6,
-  '/(console)/console/preview/[[...path]]/page': 150.5,
+  '/(console)/console/content/page': 157.6,
+  '/(console)/console/products/[handle]/page': 177.7,
+  '/(console)/console/settings/[section]/page': 150.9,
+  '/(console)/console/orders/page': 148.5,
+  '/(console)/console/offers/[id]/page': 144.3,
+  '/(console)/console/collections/[handle]/page': 146.8,
+  '/(console)/console/collections/new/page': 145.5,
+  '/(console)/console/offers/new/page': 141.5,
+  '/(console)/console/preview/[[...path]]/page': 150.1,
   // The Studio workbench (plan 2026-11-22 WB·3, speed review M: at most 150): what the shell loaded on 2026-11-22
   // (131.4 kB) + 2, so growth is a finding. Code, Checks and Versions load with next/dynamic; no diff or highlight library.
   '/(partner)/partner/fixtures/studio/page': 133.4,

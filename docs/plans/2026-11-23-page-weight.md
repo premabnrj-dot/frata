@@ -186,6 +186,29 @@ every theme shop, so it is listed here, not built.
 option alone reached the 1.5 kB goal for About/FAQ at a 109.5 ceiling. The owner chose A and E (with a whole-page
 ceiling kept beside the own-files one), declined B for now and put the faces after this release: § Point 3 · built.
 
+## After the release (the orchestrator's follow-ups, 2026-11-23)
+- **The guard tells a developer what to do.** `npm run weight -- <page>` (a URL path or a manifest key) prints the page's
+  first-load files, heaviest first, by kind (framework, shell, layout, page, shared), the client components this page
+  renders that bring each (Next's client reference manifest, kept to components whose every file the page loads) and
+  the libraries in each (zod, tailwind-merge, lucide, the passkey client). Every budget failure names it for its page,
+  then the fix. `scripts/lib/page-weight.mjs`, tested.
+- **The theme faces' stylesheet (built: nothing a shopper sees changes).** The eight theme faces are
+  `src/components/shop-preview/store-fonts.css`, written by `scripts/build-store-fonts.mjs` with next/font's own local
+  loader and its own postcss plugin, so the output is next/font's to the character; `check:store-fonts` (gates) fails a
+  stale file. **Proved identical** on the built CSS against a baseline saved from the build before: all 18 `@font-face`
+  rules (src aside: `font-display: swap`, weights, unicode-ranges, the fallback faces' `local()` and overrides) and all
+  10 `--font-store-*` values match; none of the eight was or is preloaded; Inter and DM Sans (preloaded) stay on next/font.
+  e2e `shop-look`'s screenshot baselines match. Saves 0.32 kB of own script on About/FAQ, 0.26 on checkout, 0.4 on the
+  product page and Console › Brand; the shop's CSS 15.9 → 15.8 kB.
+- **The rest of the double loads.** Three more cache groups in `next.config.ts`, each limited to one surface's pages and
+  to modules its layout already loads: `partnerShell` (the passkey gate and its form parts), `adminShell` (Admin's passkey
+  gate), `signInToaster` (the Toaster on sign-in, start, join, handover and the partner application). Duplication left on
+  any page: at most 0.32 kB (Next's `next/navigation` re-export, 0.1 kB, the largest). Partner Team 145.7 → 142.8 kB,
+  Developer 142.4 → 139.5, Admin pages about −0.8.
+- **Ceilings lowered again** (measured + 0.5 own, + 1.5 whole; checkout's whole stays 120): About/FAQ 110.3 whole and
+  8.4 own (108.75 / 7.81 measured), checkout 120 and 17.9 (118.27 / 17.33). Console pins to measured + 2 again (0.1–0.8 kB
+  each), the customizer 149.2. The Studio pins stay lane D's.
+
 ## Regression net
 The flows the change touches, run on the branch before the release report: checkout, shop-look (its screenshot
 baselines guard the shop's look), look, content, brand, products-pr0, partner-credits, partner-team, studio,

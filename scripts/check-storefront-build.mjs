@@ -54,8 +54,10 @@ const BUDGET_KB = 120
 // Set 2026-11-23 after option A (8-character chunk hashes: the runtime 2.50 → 2.28 kB): About/FAQ 109.06 whole, 8.13 own;
 // checkout 118.52 whole (its whole limit stays the 120 budget), 17.59 own. About/FAQ's whole number moves 109.8 → 110.6
 // because it now holds a different thing: the runtime's room; the page's own code is held at 8.7.
-const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 110.6 }
-const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.7, '/s/[host]/(checkout)/checkout/page': 18.1 }
+// Lowered the same day after the theme faces became a stylesheet (scripts/build-store-fonts.mjs: no JS object a face):
+// About/FAQ 108.75 whole, 7.81 own; checkout 118.27 whole, 17.33 own (its whole limit stays 120, the owner's word).
+const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 110.3 }
+const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.4, '/s/[host]/(checkout)/checkout/page': 17.9 }
 // (OWN still counts the next/link chunk, Next's app-dir link.js: a Next upgrade can move it. scripts/lib/app-budget.mjs.)
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
@@ -165,7 +167,7 @@ for (const p of appShellProblems(build)) failures.push(p)
 // shop page a few bytes of runtime, and checkout crossed 120 on Vercel that day.
 // 147.7 kB the same day once zod left (its forms read their caps from sections-facts.ts and site-facts.ts) and the shell
 // loads once (lane F, page weight): the ceiling came down from 177 to that + 2.
-const CUSTOMIZER_KB = 149.7
+const CUSTOMIZER_KB = 149.2 // 147.2 after the 8-character hashes and the theme faces' stylesheet (same day) + 2
 {
   const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
   if (!k) failures.push('the Look customizer page is missing from the build manifest')
