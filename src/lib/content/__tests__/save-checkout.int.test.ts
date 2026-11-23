@@ -143,4 +143,25 @@ describe.skipIf(!host)('saveCheckout', () => {
     expect(await S.decideBrand({ id: ck.id, decision: 'approve' })).toMatchObject({ ok: false, error: expect.stringMatching(/changed after this was sent/) })
     expect((await design())!.policy_rows).toBe(1)
   })
+
+  it('the review card’s answer names its proposal (four-screens § 4): replaced, already answered, the wrong kind', async () => {
+    as(OWNER, 'owner')
+    const [last] = await su`select version from checkout_design where tenant_id = ${T}`
+    as(PARTNER, 'partner')
+    expect(await S.saveCheckout({ version: last!.version, design: { ...DRAWN, header: 'centre' } })).toMatchObject({ outcome: 'waits' })
+    const older = (await proposals('checkout')).at(-1)!
+    expect(await S.saveCheckout({ version: last!.version, design: { ...DRAWN, header: 'centre', thanks: 'Thank you.' } })).toMatchObject({ outcome: 'waits' })
+    const newer = (await proposals('checkout')).at(-1)!
+    as(OWNER, 'owner')
+    expect(await S.decideBrand({ id: older.id, decision: 'approve', kind: 'checkout' })).toEqual({ ok: false, error: 'Your partner sent a newer change.' })
+    expect((await design())!.header).toBe('left')
+    expect(await S.decideBrand({ id: newer.id, decision: 'approve', kind: 'brand' })).toMatchObject({ ok: false })
+    expect((await proposals('checkout')).at(-1)!.decision).toBeNull()
+    expect(await S.decideBrand({ id: newer.id, decision: 'decline', kind: 'checkout' })).toMatchObject({ ok: true })
+    expect(await S.decideBrand({ id: newer.id, decision: 'approve', kind: 'checkout' })).toMatchObject({ ok: false, error: expect.stringMatching(/^Already declined by you, today, \d/) })
+    await su`insert into members (tenant_id, user_id, role) values (${T}, ${randomUUID()}, 'admin')`
+    const [mgr] = await su`select user_id from members where tenant_id = ${T} and role = 'admin'`
+    as(mgr!.user_id, 'admin')
+    expect(await S.decideBrand({ id: newer.id, decision: 'approve' })).toMatchObject({ ok: false, error: expect.stringMatching(/^Already declined by the owner, today, \d/) })
+  })
 })

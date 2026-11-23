@@ -75,10 +75,14 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const passkeys: NavItem = { href: '/partner/passkeys', label: 'Passkeys', icon: 'key' }
   // Credits and billing (C1; undrawn mockup, owner 2026-11-22): under Clients, for the owner and Leads; never a Builder.
   const credits: NavItem = { href: '/partner/credits', label: 'Credits and billing', icon: 'payments' }
-  const items = [clients, ...(can('budgets') ? [credits] : []), ...(can('manageTeam') ? [team] : []), passkeys, ...(can('seeDetails') ? [details] : [])]
+  // Everyone's own computers (G·3; four screens § 2): a Builder's page says who may sign one in. The phone bar is four
+  // cells (nav.tsx): three places and More; Developer and anything past three sit in More.
+  const developer: NavItem = { href: '/partner/developer', label: 'Developer', icon: 'code' }
+  const items = [clients, ...(can('budgets') ? [credits] : []), ...(can('manageTeam') ? [team] : []), passkeys, developer, ...(can('seeDetails') ? [details] : [])]
+  const bar = items.filter((i) => i !== developer)
   const name = auth.partner.businessName || auth.partner.name
   return (
-    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}
+    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={bar.slice(0, 3)} more={[...bar.slice(3), developer]} foot={[]}
       email={auth.email} places={places} signOutTo="partner">
       <CheckTimer confirmedAt={auth.confirmedAt.toISOString()} signOut={<form action={signOutAction}><input type="hidden" name="to" value="partner" /><Submit variant="secondary">Sign out</Submit></form>} />
       {children}

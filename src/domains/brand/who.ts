@@ -4,7 +4,8 @@
 //   owner, Manager (shop.manage)            a save goes live; they approve or decline a partner's waiting change
 //   the store's partner owner and Lead      before the store opens, a save goes live; once open, it waits for the owner
 //     (members role 'partner', shop.build)
-//   a partner's Builder, Staff, Accountant  preview only (a Builder sees the page; Staff and the Accountant don't open it)
+//   a partner's Builder, Staff, Accountant  preview only (a Builder sees the page; the Accountant doesn't open it; Staff
+//                                           open only Brand › Checkout, while a partner's change waits: its card, no buttons)
 //   a Frrata support visit                  preview only
 // Pure. The page, saveBrand and the decisions read it.
 // =============================================================================

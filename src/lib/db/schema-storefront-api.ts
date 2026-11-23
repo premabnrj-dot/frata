@@ -67,8 +67,20 @@ export const buildKeyDeviceCodes = pgTable('build_key_device_codes', {
   approvedBy: uuid('approved_by'),
   approvedAt: timestamp('approved_at', { withTimezone: true }),
   claimedAt: timestamp('claimed_at', { withTimezone: true }),
+  // The G·3 page (four screens § 2): the network the CLI started from, as the sha256 hex of its /64 (IPv6) or /24
+  // (IPv4), never the address; gone with the row at the first daily run after its 10 minutes (24 hours at most). The
+  // confirm dialog only compares it with the confirmer's.
+  startNet: text('start_net'),
+  // The passkey check made for THIS code (an earlier check never counts): the challenge Give key asked the browser to
+  // sign, whose, when, and when it was taken. The approve definer consumes it with the approval.
+  challenge: text('challenge'),
+  challengeBy: uuid('challenge_by'),
+  challengeAt: timestamp('challenge_at', { withTimezone: true }),
+  challengeUsedAt: timestamp('challenge_used_at', { withTimezone: true }),
 }, (t) => [
   index('build_key_device_codes_expires').on(t.expiresAt),
+  check('build_key_device_codes_net', sql`${t.startNet} is null or ${t.startNet} ~ '^[0-9a-f]{64}$'`),
+  check('build_key_device_codes_challenge', sql`(${t.challenge} is null) = (${t.challengeBy} is null) and (${t.challenge} is null) = (${t.challengeAt} is null) and (${t.challengeUsedAt} is null or ${t.challenge} is not null)`),
   check('build_key_device_codes_hashes', sql`${t.deviceHash} ~ '^[0-9a-f]{64}$' and ${t.codeHash} ~ '^[0-9a-f]{64}$'`),
   check('build_key_device_codes_end', sql`${t.expiresAt} <= ${t.createdAt} + interval '10 minutes'`),
   check('build_key_device_codes_approved', sql`(${t.approvedAt} is null) = (${t.approvedBy} is null) and (${t.approvedAt} is null) = (${t.tenantId} is null)`),

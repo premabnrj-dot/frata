@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.6.0
+  version: 2.7.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -121,15 +121,20 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    escaped (`structured.ts`). The product and collection routes read `apiShop` too, so their copies carry `settings`.
    G14 (a compliance certificate as a policy kind) waits: Frrata holds no such record.
 
-16. **G·3 (2026-11-22), a developer's device sign-in, server parts only** (the confirm page waits for its mockup): the
-   CLI POSTs `/api/dev/device/start` (a store slug; no shop read, the same answer for any slug, `deviceStartIp`) and
-   gets a device secret and an 8-character code; only their sha256s are stored in `build_key_device_codes` (no grant to
-   any role; the `app_device_code_*` definers, `src/lib/db/device-codes.ts`), for 10 minutes. `confirmDeviceCode`
-   (`src/lib/storefront-api/device.ts`, for the future page; `deviceCodeFor` shows the store's name first) needs a
-   passkey check in the last 5 minutes and `api.manage` on the store the CLI named, never one the page sends; the
-   approval and its audit row are one definer. `/api/dev/device/poll` (per network, then per device) claims a confirmed
-   code ONCE and mints through `mintBuildKey` as that person (developer, 24 hours); a mint that fails for a passing
-   reason (a limit, the ceiling) gives it back, a refusal keeps it spent.
+16. **G·3 (2026-11-22), a developer's device sign-in** (four screens § 2, owner-approved; ADR-0018 build-key amendment,
+   "As built (G·3 page)"): the CLI POSTs `/api/dev/device/start` (a store slug; no shop read, the same answer for any
+   slug, `deviceStartIp`) and gets a device secret, an 8-character code, `verify` (Partner workspace › Developer,
+   `DEVICE_VERIFY_PATH`) and `message` (the terminal's words, `DEVICE_TERMINAL`); only sha256s are stored in
+   `build_key_device_codes` (the secret, the code and the network's /64 or /24; no grant to any role; the
+   `app_device_code_*` definers, `src/lib/db/device-codes.ts`), for 10 minutes. The person at the terminal confirms
+   their OWN code on the partner page: `checkDeviceCode` (the store, when and from which network it started, room,
+   a passkey; `deviceCheckPerson`) and Give key (`giveOptions`/`giveVerify`: the shared passkey ceremony over a store
+   bound to that code, `deviceGivePerson`); the definers allow a Partner owner or an assigned Lead of the store's
+   partner only (never the store's own people, a Builder or a support visit) and approve with the store's audit row
+   under the ceiling. `/api/dev/device/poll` (per network, then per device) claims a confirmed code ONCE and mints
+   through `mintBuildKey` as that person (developer, 24 hours, named "<email>’s computer"); a mint that fails for a
+   passing reason gives it back (409 `full` for the ceiling, 429 `busy` otherwise), a refusal keeps it spent. Your
+   computers (`app_partner_developer_keys`, `…_key_delete`) lists and deletes the person's own developer keys.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run

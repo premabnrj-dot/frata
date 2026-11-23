@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.9.0
+  version: 3.10.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -174,7 +174,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (one door for both kinds of waiting change) in `src/lib/content/save.ts`; its rules are `src/domains/brand/checkout.ts`
   (save, preview and render run the same check; a part that fails a later rule renders as Frrata's default). A
   partner's change on an open store waits in `brand_proposals` with `kind = 'checkout'`: **one open change of each kind
-  a store**, so every read and write of a proposal names its kind. The store's pages read it with the record through
+  a store**, so every read and write of a proposal names its kind. A newer save is a new row (the older one
+  `replaced`), and an answer names the row and kind it showed (`decideBrand({ id, decision, kind })`): an answer to an
+  older row is refused in words ("Your partner sent a newer change."), never applied to the newer one. The store's pages read it with the record through
   `checkoutLook` (`settings` tag) and draw it with `BrandFrame` (`src/components/storefront/brand-frame.tsx`), whose
   rules travel inline (`brand-css.ts`): nothing a code-site page needs goes in the shop's shared sheet (15.9 kB).
   A Builder reads the live design's columns and the store's public delivery, returns and Pay on delivery facts.
