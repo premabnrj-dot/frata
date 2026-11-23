@@ -1212,6 +1212,20 @@
       "when": 1795442556635,
       "tag": "0172_admin_costs",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1795457879842,
+      "tag": "0173_people_and_partner_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1795457936176,
+      "tag": "0174_people_access",
+      "breakpoints": true
     }
   ]
 }

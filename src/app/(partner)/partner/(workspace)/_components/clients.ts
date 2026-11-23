@@ -54,10 +54,11 @@ export function buildClients(rows: ClientRow[], billing: ClientBilling[], shares
     const deal = b?.deal ?? null
     const next = clientNext({ stage, bills, deal, ownerSince: row.ownerSince ? istDayKey(row.ownerSince) : null, inviteSentOn: row.inviteSentAt ? istDayKey(row.inviteSentAt) : null }, role, today)
     const s = byLink.get(row.linkId)
-    const w = row.shareMonths !== null && row.noticeDays !== null ? shareWindow({ shareMonths: row.shareMonths, noticeDays: row.noticeDays }, row.firstOpenedAt, row.removedAt) : null
+    // A no-share link (an owner added this partner, drizzle/0174) has no window: no "ends" date, ever.
+    const w = row.linkShareBps !== 0 && row.shareMonths !== null && row.noticeDays !== null ? shareWindow({ shareMonths: row.shareMonths, noticeDays: row.noticeDays }, row.firstOpenedAt, row.removedAt) : null
     return {
       row, stage, next, deal, bills, holdsBook,
-      share: role === 'owner' ? visibleShare(monthShare(s?.month ?? null, s?.bps ?? 0), SHARE_IN_RUPEES) : null, shareBps: s?.bps ?? null,
+      share: role === 'owner' && row.linkShareBps !== 0 ? visibleShare(monthShare(s?.month ?? null, s?.bps ?? 0), SHARE_IN_RUPEES) : null, shareBps: row.linkShareBps ?? s?.bps ?? null,
       shareEnds: w && w !== 'not_started' ? w.endsAt : null, shareStarted: !!w && w !== 'not_started',
     }
   })
