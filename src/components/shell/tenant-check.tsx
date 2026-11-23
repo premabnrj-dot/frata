@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
+import { settle } from '@/lib/settle'
 
 // =============================================================================
 // FILE: src/components/shell/tenant-check.tsx (tenancy audit of U·2a, MEDIUM 1)
@@ -12,7 +13,8 @@ import { useEffect, useRef } from 'react'
 // after each move (not the first render, which is fresh) and when the tab
 // comes back into view the shell asks GET /api/console/tenant which shop this
 // request is for; if it is not the shop the shell was drawn for, everything is
-// refreshed. Merchants' access does not change mid-session (choosing another
+// refreshed, twice (settle: Next 15.5 can drop a refresh that starts while the
+// move's response still streams; page weight 2026-11-23). Merchants' access does not change mid-session (choosing another
 // shop is a full page load), so they skip it.
 // =============================================================================
 export function TenantCheck({ tenantId, staff }: { tenantId: string; staff: boolean }) {
@@ -23,7 +25,7 @@ export function TenantCheck({ tenantId, staff }: { tenantId: string; staff: bool
     if (!staff) return
     let live = true
     const check = () => fetch('/api/console/tenant', { cache: 'no-store' }).then((r) => r.json())
-      .then((b: { tenantId: string | null }) => { if (live && b.tenantId !== tenantId) router.refresh() }).catch(() => {})
+      .then((b: { tenantId: string | null }) => { if (live && b.tenantId !== tenantId) settle(router) }).catch(() => {})
     if (first.current) first.current = false
     else check()
     const back = () => { if (document.visibilityState === 'visible') check() }
