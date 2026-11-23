@@ -2,9 +2,9 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification), email or Anthropic (Managed Agents, the Agent SDK's terms, model prices for Studio) - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 2.4.0
+  version: 2.5.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-23
   decisions: [ADR-0006, ADR-0020]
 ---
 

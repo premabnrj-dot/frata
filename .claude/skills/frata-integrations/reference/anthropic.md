@@ -12,6 +12,7 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Vercel Sandbox (the second runtime)
 - Answered from documentation (2026-11-22)
 - Measured on `studio-eval` (2026-11-22)
+- As built in V3a (2026-11-23)
 - Not yet confirmed (the V3a·1 spike)
 
 ## Account and terms — checked 2026-11-16
@@ -111,6 +112,24 @@ Probes now run on Haiku 5.5 (owner, 2026-11-22).
   [`mount-sha`, public repository].
 - `usage.list_cost` equals the tokens at list rates plus running time, **in whole cents** (a $0.044 turn reads $0.04)
   [`session`].
+
+## As built in V3a — 2026-11-23 (`src/lib/studio/runtime-managed.ts`, `docs/plans/2026-11-22-v3a-runtime.md`; checked against the SDK 1.12.0 types and the fake server, not yet the live API)
+- **Budgets are set at create and only raised.** A session is always created with `budget.max_list_cost` (cents, a
+  string); a session without one can never get one. Each turn's Send raises it first: spent + the turn's ceiling −
+  max(largest request, the model's floor), strictly above what is spent, or the session restarts (`budgetFor`).
+- **At the cap the session pauses** (`session.status_idle` with `stop_reason: budget_reached`) and takes only settle
+  events (tool results, interrupt). Raising the budget resumes the old work, so the next Send raises, then sends
+  `user.interrupt`, then the message.
+- **One `requires_action` idle per round:** every pending custom tool call is answered in one send (each answer alone
+  raises another idle).
+- **Events are listed in processing order, filtered by `created_at[gte]`.** A queued message is listed before it is
+  processed (no `processed_at`): the cursor is a `created_at` and never passes an unprocessed event (`events.ts`).
+- **The SDK sends `Authorization: Bearer <key>`** (with `authToken: null` set explicitly so no environment variable is
+  read), `anthropic-version` 2026-10-21; the beta header on every Managed Agents call.
+- **Vault credentials:** `environment_variable` with `injection_location: { header: true }` and networking limited to
+  exactly `api.frrata.shop`; never `body`.
+- **Haiku 5.5 above 100K prompt tokens** is priced at the higher rate ($0.50 in, $2.50 out; cache read 0.1×, a 1-hour
+  write 2×): Studio's caps use it (`src/domains/studio/spend.ts`), since a page turn's prompt crosses 100K.
 
 ## Not yet confirmed (the V3a·1 spike: blocked on owner set-up, see the report § Blocked)
 
