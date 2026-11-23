@@ -14,6 +14,11 @@
 //     imports `@/lib/db` or the schema: reads live in src/lib/queries/, where
 //     each is named, server-only and reusable. Ekatan had three pages break this.
 //
+//  5. A BROWSER'S HALF STAYS ZOD-FREE (page weight 2026-11-23). A domain file a form reads for a cap or a list has a
+//     `*-facts.ts` half (and print-cap.ts, says-online.ts, discount-styles.ts, catalogue/readiness.ts): neither it nor anything it imports at
+//     run time (type-only imports are erased) may import zod, or zod's 26 kB rides into the page again. The build's own
+//     check (check:storefront-build) sees it only after a full build; this one sees it at commit.
+//
 //  2. getUser(), NEVER getSession(). getSession() reads the auth cookie
 //     WITHOUT verifying it against the auth server, so a forged cookie
 //     passes. That is a security difference, not a style one.
@@ -92,6 +97,33 @@ for (const file of walk('src')) {
     if (SESSION.test(line)) fail(rel, i, 'getSession() — use getUser(), it verifies')
     if (CATALOGUE_READ.test(line) && !CATALOGUE_OK.some((p) => rel.includes(p))) fail(rel, i, 'reads CATALOGUE — read manifests through a ManifestSource (manifestsFor)')
   }
+}
+
+// 5. The browser's halves: zod-free all the way down their run-time imports.
+const BROWSER_HALF = /^src\/domains\/.+-facts\.ts$|^src\/domains\/(orders\/print-cap|checkout\/says-online|checkout\/discount-styles|catalogue\/readiness)\.ts$/
+const RUNTIME_IMPORT = /^\s*(?:import|export)\s+(?!type\b)[^'"]*?from\s+['"]([^'"]+)['"]/gm
+const resolveFrom = (from, spec) => {
+  const base = spec.startsWith('@/') ? 'src/' + spec.slice(2) : spec.startsWith('.') ? join(from, '..', spec).replaceAll('\\', '/') : null
+  if (!base) return spec
+  for (const c of [base + '.ts', base + '.tsx', base + '/index.ts', base]) { try { if (statSync(c).isFile()) return c } catch { /* next */ } }
+  return null
+}
+const zodVia = (file, seen = new Set()) => {
+  if (seen.has(file)) return null
+  seen.add(file)
+  const text = readFileSync(file, 'utf8').split(/\r?\n/).filter((l) => !isComment(l)).join('\n')
+  for (const m of text.matchAll(RUNTIME_IMPORT)) {
+    const to = resolveFrom(file, m[1])
+    if (to === 'zod' || to?.startsWith('zod/')) return [file]
+    if (to && to.startsWith('src/')) { const via = zodVia(to, seen); if (via) return [file, ...via] }
+  }
+  return null
+}
+for (const file of walk('src')) {
+  const rel = relative('.', file).replaceAll('\\', '/')
+  if (!BROWSER_HALF.test(rel)) continue
+  const via = zodVia(rel)
+  if (via) fail(rel, 0, `reaches zod at run time (${via.join(' → ')} → zod): a browser's half stays zod-free; import a type with \`import type\`, a value from another *-facts.ts`)
 }
 
 if (failures) {

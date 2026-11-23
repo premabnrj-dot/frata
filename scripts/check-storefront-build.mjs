@@ -40,7 +40,7 @@ const BUDGET_KB = 120
 // fails by chance also blocks the redeploy that switches Studio off, so the half kB is room for Vercel's variance, not for
 // code: check the three closest pages before adding any.
 // Back on the 120 budget the same day (lane F, page weight): the checkout's offer rows read one rule (says-online.ts)
-// instead of every offer sentence, 119.8 → 118.8 kB here.
+// instead of every offer sentence, 119.8 → 118.7 kB here.
 const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.8 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet

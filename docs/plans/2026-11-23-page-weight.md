@@ -5,6 +5,10 @@ Status: active (points 1, 2 and 4 built on the branch, speed review folded in; p
 **Mockup:** none — nothing a person sees changes: the same code is loaded in fewer or different chunks, and constants move between files
 **Approved:** owner, 2026-11-23 ("start a lane on the page size job"; points 1, 2 and 4 go ahead once speed-reviewer has read the plan)
 **Review:** speed-reviewer WITHIN BUDGET, changes requested (2 HIGH: pins not lowered; About/FAQ 11 bytes above the new margin), all folded in but option A (needs the owner's word, § Point 3), 2026-11-23
+**Review:** speed-reviewer WITHIN BUDGET, approved on the diff (0 HIGH, 1 MED: About/FAQ 33 bytes above the local margin, waits on point 3), 2026-11-23
+**Review:** impact-reviewer CLEAR (2 MED folded in: check:layers keeps each browser half zod-free at commit; a test that each half and its original are one value), 2026-11-23
+**Review:** security-reviewer SAFE (every action validates with the same schema; no client file ever ran zod; nothing server-only moved), 2026-11-23
+**Review:** design-system-reviewer PASS (nothing a person sees changed), 2026-11-23
 
 ## The problem
 On 2026-11-23 five production builds failed on Vercel, each on a different page a fraction of a kB over its first-load
@@ -64,6 +68,9 @@ never by raising a number. Each pin that frees up comes down to what the page me
      those rows. Off Vercel (`VERCEL` unset: a local build, CI, the e2e stack) a page within 0.5 kB of its limit fails;
      on Vercel only the limit counts (the margin is what Vercel spends). On success it prints the three closest pages.
    - On a shop page the margin message says the likely cause: a lazy chunk added elsewhere grew webpack's runtime.
+   - At commit, `check:layers` (rule 5) fails a `src/domains/**/*-facts.ts`, `print-cap.ts`, `says-online.ts`,
+     `discount-styles.ts` or `catalogue/readiness.ts` that reaches zod through any run-time import (type-only imports are
+     erased), and `src/domains/__tests__/browser-halves.test.ts` holds each half and its original to one value.
    - The gate reads only `.next`, so it cannot match its own documentation. Proven by planting both failures in a
      made-up build folder: a page at 149.69/150 and a chunk holding `"ZodError"` each fail; with `VERCEL` set only the
      zod line fails.
@@ -101,7 +108,8 @@ regrouping the shop's shared chunks: the modules the checkout and the product pa
 split, and the product page now loads its share as a chunk of its own (`availability`, `picker`, `sizes`, `swatch`…);
 2.2 kB of room stays.
 
-**Left for later (speed review 6):** partner workspace pages still load 1.8–2.4 kB twice (Submit, form errors, the
+**Left for later (speed review 6, and on the diff):** Next's `next/navigation` re-export (0.1 kB) is still in two chunks
+on 25 shell pages; partner workspace pages still load 1.8–2.4 kB twice (Submit, form errors, the
 dialog, the passkey client) and Admin 0.8–1.3 kB; sign-in and start load the Toaster twice (2.4 kB, not budgeted). A
 second cache group for the partner workspace and Admin would take them; no page needs it today.
 
