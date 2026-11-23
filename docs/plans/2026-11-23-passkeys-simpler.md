@@ -1,13 +1,15 @@
 # Passkeys, simpler: the task plan (lane G)
-Status: draft · Date: 2026-11-23 · Spec: `docs/specs/2026-11-23-passkeys-simpler.md` · **Not built** until the owner approves the mockup.
+Status: parked by the owner, 2026-11-23 · Date: 2026-11-23 · Spec: `docs/specs/2026-11-23-passkeys-simpler.md` · **Not built**.
 **Mockup:** https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`)
-**Approved:** not yet — sent to the owner through the orchestrator 2026-11-23; nothing below starts before it
+**Approved:** not given — the owner parked the plan, 2026-11-23; nothing below starts until it is picked up again
 **Review:** security-reviewer FIX THE SPEC (2 high, 5 medium, 2 low; all folded into the spec), 2026-11-23
 **Review:** tenancy-auditor FIX BEFORE BUILD (no leak; 4 high, 2 medium, 1 low; all folded in), 2026-11-23
 **Review:** architecture-reviewer CHANGES NEEDED (2 blockers, 8 major; all folded in), 2026-11-23
 **Review:** words-reviewer 30 lines rewritten in the mockup, 2026-11-23
-**Review:** speed-reviewer pending (a staff confirm writes one more row; no page reads more)
-**Review:** impact-reviewer pending (on each task's diff)
+**Review:** speed-reviewer not run, parked before it was due, 2026-11-23
+**Review:** impact-reviewer not run, runs on each task's diff once picked up, 2026-11-23
+
+**Parked** (owner, 2026-11-23): "on passkey, could you please park the plan and just add option in admin to disable passkeys … it's too early for passkeys in the system, let it be just email and password login. I don't understand the need of passkey system … just wish to get started for now". Lane D builds the switch the owner asked for. The mockup and the reviews stay as they are for when this is picked up again.
 
 Owner (2026-11-23): "Please simplify the process … remove redundancies." · "there is no calling feature setup, neither
 we want one." Lanes: D owns `src/lib/studio` and the Studio page (its files do not change here); C owns partner credits;

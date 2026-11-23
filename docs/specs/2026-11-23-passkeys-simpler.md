@@ -1,8 +1,10 @@
 # Passkeys, simpler: one check for a person, no phone calls, a clear way in on a new device
-Status: draft · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`) · Approved: — ·
+Status: parked by the owner, 2026-11-23 · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`) · Approved: — ·
 Owner (2026-11-23): "Please simplify the process, see the complexities issues with passcodes and make it simpler,
 easier. remove redundancies." · Owner (2026-11-23): "there is no calling feature setup, neither we want one." ·
 Fits with lane D's Studio entry card (https://claude.ai/artifact/8gL1SMBEUifHiqV6PRPTak, approved).
+
+**Parked** (owner, 2026-11-23): "on passkey, could you please park the plan and just add option in admin to disable passkeys … it's too early for passkeys in the system, let it be just email and password login. I don't understand the need of passkey system … just wish to get started for now". Nothing here is built. The map (§ A, § B), the reviews (§ D) and the mockup stay as they are for when it is picked up again.
 
 ## Goal
 Ranked problem (5), a premium storefront built by partners: partners are the builders (ADR-0014), and today the first
