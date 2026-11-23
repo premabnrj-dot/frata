@@ -231,7 +231,7 @@ table.fc th:first-child, table.fc thead th:first-child { text-align:left } table
         <div class="scroll" style="border:0;border-top:1px solid var(--line-soft);border-radius:0"><table class="fc">
           <thead><tr><th>Month</th><th>Opening</th><th>Billing</th><th>Other in</th><th>Costs</th><th>GST to pay</th><th>Closing</th></tr></thead><tbody><tr><th scope="row">Dec</th><td class="num">₹3,01,736</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹63,070</td><td class="num">−₹4,042</td><td class="num"><b>₹2,52,791</b></td></tr><tr><th scope="row">Jan</th><td class="num">₹2,52,791</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹2,13,916</b> <span class="badge b-warn">Below floor</span></td></tr><tr><th scope="row">Feb</th><td class="num">₹2,13,916</td><td class="num">₹18,167</td><td class="num">₹1,50,000</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹3,25,041</b></td></tr><tr><th scope="row">Mar</th><td class="num">₹3,25,041</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹61,771</td><td class="num">−₹2,771</td><td class="num"><b>₹2,78,666</b></td></tr><tr><th scope="row">Apr</th><td class="num">₹2,78,666</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹2,39,791</b> <span class="badge b-warn">Below floor</span></td></tr><tr><th scope="row">May</th><td class="num">₹2,39,791</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹2,00,916</b> <span class="badge b-warn">Below floor</span></td></tr></tbody></table></div>
         <details class="fold" style="margin:12px 16px 16px"><summary>How this is worked out</summary>
-          <div class="chips"><span class="chip on">Billing ₹18,167 a month</span><span class="chip">Opening is cash now less ₹3,264 still due in Nov</span><span class="chip">Costs from their due dates</span><span class="chip">GST 18% of billing, paid next month</span><span class="chip">Entries marked Planned</span></div></details></div>
+          <div class="chips"><span class="chip on">Billing ₹18,167 a month</span><span class="chip">Opening is cash now less ₹3,264 due in Nov</span><span class="chip">Costs from their due dates</span><span class="chip">GST on this month’s invoices, then 18% of billing</span><span class="chip">Entries marked Planned</span></div></details></div>
     </div>
   </div></div>
 </section>
@@ -298,7 +298,7 @@ table.fc th:first-child, table.fc thead th:first-child { text-align:left } table
       <div class="dlg"><h3>Update balance</h3>
         <div class="fld"><label>Account</label><div class="in">Reserve<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
         <div class="two"><div class="fld"><label>Balance</label><div class="in num"><span class="cur">INR</span>1,30,000</div></div><div class="fld"><label>As of</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>23 Nov 2026</div></div></div>
-        <div class="card" style="padding:12px 14px;display:grid;gap:6px"><div class="ph" style="gap:8px"><span style="color:var(--text-2)">Our books say</span><b class="num" style="margin-left:auto">₹1,30,000</b></div><div class="ph" style="gap:8px"><span style="color:var(--text-2)">Difference</span><span class="badge b-ok" style="margin-left:auto">Matches</span></div></div>
+        
         <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Save balance</button></div>
         <div class="toast" style="position:static;transform:none;justify-self:start"><span class="ok"></span>Balance saved · ₹3,05,000 in all<button>Undo</button></div></div>
     </div>
@@ -315,7 +315,7 @@ table.fc th:first-child, table.fc thead th:first-child { text-align:left } table
       <div class="ph"><h2>Cashflow</h2><button class="btn sec2">Add account</button><button class="btn">Update balance</button></div>
       <div class="tabs"><a href="#overview">Overview</a><a href="#movements">Movements</a><a class="on" href="#accounts">Accounts</a></div>
       <div class="card">
-        <div class="acct"><div class="top"><b>Current account</b><span class="num"><b style="font-weight:600">₹1,75,000</b></span></div><span style="color:var(--text-2);font-size:12px">As of 22 Nov · ₹1,82,400 on 14 Nov · ₹2,18,100 on 1 Nov</span></div>
+        <div class="acct"><div class="top"><b>Current account</b><span class="tag">Main</span><span class="num"><b style="font-weight:600">₹1,75,000</b></span></div><span style="color:var(--text-2);font-size:12px">As of 22 Nov · ₹1,82,400 on 14 Nov · ₹2,18,100 on 1 Nov</span></div>
         <div class="acct"><div class="top"><b>Reserve</b><span class="num"><b style="font-weight:600">₹1,30,000</b></span></div><span style="color:var(--text-2);font-size:12px">As of 22 Nov · ₹1,30,000 on 1 Nov</span></div>
         <div class="acct" style="background:var(--sunk)"><div class="top"><b>Total</b><span class="num"><b style="font-weight:600">₹3,05,000</b></span></div></div>
       </div>
@@ -392,7 +392,7 @@ table.fc th:first-child, table.fc thead th:first-child { text-align:left } table
   <h2>Your calls</h2>
   <div class="call"><b>1 · Who sees Cashflow</b><span>Master admin only. <span class="rec">Recommended.</span></span></div>
   <div class="call"><b>2 · What counts as money in</b><span>Billing payments you captured, less refunds, plus entries. Partner credit purchases join once a read for them exists. <span class="rec">Recommended.</span></span></div>
-  <div class="call"><b>3 · GST</b><span>Show GST to pay as its own line, estimated as 18% of billing paid the next month. <span class="rec">Recommended.</span> Your CA may want the exact rule.</span></div>
+  <div class="call"><b>3 · GST</b><span>Show GST to pay as its own line: next month’s from the invoices you issued, later months estimated from billing. <span class="rec">Recommended.</span> Your CA confirms the rule.</span></div>
   <div class="call"><b>4 · Forecast length</b><span>Six months, with billing at the average of the last three months. <span class="rec">Recommended.</span></span></div>
   <div class="call"><b>5 · Low-cash floor</b><span>One typed figure. Falling below it shows on Today. <span class="rec">Recommended.</span></span></div>
   <div class="call"><b>6 · Costs from the vendors</b><span>The vendor’s figure fills the bill for you to confirm. Recording turns on for a vendor only after you have matched one month. Vercel first, then Anthropic with an admin key. Supabase stays typed. <span class="rec">Recommended.</span></span></div>
