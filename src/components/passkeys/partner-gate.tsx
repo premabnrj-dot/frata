@@ -9,13 +9,14 @@ import { dateTimeIN } from '@/lib/format-date'
 import { deviceLabel } from '@/domains/partners/passkeys'
 import { passkeyClient } from './passkey-client'
 import { JoinSteps, PasskeyTile, ReadCode } from './partner-frame'
+import { ConfirmSteps } from './confirm-steps'
 import type { PartnerGate } from './types'
 
 // =============================================================================
 // FILE: src/components/passkeys/partner-gate.tsx — what a partner person sees instead of the workspace until this
 // browser session passes a passkey check (T1b; partner sign-in mockup https://claude.ai/artifact/Cway5SSahPgQeuCo2UmdTJ,
-// screens 5, 7, 8, 9, 11, 14, 19, 21). With a passkey: "Confirm it's you". Without one, or with "Can't use your
-// passkey?": a code to read to the partner's owner (a Lead) or to Frrata (the owner), shown at once; once approved,
+// screens 5, 7, 8, 9, 11, 21). With a passkey: screens 1–3 of passkeys, simpler (ConfirmSteps, shared with Frrata
+// Admin). Without one, or after "Ask for a new passkey": a code to read to the partner's owner (a Lead) or to Frrata (the owner), shown at once; once approved,
 // "Create a passkey" on this device. A code lives only in this tab (the database keeps its hash), so a reload shows it
 // again from sessionStorage, or asks for a new one. A failure is an error toast (§ Feedback 1).
 // =============================================================================
@@ -29,7 +30,7 @@ export type GateProps = {
   signOut: React.ReactNode
 }
 
-const { addPasskey, call, confirmPasskey } = passkeyClient('/partner/passkey')
+const { addPasskey, call } = passkeyClient('/partner/passkey')
 type Code = { code: string; expiresAt: string; opensAt: string | null }
 const KEY = 'frrata-partner-code'
 const readSaved = (): Code | null => { try { const v = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as Code | null; return v && v.code && new Date(v.expiresAt).getTime() > Date.now() ? v : null } catch { return null } } // clock-ok: after mount
@@ -51,10 +52,8 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
   const [busy, setBusy] = useState(false)
   const [code, setCode] = useState<Code | null>(null)
   const [lost, setLost] = useState(false)
-  const [cantUse, setCantUse] = useState(false)
   const [now, setNow] = useState<number | null>(null)
   const [done, setDone] = useState<{ name: string } | null>(null)
-  const [offerHere, setOfferHere] = useState(false)
   const asked = useRef(false)
   const owner = state?.role === 'owner'
   const request = state?.request ?? null
@@ -95,18 +94,12 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
   }
   const create = () => run(async () => {
     const r = await addPasskey(deviceLabel(navigator.userAgent) ?? 'My passkey')
-    if (r.ok) { save(null); setDone({ name: r.value?.name ?? '' }); setOfferHere(false) }
-    return r
-  }, () => {})
-  const confirm = () => run(async () => {
-    const r = await confirmPasskey()
-    if (r.ok && r.value?.crossDevice && (state?.passkeys ?? 0) < 10) setOfferHere(true)
-    else if (r.ok) router.refresh()
+    if (r.ok) { save(null); setDone({ name: r.value?.name ?? '' }) }
     return r
   }, () => {})
 
   // Each state change replaces the focused control: focus moves to the new heading, which a screen reader reads.
-  const phase = !state ? 'again' : done ? 'done' : offerHere ? 'offer' : request?.approved ? 'create' : request?.declined ? 'declined' : wantsCode ? 'code' : cantUse ? 'cant' : 'confirm'
+  const phase = !state ? 'again' : done ? 'done' : request?.approved ? 'create' : request?.declined ? 'declined' : wantsCode ? 'code' : 'confirm'
   const head = useRef<HTMLHeadingElement>(null)
   const first = useRef(true)
   useEffect(() => { if (first.current) { first.current = false; return } head.current?.focus() }, [phase])
@@ -125,17 +118,6 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
         <Heading ref={head}>You’re in</Heading>
         <Button size="lg" onClick={() => router.refresh()}>Open your clients</Button>
         <Link href="/partner/passkeys" className={`${button({ variant: 'link' })} justify-self-start`}>Add a passkey on another device</Link>
-      </>
-    )
-  } else if (offerHere) {
-    // Screen 14: confirmed with a phone's passkey; this device may keep its own.
-    body = (
-      <>
-        <PasskeyTile />
-        <Heading ref={head}>Sign in faster on this device</Heading>
-        <p className="text-sm text-muted-foreground">Anyone who can unlock this device can sign in.</p>
-        <Button size="lg" busy={busy} onClick={create}>Create a passkey</Button>
-        <Button variant="link" className="justify-self-start" onClick={() => router.refresh()}>Not now</Button>
       </>
     )
   } else if (request?.approved) {
@@ -159,10 +141,12 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
   } else if (wantsCode && owner) {
     // Screens 11 and 21: Frrata approves an owner; a recovery opens after 24 hours.
     const opens = code?.opensAt ?? request?.opensAt ?? null
+    // An owner who has a passkey is recovering it (24 hours), even before the request exists (passkeys, simpler B6).
+    const recovery = !!opens || !firstTime
     body = (
       <>
-        <Heading ref={head}>{opens ? 'Frrata approves it after 24 hours' : 'Frrata approves your first passkey'}</Heading>
-        {!opens && <p className="text-sm text-muted-foreground">We call you on {phone ?? 'the phone on file'}.<br />Read us this code.</p>}
+        <Heading ref={head}>{recovery ? 'Frrata approves it after 24 hours' : 'Frrata approves your first passkey'}</Heading>
+        {!recovery && <p className="text-sm text-muted-foreground">We call you on {phone ?? 'the phone on file'}.<br />Read us this code.</p>}
         {code ? <ReadCode code={code.code} /> : waiting ? <Button variant="secondary" busy={busy} onClick={() => void ask()}>Get a new code</Button>
           : <Button size="lg" busy={busy} onClick={() => void ask()}>Request a call</Button>}
         {opens ? <p className="text-sm text-muted-foreground">Opens <span className="font-num">{dateTimeIN(new Date(opens))}</span></p>
@@ -184,25 +168,12 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
         </div>
       </>
     )
-  } else if (cantUse) {
-    // Screen 19.
-    body = (
-      <>
-        <Heading ref={head}>Can’t use your passkey?</Heading>
-        <Button size="lg" busy={busy} onClick={() => { setLost(true); setCantUse(false); if (owner) void ask(); else asked.current = false }}>{owner ? 'Ask Frrata for a new passkey' : `Ask ${ownerName} for a new passkey`}</Button>
-        <p className="text-sm text-muted-foreground">Then delete the lost passkey in Passkeys.</p>
-        <Button variant="link" className="justify-self-start" onClick={() => setCantUse(false)}>Use my passkey</Button>
-      </>
-    )
   } else {
-    // Screen 5.
-    body = (
-      <>
-        <Heading ref={head}>Confirm it’s you</Heading>
-        <Button size="lg" busy={busy} onClick={confirm}>Use passkey</Button>
-        <Button variant="link" className="justify-self-start" onClick={() => setCantUse(true)}>Can’t use your passkey?</Button>
-      </>
-    )
+    // Passkeys, simpler screens 1–3 (shared with Frrata Admin's gate).
+    body = <ConfirmSteps endpoint="/partner/passkey" canSave={(state.passkeys ?? 0) < 10} headingClass="font-display text-title font-semibold"
+      onDone={() => router.refresh()}
+      // "Ask for a new passkey": a Lead's code at once (screen 7); an owner presses "Request a call" first (screen 21).
+      onAsk={() => { setLost(true); asked.current = owner }} />
   }
   return <>{body}{signOut}</>
 }

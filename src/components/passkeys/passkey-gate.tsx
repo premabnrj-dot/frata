@@ -8,11 +8,12 @@ import { useToast } from '@/components/ui/toast'
 import { dateTimeIN } from '@/lib/format-date'
 import { passkeyClient, type PasskeyEndpoint } from './passkey-client'
 import type { GateState } from './types'
+import { ConfirmSteps } from './confirm-steps'
 
 // =============================================================================
 // FILE: src/components/passkeys/passkey-gate.tsx — what Admin (and the partner workspace, T1b) shows instead of any
 // page until this browser session has passed a passkey check (mockup https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ).
-// Confirm with a passkey; with none, ask for one (a code someone else types to approve) and, once approved, add it on
+// Confirm with a passkey (screens 1–3 of passkeys, simpler: ConfirmSteps, shared with the partner gate); with none, ask for one (a code someone else types to approve) and, once approved, add it on
 // this browser. A failure is an error toast (§ Feedback 1): the layout wraps the gate in its own calm Toaster.
 // `readTo` names who approves ("another Frrata Admin user", "your team's owner", "Frrata"); `help` says how to reach them.
 // =============================================================================
@@ -28,7 +29,7 @@ function Key() {
 export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey', readTo = 'another Frrata Admin user', help = null }: {
   email: string; state: GateState | null; signOut: React.ReactNode; endpoint?: PasskeyEndpoint; readTo?: string; help?: React.ReactNode
 }) {
-  const { addPasskey, confirmPasskey, requestCode } = passkeyClient(endpoint)
+  const { addPasskey, requestCode } = passkeyClient(endpoint)
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -86,13 +87,8 @@ export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey'
       </>
     )
   } else {
-    body = (
-      <>
-        <h1 className="text-xl font-semibold">Confirm it&apos;s you</h1>
-        <Button disabled={busy} onClick={() => run(confirmPasskey)}>{busy ? 'Waiting for your device…' : 'Use passkey'}</Button>
-        <button type="button" className="justify-self-start text-sm underline underline-offset-4" onClick={() => setAsking(true)}>Lost your passkeys?</button>
-      </>
-    )
+    body = <ConfirmSteps endpoint={endpoint} canSave={state.passkeys < 10} headingClass="text-xl font-semibold"
+      onDone={() => router.refresh()} onAsk={() => setAsking(true)} />
   }
   return (
     <main data-shell data-neel="" className="grid min-h-dvh place-items-center p-6">

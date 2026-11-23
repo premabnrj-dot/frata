@@ -138,6 +138,12 @@
     "why": "A phone or laptop is literally unlocked: the passkey security line (partner sign-in research lesson 5; approved mockup screens 8 and 14)"
   },
   {
+    "file": "src/components/passkeys/confirm-steps.tsx",
+    "rule": "filler",
+    "text": "unlock this device",
+    "why": "The same security line, now shared by both gates (passkeys, simpler mockup screen 3, approved 2026-11-23)"
+  },
+  {
     "file": "src/app/(console)/console/settings/website/page.tsx",
     "rule": "W4",
     "text": "Website",

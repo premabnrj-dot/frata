@@ -7,6 +7,7 @@ import { confirmedRecently, type StaffIdentity, type StaffOk } from '@/lib/auth/
 import { tokenHash, type PasskeySite } from '@/lib/auth/staff-cookie'
 import { enrolCodeHash, passkeyCeremony, type PasskeyStore, type Result, type StoredKey, type Who } from '@/lib/auth/webauthn'
 import type { GateState } from '@/domains/auth/gate-state'
+import { passkeyProvider } from '@/domains/auth/passkey-providers'
 
 // =============================================================================
 // FILE: src/lib/admin/passkeys.ts — STAFF PASSKEYS (docs/specs/2026-11-12-staff-passkeys.md; ADR-0007 amended).
@@ -50,7 +51,9 @@ const store: PasskeyStore = {
   add: (w, stepup, credential, publicKey, counter, transports, name) => one<string>(sql`select app_staff_add_passkey(${w.userId}::uuid, ${w.sessionId}::uuid, ${stepup},
       ${credential}, ${publicKey}, ${counter}, ${transports}::text[], ${name}) as r`),
 }
-const ceremony = passkeyCeremony({ rpName: 'Frrata Admin', tag: 'passkeys', says: SAYS, tokenHash, store })
+// Named by its password manager when the authenticator says which ("iCloud Keychain"), as partner passkeys are (passkeys,
+// simpler P0): the gate's "No passkey on this browser" names where each one is saved.
+const ceremony = passkeyCeremony({ rpName: 'Frrata Admin', tag: 'passkeys', says: SAYS, tokenHash, store, nameFor: passkeyProvider })
 const run = ceremony.run
 const signInAgain = { ok: false as const, error: 'Sign in again.' }
 const stepupOf = (w: Who, proof: Proof | null) => (proof?.sessionId === w.sessionId ? proof.hash : null)
@@ -77,11 +80,11 @@ export async function addOptions(identity: StaffIdentity | StaffOk, proof: Proof
   const w = who(identity)
   return w ? ceremony.addOptions(w, identity.email, new TextEncoder().encode(identity.userId), stepupOf(w, proof), site) : signInAgain
 }
-export async function addVerify(identity: StaffIdentity | StaffOk, proof: Proof | null, response: RegistrationResponseJSON, name: string, site: PasskeySite): Promise<Result<string>> {
+/** Returns the new passkey's id and the name it was stored under (its password manager's, when the device says). */
+export async function addVerify(identity: StaffIdentity | StaffOk, proof: Proof | null, response: RegistrationResponseJSON, name: string, site: PasskeySite): Promise<Result<{ id: string; name: string }>> {
   const w = who(identity)
   if (!w) return signInAgain
-  const r = await ceremony.addVerify(w, stepupOf(w, proof), response, name, site)
-  return r.ok ? { ok: true, value: r.value.id } : r
+  return ceremony.addVerify(w, stepupOf(w, proof), response, name, site)
 }
 
 /** "Let me add a passkey": the code this session shows; another admin types it to approve (15 minutes). */

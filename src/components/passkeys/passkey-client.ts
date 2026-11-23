@@ -34,18 +34,20 @@ export function passkeyClient(endpoint: PasskeyEndpoint) {
     return r.ok ? { ok: true, value: { crossDevice: response.authenticatorAttachment === 'cross-platform' } } : r
   }
   /** "Add passkey", then confirm with it so the session is through. `confirmFirst`: a second device for someone already
-   *  in (adding needs a passkey check in the last 5 minutes; security review M2). */
-  /** Returns the name the passkey was stored under (partners: its password manager's, when the device says). */
-  async function addPasskey(name: string, confirmFirst = false): Promise<Done<{ name: string }>> {
+   *  in (adding needs a passkey check in the last 5 minutes; security review M2). `confirmAfter` false: the session is
+   *  already through (Save a passkey on this device, right after another device's check), so no second prompt.
+   *  Returns the name the passkey was stored under (its password manager's, when the device says). */
+  async function addPasskey(name: string, confirmFirst = false, confirmAfter = true): Promise<Done<{ name: string }>> {
     if (confirmFirst) { const c = await confirmPasskey(); if (!c.ok) return c }
     const o = await call<Parameters<typeof startRegistration>[0]['optionsJSON']>('add-options')
     if (!o.ok || !o.value) return o.ok ? { ok: false, error: 'Not added. Try again.' } : o
     let response
     try { response = await startRegistration({ optionsJSON: o.value }) } catch { return { ok: false, error: 'Not added. Try again.' } }
-    const added = await call<string | { name?: string }>('add-verify', { response, name })
+    const added = await call<{ name?: string }>('add-verify', { response, name })
     if (!added.ok) return added
+    const stored = added.value?.name || name
+    if (!confirmAfter) return { ok: true, value: { name: stored } }
     const c = await confirmPasskey()
-    const stored = typeof added.value === 'object' && added.value?.name ? added.value.name : name
     return c.ok ? { ok: true, value: { name: stored } } : c
   }
   /** A sensitive step (approve, remove, hand over): a fresh passkey check first, then the step. */

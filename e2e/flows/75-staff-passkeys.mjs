@@ -174,7 +174,7 @@ export default {
         await until(async () => (await db`select count(*)::int n from staff_stepups where user_id = ${F.id} and session_id = ${meera.ctx.frrataSession}`)[0].n === 0, 10_000)
         const phone = await withAuthenticator(t, 'frata', { viewport: { width: 390, height: 844 } })
         await phone.p.goto(CONSOLE + '/admin')
-        await phone.p.getByRole('heading', { name: 'Confirm it\'s you' }).waitFor()
+        await phone.p.getByRole('heading', { name: 'Confirm it’s you' }).waitFor()
         assert.ok(await phone.p.evaluate(() => document.documentElement.scrollWidth <= 390))
         await phone.p.screenshot({ path: t.out('phone') })
       })
