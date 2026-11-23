@@ -276,9 +276,9 @@ export const system = {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_token_event(${token}, ${status}) as ok`)
     return r?.ok === true
   },
-  async refundsDue(limit: number): Promise<{ id: string; paymentId: string; amount: Paise; test: boolean }[]> {
+  async refundsDue(limit: number): Promise<{ id: string; paymentId: string; amount: Paise; test: boolean; claimed: boolean }[]> {
     const rows = await db().execute<Record<string, unknown>>(sql`select * from app_pc_refunds_due(${limit})`)
-    return rows.map((r) => ({ id: r.id as string, paymentId: r.payment_id as string, amount: paise(num(r.amount)), test: r.test === true }))
+    return rows.map((r) => ({ id: r.id as string, paymentId: r.payment_id as string, amount: paise(num(r.amount)), test: r.test === true, claimed: r.claimed === true }))
   },
   async refundClaim(purchaseId: string): Promise<boolean> {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_refund_claim(${purchaseId}::uuid) as ok`)

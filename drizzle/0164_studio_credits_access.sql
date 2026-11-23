@@ -709,10 +709,11 @@ end $$;
 --> statement-breakpoint
 
 -- ── Refunds of money that bought nothing (architecture M7): listed, claimed once before the request, then recorded. ──
-create or replace function app_pc_refunds_due(p_limit integer) returns table (id uuid, payment_id text, amount bigint, test boolean)
+create or replace function app_pc_refunds_due(p_limit integer) returns table (id uuid, payment_id text, amount bigint, test boolean, claimed boolean)
   language sql stable security definer set search_path = '' as $$
-  select p.id, p.refund_payment_id, p.refund_amount, p.test from public.partner_credit_purchases p
-   where p.refund_due_at is not null and p.refunded_at is null and p.refund_claimed_at is null
+  -- Unclaimed ones, and ones claimed over an hour ago that never finished (the run looks for the refund first).
+  select p.id, p.refund_payment_id, p.refund_amount, p.test, p.refund_claimed_at is not null from public.partner_credit_purchases p
+   where p.refund_due_at is not null and p.refunded_at is null and (p.refund_claimed_at is null or p.refund_claimed_at < now() - interval '1 hour')
    order by p.refund_due_at limit least(p_limit, 100)
 $$;
 --> statement-breakpoint

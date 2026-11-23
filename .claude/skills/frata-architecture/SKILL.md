@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.7.0
+  version: 3.8.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -243,7 +243,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   the GST export). A payment is believed only from the server's fetch of OUR order or the stored, verified webhook
   (`app_pc_apply`, matched by order id, amount, INR and the server's test mode; refused money becomes `refund_due`). The
   free 20 are granted by a trigger on `partners` (approval is a plain update). The SQL restates the pure rules in
-  `src/domains/studio/credits.ts`; `sql-drift.test.ts` pins the numbers.
+  `src/domains/studio/credits.ts`; `sql-drift.test.ts` pins the numbers. Their background work runs hourly in `/api/cron/credits`
+  (`src/lib/studio/run.ts`): stragglers, seat renewals and their notices, renewal orders, refunds, mandate cancels and the
+  partner's emails, never in the daily outbox job.
 - **Partner teams** (T1a, 2026-11-12; plan `docs/plans/2026-11-12-studio-build.md`, drizzle/0123–0124): a partner is a
   team in `partner_members` (owner | lead | builder, T1c; the owner moves Lead ↔ Builder with `app_partner_set_role`,
   fresh check) with `partner_assignments` (which stores a lead

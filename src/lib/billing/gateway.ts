@@ -19,7 +19,7 @@ export const billingKeyId = () => RAZORPAY_BILLING_KEY_ID
 
 export class GatewayError extends Error { constructor(readonly status: number, message: string) { super(message) } }
 
-async function api<T>(method: 'GET' | 'POST', path: string, body?: object): Promise<T> {
+async function api<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: object): Promise<T> {
   const res = await fetchWithTimeout(`${RAZORPAY_API_BASE}${path}`, {
     method, headers: { authorization: 'Basic ' + Buffer.from(`${RAZORPAY_BILLING_KEY_ID}:${RAZORPAY_BILLING_KEY_SECRET}`).toString('base64'), 'content-type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined, redirect: 'error',
@@ -42,6 +42,39 @@ export const createCustomer = (c: { name: string; email: string; contact: string
 export const createMandateOrder = (o: { customer: string; method: Method; maxAmount: number; receipt: string }) =>
   api<Order>('POST', '/v1/orders', { amount: o.method === 'emandate' ? 0 : 100, currency: 'INR', customer_id: o.customer, method: o.method, payment_capture: 1, receipt: o.receipt,
     token: { max_amount: o.maxAmount, expire_at: Math.floor(Date.now() / 1000) + 10 * 365 * 86_400, frequency: 'as_presented' } })
+
+/**
+ * Studio's seat (C1·3): an authorisation order whose amount IS the first month's debit (Razorpay: "The amount field is the
+ * first debit", checked 2026-11-22), with the plan's AutoPay limit and a monthly frequency (Razorpay warns as_presented
+ * looks risky on a monthly plan; owner call 6, 22 Nov).
+ */
+export const createSeatOrder = (o: { customer: string; method: 'upi' | 'card'; amount: number; maxAmount: number; receipt: string }) =>
+  api<Order>('POST', '/v1/orders', { amount: o.amount, currency: 'INR', customer_id: o.customer, method: o.method, payment_capture: 1, receipt: o.receipt,
+    token: { max_amount: o.maxAmount, expire_at: Math.floor(Date.now() / 1000) + 10 * 365 * 86_400, frequency: 'monthly' } })
+
+/** A seat's renewal order carrying Razorpay's pre-debit notification (UPI: sent when the order is made; the debit ≥ 24 h
+ *  later; card: 36 h 5 min; checked 2026-11-22). With it Razorpay retries nothing itself: each retry is a new order. */
+export const createRenewalOrder = (o: { amount: number; receipt: string; token: string; paymentAfter: Date }) =>
+  api<Order>('POST', '/v1/orders', { amount: o.amount, currency: 'INR', receipt: o.receipt, payment_capture: 1,
+    notification: { token_id: o.token, payment_after: Math.floor(o.paymentAfter.getTime() / 1000) } })
+
+/** A payment's refunds: before a refund claimed earlier is sent again, look for it (Razorpay takes no idempotency key). */
+export const paymentRefunds = (paymentId: string) => api<{ items: { id: string; amount: number; status: string }[] }>('GET', `/v1/payments/${encodeURIComponent(paymentId)}/refunds`)
+
+/** Money taken that bought nothing goes back (C1, architecture M7). */
+export const refundPayment = (paymentId: string, amount: number) =>
+  api<{ id: string; status: string }>('POST', `/v1/payments/${encodeURIComponent(paymentId)}/refund`, { amount })
+
+/** Cancels a mandate: a UPI token by PUT …/cancel (DELETE does not cancel it); a card token, which has no cancel call,
+ *  is deleted (the only call shown; checked 2026-11-22). Which one it is isn't kept once a seat ends, so cancel first. */
+export async function cancelToken(customer: string, token: string): Promise<void> {
+  const base = `/v1/customers/${encodeURIComponent(customer)}/tokens/${encodeURIComponent(token)}`
+  try { await api<object>('PUT', `${base}/cancel`) } catch (e) {
+    // Only a "bad request" means the token has no cancel call (a card); a 401, 404 or 429 is a real failure, retried.
+    if (!(e instanceof GatewayError) || e.status !== 400) throw e
+    await api<object>('DELETE', base)
+  }
+}
 
 export const fetchPayment = (id: string) => api<Payment>('GET', `/v1/payments/${encodeURIComponent(id)}`)
 export const orderPayments = (order: string) => api<{ items: Payment[] }>('GET', `/v1/orders/${encodeURIComponent(order)}/payments`)
