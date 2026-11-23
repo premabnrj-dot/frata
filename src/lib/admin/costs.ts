@@ -1,11 +1,17 @@
 import 'server-only'
+import { cache } from 'react'
 import { and, asc, desc, eq, gte, or, sql } from 'drizzle-orm'
 import {
   anchorMayMove, daysBetween, fyRange, isDueDate, LOOKBACK_MONTHS, MAX_LIVE_COSTS, type Cadence, type CostCategory, type CostCurrency,
-  type CostItem, type CostItemInput, type PaidInput, type PaymentRow,
+  type CostItem, type CostItemInput, type PaidInput, type PaymentRow, dueRows,
 } from '@/domains/admin/costs'
 import { FX_RATE_BAND_E4 } from '@/domains/studio/credits'
+import type { TodayItem } from '@/domains/admin/today'
 import { addMonths, monthKey } from '@/domains/time/month'
+import { dayMonthIN } from '@/lib/format-date'
+import { formatInr, formatUsd } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
+import type { MicroUsd } from '@/domains/money/usd'
 import { ADMIN_ONLY, confirmedRecently, type StaffOk } from '@/lib/auth/require-staff'
 import { adminDb } from '@/lib/db/admin'
 import { costItems, costPayments } from '@/lib/db/schema-costs'
@@ -48,11 +54,15 @@ export type CostsData = {
   rate: { day: string; rateE4: number } | null
 }
 
-/** The shared due set: every item, the payments that matter (periods since the lookback for what is due, paid in this or last
+/** The shared due set (cached per request by the day, so the layout's Today source and the page read it once): every item, the payments that matter (periods since the lookback for what is due, paid in this or last
  *  month for what was spent, and a one-time cost's own payment), and the rate. Three plain statements, in parallel. A dues
  *  walk starts at the item's anchor, never before, and Add refuses an anchor over 45 days back, so no created-at bound is needed. */
 export async function costsData(staff: StaffOk, today: string): Promise<CostsData> {
   adminOnly(staff)
+  return loadCosts(today)
+}
+
+const loadCosts = cache(async (today: string): Promise<CostsData> => {
   const db = adminDb()
   const back = addMonths(new Date(`${today}T00:00:00Z`), -LOOKBACK_MONTHS).toISOString().slice(0, 10)
   const monthsBack = `${monthKey(today, -1)}-01` // the 1st of last month
@@ -67,7 +77,7 @@ export async function costsData(staff: StaffOk, today: string): Promise<CostsDat
   ])
   const r = rate[0]
   return { items: items.map(toItem), payments: pays.map(toPay), rate: r ? { day: r.day, rateE4: Number(r.rate_e4) } : null }
-}
+})
 
 /** One cost and all its payments, for the side panel. */
 export async function costPanel(staff: StaffOk, id: string): Promise<{ item: CostItem; payments: PaymentRow[] } | null> {
@@ -259,4 +269,24 @@ export async function editCost(staff: StaffOk, itemId: string, patch: CostPatch,
       return { ok: true }
     })
   } catch (e) { return failed(e) }
+}
+
+/** Admin › Today's source (C2): one item per repeating cost overdue or due within a week, oldest first. It reads the shared due set
+ *  and the engine's one definition of "due" (`dueRows`); Today never reads these tables itself (check:tenant § 10). */
+export async function dueCostItems(staff: StaffOk, today: string): Promise<TodayItem[]> {
+  adminOnly(staff)
+  const { items, payments } = await loadCosts(today)
+  const paidBy = new Map<string, Set<string>>()
+  for (const p of payments) { const s = paidBy.get(p.itemId) ?? new Set<string>(); s.add(p.periodFor); paidBy.set(p.itemId, s) }
+  const byId = new Map(items.map((i) => [i.id, i]))
+  return dueRows(items, paidBy, today).map((row) => {
+    const item = byId.get(row.id)!
+    const amount = item.currency === 'INR' ? formatInr(paise(item.amount), { decimals: item.amount % 100 !== 0 }) : formatUsd(item.amount as MicroUsd)
+    const when = row.tone === 'overdue' ? `overdue ${row.overdueDays} ${row.overdueDays === 1 ? 'day' : 'days'}` : row.inDays === 0 ? 'due today' : `due in ${row.inDays} ${row.inDays === 1 ? 'day' : 'days'}`
+    return {
+      kind: 'cost_due' as const, key: `${row.id}:${row.next}`, title: `${row.name} is ${when}`,
+      line: `${item.varies ? 'About ' : ''}${amount} · ${dayMonthIN(new Date(`${row.next}T12:00:00+05:30`))}`, action: 'Mark paid',
+      href: `/admin/costs?view=all&id=${row.id}`, since: new Date(`${row.next}T00:00:00+05:30`),
+    }
+  })
 }
