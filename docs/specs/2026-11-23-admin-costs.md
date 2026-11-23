@@ -134,7 +134,7 @@ that list (it hard-codes `billing` today, `activity/page.tsx`); `credits.rate.se
 
 Names trimmed with control and bidi characters stripped; `name` 1–80, `vendor` ≤ 80, `note` ≤ 300; amounts integer 1 to
 ₹1 crore (1e9 paise; USD in cents with the same ceiling in rupees); USD `inr_paise` within the `fx_rates` 50–200 band;
-`gst_paise` 0 to `inr_paise`; dates 2020-01-01 to today + 2 years, `paid_on` not after today in IST. `period_for` is
+`gst_paise` 0 to `inr_paise`; an anchor no more than 45 days before today when a cost is added (dues start at the anchor, so a long-past one would count missed bills), dates 2020-01-01 to today + 2 years, `paid_on` not after today in IST. `period_for` is
 accepted only if it is a real due date of the item (engine) and not after `ends_on`; a one-time item takes one payment
 (partial unique index on `item_id` where `kind = 'one_time'`, kept by a column or trigger-free check in the writer); Undo is
 `delete … where id = $p and item_id = $i returning`, zero rows answering not found. Overdue counts are arithmetic, not a loop.

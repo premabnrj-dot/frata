@@ -25,3 +25,10 @@ export function ymOf(d: Date): string {
   const ist = new Date(d.getTime() + IST_OFFSET_MS)
   return `${ist.getUTCFullYear()}-${String(ist.getUTCMonth() + 1).padStart(2, '0')}`
 }
+
+/** n calendar months on (UTC); a day past the target month's end falls to that month's last day (31 Jan + 1 → 28 Feb). Never step it month by month: derive each date from the first (31 Jan + 2 → 31 Mar). */
+export function addMonths(from: Date, n: number): Date {
+  const y = from.getUTCFullYear(), mo = from.getUTCMonth() + n
+  const last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(y, mo, Math.min(from.getUTCDate(), last), from.getUTCHours(), from.getUTCMinutes(), from.getUTCSeconds(), from.getUTCMilliseconds()))
+}

@@ -17,6 +17,7 @@
 // =============================================================================
 
 import { keysMatch, needsFreshNotice, NOTICE_LEAD_MS, noticeStood } from '@/domains/billing/collect'
+import { addMonths } from '@/domains/time/month'
 import { FREE_DAYS, LOT_MONTHS, type SeatPlan } from './prices'
 
 const DAY = 86_400_000
@@ -74,12 +75,7 @@ export const rateUsable = (rateDay: Date | null, now: Date) => !!rateDay && now.
 export const LOT_KINDS = ['grant', 'pack', 'credits', 'seat', 'return'] as const
 export type LotKind = (typeof LOT_KINDS)[number]
 
-/** n calendar months on; a day past the target month's end falls to that month's last day (31 Jan + 1 → 28 Feb). */
-export function addMonths(from: Date, n: number): Date {
-  const y = from.getUTCFullYear(), m = from.getUTCMonth() + n
-  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-  return new Date(Date.UTC(y, m, Math.min(from.getUTCDate(), last), from.getUTCHours(), from.getUTCMinutes(), from.getUTCSeconds(), from.getUTCMilliseconds()))
-}
+export { addMonths }
 
 /** A use-by date: 12 months for anything bought (and a credit returned after its lot ended); 90 days for the free 20. */
 export function expiresAt(kind: LotKind, from: Date): Date {

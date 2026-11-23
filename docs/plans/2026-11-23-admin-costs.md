@@ -9,7 +9,7 @@
 
 Unit economics: not run, nothing a merchant pays or Frrata charges changes.
 
-Status: draft · Spec: `docs/specs/2026-11-23-admin-costs.md` · Phases C1, C2
+Status: active · Spec: `docs/specs/2026-11-23-admin-costs.md` · Phases C1, C2
 
 Goal and design are in the spec; this file is the order of work. The spec's tasks 1–6 are cut finer here, each with its verify command.
 

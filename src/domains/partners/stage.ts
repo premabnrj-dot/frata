@@ -5,6 +5,8 @@
 // statements read these two functions and nothing else.
 // =============================================================================
 
+import { addMonths } from '@/domains/time/month'
+
 export type ClientStage = 'building' | 'invited' | 'with_owner' | 'open' | 'ended'
 
 export type ClientFacts = {
@@ -30,12 +32,7 @@ export const STAGE_LABEL: Record<ClientStage, string> = {
 
 export type ShareTerms = { shareMonths: number; noticeDays: number }
 
-/** Adds whole months in UTC; the 31st rolls to the month's last day, never into the next month. */
-export function addMonths(d: Date, months: number): Date {
-  const y = d.getUTCFullYear(), m = d.getUTCMonth() + months
-  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-  return new Date(Date.UTC(y, m, Math.min(d.getUTCDate(), last), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()))
-}
+export { addMonths }
 
 /**
  * The share's window: from the shop's first opening, for `shareMonths`; a removal ends it `noticeDays` later, never
