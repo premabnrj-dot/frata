@@ -1,16 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import { PACKS } from '../list'
 import { FALLBACK_HSN, UNSAID } from '../registry'
-import { chartKeys, labelAsked, presetsFor, returnLines, SELL_KEYS, SELL_TILES, sellsSized, startingHsn } from '..'
+import { SELL_KEYS, SELL_TILES, type SellKey } from '..'
 import { PRESETS } from '../../size-charts'
-import * as old from '../../sell-keys'
-import { presetsFor as oldPresetsFor } from '../../size-charts'
-import { labelAsked as oldLabelAsked } from '../../label'
-import { renderPolicy } from '@/domains/policies/render'
-import { factsFor, LEAD, TODAY } from '../../__tests__/sells-today.rows'
 
 // The category pack registry (plan docs/plans/2026-11-23-c1-category-packs.md, C1a·2): the packs are well formed, and
-// each accessor gives what today's functions give.
+// sells-today.test.ts proves each accessor gives what the code before them gave.
 
 /** Literal copies of the sign-up tiles' paths (src/app/start/create-shop-form.tsx:251-254 on 2026-11-23, finding 7). */
 const ICONS_TODAY = {
@@ -26,6 +21,8 @@ describe('the packs', () => {
     expect(unique(PACKS.map((p) => p.key))).toBe(true)
     for (const p of PACKS) expect(p.key).toMatch(/^[a-z][a-z_]{1,23}$/)
     expect(SELL_KEYS).toEqual(PACKS.map((p) => p.key))
+    // A union of literals, so z.enum(SELLS) and the CHECK take the keys as they are (tsc checks this line).
+    expectTypeOf<SellKey>().toEqualTypeOf<'women' | 'men' | 'kids' | 'ethnic' | 'accessories' | 'footwear' | 'jewellery' | 'beauty' | 'wellness'>()
   })
   it('tile orders and HSN ranks are each unique', () => {
     expect(unique(PACKS.map((p) => p.tile.order))).toBe(true)
@@ -47,19 +44,5 @@ describe('the packs', () => {
   })
   it('tiles come in tile order', () => {
     expect(SELL_TILES.map((t) => t.order)).toEqual([...SELL_TILES.map((t) => t.order)].sort((a, b) => a - b))
-    expect(SELL_TILES.map((t) => [t.key, t.label])).toEqual(old.SELL_LABELS)
-  })
-})
-
-// The bridge: deleted in C1a·3, once the old functions are the registry.
-describe('each accessor gives what today’s function gives', () => {
-  it.each(TODAY)('%j', (sells) => {
-    expect(startingHsn(sells)).toBe(old.startingHsn(sells))
-    expect(sellsSized(sells)).toBe(old.sellsSized(sells))
-    expect(presetsFor(sells)).toEqual(oldPresetsFor(sells as never))
-    expect(chartKeys(sells).map((k) => PRESETS[k])).toEqual(oldPresetsFor(sells as never))
-    expect(labelAsked(sells)).toBe(oldLabelAsked(sells))
-    const lead = renderPolicy('returns', factsFor(sells), String)[0]!.map((p) => ('text' in p ? p.text : p.value ?? '')).join('')
-    expect(LEAD + returnLines(sells).join(' ')).toBe(lead)
   })
 })

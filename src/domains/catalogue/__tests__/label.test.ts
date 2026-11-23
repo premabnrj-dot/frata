@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { cleanLabel, EMPTY_LABEL, labelAsked, labelInput, labelMissing, labelRows, readLabel } from '../label'
+import { cleanLabel, EMPTY_LABEL, labelInput, labelMissing, labelRows, readLabel } from '../label'
+import { labelAsked } from '../packs'
 
 describe('label', () => {
   it('is asked of beauty and wellness shops only', () => {

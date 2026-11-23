@@ -7,8 +7,6 @@
 // type, in cm and inches, with how to measure). Inches are derived, not stored.
 // =============================================================================
 
-import type { SELL_KEYS } from './sell-keys'
-
 import type { Chart } from './chart-units'
 
 export { inches, type Chart } from './chart-units'
@@ -32,21 +30,8 @@ export const PRESETS = {
 /** A starting chart's key: what a category pack names in its `charts` (packs/types.ts). */
 export type PresetKey = keyof typeof PRESETS
 
-/** Which starting charts a shop gets, from what it said it sells (or all of the common ones if it skipped). */
-export function presetsFor(sells: readonly (typeof SELL_KEYS)[number][]): Preset[] {
-  const keys = new Set<PresetKey>()
-  for (const s of sells) {
-    if (s === 'women' || s === 'ethnic') keys.add('womens_kurta')
-    if (s === 'men') keys.add('mens_shirt')
-    if (s === 'kids') keys.add('kids')
-    if (s === 'footwear') keys.add('footwear')
-    if (s === 'accessories' || s === 'jewellery' || s === 'beauty' || s === 'wellness') keys.add('one_size')
-  }
-  // Skipped the question: the common ones. A shop of jewellery or beauty only gets no garment charts.
-  if (!sells.length) (['womens_kurta', 'mens_shirt', 'one_size'] as const).forEach((k) => keys.add(k))
-  keys.add('one_size')
-  return [...keys].map((k) => PRESETS[k])
-}
+// Which starting charts a shop gets is the category packs' (../starting-charts.ts presetsFor): this file is imported by
+// client components, so it never imports the packs.
 
 /** One size however it is typed: case, spaces and dashes don't count ("2-3 y" is "2–3 Y"). */
 export const sizeKey = (x: string) => x.toLowerCase().replace(/[\s–—-]+/g, '')

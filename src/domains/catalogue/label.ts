@@ -16,8 +16,8 @@ export type Label = { net: string; unit: NetUnit; maker: string; shelfMonths: nu
 export type LabelInput = { net: string; unit: string; maker: string; shelf: string; ingredients: string; use: string }
 export const EMPTY_LABEL: Label = { net: '', unit: 'ml', maker: '', shelfMonths: null, ingredients: '', use: '' }
 
-/** The shops asked for it: beauty and personal care, wellness (what sign-up said; Settings › Store details changes it). */
-export const labelAsked = (sells: readonly string[]) => sells.some((k) => k === 'beauty' || k === 'wellness')
+// Which shops are asked for it is the category packs' (packs/index.ts labelAsked, from what sign-up said): this file is
+// imported by client components, so it never imports the packs.
 
 /** products.label as stored, read leniently: an unknown or missing field is its empty value. */
 export function readLabel(raw: unknown): Label {

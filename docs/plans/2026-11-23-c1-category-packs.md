@@ -197,7 +197,7 @@ after (C1a·3) and must not grow. `create-shop-form.tsx` (`/start`, a client fil
 | 5 | `SELLS` | `src/lib/db/schema.ts:224` | re-export for Zod | unchanged (via sell-keys) |
 | 6 | CHECK literal | `schema.ts:321` | DB domain | `array[${sql.raw(sqlList(SELL_KEYS))}]::text[]` (`sqlList`: `src/domains/tenancy/roles.ts:105`, as `schema-modules.ts:26`) |
 | 7 | CHECK in SQL | `drizzle/0070_serious_payback.sql:19` (after `0007:58`, dropped at `0070:1`) | DB domain | `check:packs` compares it with the registry |
-| 8 | `presetsFor` | `src/domains/catalogue/size-charts.ts:34-47` | starting charts | moves to `packs/index.ts` as `chartKeys(sells).map((k) => PRESETS[k])`, taking `readonly string[]`; `size-charts.ts` keeps no registry import, because client files import it (finding 2) |
+| 8 | `presetsFor` | `src/domains/catalogue/size-charts.ts:34-47` | starting charts | moves to `src/domains/catalogue/starting-charts.ts` as `chartKeys(sells).map((k) => PRESETS[k])`, taking `readonly string[]`; `size-charts.ts` keeps no registry import, because client files import it (finding 2) |
 | 9 | `labelAsked` | `src/domains/catalogue/label.ts:19-20` | label asked | removed from `label.ts` (client files import it: finding 2); readers import `labelAsked` from `@/domains/catalogue/packs`; the comment moves with it, saying "set at sign-up" (C1a·3; C1b·5 adds Settings) |
 | 10 | `condition` | `src/domains/policies/render.ts:82-91` | returns lines | `returnLines(f.sells).join(' ')` |
 | 11 | `sampleSetFor` | `src/domains/themes/catalogue/samples.ts:37-48` | sample set | left untouched: frozen theme code (ADR-0014), not a pack fact; allowlisted by rule 5 (finding 5) |
@@ -208,7 +208,7 @@ after (C1a·3) and must not grow. `create-shop-form.tsx` (`/start`, a client fil
 | 16 | `sellsSized` | `console/products/new/page.tsx:2,13` | kind step | unchanged |
 | 17 | `sellsSized`, `labelAsked` | `console/products/[handle]/page.tsx:16-17,113` | editor panels | `labelAsked` imported from `@/domains/catalogue/packs` (one import line) |
 | 18 | `EditorShop.sized/label` | `products/_components/product-editor.tsx:63-64` | panels, readiness | unchanged (flags) |
-| 19 | `presetsFor` + cast | `src/lib/catalogue/handles.ts:14-20` | `ensureTypes` | `presetsFor` imported from `@/domains/catalogue/packs`, cast removed; C1b adds `packTypesIn` beside it |
+| 19 | `presetsFor` + cast | `src/lib/catalogue/handles.ts:14-20` | `ensureTypes` | `presetsFor` imported from `@/domains/catalogue/starting-charts`, cast removed; C1b adds `packTypesIn` beside it |
 | 20 | `labelAsked` | `src/lib/catalogue/readiness.ts:38,41` | Active rule | `labelAsked` imported from `@/domains/catalogue/packs` (one import line) |
 | 21 | `readiness()` | `src/domains/catalogue/product-form.ts:173-188` | the list | unchanged (takes flags) |
 | 22 | `shopSells` | `src/lib/queries/settings.ts:146-150` | read | unchanged |
@@ -264,7 +264,7 @@ The last test is a bridge: it is deleted in C1a·3, once the old functions are t
 Verify: `npx vitest run src/domains/catalogue` all passed; `node scripts/check-layers.mjs` reports clean; `npm run typecheck` reports 0 errors.
 
 **C1a·3 · Readers move to the registry.** Files: `sell-keys.ts` (becomes re-exports: `SELL_KEYS`, `SellKey`, `SELL_LABELS` derived,
-`startingHsn`, `sellsSized`), `size-charts.ts:10,33-47` (`presetsFor` leaves for `packs/index.ts`), `label.ts:19-20` (`labelAsked`
+`startingHsn`, `sellsSized`), `size-charts.ts:10,33-47` (`presetsFor` leaves for `starting-charts.ts`), `label.ts:19-20` (`labelAsked`
 leaves for the packs), `render.ts:82-91`, `lib/catalogue/handles.ts:3,18` (import from the packs, cast removed),
 `lib/catalogue/readiness.ts:4` and `console/products/[handle]/page.tsx:16` (`labelAsked` from the packs), and the import lines of
 `label.test.ts` and `size-charts.test.ts` (the same two names). `themes/catalogue/samples.ts` is not touched (finding 5).
@@ -275,8 +275,19 @@ only; `npm run build`, whose `check:storefront-build` is clean, and `SHOW_BUDGET
 
 | Page (first-load JS, gz) | Before C1a | After C1a·3 |
 |---|---|---|
-| `/(console)/console/products/[handle]/page` | 208.4 kB | (filled at C1a·3) |
-| `/(console)/console/settings/[section]/page` | 186.6 kB | (filled at C1a·3) |
+| `/(console)/console/products/[handle]/page` | 208.4 kB | 208.4 kB |
+| `/(console)/console/settings/[section]/page` | 186.6 kB | 186.7 kB: no pack data in any of its first-load files (grep of the build for a tile word and the returns text); the 0.1 kB is webpack's runtime, whose chunk map names the new modules |
+| `/(console)/console/content/page` (pinned 227.2 kB) | 227.0 kB | 227.0 kB (231.3 kB before `pure`, below) |
+| `/start` (not pinned; until C1a·6) | 128 kB | 129 kB |
+
+As built (C1a·3), two changes to the shape above, both for the browser:
+- `presetsFor` lives in `src/domains/catalogue/starting-charts.ts`, not `packs/index.ts`: with it there, every chunk that read the packs
+  also carried all the size charts (Content's first load went to 231.3 kB, over its 227.2 pin).
+- Webpack counts a top-level object literal as a side effect and keeps such a module wherever it is imported, even for nothing:
+  `policies/answers.ts` imports `render.ts` in Content's browser chunk for a constant, so the packs and the whole of `render.ts` came
+  with it. Each pack, each shared line, the list and `SELL_LABELS` are therefore made through `packs/define.ts`'s
+  `/*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)`, and `packs/index.ts` exports only functions and pure calls; an unused
+  import of the packs is then dropped. A new pack file copies that form (the recipe, C1c·2).
 
 **C1a·4 · The CHECK from the registry.** File: `schema.ts:321` built with `sqlList(SELL_KEYS)`. The new SQL must be
 byte-identical to `0070:19`. Test first: in `src/lib/db/__tests__/public-plans.test.ts`'s style, a test that renders the
@@ -287,7 +298,7 @@ Verify: `npm run db:generate` prints drizzle-kit's "No schema changes, nothing t
 the disk), `package.json` (`check:packs`, and the gate in `gates` before `check-skills`), `scripts/__tests__/check-packs.test.ts`.
 The header opens `// Fails: a category pack that is not one file named by its key, a pack missing from the registry's list, a registry whose keys differ from the shop_settings_sells CHECK the newest migration adds, or a sell key quoted outside the packs.`
 Rules, with comment lines (`//`, `/*`, `*`, `--`) skipped everywhere:
-1. Every `src/domains/catalogue/packs/*.ts` except `index.ts`, `list.ts`, `registry.ts`, `types.ts` and `shared.ts` holds exactly one
+1. Every `src/domains/catalogue/packs/*.ts` except `index.ts`, `list.ts`, `registry.ts`, `types.ts`, `shared.ts` and `define.ts` holds exactly one
    `key: '<k>'`, and `<k>` is its file name.
 2. `list.ts` imports each pack file and names it in `PACKS = [ … ]`. A listed name has a file.
 3. Walk `drizzle/meta/_journal.json` in order and read each file. The last `CONSTRAINT "shop_settings_sells" CHECK (… array[…]`

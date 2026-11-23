@@ -13,17 +13,21 @@ export const UNSAID = ['ethnic', 'women', 'men'] as const
 export const FALLBACK_HSN = '6211'
 
 type Keys<P extends readonly Pack[]> = { readonly [I in keyof P]: P[I]['key'] }
-export type Tile = { readonly key: string; readonly label: string; readonly order: number; readonly icon: string }
+export type Tile<K extends string = string> = { readonly key: K; readonly label: string; readonly order: number; readonly icon: string }
+
+/** The keys, in list order (the CHECK's order), typed as the literal keys so z.enum and the CHECK take them. */
+export const keysOf = <const P extends readonly Pack[]>(packs: P) => packs.map((p) => p.key) as unknown as Keys<P>
+/** The tiles, in tile order. */
+export const tilesOf = <const P extends readonly Pack[]>(packs: P) =>
+  [...packs].sort((a, b) => a.tile.order - b.tile.order).map((p) => ({ key: p.key, ...p.tile })) as readonly Tile<P[number]['key']>[]
 
 export function registry<const P extends readonly Pack[]>(packs: P) {
   const byKey = new Map<string, Pack>(packs.map((p) => [p.key, p]))
   /** The packs a store sells, in the store's own order; an empty list is UNSAID, an unknown key is ignored. */
   const of = (sells: readonly string[]): Pack[] => (sells.length ? sells : UNSAID).flatMap((k) => byKey.get(k) ?? [])
-  const keys = packs.map((p) => p.key) as unknown as Keys<P>
-  const tiles: readonly Tile[] = [...packs].sort((a, b) => a.tile.order - b.tile.order).map((p) => ({ key: p.key, ...p.tile }))
   return {
-    keys,
-    tiles,
+    keys: keysOf(packs),
+    tiles: tilesOf(packs),
     /** shop_settings.default_hsn at sign-up: the lowest-ranked pack's code. A prefill, never a fallback at checkout. */
     startingHsn: (sells: readonly string[]): string =>
       of(sells).reduce<Pack | null>((best, p) => (!best || p.startingHsn.rank < best.startingHsn.rank ? p : best), null)?.startingHsn.code ?? FALLBACK_HSN,
