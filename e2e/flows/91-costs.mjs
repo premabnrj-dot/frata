@@ -116,7 +116,7 @@ export default {
         const { ctx, p } = await open('frata')
         await p.goto(CONSOLE + '/admin/costs')
         await p.getByText('1 cost is overdue').waitFor()
-        await p.getByText('Overdue 3 days').first().waitFor()
+        await p.getByText('Overdue 3 days', { exact: true }).first().waitFor()
         await p.screenshot({ path: t.out('overview'), fullPage: true })
         await ctx.close()
       })
