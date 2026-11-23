@@ -45,5 +45,5 @@ export const TOOL_ERRORS = {
   unavailable: 'This is not available yet. Tell the person so.',
   failed: 'That did not work on Frrata’s side. Nothing was changed.',
   // Studio's own database setting is wrong (DATABASE_URL_BUILDER; production 2026-11-23): no retry helps until Frrata fixes it.
-  setup: 'Studio cannot read this store until Frrata finishes its setup. Nothing was changed. Tell the person this, word for word. Studio can’t read your store yet. Frrata needs to fix its setup. Try again later.',
+  setup: 'Nothing was changed. Tell the person, word for word. Studio can’t read your store yet. Frrata is fixing it.',
 } as const

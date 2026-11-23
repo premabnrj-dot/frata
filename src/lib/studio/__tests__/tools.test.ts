@@ -41,7 +41,7 @@ describe('the tool runner', () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {})
     reads.facts = async () => { throw new DbUrlError('[db] DATABASE_URL_BUILDER must log in as frata_builder.<project-ref>, not another role') }
     expect(await outcomeOf(ctx, { name: 'store_facts', input: {} })).toEqual({ answer: { error: TOOL_ERRORS.setup }, isError: true })
-    expect(TOOL_ERRORS.setup).toMatch(/word for word\. Studio can’t read your store yet\./)
+    expect(TOOL_ERRORS.setup).toMatch(/word for word\. Studio can’t read your store yet\. Frrata is fixing it\./)
     expect(err).toHaveBeenCalledWith('[studio] tool', 'store_facts', 'DbUrlError', '[db] DATABASE_URL_BUILDER must log in as frata_builder.<project-ref>, not another role')
     reads.facts = async () => { throw new Error('postgresql://frata_builder.ref:secret@host/db') }
     await outcomeOf(ctx, { name: 'store_facts', input: {} })

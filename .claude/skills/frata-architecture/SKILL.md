@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.16.0
+  version: 3.17.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -310,7 +310,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
   header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security). Framed only by the
   console itself (SAMEORIGIN, `frame-ancestors 'self'`, on the console host; DENY elsewhere): `/console/theme-preview/*`
-  and, for Studio's preview pane, `/console/preview[/*]` (`src/lib/__tests__/framing.test.ts`).
+  and, for Studio's preview pane, `/console/studio-preview[/*]`: the store alone, `requireStudio`'s store only, in an iframe sandboxed to `allow-same-origin` (owner 2026-11-23; `/console/preview` is DENY like every console page; `src/lib/__tests__/framing.test.ts`).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does; `requireShop` also weighs `Sec-Fetch-Site` (`src/lib/auth/fetch-site.ts`: sibling stores

@@ -13,7 +13,7 @@ Read with `SKILL.md` § Studio's agent (the rules) and `docs/plans/2026-11-22-v3
   (`src/lib/queries/studio.ts`, under withStudio, the person's own latest session, keyset on `seq`) through the rows route,
   whose `after()` runs `pollAdvance` on the person's own open turn (no id from the request; cross-site refused).
   Apply (`src/lib/studio/apply.ts`) runs `saveBrand` with the version the person holds; a card reads Applied only when the
-  change went live; refused on a store with an owner until V3b. The preview pane frames `/console/preview`.
+  change went live; refused on a store with an owner until V3b. The preview pane frames `/console/studio-preview`: the store alone, never the console (owner 2026-11-23).
 - **Send and the cron**: `src/lib/studio/sessions.ts` (send, start, Stop, the poll's advance; imported by the Studio
   actions and rows route only) and `src/lib/studio/cron.ts` (end, clean, delete from `app_studio_due`'s ids, no bind;
   imported by the cron route only). With Studio unconfigured the cron still ends open sessions as `switch` and revokes
