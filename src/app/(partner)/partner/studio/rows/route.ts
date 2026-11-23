@@ -14,6 +14,9 @@ export const maxDuration = 30
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 
 export async function GET(request: Request) {
+  // Read by this page's own script only: a cross-site request (a link elsewhere) neither reads nor advances anything
+  // (security review of R7, LOW-3; the advance's lease already skips repeats within 5 s).
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return NextResponse.json({ closed: true }, { status: 403, headers: NO_STORE })
   const auth = await requireStudio()
   if (!auth.ok) return NextResponse.json({ closed: true }, { status: 403, headers: NO_STORE })
   const raw = new URL(request.url).searchParams.get('after')

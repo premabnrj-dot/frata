@@ -156,11 +156,15 @@ export default {
       const [s3] = await db`insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id) values (${S}, ${pm.p}, ${pm.m}, ${P.id}) returning id`
       const [t3] = await db`insert into studio_turns (tenant_id, partner_id, session_id, started_at, user_message_event_id) values (${S}, ${pm.p}, ${s3.id}, now(), 'sevt_e2e_slow') returning id`
       await db`insert into studio_messages (tenant_id, partner_id, session_id, kind, text) values (${S}, ${pm.p}, ${s3.id}, 'person', 'Make the accent warmer')`
-      await db`insert into studio_tool_calls (tenant_id, partner_id, session_id, turn_id, tool_use_id, name, input, executed_at, result, is_error, answered_at)
-        values (${S}, ${pm.p}, ${s3.id}, ${t3.id}, 'sevt_e2e_a', 'store_facts', '{}', now(), '{}', false, now()), (${S}, ${pm.p}, ${s3.id}, ${t3.id}, 'sevt_e2e_b', 'tokens_propose', '{}', null, null, null, null)`
+      await db`insert into studio_tool_calls (tenant_id, partner_id, session_id, turn_id, tool_use_id, name, input, created_at, executed_at, result, is_error, answered_at)
+        values (${S}, ${pm.p}, ${s3.id}, ${t3.id}, 'sevt_e2e_a', 'store_facts', '{}', now() - interval '2 seconds', now(), '{}', false, now()),
+               (${S}, ${pm.p}, ${s3.id}, ${t3.id}, 'sevt_e2e_b', 'tokens_propose', '{}', now() - interval '1 second', null, null, null, null)`
       await p.reload()
       await chat.getByText('Read the brand').waitFor()
       await chat.getByText('Checking the colours').waitFor()
+      // As drawn: what was done first, then what is running.
+      const lines = await chat.locator('ul li').allInnerTexts()
+      assert.ok(lines.findIndex((l) => l.startsWith('Read the brand')) < lines.findIndex((l) => l.startsWith('Checking the colours')), lines.join(' | '))
       await chat.getByText('Working · you can still type').waitFor()
       await chat.getByRole('button', { name: 'Stop' }).waitFor()
       await p.screenshot({ path: 'e2e/.out/97-studio-agent-3-working.png' })

@@ -6,6 +6,7 @@ import { saveBrand } from '@/lib/content/save'
 import { requireMember } from '@/lib/auth/require-member'
 import { storeSvgLogo } from '@/lib/media/brand-files'
 import { errName } from '@/lib/log'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { LOGO_SLOT } from '@/domains/studio/proposals'
 import { withStudio, type StudioOk } from './with-studio'
 
@@ -20,6 +21,8 @@ import { withStudio, type StudioOk } from './with-studio'
 
 export const OWNER_STORE = 'Change this in the store’s own console. Nothing was changed.'
 const GONE = 'This change is already applied or set aside. Nothing was changed.'
+const WAITS = 'The owner decides this change in Notices.'
+const LIMIT = 'You sent 60 requests this hour. Ask again in an hour.'
 
 type Proposal = { id: string; kind: string; value: unknown; decided: boolean; ownerOrOpen: boolean }
 
@@ -42,6 +45,7 @@ async function mark(auth: StudioOk, id: string, set: Partial<typeof studioPropos
   await withStudio(auth, (tx) => tx.update(studioProposals).set(set)
     .where(and(eq(studioProposals.tenantId, auth.tenantId), eq(studioProposals.id, id), isNull(studioProposals.appliedAt), isNull(studioProposals.dismissedAt),
       sql`${studioProposals.sessionId} in (select s.id from studio_sessions s where s.tenant_id = ${auth.tenantId} and s.user_id = ${auth.userId})`)))
+    .catch((e) => console.error('[studio] mark', errName(e))) // its class only (security review of R7, LOW-4)
 }
 
 export type ApplyResult = { ok: true } | { ok: false; error: string }
@@ -57,6 +61,8 @@ export async function applyProposal(auth: StudioOk, id: string, version: number 
   if (p.kind === 'logo') {
     const svg = (p.value as { svg?: unknown } | null)?.svg
     if (typeof svg !== 'string') return { ok: false, error: GONE }
+    // A logo is stored before the save counts its own limit: counted here first, per person (security review of R7, LOW-2).
+    if (!(await withinLimit(LIMITS.studioSendUser, auth.userId, new Date(), true))) return { ok: false, error: LIMIT }
     const stored = await storeSvgLogo(auth.tenantId, svg)
     if (!stored.ok) { await mark(auth, id, { refusedAt: new Date(), refusedReason: stored.error.slice(0, 300) }); return { ok: false, error: stored.error } }
     patch = { logos: { [LOGO_SLOT]: stored.url } }
@@ -67,6 +73,12 @@ export async function applyProposal(auth: StudioOk, id: string, version: number 
   if (!r.ok) {
     await mark(auth, id, { refusedAt: new Date(), refusedReason: r.error.slice(0, 300) })
     return { ok: false, error: r.error }
+  }
+  // Applied only when the change is live (or already was): a change that waits for an owner who arrived meanwhile is the
+  // owner's to decide, in Notices (security review of R7, LOW-1).
+  if (r.outcome === 'waits') {
+    await mark(auth, id, { refusedAt: new Date(), refusedReason: WAITS })
+    return { ok: false, error: WAITS }
   }
   await mark(auth, id, { appliedAt: new Date(), appliedBy: auth.userId, refusedAt: null, refusedReason: null })
   return { ok: true }
