@@ -97,7 +97,7 @@ export type BrandNoticeState = 'open' | 'approved' | 'declined' | 'replaced'
 const notSelf = (userId: string) => or(isNull(notices.by), ne(notices.by, userId))
 /** What this member may be shown: everything but their own changes, and a partner's ask only for owners and Managers
  *  (PP1; app_notice_members holds the same for email). */
-const shownTo = (userId: string, role: string) => (seesAsks(role) ? notSelf(userId) : and(notSelf(userId), notInArray(notices.sourceKind, ['ask_owner', 'brand'])))
+const shownTo = (userId: string, role: string) => (seesAsks(role) ? notSelf(userId) : and(notSelf(userId), notInArray(notices.sourceKind, ['ask_owner', 'brand', 'partner_request'])))
 
 /** The latest notices for this member, newest first, with whether they read each. `role` is the member's (a support
  *  visit's is the owner's). */

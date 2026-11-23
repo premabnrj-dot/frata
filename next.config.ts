@@ -29,14 +29,15 @@ const config: NextConfig = {
   async rewrites() {
     return { beforeFiles: [...apiRewrites(API_HOST), ...shopRewrites(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST, API_HOST)], afterFiles: [], fallback: [] }
   },
-  // Every response may not be framed (DENY), except the customizer's look preview and the store preview on the console
-  // host, which the console itself frames (themes spec § Preview; Studio's preview pane, V3a R7). A later entry can't
+  // Every response may not be framed (DENY), except the customizer's look preview and Studio's store-only preview on the
+  // console host, which the console itself frames (themes spec § Preview; owner 2026-11-23: Studio's pane is the store
+  // alone, so /console/preview, with the console around it, is DENY like every other console page). A later entry can't
   // remove X-Frame-Options, so the global entry skips those paths and two entries cover each: SAMEORIGIN on the console
   // host, DENY on any other host.
   async headers() {
     return [
-      { source: '/:path((?!console/theme-preview/|console/preview(?:/|$)).*)', headers: SECURITY_HEADERS },
-      ...['/console/preview', '/console/preview/:path*'].flatMap((source) => [
+      { source: '/:path((?!console/theme-preview/|console/studio-preview(?:/|$)).*)', headers: SECURITY_HEADERS },
+      ...['/console/studio-preview', '/console/studio-preview/:path*'].flatMap((source) => [
         { source, has: [{ type: 'host' as const, value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
         { source, missing: [{ type: 'host' as const, value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
       ]),

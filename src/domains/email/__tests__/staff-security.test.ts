@@ -22,4 +22,11 @@ describe('staff security emails', () => {
     expect(staffSecurityWords({ kind: 'partner_role_changed', about: 'meera@pixelthread.in', by: 'ananya@pixelthread.in', detail: 'Builder' }))
       .toEqual({ subject: 'meera@pixelthread.in is now a Builder', body: 'ananya@pixelthread.in made meera@pixelthread.in a Builder. Their stores stay the same.' })
   })
+  it('words the two store invitations (Settings › People), with a fallback for a missing sender or role', () => {
+    expect(staffSecurityWords({ kind: 'store_invite', about: 'House Of Ayuda', by: 'prem@ayuda.in', detail: 'staff' }))
+      .toEqual({ subject: 'prem@ayuda.in added you to House Of Ayuda', body: 'Sign in to join as Staff. This invitation expires in 14 days.' })
+    expect(staffSecurityWords({ kind: 'store_invite', about: 'House Of Ayuda', by: null, detail: null }).body).toMatch(/as a member/)
+    expect(staffSecurityWords({ kind: 'store_partner_invite', about: 'House Of Ayuda', by: 'prem@ayuda.in', detail: null }))
+      .toEqual({ subject: 'House Of Ayuda wants you as its partner', body: 'prem@ayuda.in sent this invitation. It expires in 14 days.' })
+  })
 })

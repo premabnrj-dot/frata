@@ -5,6 +5,7 @@ import { attachDatabasePool } from '@vercel/functions'
 import { DATABASE_URL } from '@/lib/env'
 import * as schema from './schema'
 import { parseDatabaseUrl } from './url'
+import { onePerConnection } from './one-per-connection'
 
 // =============================================================================
 // FILE: src/lib/db/index.ts
@@ -26,6 +27,7 @@ import { parseDatabaseUrl } from './url'
  * The pool (speed review P12): an idle connection is let go after 20 s, so warm-but-idle functions stop holding
  * Supavisor's client slots (about 200 on small tiers: 20 instances × 10 used them all); a connect that hangs
  * fails in 5 s; a connection is renewed every 10 minutes. `prepare: false` for Supavisor's transaction mode.
+ * Every pool is wrapped in `onePerConnection` (./one-per-connection.ts): no query is sent behind another on a connection.
  */
 export const POOL = { prepare: false, max: 10, idle_timeout: 20, connect_timeout: 5, max_lifetime: 600 } as const
 
@@ -59,7 +61,7 @@ let raw: ReturnType<typeof postgres> | null = null
 export function db() {
   if (!client) {
     attachPool()
-    raw = postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL)
+    raw = onePerConnection(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), POOL.max)
     client = drizzle(raw, { schema, logger: releaseOnQuery })
   }
   return client

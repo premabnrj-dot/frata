@@ -6,6 +6,7 @@ import type { IngestBatch } from '@/domains/analytics/event'
 import { ANALYTICS_DATABASE_URL } from '@/lib/env'
 import * as schema from './analytics-schema'
 import { attachPool, POOL, poolReleased, releaseOnQuery } from './index'
+import { onePerConnection } from './one-per-connection'
 import { parseDatabaseUrl } from './url'
 
 // =============================================================================
@@ -26,7 +27,7 @@ let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 function analyticsDb() {
   if (!client) {
     attachPool()
-    client = drizzle(postgres(parseDatabaseUrl(ANALYTICS_DATABASE_URL, 'frata_app', 'ANALYTICS_DATABASE_URL'), ANALYTICS_POOL), { schema, logger: releaseOnQuery })
+    client = drizzle(onePerConnection(postgres(parseDatabaseUrl(ANALYTICS_DATABASE_URL, 'frata_app', 'ANALYTICS_DATABASE_URL'), ANALYTICS_POOL), ANALYTICS_POOL.max), { schema, logger: releaseOnQuery })
   }
   return client
 }

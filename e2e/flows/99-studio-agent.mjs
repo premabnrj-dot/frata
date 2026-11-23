@@ -166,10 +166,38 @@ export default {
     await t.step('states 7 and 8: the store’s own preview; Code and Checks empty', async () => {
       await p.getByText('Store preview').first().waitFor()
       await p.getByText('Drafts included').waitFor()
-      assert.equal(await p.locator('iframe[title="Store preview"]').getAttribute('src'), '/console/preview')
-      // Framed by the console, same origin only: the store's own page is drawn in the pane (not refused).
+      // The store alone (owner 2026-11-23): its own bare document, sandboxed with nothing but same-origin.
+      const pane = p.locator('iframe[title="Store preview"]')
+      assert.equal(await pane.getAttribute('src'), '/console/studio-preview')
+      assert.equal(await pane.getAttribute('sandbox'), 'allow-same-origin')
       const frame = p.frameLocator('iframe[title="Store preview"]')
-      await until(async () => ((await frame.locator('body').innerText().catch(() => '')) ?? '').trim().length > 0, 15_000)
+      await frame.getByText('Kesar test').first().waitFor()
+      // No console in the frame: no console or Admin link, no Building-for bar, no Hand over, no Back to products.
+      const out = await frame.locator('a[href]').evaluateAll((as) => as.map((a) => a.getAttribute('href')).filter((h) => /^\/(console|admin|partner)(\/|$)/.test(h) && !/^\/console\/studio-preview(\/|$)/.test(h)))
+      assert.deepEqual(out, [], 'a link out of the store preview')
+      for (const words of ['Hand over', 'Back to products', 'Building for', 'No owner yet']) assert.equal(await frame.getByText(words).count(), 0, `"${words}" in the store preview`)
+      // A link inside the store moves the frame within the preview, never Studio's window.
+      const inner = frame.locator('a[href^="/console/studio-preview/"]').first()
+      if (await inner.count()) {
+        await inner.click()
+        await until(async () => p.frames().some((f) => f.url().includes('/console/studio-preview/')), 10_000)
+        assert.ok(p.url().endsWith('/partner/studio'), 'Studio itself never navigated')
+      }
+      // Framing: the store-only preview by the console itself only; the console's own preview and every console page never.
+      const head = async (path, c = ctx) => (await c.request.get(CONSOLE + path, { maxRedirects: 0 })).headers()
+      const sp = await head('/console/studio-preview')
+      assert.equal(sp['x-frame-options'], 'SAMEORIGIN')
+      assert.match(sp['content-security-policy'] ?? '', /frame-ancestors 'self'/)
+      for (const path of ['/console/preview', '/console/products', '/admin']) assert.equal((await head(path))['x-frame-options'], 'DENY', `${path} may be framed`)
+      // Not for anyone else: the store's own owner (no Studio) gets nothing; the store is never taken from the URL.
+      const other = await signedIn(t.browser, 'owner', { viewport: { width: 800, height: 600 } })
+      await other.addCookies([{ name: 'frata_tenant', value: S, domain: 'localhost', path: '/' }])
+      assert.equal((await other.request.get(CONSOLE + '/console/studio-preview', { maxRedirects: 0 })).status(), 404)
+      const asked = await ctx.request.get(CONSOLE + `/console/studio-preview?tenant=${KESAR}`, { maxRedirects: 0 })
+      assert.equal(asked.status(), 200)
+      assert.ok((await asked.text()).includes('Kesar test'), 'a URL parameter chose another store')
+      await other.close()
+      await p.goto(URL); await p.getByText('Store preview').first().waitFor()
       await insp.getByRole('tab', { name: 'Code' }).click()
       await insp.getByText('No code yet').waitFor()
       await insp.getByRole('tab', { name: 'Checks' }).click()

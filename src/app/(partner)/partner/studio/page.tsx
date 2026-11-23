@@ -72,7 +72,7 @@ export default async function StudioPage() {
   return (
     <Toaster>
       <h1 className="sr-only">Studio</h1>
-      <StudioApp store={auth.tenantName} chat={chat} version={brand.version} design={<BrandRead brand={brand.brand?.record ?? null} />} empty={{
+      <StudioApp store={auth.tenantName} storeId={auth.tenantId} chat={chat} version={brand.version} design={<BrandRead brand={brand.brand?.record ?? null} />} empty={{
         feed: <Empty title={W.empty}><span className="text-muted-foreground">{auth.tenantName} · test store</span></Empty>,
         code: <Empty title={W.noCode.title}><span className="text-muted-foreground">{W.noCode.line}</span></Empty>,
         checks: <Empty title={W.noChecks.title}><span className="text-muted-foreground">{W.noChecks.line}</span></Empty>,

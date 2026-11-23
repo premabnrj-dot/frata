@@ -4,6 +4,7 @@ import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { builderActor, type BuilderActor } from '@/lib/db/actor'
 import { isStudioConfigured, STUDIO_OPEN } from '@/lib/env'
+import { DbUrlError, urlProblem } from '@/lib/db/url'
 
 // =============================================================================
 // FILE: src/lib/studio/as-turn.ts — THE ONE CHOKEPOINT FOR A TOOL CALL (ADR-0020 point 4; plan
@@ -28,6 +29,9 @@ export type TurnContext = {
 
 export type TurnRefusal = 'switch' | 'actor'
 export class TurnUnbound extends Error { override name = 'TurnUnbound' }
+/** A read or write failed on Studio's own database setting (DATABASE_URL_BUILDER): the rule it broke, never its value;
+ *  '' for any other failure. */
+export const setupProblem = (err: unknown): string => (err instanceof DbUrlError ? urlProblem(err) || 'DbUrlError' : '')
 
 /** The turn's person re-checked now, in a short transaction that closes before any read or call. */
 async function actorLive(t: TurnRef): Promise<boolean> {

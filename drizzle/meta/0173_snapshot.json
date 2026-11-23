@@ -1,5 +1,5 @@
 {
-  "id": "527e77bb-fa23-4a3f-8bde-06c557192a94",
+  "id": "77a7ea5d-f4f0-4281-baac-60d9061df0d3",
   "prevId": "725e2179-ee71-4bd1-b7ec-df7379de0422",
   "version": "7",
   "dialect": "postgresql",
@@ -705,6 +705,13 @@
           "notNull": true,
           "default": "'{}'::text[]"
         },
+        "people_limit": {
+          "name": "people_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -771,7 +778,7 @@
         },
         "plan_versions_numbers": {
           "name": "plan_versions_numbers",
-          "value": "\"plan_versions\".\"monthly_price\" >= 0 and \"plan_versions\".\"included_orders\" >= 0"
+          "value": "\"plan_versions\".\"monthly_price\" >= 0 and \"plan_versions\".\"included_orders\" >= 0 and \"plan_versions\".\"people_limit\" >= 0"
         }
       },
       "isRLSEnabled": false
@@ -8203,6 +8210,150 @@
       },
       "isRLSEnabled": false
     },
+    "public.partner_requests": {
+      "name": "partner_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "declined_at": {
+          "name": "declined_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partner_id": {
+          "name": "partner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "partner_requests_one_open": {
+          "name": "partner_requests_one_open",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"partner_requests\".\"accepted_at\" is null and \"partner_requests\".\"declined_at\" is null and \"partner_requests\".\"cancelled_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "partner_requests_email": {
+          "name": "partner_requests_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"partner_requests\".\"accepted_at\" is null and \"partner_requests\".\"declined_at\" is null and \"partner_requests\".\"cancelled_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "partner_requests_tenant_id_tenants_id_fk": {
+          "name": "partner_requests_tenant_id_tenants_id_fk",
+          "tableFrom": "partner_requests",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "partner_requests_partner_id_partners_id_fk": {
+          "name": "partner_requests_partner_id_partners_id_fk",
+          "tableFrom": "partner_requests",
+          "tableTo": "partners",
+          "columnsFrom": [
+            "partner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "partner_requests_email": {
+          "name": "partner_requests_email",
+          "value": "\"partner_requests\".\"email\" = lower(\"partner_requests\".\"email\") and char_length(\"partner_requests\".\"email\") between 3 and 254"
+        },
+        "partner_requests_one_end": {
+          "name": "partner_requests_one_end",
+          "value": "num_nonnulls(\"partner_requests\".\"accepted_at\", \"partner_requests\".\"declined_at\", \"partner_requests\".\"cancelled_at\") <= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.partner_stepups": {
       "name": "partner_stepups",
       "schema": "",
@@ -12503,28 +12654,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "frrata_invoices_test": {
-          "name": "frrata_invoices_test",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"frrata_invoices\".\"test_mode\"",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -12794,38 +12923,6 @@
           ],
           "isUnique": false,
           "where": "\"frrata_payments\".\"over_paid\" > 0 and \"frrata_payments\".\"refunded_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "frrata_payments_captured": {
-          "name": "frrata_payments_captured",
-          "columns": [
-            {
-              "expression": "captured_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"frrata_payments\".\"captured_at\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "frrata_payments_refunded": {
-          "name": "frrata_payments_refunded",
-          "columns": [
-            {
-              "expression": "refunded_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"frrata_payments\".\"refunded_at\" is not null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -16998,7 +17095,7 @@
         },
         "notices_source": {
           "name": "notices_source",
-          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment','content','ask_owner','brand')"
+          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment','content','ask_owner','brand','partner_request')"
         },
         "notices_href": {
           "name": "notices_href",
@@ -17557,7 +17654,7 @@
       "checkConstraints": {
         "staff_notices_kind": {
           "name": "staff_notices_kind",
-          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed','passkeys_off','passkeys_on')"
+          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed','passkeys_off','passkeys_on','store_invite','store_partner_invite')"
         }
       },
       "isRLSEnabled": false
@@ -23850,348 +23947,6 @@
         "cost_payments_note": {
           "name": "cost_payments_note",
           "value": "\"cost_payments\".\"note\" is null or length(\"cost_payments\".\"note\") <= 300"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cash_accounts": {
-      "name": "cash_accounts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "cash_accounts_name": {
-          "name": "cash_accounts_name",
-          "value": "length(btrim(\"cash_accounts\".\"name\")) between 1 and 60"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cash_balances": {
-      "name": "cash_balances",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "as_of": {
-          "name": "as_of",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "balance_paise": {
-          "name": "balance_paise",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "cash_balances_latest": {
-          "name": "cash_balances_latest",
-          "columns": [
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "as_of",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "cash_balances_account_fk": {
-          "name": "cash_balances_account_fk",
-          "tableFrom": "cash_balances",
-          "tableTo": "cash_accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "cash_balances_amount": {
-          "name": "cash_balances_amount",
-          "value": "\"cash_balances\".\"balance_paise\" between -100000000000 and 100000000000"
-        },
-        "cash_balances_day": {
-          "name": "cash_balances_day",
-          "value": "\"cash_balances\".\"as_of\" between '2020-01-01' and '2100-12-31'"
-        },
-        "cash_balances_note": {
-          "name": "cash_balances_note",
-          "value": "\"cash_balances\".\"note\" is null or length(\"cash_balances\".\"note\") <= 300"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cash_entries": {
-      "name": "cash_entries",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount_paise": {
-          "name": "amount_paise",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "happened_on": {
-          "name": "happened_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "expected_on": {
-          "name": "expected_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "cash_entries_happened": {
-          "name": "cash_entries_happened",
-          "columns": [
-            {
-              "expression": "happened_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cash_entries_planned": {
-          "name": "cash_entries_planned",
-          "columns": [
-            {
-              "expression": "expected_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"cash_entries\".\"happened_on\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "cash_entries_account_fk": {
-          "name": "cash_entries_account_fk",
-          "tableFrom": "cash_entries",
-          "tableTo": "cash_accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "cash_entries_kind": {
-          "name": "cash_entries_kind",
-          "value": "\"cash_entries\".\"kind\" in ('funding','loan','grant','owner_capital','other_in','gst_paid','tds_paid','tax_paid','loan_repayment','owner_draw','other_out')"
-        },
-        "cash_entries_amount": {
-          "name": "cash_entries_amount",
-          "value": "\"cash_entries\".\"amount_paise\" between 1 and 100000000000"
-        },
-        "cash_entries_when": {
-          "name": "cash_entries_when",
-          "value": "(\"cash_entries\".\"happened_on\" is not null and \"cash_entries\".\"expected_on\" is null) or (\"cash_entries\".\"happened_on\" is null and \"cash_entries\".\"expected_on\" is not null)"
-        },
-        "cash_entries_days": {
-          "name": "cash_entries_days",
-          "value": "(\"cash_entries\".\"happened_on\" is null or \"cash_entries\".\"happened_on\" between '2020-01-01' and '2100-12-31') and (\"cash_entries\".\"expected_on\" is null or \"cash_entries\".\"expected_on\" between '2020-01-01' and '2100-12-31')"
-        },
-        "cash_entries_note": {
-          "name": "cash_entries_note",
-          "value": "\"cash_entries\".\"note\" is null or length(\"cash_entries\".\"note\") <= 300"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cash_settings": {
-      "name": "cash_settings",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "smallint",
-          "primaryKey": true,
-          "notNull": true,
-          "default": 1
-        },
-        "floor_paise": {
-          "name": "floor_paise",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "main_account_id": {
-          "name": "main_account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "cash_settings_main_fk": {
-          "name": "cash_settings_main_fk",
-          "tableFrom": "cash_settings",
-          "tableTo": "cash_accounts",
-          "columnsFrom": [
-            "main_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "cash_settings_one": {
-          "name": "cash_settings_one",
-          "value": "\"cash_settings\".\"id\" = 1"
-        },
-        "cash_settings_floor": {
-          "name": "cash_settings_floor",
-          "value": "\"cash_settings\".\"floor_paise\" is null or \"cash_settings\".\"floor_paise\" between 0 and 100000000000"
         }
       },
       "isRLSEnabled": false

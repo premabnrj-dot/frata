@@ -100,7 +100,7 @@ export default {
         await p.getByText('Main', { exact: true }).waitFor()
         await p.getByText('₹1,75,000').first().waitFor()
         await p.screenshot({ path: t.out('accounts') })
-        await p.getByRole('button', { name: 'Undo balance' }).click()
+        await p.getByRole('button', { name: /^Undo .* balance$/ }).click()
         await until(async () => (await db`select count(*)::int n from cash_balances`)[0].n === 0)
         assert.equal((await db`select count(*)::int n from audit_events where action = 'cash.balance.undo'`)[0].n, 1, 'the undo is audited')
         await ctx.close()

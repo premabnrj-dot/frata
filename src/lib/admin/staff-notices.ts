@@ -31,9 +31,12 @@ export async function sendStaffNotices(limit = 20): Promise<number> {
     const partner = isPartnerNotice(r.kind)
     const mail = frrataEmail({ preview: w.subject, heading: w.subject, message: w.body,
       // An owner's request goes to Frrata's admins too (they make the call): its button opens Admin › Partners.
-      button: r.kind === 'partner_request_made' ? { label: 'Open Frrata Admin › Partners', href: `https://${CONSOLE_HOST}/admin/partners?view=approved` }
+      button: r.kind === 'store_invite' ? { label: `Sign in to ${r.about}`.slice(0, 80), href: `https://${CONSOLE_HOST}/login` }
+        : r.kind === 'store_partner_invite' ? { label: 'Open invitation', href: `https://${CONSOLE_HOST}/partner` }
+        : r.kind === 'partner_request_made' ? { label: 'Open Frrata Admin › Partners', href: `https://${CONSOLE_HOST}/admin/partners?view=approved` }
         : partner ? { label: 'Open the partner workspace', href: `https://${CONSOLE_HOST}/partner` } : { label: 'Open Frrata Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
-      footer: r.kind === 'partner_request_made' ? 'Sent to the partner owner and every master admin. Not expected? Tell Frrata now.'
+      footer: r.kind === 'store_invite' || r.kind === 'store_partner_invite' ? 'Not expecting this? Ignore it. Nothing happens until you sign in and accept.'
+        : r.kind === 'partner_request_made' ? 'Sent to the partner owner and every master admin. Not expected? Tell Frrata now.'
         : partner ? 'Sent to you and your partner owner. Not expected? Tell them or Frrata now.'
         : 'Security emails about Frrata staff always reach every master admin. Not expected? Check Frrata Admin › Staff now.' })
     const s = await sendEmail({ from: EMAIL_NOTICES_FROM, to: r.to_email, replyTo: null, subject: w.subject.slice(0, 150), html: mail.html, text: mail.text,

@@ -25,14 +25,15 @@ describe('framing headers', () => {
     expect(framed.headers.find((h) => h.key === 'Content-Security-Policy')?.value).toMatch(/frame-ancestors 'self'; object-src 'none'; base-uri 'self'/)
     expect(preview.find((r) => frameOf(r) === 'DENY')!.missing?.[0]).toMatchObject({ type: 'host' })
   })
-  it('the store preview Studio frames (V3a R7): SAMEORIGIN on the console host only; nothing near it is opened', async () => {
+  it('Studio\'s store-only preview (owner 2026-11-23): SAMEORIGIN on the console host only; the console\'s own preview and everything near it DENY', async () => {
     const rules = await config.headers!()
     const frameOf = (r: (typeof rules)[number]) => r.headers.find((h) => h.key === 'X-Frame-Options')?.value
     const global = rules.find((r) => r.source.startsWith('/:path'))!
     const re = new RegExp(`^${global.source.replace('/:path(', '/(')}$`)
-    for (const p of ['/console/preview', '/console/preview/products/x']) expect(re.test(p)).toBe(false)
-    for (const p of ['/console/previews', '/console/preview-x', '/console/products', '/partner/studio']) expect(re.test(p)).toBe(true)
-    for (const source of ['/console/preview', '/console/preview/:path*']) {
+    for (const p of ['/console/studio-preview', '/console/studio-preview/products/x']) expect(re.test(p)).toBe(false)
+    for (const p of ['/console/preview', '/console/preview/products/x', '/console/studio-previews', '/console/studio-preview-x', '/console/products', '/partner/studio']) expect(re.test(p)).toBe(true)
+    expect(rules.filter((r) => r.source.startsWith('/console/preview'))).toEqual([])
+    for (const source of ['/console/studio-preview', '/console/studio-preview/:path*']) {
       const these = rules.filter((r) => r.source === source)
       expect(these.map(frameOf).sort()).toEqual(['DENY', 'SAMEORIGIN'])
       expect(these.find((r) => frameOf(r) === 'SAMEORIGIN')!.has?.[0]).toMatchObject({ type: 'host' })

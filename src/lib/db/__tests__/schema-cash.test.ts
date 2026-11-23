@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { CASH_KINDS, CASH_MAX, KIND_DIRECTION } from '@/domains/admin/cash'
 
-// The CHECK list in drizzle/0173 is frozen text; the engine's tuple is code. They must say the same.
-const sql = readFileSync('drizzle/0173_admin_cash.sql', 'utf8')
+// The CHECK list in drizzle/0175 is frozen text; the engine's tuple is code. They must say the same.
+const sql = readFileSync('drizzle/0175_admin_cash.sql', 'utf8')
 
 describe('the Cash migration matches the engine', () => {
   it('cash_entries_kind lists exactly the kinds, in order', () => {

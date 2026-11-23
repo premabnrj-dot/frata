@@ -2227,9 +2227,10 @@ do $$ begin
 end $$;
 
 -- 52. The Accountant (0072): only an owner or admin of THIS shop invites, lists or revokes an accountant; the role is
--- fixed; remove takes accountants only; no API role or staff runs the definers.
+-- fixed; remove takes accountants only; no API role or staff runs the definers. Since 0174 the app runs none of them
+-- (Settings › People's app_invite_person replaced them): their own checks are proved here as the definer's owner.
 insert into members (tenant_id, user_id, role) values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'staff');
-begin; set local role frata_app;
+begin;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ declare i uuid; begin
   begin perform app_invite_accountant('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'ca@example.in'); raise exception 'FAIL: staff invited an accountant';
@@ -2249,7 +2250,7 @@ do $$ declare i uuid; begin
 end $$;
 rollback;
 do $$ begin
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_app']) r,
              unnest(array['app_invite_accountant(uuid,uuid,text)', 'app_remove_accountant(uuid,uuid,uuid)', 'app_accountant_invites(uuid)', 'app_revoke_accountant_invite(uuid,uuid,uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
 end $$;
@@ -6445,6 +6446,11 @@ do $$ declare t uuid; begin
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs past its staff check'; end if;
   update staff_stepups set expires_at = now() + interval '1 hour' where user_id = 'a9100000-0000-0000-0000-000000000002';
   if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
+  -- A suspended partner's turn stops at its next check (stress list, 2026-11-23); reinstated, it runs again.
+  update partners set suspended_at = now() where id = (select partner_id from studio_turns where id = t);
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a suspended partner''s turn still runs'; end if;
+  update partners set suspended_at = null where id = (select partner_id from studio_turns where id = t);
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the reinstated partner''s turn has no actor'; end if;
   -- A turn opened while passkeys were off from Admin (0171) holds no step-up: it runs only while they stay off, and ends
   -- at its next check once an Admin turns them on (orchestrator 2026-11-23: "that is the right direction").
   create temp table k91 on commit drop as select turn_id, staff_stepup_id, partner_stepup_id from studio_turn_keys where turn_id = t;
@@ -6677,15 +6683,140 @@ do $$ begin
   if (select rate_e4 from admin_fx_rate_latest()) is distinct from 942000 then raise exception 'FAIL: 102 Admin cannot read the latest rate'; end if;
 end $$;
 rollback;
--- 103. Admin › Cashflow (drizzle/0173; spec docs/specs/2026-11-23-admin-cashflow.md, reviews 2026-11-23): four platform tables only frata_admin
+
+-- § 103 · Settings › People (drizzle/0173–0174; docs/specs/2026-11-23-add-partner.md). The owner and a Manager add
+-- people by role inside their own store only; a Manager gives Staff and Accountants only; the people limit holds; a
+-- partner invited by email sees only invitations to its own confirmed address; accept writes a no-share link and
+-- deletes the partner's older keys; another partner, a Lead and a store read nothing they weren't sent.
+begin;
+insert into tenants (id, slug, name) values ('10300000-0000-0000-0000-0000000000a1', 'proof-103', 'Proof 103'), ('10300000-0000-0000-0000-0000000000a2', 'proof-103b', 'Proof 103 B');
+insert into auth.users (id, email, email_confirmed_at) values
+  ('10300000-0000-0000-0000-0000000000f1', 'owner@p103.test', now()), ('10300000-0000-0000-0000-0000000000f2', 'manager@p103.test', now()),
+  ('10300000-0000-0000-0000-0000000000f3', 'po@p103.test', now()), ('10300000-0000-0000-0000-0000000000f4', 'lead@p103.test', now()),
+  ('10300000-0000-0000-0000-0000000000f5', 'other@p103.test', now()), ('10300000-0000-0000-0000-0000000000f6', 'joiner@p103.test', now()),
+  ('10300000-0000-0000-0000-0000000000f7', 'ownerb@p103.test', now());
+insert into members (tenant_id, user_id, role) values
+  ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f1', 'owner'),
+  ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f2', 'admin'),
+  ('10300000-0000-0000-0000-0000000000a2', '10300000-0000-0000-0000-0000000000f7', 'owner');
+insert into partners (id, user_id, email, name, business_name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f3', 'po@p103.test', 'Riya', 'Kesar 103', '919876543103', 'Jaipur', '0', 1, now(), now()),
+  ('10300000-0000-0000-0000-0000000000c2', '10300000-0000-0000-0000-0000000000f5', 'other@p103.test', 'Other', 'Other 103', '919876543104', 'Pune', '0', 1, now(), now());
+insert into partner_members (id, partner_id, user_id, email, role, accepted_at) values
+  ('10300000-0000-0000-0000-0000000000b1', '10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f3', 'po@p103.test', 'owner', now()),
+  ('10300000-0000-0000-0000-0000000000b2', '10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f4', 'lead@p103.test', 'lead', now()),
+  ('10300000-0000-0000-0000-0000000000b3', '10300000-0000-0000-0000-0000000000c2', '10300000-0000-0000-0000-0000000000f5', 'other@p103.test', 'owner', now());
+-- A key the partner made on this store before an earlier removal: re-adding must not bring it back (tenancy H2).
+insert into storefront_keys (tenant_id, kind, name, hash, prefix, partner_id, created_by) values
+  ('10300000-0000-0000-0000-0000000000a1', 'public', 'Old 103', repeat('7', 64), 'frs_pub_103103', '10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f3');
+insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', null, 'proof', 'proof § 103') on conflict (key) do update set until = null;
+set local role frata_app;
+select set_config('app.tenant_id', '10300000-0000-0000-0000-0000000000a1', true);
+do $$ declare i uuid; r uuid; t uuid; begin
+  -- A Manager gives Staff and Accountants only; never a Manager; nobody gives owner or partner.
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'x1@p103.test', 'admin'); raise exception 'FAIL: 103 a Manager invited a Manager';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f1', 'x1@p103.test', 'owner'); raise exception 'FAIL: 103 an invite gave owner';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f1', 'x1@p103.test', 'partner'); raise exception 'FAIL: 103 an invite gave partner';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f7', 'x1@p103.test', 'staff'); raise exception 'FAIL: 103 another store''s owner invited here';
+  exception when others then if sqlerrm <> 'not_manager' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f1', 'manager@p103.test', 'staff'); raise exception 'FAIL: 103 re-invited a member';
+  exception when others then if sqlerrm <> 'already_member' then raise; end if; end;
+  -- The owner invites a Manager; a Manager can't replace or cancel it.
+  i := app_invite_person('10300000-0000-0000-0000-0000000000f1', 'joiner@p103.test', 'admin');
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'joiner@p103.test', 'staff'); raise exception 'FAIL: 103 a Manager downgraded the owner''s invite';
+  exception when others then if sqlerrm <> 'invited' then raise; end if; end;
+  begin perform app_cancel_person_invite('10300000-0000-0000-0000-0000000000f2', i); raise exception 'FAIL: 103 a Manager cancelled a Manager invite';
+  exception when others then if sqlerrm <> 'no_invite' then raise; end if; end;
+  -- The limit (Launch fallback 3): the Manager member + 2 more open invites fill it.
+  perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'x2@p103.test', 'staff');
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'x3@p103.test', 'staff'); raise exception 'FAIL: 103 passed the people limit';
+  exception when others then if sqlerrm <> 'at_limit' then raise; end if; end;
+  if (select used from app_people_room('10300000-0000-0000-0000-0000000000f1')) <> 3 then raise exception 'FAIL: 103 the room count'; end if;
+  if exists (select 1 from app_person_invites('10300000-0000-0000-0000-0000000000f3')) then raise exception 'FAIL: 103 a non-member read invites'; end if;
+  -- A Manager removes neither the owner, nor themself, nor another Manager.
+  begin perform app_remove_person('10300000-0000-0000-0000-0000000000f2', '10300000-0000-0000-0000-0000000000f1'); raise exception 'FAIL: 103 a Manager removed the owner';
+  exception when others then if sqlerrm <> 'no_person' then raise; end if; end;
+  begin perform app_remove_person('10300000-0000-0000-0000-0000000000f2', '10300000-0000-0000-0000-0000000000f2'); raise exception 'FAIL: 103 a Manager removed themself';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  -- A partner by email: only the owner sends; a Manager can't.
+  begin perform app_partner_request_send('10300000-0000-0000-0000-0000000000f2', 'po@p103.test'); raise exception 'FAIL: 103 a Manager invited a partner';
+  exception when others then if sqlerrm <> 'not_owner' then raise; end if; end;
+  r := app_partner_request_send('10300000-0000-0000-0000-0000000000f1', 'po@p103.test');
+  if (select partner_id from partner_requests where id = r) is not null then raise exception 'FAIL: 103 a request names its partner before an answer'; end if;
+  -- Another partner, and a Lead of the right partner, see nothing and answer nothing.
+  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f5', null, null)) then raise exception 'FAIL: 103 another partner sees the request'; end if;
+  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f4', null, null)) then raise exception 'FAIL: 103 a Lead sees the request'; end if;
+  begin perform app_partner_answer_request('10300000-0000-0000-0000-0000000000f5', null, null, r, true); raise exception 'FAIL: 103 another partner accepted';
+  exception when others then if sqlerrm <> 'no_request' then raise; end if; end;
+  if (select count(*) from app_partner_requests('10300000-0000-0000-0000-0000000000f3', null, null)) <> 1 then raise exception 'FAIL: 103 the partner owner does not see it'; end if;
+  t := app_partner_answer_request('10300000-0000-0000-0000-0000000000f3', null, null, r, true);
+  if t is distinct from '10300000-0000-0000-0000-0000000000a1' then raise exception 'FAIL: 103 accept returned another store'; end if;
+end $$;
+-- Store B: the owner invites the other partner, who declines; the store then reads the decline, and the slot is free.
+select set_config('app.tenant_id', '10300000-0000-0000-0000-0000000000a2', true);
+do $$ declare r uuid; begin
+  r := app_partner_request_send('10300000-0000-0000-0000-0000000000f7', 'other@p103.test');
+  if app_partner_answer_request('10300000-0000-0000-0000-0000000000f5', null, null, r, false) is not null then raise exception 'FAIL: 103 a decline returned a store'; end if;
+  if (select count(*) from partner_requests where declined_at is not null) <> 1 then raise exception 'FAIL: 103 the store does not read its decline'; end if;
+  if exists (select 1 from partner_links where tenant_id = '10300000-0000-0000-0000-0000000000a2') then raise exception 'FAIL: 103 a decline linked the partner'; end if;
+  perform app_partner_request_send('10300000-0000-0000-0000-0000000000f7', 'other@p103.test');
+  perform app_partner_request_cancel('10300000-0000-0000-0000-0000000000f7');
+end $$;
+-- The other store sees none of store A's rows.
+do $$ begin
+  if exists (select 1 from partner_requests where tenant_id <> '10300000-0000-0000-0000-0000000000a2') then raise exception 'FAIL: 103 a store reads another store''s partner requests'; end if;
+  if exists (select 1 from app_person_invites('10300000-0000-0000-0000-0000000000f7')) then raise exception 'FAIL: 103 a store reads another store''s invites'; end if;
+  begin insert into partner_requests (tenant_id, email, created_by, expires_at) values ('10300000-0000-0000-0000-0000000000a2', 'z@p103.test', '10300000-0000-0000-0000-0000000000f7', now());
+    raise exception 'FAIL: 103 frata_app wrote a partner request';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ begin
+  if not exists (select 1 from partner_links where tenant_id = '10300000-0000-0000-0000-0000000000a1' and partner_id = '10300000-0000-0000-0000-0000000000c1'
+                  and removed_at is null and share_bps = 0) then raise exception 'FAIL: 103 accept did not write a no-share link'; end if;
+  if not exists (select 1 from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f3' and role = 'partner')
+    then raise exception 'FAIL: 103 accept did not add the partner owner'; end if;
+  if exists (select 1 from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f4')
+    then raise exception 'FAIL: 103 a Lead joined without an assignment'; end if;
+  if exists (select 1 from storefront_keys where tenant_id = '10300000-0000-0000-0000-0000000000a1' and name = 'Old 103' and revoked_at is null)
+    then raise exception 'FAIL: 103 a re-added partner got its old key back'; end if;
+end $$;
+-- Claim: the owner's Manager invite joins at sign-in, as that role only, in that store only.
+do $$ begin
+  perform app_claim_invites('10300000-0000-0000-0000-0000000000f6');
+  if (select role from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f6') is distinct from 'admin'
+    then raise exception 'FAIL: 103 claim gave the wrong role'; end if;
+  -- Store A is now at its limit (2 Managers + 1 open Staff invite of 3): a further invite's claim is skipped and stays open.
+  insert into invites (tenant_id, email, role, created_by, expires_at) values ('10300000-0000-0000-0000-0000000000a1', 'x2@p103.test', 'staff', '10300000-0000-0000-0000-0000000000f1', now() + interval '1 day')
+    on conflict do nothing;
+  insert into auth.users (id, email, email_confirmed_at) values ('10300000-0000-0000-0000-0000000000f8', 'x2@p103.test', now());
+  insert into members (tenant_id, user_id, role) values ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f9', 'staff');
+  perform app_claim_invites('10300000-0000-0000-0000-0000000000f8');
+  if exists (select 1 from members where user_id = '10300000-0000-0000-0000-0000000000f8') then raise exception 'FAIL: 103 a claim passed the limit'; end if;
+  if not exists (select 1 from invites where email = 'x2@p103.test' and accepted_at is null and revoked_at is null) then raise exception 'FAIL: 103 a refused claim closed the invite'; end if;
+  if exists (select 1 from members where user_id = '10300000-0000-0000-0000-0000000000f6' and tenant_id <> '10300000-0000-0000-0000-0000000000a1')
+    then raise exception 'FAIL: 103 claim joined another store'; end if;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r,
+             unnest(array['app_invite_person(uuid,text,text)', 'app_remove_person(uuid,uuid)', 'app_cancel_person_invite(uuid,uuid)',
+                          'app_partner_request_send(uuid,text)', 'app_partner_answer_request(uuid,uuid,text,uuid,boolean)', 'app_people_mail(text,text,text,uuid,text)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: 103 another role runs the people definers'; end if;
+  if has_function_privilege('frata_app', 'app_people_mail(text,text,text,uuid,text)', 'execute') then raise exception 'FAIL: 103 the app sends address mail directly'; end if;
+end $$;
+-- 104. Admin › Cashflow (drizzle/0175; spec docs/specs/2026-11-23-admin-cashflow.md, reviews 2026-11-23): four platform tables only frata_admin
 -- touches, with exactly the privileges the spec lists, RLS on and one permissive policy each; nothing copies a row out of them.
 do $$ declare r text; t text; p text; tbls regclass[] := array['public.cash_accounts', 'public.cash_balances', 'public.cash_entries', 'public.cash_settings']::regclass[]; begin
   foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
     foreach t in array array['cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings'] loop
       foreach p in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
-        if has_table_privilege(r, 'public.' || t, p) then raise exception 'FAIL: 103 % holds % on %', r, p, t; end if;
+        if has_table_privilege(r, 'public.' || t, p) then raise exception 'FAIL: 104 % holds % on %', r, p, t; end if;
       end loop;
-      if has_any_column_privilege(r, 'public.' || t, 'select') then raise exception 'FAIL: 103 % reads a column of %', r, t; end if;
+      if has_any_column_privilege(r, 'public.' || t, 'select') then raise exception 'FAIL: 104 % reads a column of %', r, t; end if;
     end loop;
   end loop;
   -- exactly these grants, to frata_admin only, and no column-level grant
@@ -6694,31 +6825,31 @@ do $$ declare r text; t text; p text; tbls regclass[] := array['public.cash_acco
      or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_entries'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT,UPDATE'
      or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_settings'::regclass and a.grantee <> c.relowner) <> 'SELECT,UPDATE'
      or exists (select 1 from pg_class c, aclexplode(c.relacl) a where c.oid = any(tbls) and a.grantee <> c.relowner and a.grantee <> 'frata_admin'::regrole)
-  then raise exception 'FAIL: 103 the Cash tables carry a grant beyond the spec'; end if;
-  if exists (select 1 from pg_attribute where attrelid = any(tbls) and attacl is not null) then raise exception 'FAIL: 103 a column-level grant on the Cash tables'; end if;
+  then raise exception 'FAIL: 104 the Cash tables carry a grant beyond the spec'; end if;
+  if exists (select 1 from pg_attribute where attrelid = any(tbls) and attacl is not null) then raise exception 'FAIL: 104 a column-level grant on the Cash tables'; end if;
   foreach t in array array['cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings'] loop
-    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 103 % without RLS', t; end if;
+    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 104 % without RLS', t; end if;
     if (select count(*) from pg_policies where schemaname = 'public' and tablename = t) <> 1
        or exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and (permissive <> 'PERMISSIVE' or roles <> '{frata_admin}'::name[]))
-    then raise exception 'FAIL: 103 % must have exactly one permissive policy, to frata_admin', t; end if;
+    then raise exception 'FAIL: 104 % must have exactly one permissive policy, to frata_admin', t; end if;
   end loop;
   -- nothing copies a row out: no rule, no trigger, no dependent function, no publication
-  if exists (select 1 from pg_rewrite where ev_class = any(tbls)) then raise exception 'FAIL: 103 a rule on a Cash table'; end if;
-  if exists (select 1 from pg_trigger where tgrelid = any(tbls) and not tgisinternal) then raise exception 'FAIL: 103 a trigger on a Cash table'; end if;
-  if exists (select 1 from pg_depend where classid = 'pg_proc'::regclass and refobjid = any(tbls)) then raise exception 'FAIL: 103 a function depends on a Cash table'; end if;
-  if exists (select 1 from pg_publication_tables where schemaname = 'public' and tablename in ('cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings')) then raise exception 'FAIL: 103 a publication carries a Cash table'; end if;
-  if exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosrc ~ 'cash_(accounts|balances|entries|settings)') then raise exception 'FAIL: 103 a function reads a Cash table'; end if;
+  if exists (select 1 from pg_rewrite where ev_class = any(tbls)) then raise exception 'FAIL: 104 a rule on a Cash table'; end if;
+  if exists (select 1 from pg_trigger where tgrelid = any(tbls) and not tgisinternal) then raise exception 'FAIL: 104 a trigger on a Cash table'; end if;
+  if exists (select 1 from pg_depend where classid = 'pg_proc'::regclass and refobjid = any(tbls)) then raise exception 'FAIL: 104 a function depends on a Cash table'; end if;
+  if exists (select 1 from pg_publication_tables where schemaname = 'public' and tablename in ('cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings')) then raise exception 'FAIL: 104 a publication carries a Cash table'; end if;
+  if exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosrc ~ 'cash_(accounts|balances|entries|settings)') then raise exception 'FAIL: 104 a function reads a Cash table'; end if;
   -- Billing's three new indexes (Cashflow reads money in by month through them)
-  if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('frrata_payments_captured', 'frrata_payments_refunded', 'frrata_invoices_test')) <> 3 then raise exception 'FAIL: 103 a Billing index for Cashflow is missing'; end if;
+  if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('frrata_payments_captured', 'frrata_payments_refunded', 'frrata_invoices_test')) <> 3 then raise exception 'FAIL: 104 a Billing index for Cashflow is missing'; end if;
 end $$;
 begin; set local role frata_app;
 do $$ begin
-  begin perform 1 from cash_balances; raise exception 'FAIL: 103 frata_app read a balance'; exception when insufficient_privilege then null; end;
-  begin insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 1, '2026-11-01'); raise exception 'FAIL: 103 frata_app forged an entry'; exception when insufficient_privilege then null; end;
+  begin perform 1 from cash_balances; raise exception 'FAIL: 104 frata_app read a balance'; exception when insufficient_privilege then null; end;
+  begin insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 1, '2026-11-01'); raise exception 'FAIL: 104 frata_app forged an entry'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;
 begin; set local role frata_builder;
-do $$ begin begin perform 1 from cash_settings; raise exception 'FAIL: 103 frata_builder read the settings'; exception when insufficient_privilege then null; end; end $$;
+do $$ begin begin perform 1 from cash_settings; raise exception 'FAIL: 104 frata_builder read the settings'; exception when insufficient_privilege then null; end; end $$;
 rollback;
 begin; set local role frata_admin;
 insert into cash_accounts (id, name) values ('00000000-0000-0000-0000-0000000d0001', 'Current account'), ('00000000-0000-0000-0000-0000000d0002', 'Reserve');
@@ -6728,13 +6859,13 @@ insert into cash_entries (id, kind, amount_paise, happened_on) values ('00000000
 insert into cash_entries (id, kind, amount_paise, expected_on, account_id) values ('00000000-0000-0000-0000-0000000f0002', 'grant', 15000000, '2027-02-15', '00000000-0000-0000-0000-0000000d0002');
 do $$ declare bad text; begin
   if (select id from cash_balances where account_id = '00000000-0000-0000-0000-0000000d0001' order by as_of desc, created_at desc, id desc limit 1) <> '00000000-0000-0000-0000-0000000e0002'
-  then raise exception 'FAIL: 103 the latest balance does not break a tie by id'; end if;
-  if (select count(*) from cash_settings) <> 1 then raise exception 'FAIL: 103 the settings row is not seeded once'; end if;
+  then raise exception 'FAIL: 104 the latest balance does not break a tie by id'; end if;
+  if (select count(*) from cash_settings) <> 1 then raise exception 'FAIL: 104 the settings row is not seeded once'; end if;
   update cash_settings set floor_paise = 25000000, main_account_id = '00000000-0000-0000-0000-0000000d0001';
-  begin update cash_balances set balance_paise = 1; raise exception 'FAIL: 103 Admin edited a balance'; exception when insufficient_privilege then null; end;
-  begin delete from cash_accounts where id = '00000000-0000-0000-0000-0000000d0002'; raise exception 'FAIL: 103 Admin deleted an account'; exception when insufficient_privilege then null; end;
-  begin delete from cash_settings; raise exception 'FAIL: 103 Admin deleted the settings'; exception when insufficient_privilege then null; end;
-  begin insert into cash_settings (id) values (2); raise exception 'FAIL: 103 Admin added a second settings row'; exception when insufficient_privilege then null; end;
+  begin update cash_balances set balance_paise = 1; raise exception 'FAIL: 104 Admin edited a balance'; exception when insufficient_privilege then null; end;
+  begin delete from cash_accounts where id = '00000000-0000-0000-0000-0000000d0002'; raise exception 'FAIL: 104 Admin deleted an account'; exception when insufficient_privilege then null; end;
+  begin delete from cash_settings; raise exception 'FAIL: 104 Admin deleted the settings'; exception when insufficient_privilege then null; end;
+  begin insert into cash_settings (id) values (2); raise exception 'FAIL: 104 Admin added a second settings row'; exception when insufficient_privilege then null; end;
   delete from cash_balances where id = '00000000-0000-0000-0000-0000000e0001';
   update cash_entries set expected_on = null, happened_on = '2026-12-01' where id = '00000000-0000-0000-0000-0000000f0002';
   foreach bad in array array[
@@ -6756,9 +6887,9 @@ do $$ declare bad text; begin
     $q$update cash_settings set floor_paise = 100000000001$q$,
     $q$update cash_settings set main_account_id = gen_random_uuid()$q$
   ] loop
-    begin execute bad; raise exception 'FAIL: 103 a bad Cash row was accepted: %', bad;
+    begin execute bad; raise exception 'FAIL: 104 a bad Cash row was accepted: %', bad;
     exception when check_violation or foreign_key_violation then null; end;
   end loop;
 end $$;
 rollback;
-\echo 'tenancy proof — all checks passed (through § 103)'
+\echo 'tenancy proof — all checks passed (through § 104)'

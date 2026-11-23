@@ -310,7 +310,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
   header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security). Framed only by the
   console itself (SAMEORIGIN, `frame-ancestors 'self'`, on the console host; DENY elsewhere): `/console/theme-preview/*`
-  and, for Studio's preview pane, `/console/preview[/*]` (`src/lib/__tests__/framing.test.ts`).
+  and, for Studio's preview pane, `/console/studio-preview[/*]`: the store alone, `requireStudio`'s store only, in an iframe sandboxed to `allow-same-origin` (owner 2026-11-23; `/console/preview` is DENY like every console page; `src/lib/__tests__/framing.test.ts`).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does; `requireShop` also weighs `Sec-Fetch-Site` (`src/lib/auth/fetch-site.ts`: sibling stores
