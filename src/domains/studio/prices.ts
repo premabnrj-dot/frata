@@ -6,7 +6,7 @@
 // is never written twice. GST is billing's own: each head on the taxable value (frrataGstHeads), CGST + SGST or IGST.
 // =============================================================================
 
-import { frrataGstHeads } from '@/domains/billing/bill'
+import { frrataGstHeads } from '@/domains/billing/gst-heads'
 import { paise, type Paise } from '@/domains/money/paise'
 
 /** The two paid plans (owner decision 7). A plan's AutoPay maximum sits just above its price with GST (owner call 5,

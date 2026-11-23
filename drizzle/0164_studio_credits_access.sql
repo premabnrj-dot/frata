@@ -42,10 +42,43 @@ create or replace function app_pc_lots(p_partner uuid, p_real boolean) returns t
 $$;
 --> statement-breakpoint
 
+-- What a partner owes from disputes (security review 2026-11-23, M2): a disputed purchase's credits not yet clawed back
+-- (spent before the dispute, or held by a use). Derived: the purchase's credits less its clawback draws.
+create or replace function app_pc_debt(p_partner uuid, p_real boolean) returns integer
+  language sql stable security definer set search_path = '' as $$
+  select coalesce(sum(greatest(p.credits + coalesce((select sum(c.credits) from public.partner_credit_entries c
+                                                     where c.purchase_id = p.id and c.kind = 'clawback'), 0), 0)), 0)::integer
+  from public.partner_credit_purchases p where p.partner_id = p_partner and p.disputed_at is not null and (not p_real or not p.test)
+$$;
+--> statement-breakpoint
+
+-- The balance is what the lots hold less what is owed (never below 0): a debt pauses Studio until bought credits cover it.
 create or replace function app_pc_balance(p_partner uuid, p_real boolean) returns integer
   language sql stable security definer set search_path = '' as $$
-  select coalesce(sum(greatest(x.left_credits, 0)), 0)::integer from public.app_pc_lots(p_partner, p_real) x
+  select greatest(0, coalesce(sum(greatest(x.left_credits, 0)), 0) - public.app_pc_debt(p_partner, p_real))::integer
+  from public.app_pc_lots(p_partner, p_real) x
 $$;
+--> statement-breakpoint
+
+-- Internal (under the partner's lock): what is owed is drawn from the lots now holding credits, oldest dispute first.
+create or replace function app_pc_debt_draw(p_partner uuid, p_real boolean) returns void
+  language plpgsql volatile security definer set search_path = '' as $$
+declare d record; l record; v_need integer; v_take integer;
+begin
+  for d in select p.id, (p.credits + coalesce((select sum(c.credits) from public.partner_credit_entries c
+                                               where c.purchase_id = p.id and c.kind = 'clawback'), 0))::integer as owed
+             from public.partner_credit_purchases p
+            where p.partner_id = p_partner and p.disputed_at is not null and (not p_real or not p.test) order by p.disputed_at, p.id loop
+    v_need := d.owed;
+    continue when v_need <= 0;
+    for l in select x.lot_id, x.left_credits from public.app_pc_lots(p_partner, p_real) x where x.left_credits > 0 loop
+      v_take := least(l.left_credits, v_need);
+      insert into public.partner_credit_entries (partner_id, kind, credits, lot_id, purchase_id) values (p_partner, 'clawback', -v_take, l.lot_id, d.id);
+      v_need := v_need - v_take;
+      exit when v_need = 0;
+    end loop;
+  end loop;
+end $$;
 --> statement-breakpoint
 
 -- What a use was charged: its reserve less what came back (releases and return lots). An open use counts whole.
@@ -486,6 +519,10 @@ create or replace function app_pc_purchase_order(p_purchase uuid, p_order text, 
 declare n integer;
 begin
   if p_order is null or p_order !~ '^order_[A-Za-z0-9]{6,40}$' then raise exception 'bad_input' using errcode = 'P0001'; end if;
+  -- An order id belongs to one family only (tenancy audit 2026-11-23): never one merchant billing already holds.
+  if exists (select 1 from public.frrata_payments f where f.gateway_order_id = p_order)
+     or exists (select 1 from public.billing_mandate_setups m where m.gateway_order_id = p_order) then
+    raise exception 'bad_input' using errcode = 'P0001'; end if;
   update public.partner_credit_purchases set gateway_order_id = p_order,
     notice_sent_at = case when p_notified then now() else notice_sent_at end
    where id = p_purchase and gateway_order_id is null and paid_at is null and failed_at is null and closed_at is null;
@@ -563,7 +600,8 @@ begin
     return 'applied';
   end if;
   -- Money taken that buys nothing: a second capture, a wrong amount, currency or mode.
-  if p.refund_due_at is null and not exists (select 1 from public.partner_credit_purchases y where y.payment_id = p_payment) then
+  -- Its own row excluded: a payment that failed first (its id kept) and was then captured wrong is refunded (security L6).
+  if p.refund_due_at is null and not exists (select 1 from public.partner_credit_purchases y where y.payment_id = p_payment and y.id <> p.id) then
     update public.partner_credit_purchases set refund_due_at = now(), refund_payment_id = p_payment, refund_amount = p_amount where id = p.id;
     return 'refund_due';
   end if;
@@ -750,6 +788,8 @@ begin
   if l.left_credits > 0 then
     insert into public.partner_credit_entries (partner_id, kind, credits, lot_id, purchase_id) values (p.partner_id, 'clawback', -l.left_credits, l.lot_id, p.id);
   end if;
+  -- What was already spent is owed: drawn from the other lots now, the rest from the next credits (security M2).
+  perform public.app_pc_debt_draw(p.partner_id, not p.test);
   return true;
 end $$;
 --> statement-breakpoint
@@ -859,6 +899,7 @@ begin
   select bb.credits into v_budget from public.partner_client_budgets bb where bb.partner_id = me.partner_id and bb.link_id = p_link;
   v_used := public.app_pc_link_used(me.partner_id, p_link);
   if v_budget is not null and v_used + v_n > v_budget then raise exception 'budget' using errcode = 'P0001'; end if;
+  perform public.app_pc_debt_draw(me.partner_id, p_real);
   v_bal := public.app_pc_balance(me.partner_id, p_real);
   if v_bal < v_n then raise exception 'balance' using errcode = 'P0001'; end if;
   insert into public.partner_credit_uses (id, partner_id, link_id, member_id, kind, what, reserved, estimate, real_money, rate_e4)
@@ -891,12 +932,18 @@ create or replace function app_pc_give_back(p_use uuid, p_credits integer) retur
 declare u record; r record; v_left integer := p_credits; v_late integer := 0; v_take integer;
 begin
   select * into u from public.partner_credit_uses x where x.id = p_use;
-  for r in select e.lot_id, -e.credits as taken, l.expires_at from public.partner_credit_entries e join public.partner_credit_entries l on l.id = e.lot_id
+  for r in select e.lot_id, -e.credits as taken, l.expires_at, l.purchase_id,
+                  exists (select 1 from public.partner_credit_purchases d where d.id = l.purchase_id and d.disputed_at is not null) as disputed
+             from public.partner_credit_entries e join public.partner_credit_entries l on l.id = e.lot_id
             where e.use_id = p_use and e.kind = 'reserve' order by l.expires_at desc, l.created_at desc, l.id desc loop
     exit when v_left = 0;
     v_take := least(v_left, r.taken);
     if r.expires_at > now() then
       insert into public.partner_credit_entries (partner_id, kind, credits, lot_id, use_id) values (u.partner_id, 'release', v_take, r.lot_id, p_use);
+      -- A disputed purchase's lot keeps nothing that comes back: the release pays down what is owed (security M2).
+      if r.disputed then
+        insert into public.partner_credit_entries (partner_id, kind, credits, lot_id, purchase_id) values (u.partner_id, 'clawback', -v_take, r.lot_id, r.purchase_id);
+      end if;
     else v_late := v_late + v_take; end if;
     v_left := v_left - v_take;
   end loop;
@@ -950,6 +997,7 @@ $$;
 
 -- ═══ GRANTS ═══════════════════════════════════════════════════════════════════════════════════════════════════════
 revoke all on function app_pc_owner(uuid, uuid, text, boolean, boolean), app_pc_lots(uuid, boolean), app_pc_balance(uuid, boolean),
+  app_pc_debt(uuid, boolean), app_pc_debt_draw(uuid, boolean),
   app_pc_charged(uuid), app_pc_window(uuid), app_pc_link_used(uuid, uuid), app_pc_notice(uuid, text, text, uuid, uuid),
   app_pc_on_partner_approved(), app_partner_credit_try(uuid, uuid, text, text),
   app_partner_credits_overview(uuid, uuid, text, boolean), app_partner_credits_usage(uuid, uuid, text, date, uuid, integer, timestamptz),

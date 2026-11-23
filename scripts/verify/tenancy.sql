@@ -4226,6 +4226,8 @@ begin
 end $$;
 reset role;
 update partner_billing set token_id = 'token_proof89w0001', mandate_method = 'upi', mandate_max = 360000, mandate_revoked_at = null where partner_id = current_setting('proof.g89p')::uuid;
+-- one token held by both families: a token event decides both, never only the first it finds (tenancy audit 2026-11-23)
+update billing_accounts set mandate_token_id = 'token_proof89w0001', mandate_revoked_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
 set local role frata_app;
 do $$ declare ev uuid; begin
   ev := app_store_billing_event('proof89-w3', 'token.cancelled', '{"_test": true, "payload": {"token": {"entity": {"id": "token_proof89w0001", "status": "cancelled"}}}}'::jsonb);
@@ -4234,6 +4236,82 @@ end $$;
 reset role;
 do $$ begin
   if (select mandate_revoked_at from partner_billing where partner_id = current_setting('proof.g89p')::uuid) is null then raise exception 'FAIL: a partner''s token event was lost'; end if;
+  if (select mandate_revoked_at from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is null then raise exception 'FAIL: a shared token''s merchant mandate was left'; end if;
+end $$;
+-- security review 2026-11-23: Frrata's own refund claws nothing back; a dispute through the route does, and what was
+-- already spent is owed (drawn from the other lots); a refund that arrives before its capture waits; a merchant's refund
+-- passes untouched; an order id merchant billing holds is never a partner's; a failed-then-wrongly-captured payment is refunded
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; p record; ev uuid; v_bal int; t text;
+begin
+  -- Frrata's own refund (its id is ours): the credits stay
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0002', false);
+  if app_pc_apply('order_proof89w0002', 'pay_proof89w0002', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a second pack'; end if;
+  perform set_config('proof.w2', p.id::text, true);
+end $$;
+reset role;
+update partner_credit_purchases set refund_gateway_id = 'rfnd_proof89w002' where id = current_setting('proof.w2')::uuid;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; p record; ev uuid; v_bal int; v_after int; t text;
+begin
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  ev := app_store_billing_event('proof89-w4', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89w002", "payment_id": "pay_proof89w0002", "amount": 235882}}, "payment": {"entity": {"id": "pay_proof89w0002", "order_id": "order_proof89w0002"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: Frrata''s own refund clawed credits back'; end if;
+  -- a merchant's refund (a payment no partner holds) is stored, applied and changes nothing of a partner's
+  ev := app_store_billing_event('proof89-w5', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89m001", "payment_id": "pay_proof89m0001", "amount": 100}}, "payment": {"entity": {"id": "pay_proof89m0001", "order_id": "order_proof89m0001"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a merchant refund touched a partner'; end if;
+  -- a refund before its capture is applied waits (stays unapplied), then claws back once the capture lands
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0003', false);
+  ev := app_store_billing_event('proof89-w6', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89w003", "payment_id": "pay_proof89w0003", "amount": 235882}}, "payment": {"entity": {"id": "pay_proof89w0003", "order_id": "order_proof89w0003"}}}}'::jsonb);
+  t := null;
+  begin perform app_apply_billing_event(ev); exception when others then t := sqlerrm; end;
+  if t is distinct from 'not_yet' then raise exception 'FAIL: a refund before its capture did not wait (%)', t; end if;
+  if app_pc_apply('order_proof89w0003', 'pay_proof89w0003', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: the late capture'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal + 100 then raise exception 'FAIL: the late capture''s credits'; end if;
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a reordered refund kept the credits'; end if;
+  -- a dispute through the route on a pack partly spent: the lot's rest clawed back, the spent part drawn from other lots
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0004', false);
+  if app_pc_apply('order_proof89w0004', 'pay_proof89w0004', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a fourth pack'; end if;
+  perform set_config('proof.w4', p.id::text, true);
+  perform set_config('proof.w4bal', (v_bal + 100)::text, true);
+  -- a failed payment then captured at the wrong amount: the money goes back (security L6)
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0005', false);
+  if app_pc_apply('order_proof89w0005', 'pay_proof89w0005', false, 235882, 'INR', true, 'declined', null) <> 'failed' then raise exception 'FAIL: a failed payment'; end if;
+  if app_pc_apply('order_proof89w0005', 'pay_proof89w0005', true, 100, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: a wrong capture after a failure kept the money'; end if;
+  -- an order id merchant billing holds is never a partner's
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform set_config('proof.w6', p.id::text, true);
+end $$;
+reset role;
+-- 60 of the fourth pack's credits spent (a void draw stands in for the uses)
+insert into partner_credit_entries (partner_id, kind, credits, lot_id)
+  select partner_id, 'void', -60, id from partner_credit_entries where purchase_id = current_setting('proof.w4')::uuid and kind = 'pack';
+insert into billing_mandate_setups (tenant_id, gateway_order_id, gateway_customer_id, method, max_amount, created_by)
+  values ('22222222-2222-2222-2222-222222222222', 'order_proof89m0006', 'cust_proof89m', 'upi', 1500000, 'aaaaaaaa-0000-0000-0000-000000000092');
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; ev uuid; v_bal int; t text;
+begin
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  if v_bal <> current_setting('proof.w4bal')::int - 60 then raise exception 'FAIL: the spent stand-in (%)', v_bal; end if;
+  ev := app_store_billing_event('proof89-w7', 'payment.dispute.created', '{"_test": true, "payload": {"payment": {"entity": {"id": "pay_proof89w0004", "order_id": "order_proof89w0004"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal - 40 - 60 then raise exception 'FAIL: a dispute left the spent credits (%)', (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance'); end if;
+  t := null;
+  begin perform app_pc_purchase_order(current_setting('proof.w6')::uuid, 'order_proof89m0006', false); exception when others then t := sqlerrm; end;
+  if t is distinct from 'bad_input' then raise exception 'FAIL: a merchant''s order id taken for a partner''s attempt (%)', t; end if;
+end $$;
+reset role;
+do $$ begin
+  if app_pc_debt(current_setting('proof.g89p')::uuid, false) <> 0 then raise exception 'FAIL: a covered dispute still owed'; end if;
+  if (select sum(-c.credits) from partner_credit_entries c where c.purchase_id = current_setting('proof.w4')::uuid and c.kind = 'clawback') <> 100
+  then raise exception 'FAIL: a dispute''s clawback is not the whole purchase'; end if;
 end $$;
 -- Frrata's GST export sees the real invoice and never a test one
 set local role frata_admin;

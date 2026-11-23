@@ -12,12 +12,12 @@
 // on the taxable value; never rounded to the rupee). A taxable value under ₹100 rolls to the next month, once.
 // =============================================================================
 
-import { applyBps, type Paise } from '@/domains/money/paise'
+import type { Paise } from '@/domains/money/paise'
 import { currentPlan, deliveredFee, feeForOrder, monthlyPrice, usage as planUsage, type PlanVersion } from '@/domains/plans/entitlements'
-import { supplyKind } from '@/domains/tax/gst'
 
 export { GST_BPS } from './gst-rate'
-import { GST_BPS } from './gst-rate'
+import { frrataGstHeads } from './gst-heads'
+export { frrataGstHeads }
 /** Under this taxable value (₹100) a bill rolls to the next month, once in a row (unit-economics review). */
 export const ROLL_BELOW = 10_000
 
@@ -225,17 +225,4 @@ export function computeBill(i: BillInput): Bill {
   // Not gstHeads (which splits one GST amount): finding 20 asks for each head on the taxable value.
   const { cgst, sgst, igst } = frrataGstHeads(sum as Paise, i.frrataGstin, i.shopState)
   return { lines, fees, credited, taxable: sum as Paise, cgst, sgst, igst, total: (sum + cgst + sgst + igst) as Paise, rolled: false, carryOut: 0, usage }
-}
-
-/**
- * GST on one of Frrata's own invoices: each head on the taxable value (plan finding 20), CGST + SGST when the buyer's
- * state is Frrata's own, IGST otherwise. Read by the monthly bill and by Studio credits (src/domains/studio/prices.ts).
- */
-export function frrataGstHeads(taxable: Paise, frrataGstin: string | null, buyerState: string | null): { cgst: Paise; sgst: Paise; igst: Paise } {
-  const intra = supplyKind(frrataGstin, buyerState) === 'intra'
-  return {
-    cgst: intra ? applyBps(taxable, GST_BPS / 2) : (0 as Paise),
-    sgst: intra ? applyBps(taxable, GST_BPS / 2) : (0 as Paise),
-    igst: intra ? (0 as Paise) : applyBps(taxable, GST_BPS),
-  }
 }
