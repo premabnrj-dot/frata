@@ -153,10 +153,11 @@ for (const file of walk('src/app/(console)')) {
 
 // A console page is guarded by its OWN check: Next renders the layout and the
 // page in parallel, so the layout's requireMember protects nothing below it.
+// requireStudio counts: it calls requireMember(['partner']) itself (Studio's store-only preview, 2026-11-23).
 for (const file of ['src/app/(console)', 'src/app/(lookeditor)', 'src/app/(lookpreview)'].flatMap((d) => (existsSync(d) ? walk(d) : []))) {
   if (!file.endsWith('/page.tsx')) continue
-  if (!/\brequire(Member|Capability)\(/.test(code(readFileSync(file, 'utf8')))) {
-    failures.push(`${file}  console page that does not call requireMember( or requireCapability( itself — the layout's check does not cover it`)
+  if (!/\brequire(Member|Capability|Studio)\(/.test(code(readFileSync(file, 'utf8')))) {
+    failures.push(`${file}  console page that does not call requireMember(, requireCapability( or requireStudio( itself — the layout's check does not cover it`)
   }
 }
 

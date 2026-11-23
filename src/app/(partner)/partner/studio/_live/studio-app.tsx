@@ -171,7 +171,13 @@ export function StudioApp({ store, storeId, chat: first, design, empty, version 
           <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-border bg-card px-2 py-1.5">
             <Tag>{W.previewTitle}</Tag><Badge tone="neutral">{W.previewTag}</Badge>
           </div>
-          <iframe title={W.previewTitle} src="/console/preview" className="h-full w-full border-0 bg-card" />
+          {/* The store alone (owner 2026-11-23), never the console. sandbox="allow-same-origin" and nothing else: no
+              scripts (so allow-same-origin can't be used to lift the sandbox), no forms (no console action can run), no
+              popups, no top navigation (the frame can never move Studio's own window). A link moves only this frame, and
+              only within the preview: every console and Admin page refuses to be framed. Same origin so the frame's own
+              page loads carry the sign-in (requireStudio). What is lost: the store's own scripts (the bag drawer, swipe
+              galleries) don't run here; layout, brand and content, which Studio changes, all show. */}
+          <iframe title={W.previewTitle} src="/console/studio-preview" sandbox="allow-same-origin" referrerPolicy="same-origin" className="h-full w-full border-0 bg-card" />
         </>
       ),
       inspector: {
