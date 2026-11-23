@@ -9,7 +9,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
-import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, ownKb as ownFilesKb, ownProblems, runtimeHashProblems, VERCEL_MARGIN_KB, zodProblems } from './lib/app-budget.mjs'
+import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, ownKb as ownFilesKb, ownProblems, runtimeHashProblems, VERCEL_MARGIN_KB, weighIt, zodProblems } from './lib/app-budget.mjs'
 
 // Next 15 + React 19's shared framework script is ~103 kB gzipped on its own; a shop page may add ~17 kB.
 const BUDGET_KB = 120
@@ -133,7 +133,7 @@ for (const [k, files] of Object.entries(build)) {
   const ownKb = ownLimit ? ownFilesKb(all, rootMain, gz) : 0
   rows.push({ page: k, kb, limit, ...(ownLimit ? { own: { kb: ownKb, limit: ownLimit } } : {}) })
   if (process.env.SHOW_BUDGETS && ownLimit) console.log(`  ${k}: own files ${ownKb.toFixed(2)} kB JS (ceiling ${ownLimit})`)
-  if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
+  if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB). Run ${weighIt(k)} to see which files and components it loads, and split what the first paint does not need (next/dynamic, or the bag's idle loading: bag.tsx)`)
 }
 
 // …and every page that isn't a shop must load it (its classes live only there): the console, Admin, the partner
@@ -175,7 +175,7 @@ const CUSTOMIZER_KB = 149.7
     const kb = [...new Set([...above.flatMap((l) => build[l] ?? []), ...build[k]])].filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
     if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS`)
     rows.push({ page: k, kb, limit: CUSTOMIZER_KB })
-    if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB) — load a form when it opens (next/dynamic)`)
+    if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB). Run ${weighIt(k)}; load a form when it opens (next/dynamic), as the story and design forms do`)
   }
 }
 

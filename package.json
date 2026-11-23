@@ -45,6 +45,7 @@
     "check:api": "node scripts/check-api.mjs",
     "verify:tenancy": "bash scripts/verify/tenancy.sh",
     "e2e": "node e2e/run.mjs",
+    "weight": "node scripts/page-weight.mjs",
     "verify:backfill": "bash scripts/verify/backfill-0019.sh && bash scripts/verify/backfill-0046.sh",
     "check:credits": "node scripts/check-credits.mjs",
     "check:feedback": "node scripts/check-feedback.mjs",

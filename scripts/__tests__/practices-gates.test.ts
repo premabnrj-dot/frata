@@ -201,6 +201,47 @@ describe('the shop\'s own files and the runtime\'s hashes (the owner\'s options 
   })
 })
 
+describe('npm run weight: what a page loads and who brings it', async () => {
+  const { pageKey, weighPage, weightReport, librariesIn } = await import('../lib/page-weight.mjs')
+  const { weighIt } = await import('../lib/app-budget.mjs')
+  const kb = (n: number) => n * 1024
+  const build = {
+    '/layout': ['webpack-1.js', 'react.js'], '/(console)/console/layout': ['app-shell-ab12.js', 'app/(console)/console/layout-1.js'],
+    '/(console)/console/brand/page': ['app/(console)/console/brand/page-2.js', '9005.js'], '/(console)/console/page': ['app/(console)/console/page-3.js'],
+    '/s/[host]/(checkout)/checkout/page': ['c.js'],
+  }
+  const sizes: Record<string, number> = { 'webpack-1.js': kb(2), 'react.js': kb(98), 'app-shell-ab12.js': kb(10), 'app/(console)/console/layout-1.js': kb(1), 'app/(console)/console/brand/page-2.js': kb(9), '9005.js': kb(3), 'app/(console)/console/page-3.js': kb(4), 'c.js': kb(5) }
+  const clientModules = {
+    '/r/src/app/(console)/console/brand/_components/brand-editor.tsx': { chunks: ['1', 'app/(console)/console/brand/page-2.js', '2', '9005.js'] },
+    '/r/src/components/shell/nav.tsx': { chunks: ['3', 'app-shell-ab12.js'] },
+    // A home-page component: it needs a file the brand page doesn't load, so it never shows as bringing one.
+    '/r/src/app/(console)/console/_components/open-shop.tsx': { chunks: ['3', 'app-shell-ab12.js', '4', 'app/(console)/console/page-3.js'] },
+    '/r/src/app/globals.css': { chunks: ['5', 'app/(console)/console/layout-1.js'] },
+  }
+  it('finds a page by its URL path, a key, or a shop path with any host', () => {
+    expect(pageKey(build, '/console/brand')).toBe('/(console)/console/brand/page')
+    expect(pageKey(build, '/(console)/console/brand/page')).toBe('/(console)/console/brand/page')
+    expect(pageKey(build, '/s/kesar/checkout')).toBe('/s/[host]/(checkout)/checkout/page')
+    expect(pageKey(build, '/console/nowhere')).toEqual([])
+  })
+  it('lists the first load heaviest first, by kind, and only the components this page can render', () => {
+    const w = weighPage(build, new Set(['webpack-1.js', 'react.js']), (f: string) => sizes[f] ?? 0, clientModules, '/(console)/console/brand/page', '/r', (f: string) => (f === '9005.js' ? 'x"mix-blend":[{"mix-blend"' : ''))
+    expect(w.total).toBe(123)
+    expect(w.own).toBe(23)
+    expect(w.rows.map((r: { file: string, kind: string }) => `${r.kind} ${r.file}`)).toEqual(['framework react.js', 'shell app-shell-ab12.js', 'page app/(console)/console/brand/page-2.js', 'shared 9005.js', 'framework webpack-1.js', 'layout app/(console)/console/layout-1.js'])
+    const shell = w.rows.find((r: { kind: string }) => r.kind === 'shell')
+    expect(shell?.brought).toEqual(['src/components/shell/nav.tsx'])
+    expect(w.rows.find((r: { file: string }) => r.file === '9005.js')?.libs).toEqual(['tailwind-merge (cn)'])
+    const text = weightReport(w)
+    expect(text).toMatch(/9005\.js \[holds tailwind-merge \(cn\)\] {2}← src\/app\/\(console\)\/console\/brand\/_components\/brand-editor\.tsx/)
+    expect(text).toMatch(/What to do: [^]*next\/dynamic/)
+  })
+  it('names zod by the same mark the build fails on, and every failure names the command', () => {
+    expect(librariesIn('a.name="ZodError";')).toEqual(['zod'])
+    expect(weighIt('/(console)/console/x/page')).toBe("npm run weight -- '/(console)/console/x/page'")
+  })
+})
+
 describe('what a first load may not carry (zod; the shell twice)', async () => {
   const { zodProblems, appShellProblems } = await import('../lib/app-budget.mjs')
   const text: Record<string, string> = { 'r.js': 'react', 'z.js': 'c=u("ZodError",x)', 'm.js': 'n=u("$ZodError",x)', 'p.js': 'page', 'app-shell-0a1b.js': 'shell' }

@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.12.0
+  version: 1.13.0
   owner: owner
   verified: 2026-11-11
   covers: ["scripts/verify/**", "e2e/run.mjs", "e2e/stack.mjs", "scripts/check-mockup.mjs"]
@@ -18,6 +18,7 @@ metadata:
 npm test            # npm run gates (the list: npm run gates:list), then vitest
 npm run typecheck
 npm run build       # postbuild: check:client-bundle, check:storefront-build (shop and Console JS budgets), check:pdf-trace
+npm run weight -- /console/brand   # after a build: what one page loads first, heaviest first, which components bring each file
 ```
 
 A gate you added: plant a violation and watch it fail before trusting it. Before every `git commit` the pre-bash hook
