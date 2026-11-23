@@ -12,7 +12,8 @@ import { studioEntry, type StudioStep } from '@/lib/studio/with-studio'
 import { errName } from '@/lib/log'
 import { StudioApp } from './_live/studio-app'
 import { BrandRead } from './_live/brand-read'
-import { ConfirmPasskeys, OpenStore } from './_live/entry-parts'
+import { switchStoreAction } from '@/app/choose/actions'
+import { ConfirmPasskeys } from './_live/entry-parts'
 
 // =============================================================================
 // /partner/studio — STUDIO, FOR FRRATA STAFF ON ONE TEST STORE (plan docs/plans/2026-11-22-v3a-runtime.md R7; ADR-0020).
@@ -40,7 +41,11 @@ function Step({ step }: { step: StudioStep }) {
     // Several partner stores: today's card, whose Open Clients lists them (a Deviation: the drawing shows one store).
     const one = step.stores.length === 1 ? step.stores[0]! : null
     if (!one) return <Closed />
-    return frame(<Panel title={`Studio runs on ${one.name}`} action={<OpenStore tenantId={one.tenantId} name={one.name} />} />)
+    return frame(<Panel title={`Studio runs on ${one.name}`} action={
+      <form action={switchStoreAction}>
+        <input type="hidden" name="tenantId" value={one.tenantId} /><input type="hidden" name="to" value="/partner/studio" />
+        <button type="submit" className={button({ size: 'sm' })}>Open {one.name}</button>
+      </form>} />)
   }
   if (step.kind === 'staff_passkey') return frame(<Panel title="Add a staff passkey" action={<Link href="/admin" className={button({ size: 'sm' })}>Add staff passkey</Link>} />)
   return frame(
