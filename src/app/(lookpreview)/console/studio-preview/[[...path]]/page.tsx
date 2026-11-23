@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { previewPage } from '@/components/storefront/preview-body'
 import { ShopShell } from '@/components/storefront/shell'
-import { requireStudio } from '@/lib/studio/with-studio'
+import { requireStudio, StudioUnbound, withStudio } from '@/lib/studio/with-studio'
 import { previewCatalogue, previewLook, previewShop } from '@/lib/queries/storefront'
 import { previewContent } from '@/lib/queries/content'
 import { manifestsFor } from '@/lib/themes/manifests'
@@ -32,6 +32,10 @@ const href = (p: string) => (p === '/' ? BASE : `${BASE}${p}`)
 export default async function StudioPreview({ params }: { params: Promise<{ path?: string[] }> }) {
   const auth = await requireStudio()
   if (!auth.ok) notFound()
+  // The database's own check that this person is bound to this store, as every Studio read has (tenancy review LOW):
+  // a partner member whose link or assignment fails it sees nothing here.
+  const bound = await withStudio(auth, async () => true).catch((e) => { if (e instanceof StudioUnbound) return false; throw e })
+  if (!bound) notFound()
   const tenantId = auth.tenantId
   const path = (await params).path ?? []
   const shop = await previewShop(tenantId)

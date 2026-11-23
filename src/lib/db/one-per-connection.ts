@@ -10,9 +10,11 @@ import type postgres from 'postgres'
 // pipelined answer can be lost. Admin › Partners sends the most reads at once (three counts, two lists, Today's sources,
 // the layout's own) on Admin's two connections.
 //
-// The fix holds the pool's queries to its size: a query waits for a free slot instead of riding behind another. Only
-// `unsafe` (every drizzle query outside a transaction) is held; `begin` keeps its own connection, and the queries inside
-// a transaction run on that connection, one after another, as they always did. (postgres.js's own `max_pipeline: 0`
+// The fix holds the pool's queries to its size: a query waits for a free slot instead of riding behind another. A query
+// (`unsafe`, every drizzle query outside a transaction) holds a slot while it runs; a transaction (`begin`) holds one for
+// its whole length, and the queries inside it run on its own connection, one after another, as they always did. A
+// transaction that waits on a pool read outside itself could wait for ever with every slot held by transactions, as it
+// already could for a connection; nothing here does that (withTenant's work runs on its own tx). (postgres.js's own `max_pipeline: 0`
 // would do it, but it also stops `begin` from claiming its connection: UNSAFE_TRANSACTION.)
 // Proof: src/lib/db/__tests__/pipeline.int.test.ts counts queries in flight on the wire.
 // =============================================================================
@@ -44,5 +46,9 @@ export function onePerConnection<T extends Sql>(sql: T, max: number): T {
     return q
   }) as unknown as T['unsafe']
   sql.unsafe = held
+  // A transaction holds a connection for its length, so it holds a slot too (tenancy review LOW): otherwise held reads
+  // could still ride behind a query on the connection the transaction left them. Its own "begin" passes through above.
+  const begin = sql.begin.bind(sql) as (...a: unknown[]) => Promise<unknown>
+  sql.begin = ((...a: unknown[]) => slot(() => begin(...a))) as unknown as T['begin']
   return sql
 }
