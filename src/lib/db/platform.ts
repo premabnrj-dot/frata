@@ -377,3 +377,17 @@ export async function deleteEndedBuildKeys(): Promise<number> {
   const rows = await db().execute<{ n: number }>(sql`select app_delete_ended_build_keys() as n`)
   return Number(rows[0]?.n ?? 0)
 }
+
+/** Passkeys on or off for everyone (drizzle/0171 app_passkeys_state; owner 2026-11-23): off, since when, set by whom.
+ *  Unreadable reads as on (passkeys asked: the safe side). */
+export type PasskeysState = { off: boolean; since: string | null; by: string | null }
+export async function passkeysState(): Promise<PasskeysState> {
+  try {
+    const rows = await db().execute<{ s: PasskeysState }>(sql`select app_passkeys_state() as s`)
+    const v = rows[0]?.s
+    return { off: v?.off === true, since: v?.since ?? null, by: v?.by ?? null }
+  } catch (e) {
+    console.error('[passkeys] state', errName(e))
+    return { off: false, since: null, by: null }
+  }
+}

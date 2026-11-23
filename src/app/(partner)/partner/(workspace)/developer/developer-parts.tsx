@@ -13,7 +13,7 @@ import { DEVICE_TERMINAL, startedWords } from '@/domains/storefront-api/device'
 import { NO_PASSKEY_HERE } from '@/components/passkeys/passkey-client'
 import { settle } from '@/lib/settle'
 import type { CodeLook } from '@/lib/db/device-codes'
-import { checkCodeAction, deleteComputerAction, giveOptionsAction, giveVerifyAction, type DeviceAnswer } from './actions'
+import { checkCodeAction, deleteComputerAction, giveOffAction, giveOptionsAction, giveVerifyAction, type DeviceAnswer } from './actions'
 
 // The page's words (four screens § 2 States), one line each; the reasons come from the actions.
 type Why = Extract<DeviceAnswer<unknown>, { ok: false }>['why']
@@ -38,7 +38,7 @@ export function SignInComputer() {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [look, setLook] = useState<(CodeLook & { code: string; at: Date }) | null>(null)
+  const [look, setLook] = useState<(CodeLook & { off: boolean; code: string; at: Date }) | null>(null)
 
   const check = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,7 +72,7 @@ export function SignInComputer() {
 
 /** The confirm dialog: the store, the code, when and where it started, the key; Give key asks for the passkey there and
  *  then, for this one key. From another network, Don't give key is the main button. */
-function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; at: Date }; onClose: () => void; onDone: () => void }) {
+function GiveKey({ look, onClose, onDone }: { look: CodeLook & { off: boolean; code: string; at: Date }; onClose: () => void; onDone: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   // Another network, or one Frrata can't tell: marked, and Give key waits for "This is my computer" (owner, 2026-11-22).
@@ -80,11 +80,19 @@ function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; a
   const [askMine, setAskMine] = useState(false)
   const elsewhere = look.sameNetwork !== true || askMine
   const [mine, setMine] = useState(false)
-  const off = look.full ? fullFor(look.store) : !look.hasPasskey ? SAY.no_passkey : elsewhere && !mine ? SAY.not_mine : undefined
+  // Passkeys off (Admin › Staff): no passkey is asked for or needed; the network check stays.
+  const needsPasskey = !look.off && !look.hasPasskey
+  const off = look.full ? fullFor(look.store) : needsPasskey ? SAY.no_passkey : elsewhere && !mine ? SAY.not_mine : undefined
+  const refused = (why: Why) => { if (why === 'not_mine') { setAskMine(true); setMine(false) } setError(why === 'full' ? fullFor(look.store) : SAY[why]) }
   const give = async () => {
     setBusy(true); setError(null)
+    if (look.off) {
+      const g = await giveOffAction(look.code, mine).catch(() => ({ ok: false as const, why: 'busy' as const }))
+      setBusy(false)
+      return g.ok ? onDone() : refused(g.why)
+    }
     const o = await giveOptionsAction(look.code, mine).catch(() => ({ ok: false as const, why: 'busy' as const }))
-    if (!o.ok) { setBusy(false); if (o.why === 'not_mine') { setAskMine(true); setMine(false) } return setError(o.why === 'full' ? fullFor(look.store) : SAY[o.why]) }
+    if (!o.ok) { setBusy(false); return refused(o.why) }
     let response
     try { response = await startAuthentication({ optionsJSON: o.value as Parameters<typeof startAuthentication>[0]['optionsJSON'] }) } catch (e) {
       setBusy(false); return setError((e as Error)?.name === 'NotAllowedError' ? NO_PASSKEY_HERE : SAY.not_confirmed)
@@ -96,7 +104,7 @@ function GiveKey({ look, onClose, onDone }: { look: CodeLook & { code: string; a
   }
   const dont = <Button variant={elsewhere ? 'primary' : 'secondary'} data-autofocus onClick={onClose}>Don’t give key</Button>
   // No passkey at all (an undrawn state, orchestrator ruling 6): Give key off, and a way to add one.
-  const add = !look.hasPasskey && <Link href="/partner/passkeys" className={button({ variant: 'secondary' })}>Add passkey</Link>
+  const add = needsPasskey && <Link href="/partner/passkeys" className={button({ variant: 'secondary' })}>Add passkey</Link>
   const yes = <Button variant={elsewhere ? 'secondary' : 'primary'} busy={busy} disabled={!!off} reason={off} onClick={give}>Give key</Button>
   return (
     <Dialog open onClose={onClose} title="Give this computer a Build key?" error={error} actions={<>{dont}{add}{yes}</>}>

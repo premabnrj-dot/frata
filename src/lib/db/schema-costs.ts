@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/lib/db/schema-costs.ts — Admin › Costs' platform tables (spec docs/specs/2026-11-23-admin-costs.md § The data;
-// plan docs/plans/2026-11-23-admin-costs.md tasks 2–3; access in the same migration, drizzle/0170). No tenant: what Frrata
+// plan docs/plans/2026-11-23-admin-costs.md tasks 2–3; access in the same migration, drizzle/0172). No tenant: what Frrata
 // pays. Only frata_admin reads and writes them (src/lib/admin/costs.ts, fenced by check:tenant § 10); frata_app, the API
 // roles and frata_builder hold nothing. Amounts are paise (INR) or micro-dollars (USD); due dates, next due, overdue and
 // burn are derived (src/domains/admin/costs.ts), never stored. A one-time cost has its anchor on the paid date and its one

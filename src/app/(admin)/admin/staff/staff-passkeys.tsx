@@ -9,7 +9,8 @@ import { Dialog, DialogError } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
-import { addPasskey, approve, confirmPasskey, removeOne } from '@/components/passkeys/passkey-client'
+import { addPasskey, approve, removeOne } from '@/components/passkeys/passkey-client'
+import { confirmWhenAsked } from '../_components/form-dialog'
 
 // =============================================================================
 // FILE: src/app/(admin)/admin/staff/staff-passkeys.tsx — Admin › Staff's passkey controls (staff passkeys spec;
@@ -96,14 +97,9 @@ export function AddOwnPasskey() {
   )
 }
 
-/** A server-action form that confirms with a passkey before it posts (adding or removing staff). An <ActionForm>: the
- *  browser's rules first, then the passkey, then the action; a refusal from either is its error toast. */
+/** A server-action form for adding or removing staff: the action first, the passkey only when the server asks. */
 export function ConfirmFirst({ action, children, className }: { action: (form: FormData) => Promise<ActionResult>; children: React.ReactNode; className?: string }) {
-  const confirmed = async (form: FormData): Promise<ActionResult> => {
-    const r = await confirmPasskey()
-    return r.ok ? action(form) : { error: r.error }
-  }
-  return <ActionForm action={confirmed} className={className}>{children}</ActionForm>
+  return <ActionForm action={confirmWhenAsked(action)} className={className}>{children}</ActionForm>
 }
 
 /** Add staff (Neel N4, board Staff): a button that opens the form in a dialog; it confirms with a passkey first. */
@@ -111,10 +107,7 @@ export function AddStaffDialog({ action, support, master }: { action: (form: For
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const close = () => { setOpen(false); setError(null) }
-  const confirmed = async (form: FormData): Promise<ActionResult> => {
-    const r = await confirmPasskey()
-    return r.ok ? action(form) : { error: r.error }
-  }
+  const confirmed = confirmWhenAsked(action)
   const field = `${FIELD} aria-invalid:border-danger-mark`
   return (
     <>

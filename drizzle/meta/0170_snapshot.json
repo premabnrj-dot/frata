@@ -1,5 +1,5 @@
 {
-  "id": "bd08914d-6683-407a-a95b-f3e6044549a4",
+  "id": "3713e895-4947-44d4-85ca-17aad34cc26d",
   "prevId": "ad67fa06-5c6e-4f3c-9ca8-6762e49a0d8e",
   "version": "7",
   "dialect": "postgresql",
@@ -17243,7 +17243,7 @@
           "name": "until",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -17281,7 +17281,7 @@
         },
         "platform_switches_until": {
           "name": "platform_switches_until",
-          "value": "\"platform_switches\".\"until\" <= \"platform_switches\".\"created_at\" + interval '30 days'"
+          "value": "\"platform_switches\".\"until\" is null or \"platform_switches\".\"until\" <= \"platform_switches\".\"created_at\" + interval '30 days'"
         }
       },
       "isRLSEnabled": false
@@ -17503,7 +17503,7 @@
       "checkConstraints": {
         "staff_notices_kind": {
           "name": "staff_notices_kind",
-          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed')"
+          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed','passkeys_off','passkeys_on')"
         }
       },
       "isRLSEnabled": false
@@ -21092,13 +21092,13 @@
           "name": "staff_stepup_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "partner_stepup_id": {
           "name": "partner_stepup_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -23478,324 +23478,6 @@
         "partner_seats_method": {
           "name": "partner_seats_method",
           "value": "\"partner_seats\".\"method\" in ('upi','card')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cost_items": {
-      "name": "cost_items",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "vendor": {
-          "name": "vendor",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "cadence": {
-          "name": "cadence",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount": {
-          "name": "amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "varies": {
-          "name": "varies",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "anchor_on": {
-          "name": "anchor_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ends_on": {
-          "name": "ends_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "cost_items_live": {
-          "name": "cost_items_live",
-          "columns": [
-            {
-              "expression": "kind",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "ends_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "cost_items_kind": {
-          "name": "cost_items_kind",
-          "value": "\"cost_items\".\"kind\" in ('recurring','one_time')"
-        },
-        "cost_items_cadence": {
-          "name": "cost_items_cadence",
-          "value": "\"cost_items\".\"cadence\" is null or \"cost_items\".\"cadence\" in ('monthly','quarterly','yearly')"
-        },
-        "cost_items_kind_cadence": {
-          "name": "cost_items_kind_cadence",
-          "value": "(\"cost_items\".\"kind\" = 'recurring') = (\"cost_items\".\"cadence\" is not null)"
-        },
-        "cost_items_currency": {
-          "name": "cost_items_currency",
-          "value": "\"cost_items\".\"currency\" in ('INR','USD')"
-        },
-        "cost_items_category": {
-          "name": "cost_items_category",
-          "value": "\"cost_items\".\"category\" in ('infrastructure','ai','messaging','software','marketing','legal','people','design','other')"
-        },
-        "cost_items_amount": {
-          "name": "cost_items_amount",
-          "value": "(\"cost_items\".\"currency\" = 'INR' and \"cost_items\".\"amount\" between 1 and 1000000000) or (\"cost_items\".\"currency\" = 'USD' and \"cost_items\".\"amount\" between 1 and 50000000000)"
-        },
-        "cost_items_name": {
-          "name": "cost_items_name",
-          "value": "length(btrim(\"cost_items\".\"name\")) between 1 and 80"
-        },
-        "cost_items_vendor": {
-          "name": "cost_items_vendor",
-          "value": "\"cost_items\".\"vendor\" is null or length(\"cost_items\".\"vendor\") <= 80"
-        },
-        "cost_items_note": {
-          "name": "cost_items_note",
-          "value": "\"cost_items\".\"note\" is null or length(\"cost_items\".\"note\") <= 300"
-        },
-        "cost_items_days": {
-          "name": "cost_items_days",
-          "value": "\"cost_items\".\"anchor_on\" between '2020-01-01' and '2100-12-31' and (\"cost_items\".\"ends_on\" is null or \"cost_items\".\"ends_on\" between '2020-01-01' and '2100-12-31')"
-        },
-        "cost_items_once": {
-          "name": "cost_items_once",
-          "value": "\"cost_items\".\"kind\" <> 'one_time' or not \"cost_items\".\"varies\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.cost_payments": {
-      "name": "cost_payments",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "period_for": {
-          "name": "period_for",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "paid_on": {
-          "name": "paid_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "inr_paise": {
-          "name": "inr_paise",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "gst_paise": {
-          "name": "gst_paise",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "cost_payments_period": {
-          "name": "cost_payments_period",
-          "columns": [
-            {
-              "expression": "item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "period_for",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cost_payments_paid": {
-          "name": "cost_payments_paid",
-          "columns": [
-            {
-              "expression": "paid_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "cost_payments_item_fk": {
-          "name": "cost_payments_item_fk",
-          "tableFrom": "cost_payments",
-          "tableTo": "cost_items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "cost_payments_currency": {
-          "name": "cost_payments_currency",
-          "value": "\"cost_payments\".\"currency\" in ('INR','USD')"
-        },
-        "cost_payments_amount": {
-          "name": "cost_payments_amount",
-          "value": "((\"cost_payments\".\"currency\" = 'INR' and \"cost_payments\".\"amount\" between 1 and 1000000000) or (\"cost_payments\".\"currency\" = 'USD' and \"cost_payments\".\"amount\" between 1 and 50000000000)) and \"cost_payments\".\"inr_paise\" between 1 and 1000000000"
-        },
-        "cost_payments_inr": {
-          "name": "cost_payments_inr",
-          "value": "\"cost_payments\".\"currency\" <> 'INR' or \"cost_payments\".\"inr_paise\" = \"cost_payments\".\"amount\""
-        },
-        "cost_payments_gst": {
-          "name": "cost_payments_gst",
-          "value": "\"cost_payments\".\"gst_paise\" is null or \"cost_payments\".\"gst_paise\" between 0 and \"cost_payments\".\"inr_paise\""
-        },
-        "cost_payments_days": {
-          "name": "cost_payments_days",
-          "value": "\"cost_payments\".\"paid_on\" between '2020-01-01' and '2100-12-31' and \"cost_payments\".\"period_for\" between '2020-01-01' and '2100-12-31'"
-        },
-        "cost_payments_note": {
-          "name": "cost_payments_note",
-          "value": "\"cost_payments\".\"note\" is null or length(\"cost_payments\".\"note\") <= 300"
         }
       },
       "isRLSEnabled": false

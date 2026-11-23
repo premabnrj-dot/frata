@@ -8,7 +8,7 @@ import { Button, button } from '@/components/ui/button'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
-import { CONTACT_MAX } from '@/domains/content/kinds'
+import { CONTACT_MAX } from '@/domains/content/kinds-facts'
 import { saveContactAction, undoContentAction } from '../actions'
 import { refused } from './refused'
 

@@ -40,13 +40,16 @@ export type DialogSpec = {
   confirm?: boolean
 }
 
-/** The spec's action, with the passkey step when the server asks for it. */
-const withConfirm = (spec: DialogSpec) => !spec.confirm ? spec.action : async (form: FormData): Promise<ActionResult> => {
-  const r = await spec.action(form)
+/** The action first; the passkey only when the server asks for a fresh one (never while passkeys are off for everyone,
+ *  Admin › Staff, drizzle/0171), then the same form again; nothing typed is lost. */
+export const confirmWhenAsked = (action: (form: FormData) => Promise<ActionResult>) => async (form: FormData): Promise<ActionResult> => {
+  const r = await action(form)
   if (!r || !('error' in r) || r.error !== STAFF_CONFIRM_FIRST) return r
   const c = await confirmPasskey()
-  return c.ok ? spec.action(form) : { error: c.error }
+  return c.ok ? action(form) : { error: c.error }
 }
+/** The spec's action, with the passkey step when the server asks for it. */
+const withConfirm = (spec: DialogSpec) => (spec.confirm ? confirmWhenAsked(spec.action) : spec.action)
 
 function Body({ spec, onClose, onError, error }: { spec: DialogSpec; onClose: () => void; onError: (m: string | null) => void; error: string | null }) {
   return (

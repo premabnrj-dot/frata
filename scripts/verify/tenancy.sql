@@ -5857,11 +5857,15 @@ begin
     then raise exception 'FAIL: 88 the switch reached the real passkey check'; end if;
   begin perform public.app_partner_need_real(p, s, '', false); raise exception 'FAIL: 88 the real partner check passed on the switch';
   exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
-  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all', 'app_handover_invite'] loop
+  -- A handover invite follows the switch (owner 2026-11-23, drizzle/0171); managing passkeys keeps the real check.
+  if (select prosrc from pg_proc where proname = 'app_handover_invite') !~ 'app_partner_need\(' then raise exception 'FAIL: 88 the handover invite ignores the switch'; end if;
+  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all'] loop
     if (select prosrc from pg_proc where proname = fn) !~ 'app_partner_need_real\(' or (select prosrc from pg_proc where proname = fn) ~ 'app_partner_need\('
       then raise exception 'FAIL: 88 % no longer asks for a real passkey', fn; end if;
   end loop;
-  foreach fn in array array['app_staff_challenge', 'app_staff_add_passkey', 'app_staff_approve', 'app_staff_remove_passkey', 'app_staff_list',
+  -- Admin › Staff's list follows the switch (names only; owner 2026-11-23, drizzle/0171); adding, approving and removing don't.
+  if (select prosrc from pg_proc where proname = 'app_staff_list') !~ 'app_passkeys_off' then raise exception 'FAIL: 88 the staff list ignores the switch'; end if;
+  foreach fn in array array['app_staff_challenge', 'app_staff_add_passkey', 'app_staff_approve', 'app_staff_remove_passkey',
                             'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
     if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
   end loop;
@@ -5885,6 +5889,66 @@ begin
     if has_function_privilege('frata_app', 'public.' || fn, 'execute') or has_function_privilege('anon', 'public.' || fn, 'execute')
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
+end $$;
+-- § 88 (cont.) · Passkeys off from Admin › Staff (drizzle/0170–0171; owner 2026-11-23). Off from Admin has no end date;
+-- only an Admin turns passkeys off, with their own passkey in the last 5 minutes; an Admin turns them on with none; each
+-- change names the person in the audit; Give key's passkey-free door opens only while off; one role holds each door.
+reset role;
+do $$ declare adm uuid := 'aaaaaaaa-0000-0000-0000-000000000035'; sup uuid := 'aaaaaaaa-0000-0000-0000-000000000001';
+  s uuid := gen_random_uuid(); k uuid; n int;
+begin
+  delete from public.platform_switches;
+  if public.app_passkeys_off() then raise exception 'FAIL: 88b passkeys off with no switch row'; end if;
+  begin perform public.app_admin_passkeys_set(sup, s, 'x', true); raise exception 'FAIL: 88b support staff turned passkeys off';
+  exception when others then if sqlerrm <> 'not_admin' then raise; end if; end;
+  begin perform public.app_admin_passkeys_set(adm, s, 'nope', true); raise exception 'FAIL: 88b passkeys turned off without a passkey';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  insert into public.staff_passkeys (user_id, credential_id, public_key, name) values (adm, 'proof88b', 'k', 'proof') returning id into k;
+  insert into public.staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at) values (adm, s, k, 'h88b', now() + interval '1 hour');
+  select count(*) into n from public.audit_events where action = 'platform.passkeys_off' and actor_kind = 'staff' and actor_user_id = adm;
+  if public.app_admin_passkeys_set(adm, s, 'h88b', true) is not true then raise exception 'FAIL: 88b an Admin with a fresh passkey could not turn passkeys off'; end if;
+  if not public.app_passkeys_off() or (select w.until from public.platform_switches w where w.key = 'passkeys_off') is not null
+    then raise exception 'FAIL: 88b passkeys off from Admin has an end date'; end if;
+  if (select count(*) from public.audit_events where action = 'platform.passkeys_off' and actor_kind = 'staff' and actor_user_id = adm) <> n + 1
+    then raise exception 'FAIL: 88b no audit row names the Admin'; end if;
+  if not exists (select 1 from public.staff_notices where kind = 'passkeys_off' and about = 'admin2@frata.test')
+     or (select count(distinct to_email) from public.staff_notices where kind = 'passkeys_off') < (select count(*) from public.platform_staff where role = 'admin')
+    then raise exception 'FAIL: 88b turning passkeys off emailed not every master admin'; end if;
+  if (public.app_passkeys_state()->>'off')::boolean is not true or public.app_passkeys_state()->>'by' <> 'admin2@frata.test'
+    then raise exception 'FAIL: 88b the state does not say who turned passkeys off'; end if;
+  if (select prosrc from pg_proc where proname = 'app_studio_proved') !~ 'app_passkeys_off' then raise exception 'FAIL: 88b Studio ignores the switch'; end if;
+  -- Give key while off (§ 81's store and people): the Partner owner gives a key with no passkey and no step-up, once;
+  -- another network still needs "This is my computer"; a Builder still gets nothing; the store's audit says passkeys off.
+  perform public.app_device_code_start(repeat('a', 62) || '8b', repeat('b', 62) || '8b', 'proof-e81', repeat('9', 64));
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f3', 'e8100000-0000-0000-0000-0000000000d3', null, repeat('b', 62) || '8b', repeat('9', 64), true);
+    raise exception 'FAIL: 88b a Builder gave a key while passkeys are off';
+  exception when others then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('8', 64), false);
+    raise exception 'FAIL: 88b a code from another network given without This is my computer';
+  exception when others then if sqlerrm <> 'not_mine' then raise; end if; end;
+  if public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('9', 64), false) <> 'Proof E81'
+    then raise exception 'FAIL: 88b the Partner owner could not give a key while passkeys are off'; end if;
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('9', 64), false);
+    raise exception 'FAIL: 88b a code given twice while passkeys are off';
+  exception when others then if sqlerrm <> 'not_found' then raise; end if; end;
+  if not exists (select 1 from public.audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'build_key.device_confirmed' and detail->>'passkeys' = 'off')
+    then raise exception 'FAIL: 88b Give key while off left no audit row saying so'; end if;
+  if public.app_admin_passkeys_set(adm, gen_random_uuid(), null, false) is not false then raise exception 'FAIL: 88b an Admin could not turn passkeys on'; end if;
+  if public.app_passkeys_off() then raise exception 'FAIL: 88b passkeys still off after an Admin turned them on'; end if;
+  -- While on, the doors that follow the switch refuse a missing step-up again (security review LOW, 2026-11-23).
+  if exists (select 1 from public.app_studio_proved(adm, '00000000-0000-0000-0000-000000000000', null, null)) then raise exception 'FAIL: 88b Studio binds with no step-up while on'; end if;
+  begin perform public.app_staff_list(adm, gen_random_uuid(), null); raise exception 'FAIL: 88b the staff list read with no passkey while on';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  if not exists (select 1 from public.staff_notices where kind = 'passkeys_on' and about = 'admin2@frata.test') then raise exception 'FAIL: 88b turning passkeys on emailed no one'; end if;
+  begin perform public.app_device_code_give_off(adm, s, null, 'x', null, true); raise exception 'FAIL: 88b Give key without a passkey while passkeys are on';
+  exception when others then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  delete from public.staff_stepups where token_hash = 'h88b'; delete from public.staff_passkeys where id = k;
+  if has_function_privilege('frata_app', 'public.app_admin_passkeys_set(uuid, uuid, text, boolean)', 'execute')
+     or not has_function_privilege('frata_admin', 'public.app_admin_passkeys_set(uuid, uuid, text, boolean)', 'execute')
+     or has_function_privilege('frata_admin', 'public.app_device_code_give_off(uuid, uuid, text, text, text, boolean)', 'execute')
+     or not has_function_privilege('frata_app', 'public.app_device_code_give_off(uuid, uuid, text, text, text, boolean)', 'execute')
+     or has_function_privilege('frata_builder', 'public.app_passkeys_state()', 'execute') or has_function_privilege('anon', 'public.app_passkeys_state()', 'execute')
+    then raise exception 'FAIL: 88b a role holds the wrong door'; end if;
 end $$;
 -- § 98 · One brand record (one-address plan P1·2, drizzle/0155; spec § 5). Each store reads and writes only its own
 -- brand_tokens, brand_seasons and brand_proposals; a logo file outside the store's own brand folder is refused, in
@@ -6381,6 +6445,17 @@ do $$ declare t uuid; begin
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs past its staff check'; end if;
   update staff_stepups set expires_at = now() + interval '1 hour' where user_id = 'a9100000-0000-0000-0000-000000000002';
   if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
+  -- A turn opened while passkeys were off from Admin (0171) holds no step-up: it runs only while they stay off, and ends
+  -- at its next check once an Admin turns them on (orchestrator 2026-11-23: "that is the right direction").
+  create temp table k91 on commit drop as select turn_id, staff_stepup_id, partner_stepup_id from studio_turn_keys where turn_id = t;
+  update studio_turn_keys set staff_stepup_id = null, partner_stepup_id = null where turn_id = t;
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn with no step-up runs while passkeys are on'; end if;
+  insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', null, 'proof', 'proof 91 off from Admin');
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn opened while passkeys are off does not run'; end if;
+  delete from platform_switches where key = 'passkeys_off';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn opened while off still runs once passkeys are on'; end if;
+  update studio_turn_keys x set staff_stepup_id = k.staff_stepup_id, partner_stepup_id = k.partner_stepup_id from k91 k where x.turn_id = k.turn_id;
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the turn''s step-ups did not come back'; end if;
   -- Sign-out deletes the partner step-up (app_partner_pk_signout): the turn's person goes with it, switch or not.
   insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 day', 'proof', 'proof 91');
   delete from partner_stepups where user_id = 'a9100000-0000-0000-0000-000000000002';
@@ -6482,7 +6557,7 @@ do $$ declare r text; tb text; fn text; begin
   if (select pg_get_function_result('app_studio_due(integer)'::regprocedure)) <> 'TABLE(session_id uuid, tenant_id uuid, turn_id uuid, kind text)' then raise exception 'FAIL: 91 the cron list returns more than ids'; end if;
   if (select pg_get_function_result('app_turn_actor(uuid)'::regprocedure)) <> 'TABLE(tenant_id uuid, partner_id uuid, session_id uuid, user_id uuid, member_id uuid)' then raise exception 'FAIL: 91 app_turn_actor returns more than ids'; end if;
 end $$;
--- 102. Admin › Costs (drizzle/0170; spec docs/specs/2026-11-23-admin-costs.md, tenancy review 2026-11-23): two platform
+-- 102. Admin › Costs (drizzle/0172; spec docs/specs/2026-11-23-admin-costs.md, tenancy review 2026-11-23): two platform
 -- tables only frata_admin touches, with exactly the privileges the spec lists, RLS on and one permissive policy each.
 do $$ declare r text; t text; p text; begin
   foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop

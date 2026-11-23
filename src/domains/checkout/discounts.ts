@@ -31,9 +31,11 @@
 // =============================================================================
 
 import { apportion, taxOrder, type ChargeShare } from '@/domains/tax/gst'
+import type { DiscountStyle } from './discount-styles'
 
-export const DISCOUNT_STYLES = ['order_off', 'free_shipping', 'pay_online', 'product_off', 'bxgy', 'free_gift'] as const
-export type DiscountStyle = (typeof DISCOUNT_STYLES)[number]
+// The styles live in discount-styles.ts, which the offer editor's browser code reads without this file's maths and
+// the tax rates it needs (page weight, 2026-11-23).
+export { DISCOUNT_STYLES, type DiscountStyle } from './discount-styles'
 export type DiscountClass = 'product' | 'order' | 'shipping' | 'payment'
 /** A style's class: derived, never stored twice. */
 export const classOf = (s: DiscountStyle): DiscountClass =>

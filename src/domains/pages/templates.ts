@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { BOUND, BOUND_QUESTION, type Bound } from '@/domains/policies/answers'
 import { DesignSchema, type Design, type DesignInput } from '@/domains/themes/blocks'
 import { BLOCK_ID, FillSchema, blockId, type Fill } from '@/domains/themes/sections'
+import { HANDLE, MAX_FAQ, type PageTemplate } from './templates-facts'
 
 // =============================================================================
 // FILE: src/domains/pages/templates.ts — A SHOP'S PAGES (Theme Studio TS1a; plan docs/plans/2026-11-11-theme-studio-ts1.md).
@@ -13,8 +14,9 @@ import { BLOCK_ID, FillSchema, blockId, type Fill } from '@/domains/themes/secti
 // Pure. Templates only ADD (templates.test.ts snapshot): no block removed or re-kinded, no new example block.
 // =============================================================================
 
-export const PAGE_TEMPLATES = ['about', 'faq'] as const
-export type PageTemplate = (typeof PAGE_TEMPLATES)[number]
+// The template names, the FAQ's cap and a page's address rule live in templates-facts.ts, which a browser may load
+// (no zod).
+export * from './templates-facts'
 
 const sample = (name: string, alt: string) => ({ base: `/themes/samples/${name}`, widths: [400, 800], width: 800, height: 1000, alt, decorative: false, focus: null })
 const step = (n: string, heading: string, words: string, photo: string) => ({
@@ -39,8 +41,6 @@ const about: DesignInput = {
   ],
 }
 
-/** The FAQ's own block: questions, some bound to Settings. */
-export const FAQ_ID = 'questions'
 /** Words shown as they are: no markup characters, no control or direction characters (security review L5, L3); an
  *  answer may keep its line breaks. */
 export const PLAIN = /^[^<>{}\\\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]*$/
@@ -50,7 +50,6 @@ export const FaqItemSchema = z.union([
   z.object({ q: z.string().max(80).regex(PLAIN), a: z.string().max(600).regex(PLAIN_LINES) }).strict(),
 ])
 export type FaqItem = z.infer<typeof FaqItemSchema>
-export const MAX_FAQ = 12
 const FaqFillSchema = z.object({ kind: z.literal('faq'), items: z.array(FaqItemSchema).max(MAX_FAQ) })
 /** The FAQ's own questions, as the template offers them: the three bound ones, then two of the owner's (examples). */
 export const FAQ_DEFAULT: { q: string; bound?: Bound; a?: string }[] = [
@@ -66,7 +65,6 @@ const faq: DesignInput = {
 }
 
 export const TEMPLATES: Record<PageTemplate, Design> = { about: DesignSchema.parse(about), faq: DesignSchema.parse(faq) }
-export const TEMPLATE_NAMES: Record<PageTemplate, string> = { about: 'About', faq: 'FAQ' }
 
 // --- A page's draft (and live) ---------------------------------------------------------------------------------------
 
@@ -76,8 +74,6 @@ export type PageFill = Fill | z.infer<typeof FaqFillSchema>
 
 /** Addresses a page can't take (built-in names; the shop's own paths are under /pages/ anyway). */
 const RESERVED = new Set(['constructor', 'prototype', '__proto__', 'tostring', 'valueof', 'hasownproperty', 'new', 'edit', 'preview'])
-export const HANDLE = /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/
-export const handleOf = (title: string) => title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '') || 'page'
 /** A title: plain words, no markup characters, no control or direction characters (security review L5). */
 const title = z.string().trim().min(1).max(60).regex(PLAIN)
 

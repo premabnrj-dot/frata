@@ -13,8 +13,8 @@ export type OfferWords = { title: string; style: DiscountStyle | string; percent
 const inr = (p: number) => formatInr(paise(p))
 
 /** "10% off (up to ₹500)", "₹50 off", or '' for free shipping. */
-/** Whether a pay-online offer's own title already says online ("Pay online, save"), so no "(paid online)" after it. */
-export const saysOnline = (title: string) => /online/i.test(title)
+// saysOnline lives in says-online.ts: the checkout's browser code reads it without this file (page weight 2026-11-23).
+export { saysOnline } from './says-online'
 
 export const offOf = (o: OfferWords, withCap = true) =>
   o.percentBps ? `${o.percentBps / 100}% off${withCap && o.cap ? ` (up to ${inr(o.cap)})` : ''}` : o.amountOff ? `${inr(o.amountOff)} off` : ''

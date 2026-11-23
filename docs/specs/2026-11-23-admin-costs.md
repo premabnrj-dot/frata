@@ -39,7 +39,7 @@ a cost arrives that needs it.
 
 ### The data (platform scope, no tenant)
 
-Two tables, migration `0170_admin_costs.sql`, in the shape of `infra_usage_daily` (drizzle/0093), **not** the P2
+Two tables, migration `0172_admin_costs.sql`, in the shape of `infra_usage_daily` (drizzle/0093), **not** the P2
 `definer_only` pattern (which would lock `frata_admin` out too; tenancy review 2026-11-23):
 
 ```
@@ -73,7 +73,7 @@ The database cannot tell a master admin from support staff (one connection), so 
 Grants: items select, insert, update (no delete — end it instead); payments select, insert, delete
 (delete is Undo for a mistaken payment). Money is integer minor units end to end (ADR-0004); USD is
 micro-dollars, shown as dollars only where a person reads it; USD converts to paise with `usdToPaise` (the engine; nearest paise in bigint. Studio's `listPaise` rounds a list price up on purpose and is not used), and a sum rounds once at full precision (÷3 and ÷12 never round per item). With no rate yet, a USD row shows dollars only, the burn leaves it out and says "rate missing", and Mark paid asks for the rupees. `inr_paise` for a USD cost is prefilled from the
-latest `fx_rates` row (a new definer `admin_fx_rate_latest()` in 0170, granted to `frata_admin` only, revoked from everyone else; `app_fx_rate_latest` stays `frata_app`'s) and editable: the card statement wins.
+latest `fx_rates` row (a new definer `admin_fx_rate_latest()` in 0172, granted to `frata_admin` only, revoked from everyone else; `app_fx_rate_latest` stays `frata_app`'s) and editable: the card statement wins.
 
 ### What is derived, never stored (SSOT)
 
@@ -130,7 +130,7 @@ item id, never a name or note; `detail` carries names of changed fields, and for
 inrPaise, gstPaise}` so the figures survive the delete. `costs` joins `MASTER_ONLY_WORDS`, and Activity's filter reads
 that list (it hard-codes `billing` today, `activity/page.tsx`); `credits.rate.set` joins it too.
 
-### Input rules (Zod on the server, CHECKs in 0170)
+### Input rules (Zod on the server, CHECKs in 0172)
 
 Names trimmed with control and bidi characters stripped; `name` 1–80, `vendor` ≤ 80, `note` ≤ 300; amounts integer 1 to
 ₹1 crore (1e9 paise) in rupees, or $50,000 in dollars (₹1 crore at the band's top, so a dollar bill can always be recorded in rupees); USD `inr_paise` within the `fx_rates` 50–200 band;
@@ -146,7 +146,7 @@ Logs carry `errName(e)` only.
 
 A new `TODAY_SOURCES` entry `cost_due` (area `costs`, roles admin; `TodayArea` and `TodayKind` gain `costs` and
 `cost_due`): one `TodayItem` per overdue cost or cost due within 7 days (`countsOf` counts items, so a combined row would
-read 1), from the shared due set, shown as the nav badge and Today rows. It ships only after 0170 is live in production (a
+read 1), from the shared due set, shown as the nav badge and Today rows. It ships only after 0172 is live in production (a
 throwing source blanks every count), with a today test where the costs source throws. A source that fails is
 "uncounted", never 0 (existing rule). No email, no WhatsApp.
 
@@ -155,7 +155,7 @@ throwing source blanks every count), with a today test where the costs source th
 | Layer | File |
 |---|---|
 | Engine and tests | `src/domains/admin/costs.ts`, `__tests__/costs.test.ts` |
-| Schema | `src/lib/db/schema-costs.ts`, `drizzle/0170_admin_costs.sql` (`--custom`) |
+| Schema | `src/lib/db/schema-costs.ts`, `drizzle/0172_admin_costs.sql` (`--custom`) |
 | Reads and writes | `src/lib/admin/costs.ts` (takes `StaffOk`, uses `adminDb()`) |
 | Actions | `src/app/(admin)/admin/costs/actions.ts` (`requireStaff(ADMIN_ONLY)` first) |
 | Page | `src/app/(admin)/admin/costs/page.tsx` + `_components/` (design-language primitives only) |
@@ -234,7 +234,7 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
 |---|---|---|
 | Blocker | Restrictive `definer_only` locks Admin out | Infrastructure's pattern (0093), see § The data |
 | Blocker | `app_fx_latest` does not exist; `app_fx_rate_latest` is closed to Admin | New `admin_fx_rate_latest()` definer |
-| Major | A `--custom` migration alone leaves the tables out of drizzle's snapshot | `npm run db:generate` writes 0170 (tables, CHECKs, indexes); the access SQL is appended to that file, as 0163 does |
+| Major | A `--custom` migration alone leaves the tables out of drizzle's snapshot | `npm run db:generate` writes 0172 (tables, CHECKs, indexes); the access SQL is appended to that file, as 0163 does |
 | Major | Dollars as cents is a second USD unit | Micro-dollars (`MicroUsd`), `listPaise` |
 | Major | The engine would rewrite `addMonths` and the financial-year start | Move `addMonths` (now in `studio/credits.ts`) to `domains/time/month.ts`, add `fyOf` there, both callers import them; each due date is `addMonths(anchor, k·step)`, never stepped (31 Jan → 28 Feb → 31 Mar), with a test |
 | Major | Next due and overdue need each live item's paid `period_for` values | The due-set read (§ Performance); `cost_due` calls the engine on it |
@@ -263,7 +263,7 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
 
 | Chore | Becomes |
 |---|---|
-| Printing production SQL for 0170 | existing `scripts/prod-migrate.mjs` |
+| Printing production SQL for 0172 | existing `scripts/prod-migrate.mjs` |
 | Checking Costs stays Admin-only | `check:tenant` names the two tables |
 
 ## Deviations

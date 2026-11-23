@@ -8,10 +8,11 @@ import { Panel } from '@/components/ui/panel'
 import { Submit } from '@/components/ui/submit'
 import { staffWithPasskeys } from '@/lib/admin/passkeys'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { staffProof } from '@/lib/auth/session'
-import { sinceIN } from '@/lib/format-date'
+import { passkeys, staffProof } from '@/lib/auth/session'
+import { dayMonthIN, sinceIN } from '@/lib/format-date'
 import { NeedsBand } from '../_components/needs-band'
 import { addStaffAction, removeStaffAction } from './actions'
+import { PasskeysSwitch } from './passkeys-switch'
 import { AddOwnPasskey, AddStaffDialog, ApproveRequest, ConfirmFirst, RemovePasskey } from './staff-passkeys'
 
 export const metadata = { title: 'Staff' }
@@ -22,12 +23,17 @@ const roleWord = (r: string) => STAFF_ROLE_WORDS[r as 'admin' | 'support'] ?? r
 export default async function StaffPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const [proof, sp] = await Promise.all([staffProof(staff.userId), searchParams])
+  const [cookie, sp, pk] = await Promise.all([staffProof(staff.userId), searchParams, passkeys()])
+  // Passkeys off for everyone (drizzle/0171): the list reads on this sign-in alone.
+  const proof = cookie ?? (pk.off ? { sessionId: staff.sessionId, hash: '' } : null)
   if (!proof) return <Panel title="Confirm it's you" />
   const rows = await staffWithPasskeys(staff, proof)
   const now = new Date()
+  const offSince = pk.off && pk.since ? `since ${dayMonthIN(new Date(pk.since))}${pk.by ? ` by ${pk.by}` : ''}` : null
   const isAdmin = isMasterAdmin(staff.role)
-  const asking = isAdmin ? rows.filter((r) => r.request && !r.request.approved && r.userId !== staff.userId) : []
+  // Passkeys off: nothing here asks for a passkey or makes one (owner's call 4), so their own controls step aside.
+  const manage = !pk.off
+  const asking = isAdmin && manage ? rows.filter((r) => r.request && !r.request.approved && r.userId !== staff.userId) : []
   const open = rows.find((r) => r.userId === sp.id) ?? rows.find((r) => r.userId === staff.userId) ?? rows[0]
   const lastUsed = (r: (typeof rows)[number]) => r.passkeys.reduce<number | null>((t, k) => (k.lastUsedAt && (!t || +new Date(k.lastUsedAt) > t) ? +new Date(k.lastUsedAt) : t), null)
   const mine = open?.userId === staff.userId
@@ -37,6 +43,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
       <PageHeader title="Staff" actions={isAdmin && (
         <AddStaffDialog action={addStaffAction} support={STAFF_ROLE_WORDS.support} master={STAFF_ROLE_WORDS.admin} />
       )} />
+
+      <div className="mb-4"><PasskeysSwitch off={pk.off} since={offSince} admin={isAdmin} /></div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4">
@@ -63,7 +71,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
 
         {open && (
           <Section ariaLabel={open.email} title={<span className="flex flex-wrap items-center gap-2"><span className="font-num [overflow-wrap:anywhere]">{open.email}</span><Badge>{roleWord(open.role)}</Badge></span>} className="text-sm">
-            {mine && open.request && !open.request.approved && (
+            {mine && manage && open.request && !open.request.approved && (
               <NeedsBand tone="neutral" title="Your passkey request" line="Another master admin approves it." />
             )}
             <h3 className="text-sm font-semibold">Passkeys</h3>
@@ -73,12 +81,12 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
                   <div key={k.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                     <span className="min-w-0">{k.name}</span>
                     <span className="flex items-center gap-2"><span className="text-muted-foreground">{k.lastUsedAt ? `Used ${sinceIN(new Date(k.lastUsedAt), now)}` : 'Not used yet'}</span>
-                      {(isAdmin || mine) && <RemovePasskey id={k.id} name={k.name} owner={open.email} left={open.passkeys.length - 1} />}</span>
+                      {(isAdmin || mine) && manage && <RemovePasskey id={k.id} name={k.name} owner={open.email} left={open.passkeys.length - 1} />}</span>
                   </div>
                 ))}
               </div>
             )}
-            {mine && <AddOwnPasskey />}
+            {mine && manage && <AddOwnPasskey />}
             {isAdmin && !mine && (
               <ConfirmFirst action={removeStaffAction} className="border-t border-border pt-3"><input type="hidden" name="userId" value={open.userId} /><Submit variant="secondary">Remove {open.email}</Submit></ConfirmFirst>
             )}

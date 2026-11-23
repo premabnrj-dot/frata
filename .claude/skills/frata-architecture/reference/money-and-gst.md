@@ -8,6 +8,7 @@ Part of `frata-architecture` (SKILL.md holds the rules every change obeys: layer
 - GST
 - Razorpay keys that stop working
 - Trials
+- Admin › Costs
 
 ## Money (ADR-0004)
 
@@ -205,3 +206,11 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   it. A support visit never opens or closes a shop with a running trial (it would start the clock for good).
 - **The state is derived, never stored** (`trialState`); every trial end is the end of an IST day, stored as the first
   moment of the next (exclusive) — show it with `lastDay()`, never `dayIN(trialEndsAt)`.
+
+## Admin › Costs (C1 built 2026-11-23; spec docs/specs/2026-11-23-admin-costs.md, plan docs/plans/2026-11-23-admin-costs.md)
+
+- **Admin › Costs** (2026-11-23; spec `docs/specs/2026-11-23-admin-costs.md`, drizzle/0172, proof § 102, `check:tenant` § 10): `cost_items` and
+  `cost_payments` are platform-scope tables in 0093's shape (direct `frata_admin` grants, one permissive policy each, nothing for any other
+  role), imported only by `src/lib/admin/costs.ts` (and `today.ts`). Support staff share the `frata_admin` connection, so every export
+  there re-checks `ADMIN_ONLY` itself. Due dates, next due, overdue and burn are derived in `src/domains/admin/costs.ts`, never stored;
+  USD is micro-dollars. Editing an amount, currency or anchor, and undoing a payment older than 10 minutes, need `confirmedRecently`.

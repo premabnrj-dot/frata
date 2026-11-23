@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.13.0
+  version: 3.14.1
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -62,11 +62,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
   holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
   waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
-- **Admin › Costs** (2026-11-23; spec `docs/specs/2026-11-23-admin-costs.md`, drizzle/0170, proof § 102, `check:tenant` § 10): `cost_items` and
-  `cost_payments` are platform-scope tables in 0093's shape (direct `frata_admin` grants, one permissive policy each, nothing for any other
-  role), imported only by `src/lib/admin/costs.ts` (and `today.ts`). Support staff share the `frata_admin` connection, so every export
-  there re-checks `ADMIN_ONLY` itself. Due dates, next due, overdue and burn are derived in `src/domains/admin/costs.ts`, never stored;
-  USD is micro-dollars. Editing an amount, currency or anchor, and undoing a payment older than 10 minutes, need `confirmedRecently`.
+- **Admin › Costs** (2026-11-23, drizzle/0172, proof § 102, `check:tenant` § 10): platform tables only `frata_admin`
+  touches; every export re-checks `ADMIN_ONLY` — [reference/money-and-gst.md](reference/money-and-gst.md) § Admin › Costs.
 - **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
   `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
 - **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
@@ -156,6 +153,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
   The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
   `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Passkeys off** (owner 2026-11-23, drizzle/0171): a master admin turns passkeys off for everyone on Admin › Staff
+  (`app_admin_passkeys_set`, their own passkey in the last 5 minutes; on needs none). While `app_passkeys_off()`, every
+  definer that follows `app_partner_need` or a staff step-up counts this sign-in as checked; passkey lists, adds and
+  removals keep the real check, so their screens say "Passkeys are off". Read the state through `passkeys()` (`session.ts`).
 - **Partner passkeys** (T1b, 2026-11-15; `docs/specs/2026-11-15-partner-login.md`, drizzle/0128–0129): the same design
   for partner people. `app_access_for(user, session, staff hash, partner hash)` counts a `members` row with a
   `partner_member_id` only with a live partner step-up (answers `partnerConfirmedAt` and `partnerHeld`). `requirePartner`
@@ -244,7 +245,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   § 89): eleven platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
   `partner_credit_uses`, `partner_credit_entries`, `partner_client_budgets`, `partner_credit_notices`, `partner_credit_tries`,
   `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them; the one carve-out is
-  `admin_fx_rate_latest()`, a definer that gives `frata_admin` the latest rate row for Admin › Costs, drizzle/0170). The ledger is `partner_credit_entries`,
+  `admin_fx_rate_latest()`, a definer that gives `frata_admin` the latest rate row for Admin › Costs, drizzle/0172). The ledger is `partner_credit_entries`,
   append-only lots and draws; a balance is a sum, never stored. Rows that point at each other carry the partner in a
   composite foreign key on `(partner_id, id)` (`partner_links` and `partner_members` gained that key), and those keys are
   RESTRICT: a tenant or partner person with Studio uses can't be deleted until an erase flow decides what happens to them.
@@ -501,7 +502,7 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 
 | Open | When | Sections |
 |---|---|---|
-| [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials |
+| [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials, Admin › Costs |
 | [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
 | [reference/modules-themes-sites.md](reference/modules-themes-sites.md) | a module (apps), a theme (retiring, ADR-0014), or the kit and fleet rules for shop websites as code | Modules, Themes, Shop websites as code |
 | [reference/speed.md](reference/speed.md) | a page, query, cache or background job: the budgets, what holds each, and the findings P1–P15 | Speed |

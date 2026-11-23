@@ -202,8 +202,8 @@ or a body, never a URL path. So a third key kind.
    OWN code in Partner workspace › Developer: a Partner owner, or a Lead assigned to the store, of the store's linked
    partner (the maker rule above); never the store's own people (owners and Managers hold no passkey, and an owner
    approving someone else's code is the device-code phishing flow), a Builder, or anyone on a support visit. Give key
-   asks for a passkey made for THAT code (its challenge on the code's row; an earlier check never counts, the
-   passkeys-off switch neither), checks the store's ceiling under its settings lock, and approves with the store's audit
+   asks for a passkey made for THAT code (its challenge on the code's row; an earlier check never counts; *amended 2026-11-23:* while passkeys are
+   off from Admin › Staff, `giveOff` approves with none, drizzle/0171), checks the store's ceiling under its settings lock, and approves with the store's audit
    row in one definer. The dialog shows where the code started (a sha256 of the CLI's /64 or /24, gone with the code).
    Your computers lists and deletes the person's own developer keys; the store's owner still sees and deletes them on
    Settings › Website (point 8).

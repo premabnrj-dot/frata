@@ -229,7 +229,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - **Look v4** (owner-approved 2026-11-09, research `docs/research/2026-11-09-look-v4.md`; menus moved to the store's content
   in V1, § A store's content): the layer gains `site` (palette of six roles, text styles, icon library + stroke), in
   `src/domains/themes/site.ts` (pure), with the menus' shape and limits (`MenusSchema`, `MENU_LIMITS`, `menusOf`; their
-  rows are the store's content). Saved through `layerProblems` (siteProblem first, in the merchant's words; an
+  rows are the store's content). What a browser reads (roles, styles, `MENU_LIMITS`, `menusOf`, the palette rule) is in
+  `site-facts.ts`, zod-free, which site.ts re-exports; every `domains/themes`, `content`, `pages` and `catalogue/stories`
+  file a form reads has such a `*-facts.ts` half (page weight 2026-11-23; check:storefront-build fails zod in a first load). Saved through `layerProblems` (siteProblem first, in the merchant's words; an
   unreadable palette is refused) and stored as parsed; read **part by part** (`readSite`: a bad part drops only itself;
   a stored palette that no longer reads is ignored). Absent = the theme exactly: a text style sets CSS only when set
   (`data-t-<style>` + `--t-*`), the palette paints paper (and the tint's accent and buttons) only when set, the default

@@ -117,3 +117,14 @@ Builder's Studio turn runs as follows.
    build-key amendment), never a live key.
 6. **Unchanged:** code a Builder writes reaches shoppers only after a Lead or the Owner publishes; `shopCached` runs
    only under the `shop` actor; no capability is added (Builders preview checkout's design only: one-address decision 9).
+
+## Amendment (owner, 2026-11-23): passkeys off from Admin › Staff, with no end date
+
+"it's too early for passkeys in the system … just wish to get started for now" and "give me option to switch off
+passkey when I feel so". A master admin turns passkeys off on Admin › Staff, with their own passkey in the last
+5 minutes, and any master admin turns them on with none. Each change emails every master admin, and every Admin page
+shows a banner while they are off. Set this way, the switch has no end date; a row with an end keeps the 30-day cap.
+While off, an email code alone opens staff and partner accounts everywhere: Admin, support visits, the partner
+workspace, money and team actions, handover, Studio and Give key. Passkey management keeps the real check, so no
+passkey is made with an email code alone. Plan, deviations and reviews: `docs/plans/2026-11-23-passkeys-off.md`
+(drizzle/0170–0171).

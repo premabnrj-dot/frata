@@ -1,8 +1,9 @@
 'use client'
 
-import { MAX_LOOPS, MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
+import { MAX_LOOPS, MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections-facts'
 import { useState } from 'react'
-import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
+import { PROMISES, sectionName, type VideoKey } from '@/domains/themes/sections-facts'
+import type { SectionInstance, SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { urlFor } from '@/domains/media/sizes'
