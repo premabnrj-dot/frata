@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { bigint, check, date, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, check, date, index, integer, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
 import { PARTNER_ROLES } from '@/domains/partners/team'
 import { sqlList } from '@/domains/tenancy/roles'
@@ -67,6 +67,8 @@ export const partnerLinks = pgTable('partner_links', {
 }, (t) => [
   uniqueIndex('partner_links_one_active').on(t.tenantId).where(sql`${t.removedAt} is null`),
   index('partner_links_partner').on(t.partnerId),
+  /** For foreign keys that carry the partner (Studio credits, C1·2: a use or a budget can't name another partner's link). */
+  unique('partner_links_partner_id_key').on(t.partnerId, t.id),
   index('partner_links_tenant').on(t.tenantId),
   check('partner_links_terms', sql`${t.shareBps} between 0 and 10000 and ${t.shareMonths} > 0 and ${t.noticeDays} >= 0`),
 ])
@@ -92,6 +94,8 @@ export const partnerMembers = pgTable('partner_members', {
   uniqueIndex('partner_members_one_partner').on(t.userId).where(sql`${t.removedAt} is null and ${t.userId} is not null`),
   uniqueIndex('partner_members_email').on(t.partnerId, t.email).where(sql`${t.removedAt} is null`),
   index('partner_members_partner').on(t.partnerId),
+  /** For foreign keys that carry the partner (Studio credits, C1·2). */
+  unique('partner_members_partner_id_key').on(t.partnerId, t.id),
   check('partner_members_role', sql`${t.role} in (${sql.raw(sqlList(PARTNER_ROLES))})`),
   check('partner_members_email_lower', sql`${t.email} = lower(${t.email})`),
   check('partner_members_accepted_user', sql`(${t.acceptedAt} is null) = (${t.userId} is null)`),

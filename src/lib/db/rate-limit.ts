@@ -172,11 +172,13 @@ export const LIMITS = {
   studioSendUser: { action: 'studio_send:user', max: 60, windowSeconds: 3600 },
   // G·3, a developer's device sign-in, all failing closed: starts per network (each is a row for 10 minutes), the CLI's
   // polls per network first (any 43-character string is a well-formed secret) then per device (one every 5 s for 10
-  // minutes is 120), confirms per person.
+  // minutes is 120). The page (four screens § 2: "Too many tries. Wait a minute."), per person a minute: Check code (a
+  // code is 28^8 ≈ 3.8e11, so 10 a minute guesses nothing) and Give key (each asks the device for a passkey).
   deviceStartIp: { action: 'device_start:ip', max: 20, windowSeconds: 600 },
   devicePollIp: { action: 'device_poll:ip', max: 600, windowSeconds: 600 },
   devicePollDevice: { action: 'device_poll:device', max: 150, windowSeconds: 600 },
-  deviceConfirmPerson: { action: 'device_confirm:person', max: 10, windowSeconds: 3600 },
+  deviceCheckPerson: { action: 'device_check:person', max: 10, windowSeconds: 60 },
+  deviceGivePerson: { action: 'device_give:person', max: 5, windowSeconds: 60 },
   // Ask the owner (PP1): per person in a store ("<tenant>:<user>"), failing closed. The definer writes at most one line a
   // page an India day, so this only bounds the calls (four pages, a few retries).
   askOwner: { action: 'ask_owner:member', max: 20, windowSeconds: 3600 },

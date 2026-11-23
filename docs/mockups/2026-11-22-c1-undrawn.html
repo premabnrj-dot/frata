@@ -1,0 +1,453 @@
+<title>Credits: the undrawn screens</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Cormorant+Garamond:wght@500;600&display=swap">
+<style>
+/* Layout: a sticky section nav over one long proposal page. Each proposal is a real screen in Neel (the console's
+   tokens, docs/mockups/2026-11-13-design-language-neel.html) with its states beside it; the Studio workbench is one
+   interactive screen whose panels collapse. Notes sit outside the screens (Rule 0). */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --sunk:var(--g50); --line:var(--g200); --line-soft:var(--g100);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14);
+  --code-bg:var(--g950); --code-fg:#E8E5E1; --code-dim:#8F8A84; --code-add:#7FD3A6; --code-cut:#F59A9C;
+  --shop-bg:#FAF6EF; --shop-ink:#2B1B14; --shop-accent:#8C1D2C; --shop-soft:#EADFCF;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --serif:'Cormorant Garamond',Georgia,serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --action-text:#0E0F24;
+  --code-bg:#0C0B0B; --code-fg:#E8E5E1; --shop-bg:#FAF6EF; --shop-ink:#2B1B14; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --action-text:#0E0F24;
+  --code-bg:#0C0B0B; --code-fg:#E8E5E1; --shop-bg:#FAF6EF; --shop-ink:#2B1B14; color-scheme:dark }
+* { box-sizing:border-box }
+[hidden] { display:none !important }
+html { scroll-padding-top:64px }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:0 64px }
+h1,h2,h3,h4,p { margin:0 } h1,h2,h3 { text-wrap:balance }
+button { font:inherit; color:inherit; cursor:pointer }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.num { font-variant-numeric:tabular-nums } .mono { font-family:var(--mono); font-size:12.5px }
+svg.i { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none }
+.doc { max-width:1320px; margin:0 auto }
+.head { padding:28px 0 14px; display:grid; gap:8px }
+.head h1 { font:600 26px/32px var(--font) } .head p { color:var(--text-2); max-width:72ch }
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--page) }
+nav { position:sticky; top:env(safe-area-inset-top, 0px); z-index:9; background:var(--page); border-bottom:1px solid var(--line); display:flex; gap:4px; overflow-x:auto; padding:8px 0; margin-bottom:8px }
+nav a { color:var(--text-2); text-decoration:none; padding:5px 10px; border-radius:999px; white-space:nowrap; font-size:13px; border:1px solid transparent }
+nav a:hover { background:var(--sunk); color:var(--text) }
+section { padding:28px 0 8px; display:grid; gap:14px; min-width:0 }
+section > h2 { font:600 20px/26px var(--font) }
+section > .lede { color:var(--text-2); max-width:76ch }
+h3 { font:600 15px/22px var(--font) }
+.tw { overflow-x:auto; border:1px solid var(--line); border-radius:12px }
+table { border-collapse:collapse; width:100%; min-width:680px }
+th, td { text-align:left; vertical-align:top; padding:10px 12px; border-bottom:1px solid var(--line-soft) }
+th { background:var(--sunk); font:500 12.5px/18px var(--font); color:var(--text-2) }
+tr:last-child td { border-bottom:0 }
+td b { font-weight:600 }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px }
+.card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:6px; align-content:start; background:var(--surface); min-width:0 }
+.card .src { font-size:12px; color:var(--text-3) }
+.take { color:var(--ok-fg); font-weight:500 } .skip { color:var(--bad-fg); font-weight:500 }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font:500 12px/18px var(--font); white-space:nowrap; background:var(--neu-bg); color:var(--neu-fg) }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.tag { display:inline-flex; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; box-shadow:var(--e1); white-space:nowrap }
+.btn.pri { background:var(--action); border-color:var(--action); color:var(--action-text) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn.ghost { border-color:transparent; box-shadow:none; background:none; color:var(--text-2) }
+.ib { width:32px; height:32px; display:grid; place-items:center; border-radius:8px; border:0; background:none; color:var(--text-2) }
+.ib:hover, .ib[aria-pressed="true"] { background:var(--sunk); color:var(--text) }
+kbd { font:500 11px/16px var(--font); border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; background:var(--surface); color:var(--text-2) }
+.answers { display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)) }
+.answers .card h3 { font-size:14px }
+.answers .card p { color:var(--text-2) }
+
+/* ---- The workbench ---- */
+.ctrl { display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+.ctrl .lab { font-size:12px; color:var(--text-3); margin-right:2px }
+.ctrl button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:4px 11px; font-size:12.5px; min-height:30px }
+.ctrl button[aria-pressed="true"] { background:var(--text); color:var(--page); border-color:var(--text) }
+.app { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--page); box-shadow:var(--e2); display:grid; grid-template-rows:52px minmax(0,1fr); height:720px; min-width:0 }
+.top { display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); background:var(--side); min-width:0 }
+.top .client { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.steps { display:flex; gap:4px; align-items:center; margin:0 auto; min-width:0; overflow:hidden }
+.st { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-3); white-space:nowrap }
+.st i { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--g300); display:grid; place-items:center; font-style:normal; font-size:10.5px; font-weight:600 }
+.st.done i { background:var(--ok-dot); border-color:var(--ok-dot); color:#fff }
+.st.done i::after { content:""; width:7px; height:4px; border-left:1.6px solid #fff; border-bottom:1.6px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.st.now { color:var(--text); font-weight:500 } .st.now i { border-color:var(--action); color:var(--action) }
+.st + .st::before { content:""; width:14px; height:1px; background:var(--g300); margin-right:4px }
+.credits { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:13px; white-space:nowrap; background:var(--surface) }
+.work { display:grid; grid-template-columns:var(--cw, 340px) minmax(0,1fr) var(--iw, 320px); min-height:0; transition:grid-template-columns 200ms cubic-bezier(.2,0,0,1) }
+.app[data-chat="off"] .work { --cw:44px } .app[data-insp="off"] .work { --iw:44px }
+@media (prefers-reduced-motion: reduce) { .work { transition:none } }
+.pane { min-width:0; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr) auto; background:var(--surface) }
+.pane.chat { border-right:1px solid var(--line) } .pane.insp { border-left:1px solid var(--line) }
+.ph { display:flex; align-items:center; gap:6px; padding:0 6px 0 12px; border-bottom:1px solid var(--line-soft); min-width:0 }
+.ph b { font-weight:600; font-size:13px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.rail { display:none; grid-auto-rows:min-content; gap:4px; justify-items:center; padding:6px 0; background:var(--side) }
+.rail .dot { position:relative } .rail .dot::after { content:""; position:absolute; top:5px; right:5px; width:7px; height:7px; border-radius:50%; background:var(--action); border:1.5px solid var(--side) }
+.app:not([data-view="phone"])[data-chat="off"] .pane.chat > :not(.rail), .app:not([data-view="phone"])[data-insp="off"] .pane.insp > :not(.rail) { display:none }
+.app:not([data-view="phone"])[data-chat="off"] .pane.chat, .app:not([data-view="phone"])[data-insp="off"] .pane.insp { display:block; background:var(--side) }
+.app:not([data-view="phone"])[data-chat="off"] .pane.chat .rail, .app:not([data-view="phone"])[data-insp="off"] .pane.insp .rail { display:grid }
+.feed { overflow:auto; padding:12px; display:grid; gap:12px; align-content:start }
+.who { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--text-3) }
+.who i { width:20px; height:20px; border-radius:6px; background:var(--text); color:var(--page); display:grid; place-items:center; font:600 10.5px var(--font); font-style:normal }
+.msg { display:grid; gap:6px }
+.me { justify-self:end; background:var(--select); border-radius:12px 12px 4px 12px; padding:7px 11px; max-width:85% }
+.prog { display:grid; gap:4px; color:var(--text-2); font-size:13px }
+.prog span { display:flex; gap:8px; align-items:center } .prog span::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--ok-dot) }
+.prog span.run::before { background:none; border:1.5px solid var(--action); border-top-color:transparent }
+.prop { border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:grid; gap:8px }
+.prop small { color:var(--text-3); font-size:12px }
+.composer { border-top:1px solid var(--line-soft); padding:10px 12px; display:grid; gap:8px }
+.sugg { display:flex; gap:6px; flex-wrap:wrap }
+.sugg button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:3px 10px; font-size:12.5px; min-height:28px }
+.field { display:flex; gap:6px; align-items:center; border:1px solid var(--g300); border-radius:10px; padding:4px 4px 4px 10px; background:var(--surface) }
+.field input { flex:1; min-width:0; border:0; background:none; font:inherit; color:inherit; outline:none; min-height:32px }
+.field:focus-within { border-color:var(--focus); box-shadow:0 0 0 3px var(--n100) }
+.canvas { min-width:0; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr); background:var(--sunk) }
+.cbar { display:flex; align-items:center; gap:8px; padding:0 8px; border-bottom:1px solid var(--line); background:var(--surface); min-width:0; overflow-x:auto }
+.seg { display:inline-flex; background:var(--sunk); border-radius:10px; padding:2px; gap:2px; flex:none }
+.seg button { border:0; background:none; border-radius:8px; padding:4px 10px; font-size:13px; color:var(--text-2); min-height:28px; white-space:nowrap }
+.seg button[aria-pressed="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1); font-weight:500 }
+.sel { border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:0 8px; min-height:30px; font:inherit; color:inherit; flex:none }
+.stage { overflow:auto; padding:20px; display:grid; justify-items:center; align-content:start }
+.dev { width:var(--dw, 300px); max-width:100%; background:var(--shop-bg); color:var(--shop-ink); border-radius:14px; border:1px solid var(--line); box-shadow:var(--e2); overflow:hidden; font-family:var(--font); transition:width 200ms cubic-bezier(.2,0,0,1) }
+@media (prefers-reduced-motion: reduce) { .dev { transition:none } }
+.dev .strip { background:var(--shop-ink); color:var(--shop-bg); text-align:center; font-size:11px; padding:5px }
+.dev header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; font:600 20px/24px var(--serif); letter-spacing:.04em }
+.dev header span { font:500 12px var(--font); letter-spacing:0 }
+.hero { margin:0 14px; border-radius:6px; min-height:210px; padding:16px; display:grid; align-content:end; background:linear-gradient(160deg,#D9A441,#B5542B 70%,#7A2A1E); color:#FFF8EC; position:relative }
+.hero h4 { font:600 28px/30px var(--serif) }
+.dev h5 { font:600 20px/24px var(--serif); margin:16px 14px 8px }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(86px, 1fr)); gap:8px; padding:0 14px 16px }
+.grid div { font-size:11px; display:grid; gap:3px } .grid div::before { content:""; aspect-ratio:3/4; border-radius:4px; background:var(--sw) }
+.pick { outline:2px solid var(--n500); outline-offset:3px; cursor:pointer }
+[data-el] { cursor:pointer } [data-el]:hover { outline:1px dashed var(--n500); outline-offset:3px }
+.app[data-state="empty"] .grid, .app[data-state="empty"] .dev h5 { display:none }
+.app[data-state="long"] .hero h4::after { content:" and hand on to your daughters" }
+.emptybag { display:none; margin:14px; padding:20px; text-align:center; border:1px dashed var(--shop-soft); border-radius:6px; font-size:13px }
+.app[data-state="empty"] .emptybag { display:block }
+.tabs { display:flex; gap:2px; padding:0 6px; border-bottom:1px solid var(--line-soft); overflow-x:auto; align-items:end }
+.tabs button { border:0; background:none; padding:11px 8px 9px; font-size:13px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap }
+.tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.pane.insp { grid-template-rows:44px minmax(0,1fr) }
+.pbody { overflow:auto; padding:12px; display:grid; gap:14px; align-content:start }
+.row { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:32px }
+.row > span:first-child { color:var(--text-2); font-size:13px }
+.lbl { font:500 12px/16px var(--font); color:var(--text-3) }
+.inp { border:1px solid var(--g300); border-radius:8px; padding:6px 10px; width:100%; font:inherit; color:inherit; background:var(--surface); min-height:36px }
+.sw { display:flex; gap:6px } .sw i { width:22px; height:22px; border-radius:6px; border:1px solid var(--line) }
+.files { display:grid; font-size:13px } .files button { border:0; background:none; text-align:left; padding:5px 8px; border-radius:6px; display:flex; gap:8px; align-items:center; color:var(--text-2) }
+.files button[aria-current="true"] { background:var(--select); color:var(--text) } .files .in { padding-left:26px }
+pre.code { margin:0; background:var(--code-bg); color:var(--code-fg); border-radius:8px; padding:10px 12px; font:500 12px/18px var(--mono); overflow-x:auto }
+pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.code .c { color:var(--code-cut) }
+.copy { display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:8px; padding:4px 4px 4px 10px; background:var(--sunk) }
+.copy code { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:500 12.5px var(--mono) }
+.chk { display:grid; gap:2px; padding:8px 0; border-bottom:1px solid var(--line-soft) } .chk:last-child { border:0 }
+.chk small { color:var(--text-3); font:500 12px var(--mono) }
+.ver { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line-soft) }
+.tabbar { display:none }
+.app[data-view="phone"] { width:390px; max-width:100%; height:700px; margin:0 auto }
+.app[data-view="phone"] .steps .st:not(.now), .app[data-view="phone"] .steps .st::before, .app[data-view="phone"] .top .btn { display:none }
+.app[data-view="phone"] .work { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) 52px }
+.app[data-view="phone"] .pane, .app[data-view="phone"] .canvas { display:none; border:0 }
+.app[data-view="phone"] .ph .ib, .app[data-view="phone"] .cbar .only-wide { display:none }
+.app[data-view="phone"][data-tab="chat"] .pane.chat, .app[data-view="phone"][data-tab="more"] .pane.insp { display:grid }
+.app[data-view="phone"] .rail, .app[data-view="phone"] .tabs [data-tab="code"], .app[data-view="phone"] .tabs .ib { display:none !important }
+.app[data-view="phone"][data-tab="site"] .canvas { display:grid }
+.app[data-view="phone"] .tabbar { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); background:var(--side) }
+.tabbar button { border:0; background:none; display:grid; justify-items:center; gap:2px; font-size:11.5px; color:var(--text-2); padding:6px 0 }
+.tabbar button[aria-pressed="true"] { color:var(--action); font-weight:500 }
+@media (max-width: 900px) { .app:not([data-view="phone"]) .work { --iw:44px !important } .steps { display:none } }
+@media (max-width: 640px) { .app:not([data-view="phone"]) .work { --cw:44px !important } }
+
+/* ---- Small screens: settings, docs ---- */
+.screens { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; align-items:start }
+.screen { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); min-width:0 }
+.screen > .cap { padding:8px 12px; background:var(--sunk); border-bottom:1px solid var(--line); font:500 12.5px/18px var(--font); color:var(--text-2) }
+.screen > .in { padding:14px; display:grid; gap:12px }
+.sec { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:10px }
+.sec h4 { font:600 15px/22px var(--font); display:flex; justify-content:space-between; gap:8px; align-items:center }
+.radio { display:grid; grid-template-columns:1fr 1fr; gap:8px }
+.radio div { border:1px solid var(--line); border-radius:10px; padding:9px 11px; display:grid; gap:1px } .radio div small { color:var(--text-3) }
+.radio div.on { border-color:var(--action); background:var(--select) }
+.krow { display:grid; gap:6px; padding:10px 0; border-top:1px solid var(--line-soft) } .krow:first-of-type { border:0; padding-top:0 }
+.krow .l1 { display:flex; gap:8px; align-items:center; flex-wrap:wrap } .krow .l1 b { font-weight:500 }
+.krow .l2 { display:flex; gap:6px; flex-wrap:wrap; align-items:center }
+.bars { display:grid; gap:10px }
+.bar { display:grid; grid-template-columns:150px repeat(3, minmax(0,1fr)); gap:6px; align-items:center }
+.bar > b { font:500 13px/18px var(--font) } .bar > b small { display:block; color:var(--text-3); font-weight:400 }
+.addr { border:1px solid var(--line); border-radius:8px; padding:6px 8px; font:500 11.5px/16px var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:var(--surface) }
+.addr.same { border-color:var(--ok-dot); background:var(--ok-bg); color:var(--ok-fg) } .addr.other { border-color:var(--warn-dot); background:var(--warn-bg); color:var(--warn-fg) }
+.bar.hd > * { font:500 12px/16px var(--font); color:var(--text-3) }
+@media (max-width: 640px) { .bar { grid-template-columns:1fr } .bar.hd { display:none } }
+.docp { display:grid; grid-template-columns:170px minmax(0,1fr); min-height:330px }
+.docp aside { border-right:1px solid var(--line); background:var(--side); padding:10px; display:grid; gap:2px; align-content:start; font-size:13px }
+.docp aside span { padding:4px 8px; border-radius:6px; color:var(--text-2) } .docp aside span.on { background:var(--select); color:var(--text); font-weight:500 }
+.docp aside small { color:var(--text-3); padding:8px 8px 2px; font-weight:500 }
+.docp main { padding:14px 16px; display:grid; gap:10px; align-content:start; min-width:0 }
+@media (max-width: 560px) { .docp { grid-template-columns:1fr } .docp aside { display:none } }
+</style>
+<style>
+.dlg { border:1px solid var(--line); border-radius:16px; padding:18px; display:grid; gap:10px; box-shadow:var(--e2); background:var(--surface) }
+.dlg h4 { font:600 16px/24px var(--font) } .dlg p { color:var(--text-2) }
+.bal { display:grid; gap:6px } .bal b { font:600 30px/36px var(--font) } .meter { height:8px; border-radius:999px; background:var(--sunk); overflow:hidden } .meter i { display:block; height:100%; background:var(--action) }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px } .kv span:nth-child(odd) { color:var(--text-2) } .kv span:nth-child(even) { text-align:right }
+.vt { display:flex; gap:2px; border-bottom:1px solid var(--line); overflow-x:auto } .vt span { padding:8px 10px; font-size:13px; color:var(--text-2); white-space:nowrap; border-bottom:2px solid transparent } .vt span.on { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.plan3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px } .plan3 > div { border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:grid; gap:3px; align-content:start } .plan3 > div.on { border-color:var(--action); background:var(--select) } .plan3 small { color:var(--text-2) }
+.term { background:var(--code-bg); color:var(--code-fg); border-radius:10px; padding:12px 14px; font:500 12.5px/20px var(--mono); overflow-x:auto; white-space:pre }
+.term .d { color:var(--code-dim) } .term .a { color:var(--code-add) }
+.codebox { font:600 22px/30px var(--mono); letter-spacing:.14em; border:1px solid var(--g300); border-radius:8px; padding:8px 12px; text-align:center; background:var(--surface) }
+.facts { display:grid; grid-template-columns:120px minmax(0,1fr); gap:6px 12px; font-size:13px } .facts span:nth-child(odd) { color:var(--text-2) }
+.rev { border:1px solid var(--warn-dot); border-radius:12px; padding:14px 16px; display:grid; gap:10px; background:var(--surface) }
+.rev h4 { font:600 15px/22px var(--font); display:flex; justify-content:space-between; gap:8px; align-items:center }
+.toast { background:var(--g950); color:var(--g0); border-radius:10px; padding:9px 12px; display:flex; gap:12px; align-items:center; justify-content:space-between; font-size:13px; box-shadow:var(--e2) } .toast u { color:#A3ABF5; text-decoration:none; font-weight:500 }
+.bb { display:grid; gap:12px } .bb .k { font:500 12px/16px var(--font); color:var(--text-3) } .bb .v { font-size:13px }
+.mini { background:var(--shop-bg); color:var(--shop-ink); border-radius:8px; padding:10px; display:grid; gap:6px; font-size:12px } .mini b { font:600 16px/20px var(--serif); text-align:center } .mini i { font-style:normal; border:1px solid #CDBFA9; border-radius:4px; padding:5px 8px; background:#fff }
+</style>
+<style>
+.side { display:grid; gap:2px; font-size:13px } .side span { padding:6px 10px; border-radius:8px; color:var(--text-2) } .side span.on { background:var(--select); color:var(--text); font-weight:500 }
+.err { color:var(--bad-fg); font-size:12.5px }
+.mail { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:8px; background:var(--surface) }
+.mail .subj { font:600 14px/20px var(--font) } .mail p { color:var(--text-2); font-size:13px }
+.paper { border:1px solid var(--line); border-radius:4px; padding:18px; display:grid; gap:10px; background:var(--surface); font-size:12.5px; box-shadow:var(--e1) }
+.paper h5 { font:600 16px/22px var(--font) } .paper .two { display:grid; grid-template-columns:1fr 1fr; gap:12px } .paper small { color:var(--text-3); display:block }
+.phone { max-width:390px; border:1px solid var(--line); border-radius:22px; overflow:hidden; background:var(--sunk); display:grid; align-content:end; min-height:420px }
+.phone .sheet { background:var(--surface); border-radius:16px 16px 0 0; padding:16px; display:grid; gap:10px; box-shadow:var(--e2) } .phone .grab { width:36px; height:4px; border-radius:2px; background:var(--g300); justify-self:center }
+.acts { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap }
+</style>
+<div class="doc">
+<div class="head">
+  <h1>Credits and billing: the screens still to draw</h1>
+  <p>22 Nov 2026 · Draft for the owner. The pages you approved today, with the dialogs, emails and states they lead to. Nothing here is built.</p>
+</div>
+<nav aria-label="Sections">
+  <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#plan">Plan</a><a href="#budgets">Budgets</a><a href="#details">Invoices</a><a href="#buy">Buying</a><a href="#lead">A Lead</a><a href="#emails">Emails</a><a href="#calls">Your calls</a>
+</nav>
+
+<section id="in-short">
+  <h2>In short</h2>
+  <div class="answers">
+    <div class="card"><h3>What this is</h3><p>Fourteen screens and states the two approved pages point to but don’t show. Starting, changing and cancelling Studio. Setting a budget. Invoice details and the invoice itself. Paying by phone. A Lead’s page. Five emails.</p></div>
+    <div class="card"><h3>What changed from your answers</h3><p>Your nine answers today are drawn as given. Changes to Studio start at the next renewal. Retries come on days 1, 3 and 5. The banner shows below 20 credits.</p></div>
+    <div class="card"><h3>One thing the law adds</h3><p>The bank regulator (RBI) wants a notice at least 24 hours before every AutoPay debit, retries included. So each retry gets its own email the day before.</p></div>
+    <div class="card"><h3>What I need from you</h3><p>Approve the screens, or mark what to change. Four calls at the end.</p></div>
+  </div>
+</section>
+
+<section id="audit">
+  <h2>Audit</h2>
+  <div class="tw"><table>
+    <tr><th>The approved page shows</th><th>What it leads to</th><th>Drawn here</th></tr>
+    <tr><td>Plan: Studio, Studio Plus, Move to Studio Plus, Cancel Studio</td><td>Starting a plan, a new AutoPay limit, a confirm</td><td>Plan</td></tr>
+    <tr><td>Client budgets: Set budget</td><td>A dialog</td><td>Budgets</td></tr>
+    <tr><td>Invoices go to · Edit details; Pays by · Change method; invoice numbers</td><td>Two dialogs and the invoice</td><td>Invoices</td></tr>
+    <tr><td>“Waiting up to 5 minutes”; “Buy credits is a sheet” on a phone</td><td>The wait running out; the sheet</td><td>Buying</td></tr>
+    <tr><td>“A Lead: client budgets only”</td><td>The Lead’s page and menu</td><td>A Lead</td></tr>
+    <tr><td>Alerts: below 50, a client at 80%</td><td>Emails, and the notices the law needs</td><td>Emails</td></tr>
+  </table></div>
+</section>
+
+<section id="plan">
+  <h2>Plan</h2>
+  <div class="screens">
+    <div class="screen"><div class="cap">Start Studio · from Partner</div><div class="in">
+      <div class="dlg"><h4>Start Studio</h4>
+        <div class="kv"><span>Studio</span><span class="num">₹2,999.00</span><span>GST 18%</span><span class="num">₹539.82</span><span><b>Pay today</b></span><span class="num"><b>₹3,538.82</b></span></div>
+        <div class="kv"><span>Credits</span><span class="num">150 now, 150 each month</span><span>Renews</span><span>22 Dec</span></div>
+        <span class="lbl">Pays by</span>
+        <div class="radio"><div class="on"><b>UPI AutoPay</b><small class="num">Up to ₹3,600 a debit</small></div><div><b>Card</b><small class="num">Up to ₹3,600 a debit</small></div></div>
+        <div class="acts"><button class="btn sm">Not now</button><button class="btn pri sm">Pay ₹3,538.82</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Start Studio · waiting, declined, done</div><div class="in">
+      <div class="dlg"><h4>Approve ₹3,538.82 in your UPI app</h4><p>Waiting up to 5 minutes.</p></div>
+      <div class="dlg"><h4>Start Studio</h4><p class="err">The payment didn’t go through. Nothing was charged.</p><div class="acts"><button class="btn sm">Not now</button><button class="btn pri sm">Try again</button></div></div>
+      <div class="toast"><span>Studio started. 150 credits added.</span></div>
+    </div></div>
+    <div class="screen"><div class="cap">Move to Studio Plus</div><div class="in">
+      <div class="dlg"><h4>Move to Studio Plus</h4>
+        <div class="kv"><span>From 1 Dec</span><span class="num">₹9,999 + GST a month</span><span>Credits</span><span class="num">500 a month</span><span>Pays by</span><span class="num">UPI AutoPay · up to ₹12,000 a debit</span></div>
+        <div class="acts"><button class="btn sm">Not now</button><button class="btn pri sm">Approve up to ₹12,000</button></div></div>
+      <div class="sec"><h4>Plan <span class="tag">Studio</span></h4><div class="kv"><span>From 1 Dec</span><span>Studio Plus</span></div><div><button class="btn sm ghost">Stay on Studio</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Cancel Studio</div><div class="in">
+      <div class="dlg"><h4>Cancel Studio?</h4>
+        <p>Studio ends on 30 Nov. Your credits stay until their use-by dates.</p>
+        <div class="acts"><button class="btn sm">Keep Studio</button><button class="btn sm" style="color:var(--bad-fg)">Cancel Studio</button></div></div>
+    </div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>Studio Plus to Studio</td><td>Same dialog, titled “Move to Studio”. It starts at the next renewal. No new approval, because the limit is already higher.</td></tr>
+    <tr><td>A card</td><td>“Confirm with your bank” in place of the UPI wait.</td></tr>
+    <tr><td>A change waiting</td><td>Plan reads “From 1 Dec · Studio Plus” with Stay on Studio.</td></tr>
+  </table></div>
+</section>
+
+<section id="budgets">
+  <h2>Budgets</h2>
+  <div class="screens">
+    <div class="screen"><div class="cap">Set budget</div><div class="in">
+      <div class="dlg"><h4>House of Ayuda’s budget</h4>
+        <span class="lbl">For the build</span><input class="inp num" value="400" aria-label="Credits">
+        <div class="kv"><span>Used</span><span class="num">300</span></div>
+        <div class="acts"><button class="btn sm">Cancel</button><button class="btn pri sm">Save budget</button></div></div>
+      <div class="toast"><span>House of Ayuda’s budget is now 400 credits.</span><u>Undo</u></div>
+    </div></div>
+    <div class="screen"><div class="cap">Set budget · below what’s used</div><div class="in">
+      <div class="dlg"><h4>House of Ayuda’s budget</h4>
+        <span class="lbl">For the build</span><input class="inp num" value="250" aria-label="Credits" aria-invalid="true">
+        <span class="err">House of Ayuda has used 300. Set 300 or more.</span>
+        <div class="acts"><button class="btn sm">Cancel</button><button class="btn pri sm">Save budget</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">New websites</div><div class="in">
+      <div class="sec"><h4>New websites <button class="btn sm ghost">Change</button></h4><div class="kv"><span>Start at</span><span class="num">300 credits</span></div></div>
+      <div class="dlg"><h4>New websites start at</h4><input class="inp num" value="300" aria-label="Credits"><div class="acts"><button class="btn sm">Cancel</button><button class="btn pri sm">Save start</button></div></div>
+    </div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>Before the website goes live</td><td>“For the build”. One total.</td></tr>
+    <tr><td>After the website goes live</td><td>“Each month”. It starts again on the 1st.</td></tr>
+  </table></div>
+</section>
+
+<section id="details">
+  <h2>Invoices</h2>
+  <div class="screens">
+    <div class="screen"><div class="cap">Edit details</div><div class="in">
+      <div class="dlg"><h4>Invoices go to</h4>
+        <span class="lbl">Legal name</span><input class="inp" value="Neel Studio LLP" aria-label="Legal name">
+        <span class="lbl">GSTIN (optional) <span title="Your 15-character GST number" aria-label="Your 15-character GST number">ⓘ</span></span><input class="inp mono" value="27AAACP1234R1Z5" aria-label="GSTIN">
+        <span class="lbl">State</span><input class="inp" value="Maharashtra" aria-label="State">
+        <span class="lbl">Address</span><input class="inp" value="4th floor, 12 Hill Road, Bandra West, Mumbai 400050" aria-label="Address">
+        <p>Invoices already issued don’t change.</p>
+        <div class="acts"><button class="btn sm">Cancel</button><button class="btn pri sm">Save details</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Edit details · a wrong GSTIN</div><div class="in">
+      <div class="dlg"><h4>Invoices go to</h4>
+        <span class="lbl">GSTIN (optional)</span><input class="inp mono" value="27AAACP1234R1Z" aria-label="GSTIN" aria-invalid="true"><span class="err">A GSTIN has 15 characters. Check it, or leave it empty.</span>
+        <div class="acts"><button class="btn sm">Cancel</button><button class="btn pri sm">Save details</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Change method</div><div class="in">
+      <div class="dlg"><h4>Change method</h4>
+        <div class="radio"><div><b>UPI AutoPay</b><small>Now</small></div><div class="on"><b>Card</b><small class="num">Up to ₹3,600 a debit</small></div></div>
+        <div class="acts"><button class="btn sm">Cancel</button><button class="btn pri sm">Confirm with your bank</button></div></div>
+      <div class="toast"><span>Studio now pays by card.</span></div>
+    </div></div>
+    <div class="screen"><div class="cap">The invoice (PDF)</div><div class="in">
+      <div class="paper">
+        <div class="two"><div><h5>Tax invoice</h5><span class="mono">FRR/26-27/00142</span> · 22 Nov 2026</div><div style="text-align:right"><b>Frrata</b><small>Frrata’s GSTIN</small><small>Frrata’s address</small></div></div>
+        <div class="two"><div><small>Bill to</small><b>Neel Studio LLP</b><small>GSTIN 27AAACP1234R1Z5</small><small>Maharashtra (27)</small></div><div><small>Place of supply</small><b>Maharashtra (27)</b></div></div>
+        <div class="kv"><span>Studio credits · 100 · SAC 998315</span><span class="num">₹1,999.00</span><span>IGST 18%</span><span class="num">₹359.82</span><span><b>Total</b></span><span class="num"><b>₹2,358.82</b></span></div>
+        <small>Rupees two thousand three hundred fifty-eight and eighty-two paise · Paid by UPI · 22 Nov 2026</small>
+      </div>
+    </div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>No GSTIN</td><td>Bill to shows the name, the state and the address. Place of supply is that state.</td></tr>
+    <tr><td>Same state as Frrata</td><td>CGST 9% and SGST 9% in place of IGST 18%.</td></tr>
+    <tr><td>A test invoice (test keys only)</td><td>Number <span class="mono">T26-27/00004</span> and a Test chip in Payments. The paper reads “Test invoice. Not a tax invoice.”</td></tr>
+    <tr><td>No details yet</td><td>Buy credits opens Invoices go to first: “Add a name and a state.”</td></tr>
+  </table></div>
+</section>
+
+<section id="buy">
+  <h2>Buying</h2>
+  <div class="screens">
+    <div class="screen"><div class="cap">The wait ran out</div><div class="in">
+      <div class="dlg"><h4>Still waiting for your bank</h4><p>If you paid, the credits arrive here. You’re never charged twice.</p><div class="acts"><button class="btn sm">Close</button></div></div>
+      <div class="sec"><h4>Payments and invoices</h4><div class="row"><span>22 Nov · 100 credits</span><span class="chip warn">Waiting for the bank</span></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Phone · Buy credits</div><div class="in">
+      <div class="phone"><div class="sheet"><span class="grab"></span><h4 style="font:600 16px/24px var(--font)">Buy credits</h4>
+        <div class="radio"><div><b>100 credits</b><small class="num">₹1,999 + GST</small></div><div class="on"><b>Any amount</b><small class="num">₹20 + GST a credit</small></div></div>
+        <span class="lbl">Credits</span><input class="inp num" value="250" aria-label="Credits" inputmode="numeric">
+        <div class="kv"><span>250 credits</span><span class="num">₹5,000.00</span><span>GST 18%</span><span class="num">₹900.00</span><span><b>Pay today</b></span><span class="num"><b>₹5,900.00</b></span></div>
+        <button class="btn pri">Pay ₹5,900.00</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Usage · credits in and out</div><div class="in">
+      <div class="vt"><span>Overview</span><span class="on">Usage</span><span>Client budgets</span><span>Payments and invoices</span><span>Plan</span></div>
+      <div class="kv"><span>House of Ayuda · Home · Kabir</span><span class="num">≈ 19 → 17</span><span>October seat · past its use-by date</span><span class="num">−12</span><span>Free credits</span><span class="num">+20</span></div>
+    </div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>Any amount below 20 or above 5,000</td><td>Under the field: “Enter 20 to 5,000 credits.”</td></tr>
+    <tr><td>The bank confirms later</td><td>The row turns Paid, the credits arrive, and the paid email goes out.</td></tr>
+    <tr><td>The bank never confirms</td><td>After a day the row reads “Not paid. Nothing was charged.”</td></tr>
+  </table></div>
+</section>
+
+<section id="lead">
+  <h2>A Lead</h2>
+  <div class="screens">
+    <div class="screen"><div class="cap">The menu · owner, Lead</div><div class="in">
+      <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="side"><span>Home</span><span>Clients</span><span class="on">Credits and billing</span><span>Team</span><span>Your details</span><span>Passkeys</span></div>
+        <div class="side"><span>Home</span><span>Clients</span><span class="on">Credits and billing</span><span>Passkeys</span></div>
+      </div>
+    </div></div>
+    <div class="screen"><div class="cap">A Lead’s page</div><div class="in">
+      <div class="vt"><span class="on">Client budgets</span></div>
+      <div class="sec"><h4>House of Ayuda <span class="chip bad">Used up</span></h4><div class="kv"><span>For the build</span><span class="num">300 of 300</span></div><p style="font-size:13px;color:var(--text-2)">Ask Kabir to raise it.</p></div>
+      <div class="sec"><h4>Kesar Studio <span class="chip warn">80% used</span></h4><div class="kv"><span>Each month</span><span class="num">122 of 150</span></div></div>
+    </div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>A Lead with no clients</td><td>“No clients yet.”</td></tr>
+    <tr><td>A Builder</td><td>No menu item. The address shows “Builders can’t see this page”.</td></tr>
+  </table></div>
+</section>
+
+<section id="emails">
+  <h2>Emails</h2>
+  <p class="lede">To the partner owner. The 80% email also goes to that client’s Lead.</p>
+  <div class="screens">
+    <div class="mail"><span class="subj">Your Studio credits are below 50</span><p>You have 46 credits. Turns that need more will wait.</p><div><button class="btn pri sm">Buy credits</button></div></div>
+    <div class="mail"><span class="subj">House of Ayuda has used 80% of its budget</span><p>240 of 300 credits. Its turns wait at 300 credits. Raise the budget to keep them going.</p><div><button class="btn pri sm">Open client budgets</button></div></div>
+    <div class="mail"><span class="subj">₹3,538.82 for Studio on 1 Dec</span><p>We’ll take ₹3,538.82 from UPI AutoPay <span class="mono">••••4821</span> on 1 Dec, after 9:00 am. This pays Studio for December.</p><p>To stop it, cancel Studio before then.</p><div><button class="btn sm">Manage Studio</button></div></div>
+    <div class="mail"><span class="subj">The 1 Dec payment for Studio didn’t go through</span><p>Your credits still work. We’ll try again on 2, 4 and 6 Dec. You get a notice the day before each. If the last try fails, your plan becomes Partner on 8 Dec.</p><div><button class="btn pri sm">Pay ₹3,538.82</button></div></div>
+    <div class="mail"><span class="subj">Paid: ₹2,358.82 for 100 credits</span><p>Invoice <span class="mono">FRR/26-27/00142</span> is attached.</p><div><button class="btn sm">See the invoice</button></div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>Alerts switched off</td><td>No low-balance or 80% email. The AutoPay notice, failures and receipts always go.</td></tr>
+    <tr><td>The 80% email to a Lead</td><td>“Its turns wait at 300 credits. Ask Kabir to raise it.” No button.</td></tr>
+    <tr><td>Each threshold</td><td>One email when it is crossed, not again until it is crossed again.</td></tr>
+  </table></div>
+</section>
+
+<section id="calls">
+  <h2>Your calls</h2>
+  <div class="tw"><table>
+    <tr><th>#</th><th>Call</th><th>Recommendation</th></tr>
+    <tr><td>1</td><td>Starting Studio takes the first month at once</td><td>Yes. Razorpay’s docs say the AutoPay approval can be the first debit. The first live payment proves it. If the bank refuses on a card, we take ₹1 first. The month follows 36 hours later.</td></tr>
+    <tr><td>2</td><td>Moving to Studio Plus asks for the new limit now and changes the plan at renewal</td><td>Yes. Asking now means the first Plus month never fails on the old limit.</td></tr>
+    <tr><td>3</td><td>Credits and billing sits under Clients in the menu, for owners and Leads</td><td>Yes. A Builder sees no item.</td></tr>
+    <tr><td>4</td><td>Invoice details are needed before the first purchase</td><td>Yes. The law needs a name and a state on every invoice.</td></tr>
+    <tr><td>5</td><td>Frrata emails a notice before every AutoPay debit, even though UPI apps send one too</td><td>Yes. Razorpay doesn’t say it sends one for cards. One email from Frrata covers both.</td></tr>
+    <tr><td>6</td><td>The AutoPay approval says “monthly” in the payer’s app, not “as presented”</td><td>Yes. Razorpay warns “as presented” can look risky on a monthly plan. The limit stays ₹3,600 or ₹12,000.</td></tr>
+    <tr><td>—</td><td>Not built</td><td>A per-person cap, the WhatsApp alert, Your share, refunds as money.</td></tr>
+  </table></div>
+</section>
+</div>

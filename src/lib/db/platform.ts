@@ -371,7 +371,8 @@ export async function addonTrialNotices(): Promise<number> {
 }
 
 /** G·2: build keys past their end, deleted once a day (the daily cron); a count only (ADR-0018's build-key amendment,
- *  point 5). The definer deletes `kind = 'build'` rows past `expires_at` and nothing else (proof § 81). */
+ *  point 5). The definer deletes `kind = 'build'` rows past `expires_at`, and (0162) device codes past their 10 minutes
+ *  with their network and challenge, and nothing else (proof § 81). */
 export async function deleteEndedBuildKeys(): Promise<number> {
   const rows = await db().execute<{ n: number }>(sql`select app_delete_ended_build_keys() as n`)
   return Number(rows[0]?.n ?? 0)

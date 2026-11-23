@@ -129,7 +129,7 @@ rebuilds 2026-10-08 and 2026-11-12T08:15Z: a lastmod on those days is not proof 
   cdn.razorpay.com, express.razorpay.com [V-observed]. Apple Pay in a frame: `allow="payment"` (Safari 17+), same origin
   (≤ 16) [V apple-pay lastmod 2026-11-12].
 
-## Merchant billing (Frrata bills merchants) — checked 2026-11-08
+## Merchant billing (Frrata bills merchants) — checked 2026-11-08; Recurring Payments re-read 2026-11-22
 
 - RBI Digital Payments – E-mandate Framework, 2026 (21 Apr 2026, RBI/DPSS/2026-27/396) covers cards, PPI, UPI;
   NACH not in scope. Without extra authentication up to ₹15,000 a debit (₹1,00,000 only for insurance, mutual funds,
@@ -139,8 +139,28 @@ rebuilds 2026-10-08 and 2026-11-12T08:15Z: a lastmod on those days is not proof 
   this) [V, help.shopify.com india-pay-bills, undated, cites 13 Jul 2026]; eNACH avoids it.
 - Razorpay Subscriptions: fixed plan amount per cycle; Add-ons DEPRECATED (FAQ) though the overview still lists them;
   a live amount change only for card-authorised subscriptions; retries T+1..T+3, then `halted` [V, lastmod 2026-10-08].
-- Variable monthly amounts → Razorpay Recurring Payments (token; we start each charge; cards, UPI Autopay, eMandate,
-  paper NACH) [V, llm-docs, undated]. Who sends the pre-debit notice is not documented [U]: Frrata sends its own.
+- Variable monthly amounts → Razorpay Recurring Payments (token; we start each charge) [V, llm-docs, undated]. UPI: Razorpay
+  sends the pre-debit notice when the order is created; wait ≥ 24 h, then create the payment [V,
+  api/payments/recurring-payments/upi/create-subsequent-payments.md, undated, checked 2026-11-22]. Cards: a `notification`
+  object on POST /orders, turnaround 36 h 5 min; who sends it is not stated [U, cards/create-subsequent-payments.md,
+  2026-11-22]. Frrata also emails its own notice (C1, partner seats), so a UPI payer may get two.
+- UPI authorisation order amount = the first debit (≥ ₹1, ≤ token.max_amount); "If the first debit fails, the registration
+  fails" [V docs; a live ₹3,538.82 / ₹11,798.82 authorisation untested, U] [V, upi/create-authorization-transaction.md,
+  payment-gateway/s2s-integration/recurring-payments/upi.md, undated, 2026-11-22]. Card: only the ₹1 minimum is stated;
+  first charge at registration not stated [U]. eMandate order amount 0. Nothing says a ₹1 authorisation is refunded [U].
+- token.max_amount (UPI, "All other MCCs"): ≤ ₹25,000 as_presented, ≤ ₹1,00,000 other frequencies; AFA-free ₹15,000 a
+  debit; lower caps for MCCs 4722, 5944, 7322, 7409, 7410, 9311, 9400; Frrata's MCC unknown [U]. frequency (UPI): daily,
+  weekly, fortnightly, bimonthly, monthly, quarterly, half_yearly, yearly, as_presented (cards: weekly, monthly, yearly,
+  as_presented); Razorpay warns as_presented on a monthly plan "may find it risky"; NPCI allows one successful debit per
+  token per cycle. expire_at default 10 years, max 30 [V, upi/create-authorization-transaction.md, 2026-11-22].
+- Cancel a UPI token: `PUT /customers/:cid/tokens/:tid/cancel` (DELETE does not cancel the mandate); cards: only DELETE is
+  documented [V/U, upi/tokens.md, cards/tokens.md, 2026-11-22]. Recurring webhooks: token.confirmed, token.rejected,
+  token.cancelled, token.paused, order.notification.delivered/failed (only with a notification object),
+  payment.authorized/captured/failed, order.paid [V, recurring-payments/webhooks.md, 2026-11-22].
+- A failed debit: UPI with no notification object → Razorpay debits at 25 h and retries 3 times itself; with one → no
+  automatic retry, the merchant creates a new order [V, upi/create-subsequent-payments.md, 2026-11-22]. Up to 30 webhook
+  URLs an account, each with a secret field; reply 2xx within 5 s; retried 24 h, then disabled [V,
+  webhooks/setup-edit-payments.md, 2026-11-22].
 - Razorpay Invoices API cannot make GST-compliant invoices → Frrata issues its own tax invoice [V, lastmod 2026-10-14].
 - Cashfree On-Demand: charge any amount up to the authorised maximum; no auto-retry on eNACH or card, 3 on UPI; ≥ 25 h
   between notice and UPI debit; eNACH approval 24–48 h [V, Cashfree FAQ, undated].

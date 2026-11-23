@@ -27,7 +27,7 @@ export async function BuilderCheckout({ actor, shopName, at, tabs }: { actor: Bu
   }
   return (
     <NowProvider at={at}>
-      <CheckoutEditor mode="preview" live={c.design} version={null} waiting={null} record={c.record} shopName={shopName} facts={facts} data={data} tabs={tabs} />
+      <CheckoutEditor mode="preview" live={c.design} version={null} waiting={null} decides={false} record={c.record} shopName={shopName} facts={facts} data={data} tabs={tabs} />
     </NowProvider>
   )
 }

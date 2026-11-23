@@ -196,14 +196,22 @@ export async function gstRows(staff: StaffOk, monthStart: Date, nextMonthStart: 
   adminOnly(staff)
   const db = adminDb()
   const range = (col: typeof frrataInvoices.issuedAt | typeof frrataCreditNotes.issuedAt) => sql`${col} >= ${monthStart.toISOString()}::timestamptz and ${col} < ${nextMonthStart.toISOString()}::timestamptz`
-  const [inv, cns] = await Promise.all([
+  const [inv, cns, partnerInv] = await Promise.all([
     // Test-mode documents are never supplies: they stay out of the CA's export (security review 2026-11-08).
     db.select().from(frrataInvoices).where(and(isNotNull(frrataInvoices.number), eq(frrataInvoices.testMode, false), range(frrataInvoices.issuedAt))).orderBy(asc(frrataInvoices.number)),
     db.select({ cn: frrataCreditNotes, inv: { number: frrataInvoices.number, buyerName: frrataInvoices.buyerName, buyerGstin: frrataInvoices.buyerGstin, placeOfSupply: frrataInvoices.placeOfSupply } })
       .from(frrataCreditNotes).innerJoin(frrataInvoices, eq(frrataInvoices.id, frrataCreditNotes.invoiceId)).where(and(eq(frrataCreditNotes.testMode, false), range(frrataCreditNotes.issuedAt))).orderBy(asc(frrataCreditNotes.number)),
+    // Studio credit invoices share the FRR series (C1, drizzle/0164): through their one Admin definer, real ones only.
+    db.execute<{ number: string; issued_at: string; buyer_name: string; buyer_gstin: string | null; place_of_supply: string; taxable: string; cgst: string; sgst: string; igst: string; total: string }>(
+      sql`select * from admin_partner_gst_rows(${monthStart.toISOString()}::timestamptz, ${nextMonthStart.toISOString()}::timestamptz)`),
   ])
-  return [
+  const invoices = [
     ...inv.map((i): GstRow => ({ type: 'Invoice', number: i.number!, date: i.issuedAt!, against: '', buyer: i.buyerName ?? '', gstin: i.buyerGstin ?? '', placeOfSupply: i.placeOfSupply ?? '', taxable: i.taxable, cgst: i.cgst, sgst: i.sgst, igst: i.igst, total: i.total })),
+    ...partnerInv.map((i): GstRow => ({ type: 'Invoice', number: i.number, date: new Date(i.issued_at), against: '', buyer: i.buyer_name, gstin: i.buyer_gstin ?? '', placeOfSupply: i.place_of_supply,
+      taxable: Number(i.taxable), cgst: Number(i.cgst), sgst: Number(i.sgst), igst: Number(i.igst), total: Number(i.total) })),
+  ].sort((a, b) => a.number.localeCompare(b.number))
+  return [
+    ...invoices,
     ...cns.map(({ cn, inv: i }): GstRow => ({ type: 'Credit note', number: cn.number, date: cn.issuedAt, against: i.number ?? '', buyer: i.buyerName ?? '', gstin: i.buyerGstin ?? '', placeOfSupply: i.placeOfSupply ?? '', taxable: cn.taxable, cgst: cn.cgst, sgst: cn.sgst, igst: cn.igst, total: cn.total })),
   ]
 }

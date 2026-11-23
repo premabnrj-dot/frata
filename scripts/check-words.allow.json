@@ -268,5 +268,23 @@
     "rule": "W4",
     "text": "websites",
     "why": "Studio state 8, the owner-approved states mockup (2026-11-23): the brand's own code site, Website in the glossary's exception (owner 2026-11-15), said to a partner"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/credits/actions.ts",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/credits/page.tsx",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/credits/credits-parts.tsx",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
   }
 ]

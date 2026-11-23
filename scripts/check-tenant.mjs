@@ -95,6 +95,17 @@ for (const file of walk('src')) {
     const onlyTypes = [...text.matchAll(/import\s+(type\s+)?\{[^}]*\}\s+from\s+['"]@\/lib\/db['"]/g)].every(m => m[1])
     if (!onlyTypes) failures.push(`${file}  imports the raw db — read merchant rows through src/lib/queries/ (withTenant)`)
   }
+  // Studio credits' SYSTEM definers (ids only: apply a payment, settle, refund, renew; C1, architecture B2) are called
+  // only by the code that measured or fetched what they record: src/lib/studio/** (the billing webhook reaches them
+  // through app_apply_billing_event). A whole-module import or a re-export would carry `system` past this rule, and a
+  // definer named anywhere but the one TS layer would skip it (tenancy audit 2026-11-23).
+  const CREDITS_DB = `['"]@\\/lib\\/db\\/partner-credits['"]`
+  if ((new RegExp(`import\\s*\\{[^}]*\\bsystem\\b[^}]*\\}\\s*from\\s*${CREDITS_DB}`).test(text) || new RegExp(`import\\s*\\*\\s*as\\s+\\w+\\s+from\\s*${CREDITS_DB}`).test(text))
+      && !file.startsWith('src/lib/studio/')) {
+    failures.push(`${file}  imports Studio credits' system definers — only src/lib/studio/** may (C1)`)
+  }
+  if (new RegExp(`export\\s*(\\*|\\{[^}]*\\})\\s*from\\s*${CREDITS_DB}`).test(text)) failures.push(`${file}  re-exports src/lib/db/partner-credits — import what you need where you need it (C1)`)
+  if (/\bapp_pc_\w+/.test(text) && file !== 'src/lib/db/partner-credits.ts') failures.push(`${file}  names a Studio credits definer (app_pc_*) — only src/lib/db/partner-credits.ts calls them (C1)`)
   if (ADMIN_DB.test(text) && !file.startsWith('src/lib/admin/') && file !== 'src/lib/db/admin.ts') {
     failures.push(`${file}  imports the admin connection — only src/lib/admin/** may (ADR-0007)`)
   }
@@ -256,6 +267,13 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 // no role holds a grant; the app_studio_* definers and app_turn_actor are the only door (ADR-0020 § 5 as amended).
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(studio_(?:turn_keys|binds|spend_[a-z]+))\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — Studio's turn keys and spend rows have no table grants; the app_studio_* definers are the only door (V3a)`)
+}
+// Studio credits (C1, drizzle/0163–0164; plan docs/plans/2026-11-22-c1-credits.md): no table grant to ANY role; the
+// person definers (app_partner_credit*, app_partner_set_*, app_partner_invoice, app_partner_seat_change) and the system
+// ones (app_pc_*) are the only door, and Admin reads only admin_partner_gst_rows (tenancy audit
+// low finding: a rule naming every table, since partner_billing and partner_invoices share no prefix with the rest).
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:billing|seats|credit_purchases|invoices|credit_uses|credit_entries|client_budgets|credit_notices|credit_tries)|fx_rates)\b[^;]*?\bto\b/g)) {
+  failures.push(`grant on ${m[1]}  — Studio credit tables have no table grants; the app_partner_credit* / app_pc_* definers are the only door (C1)`)
 }
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {

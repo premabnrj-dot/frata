@@ -8,22 +8,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { completeAutopay, completePayNow, startAutopay, startPayNow, stopAutopay } from './actions'
+import { loadRazorpay, type Answer } from '@/components/billing/razorpay'
 
 // Autopay and Pay now (billing B3): Razorpay Checkout opens with an order the SERVER made; its answer goes back to the
 // server, which verifies the signature and reads the payment from the gateway itself before anything is saved.
-
-type Rzp = new (o: object) => { open: () => void; on: (e: string, f: (r: unknown) => void) => void }
-declare global { interface Window { Razorpay?: Rzp } }
-function loadRazorpay(): Promise<boolean> {
-  if (window.Razorpay) return Promise.resolve(true)
-  return new Promise((res) => {
-    const s = document.createElement('script')
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    s.onload = () => res(true); s.onerror = () => res(false)
-    document.head.appendChild(s)
-  })
-}
-type Answer = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
 
 // Razorpay Checkout is one modal for the whole tab: Overview's dialog, the Payment tab's inline picker and Pay now
 // can each start one, so a second trigger must wait for the first to finish or two stack, each unaware of the other

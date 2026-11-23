@@ -1139,12 +1139,40 @@
     {
       "idx": 162,
       "version": "7",
+      "when": 1795378122331,
+      "tag": "0162_device_code_network",
+      "breakpoints": true
+    },
+    {
+      "idx": 163,
+      "version": "7",
+      "when": 1795378446561,
+      "tag": "0163_studio_credits",
+      "breakpoints": true
+    },
+    {
+      "idx": 164,
+      "version": "7",
+      "when": 1795378448948,
+      "tag": "0164_studio_credits_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 165,
+      "version": "7",
+      "when": 1795394157627,
+      "tag": "0165_billing_events_route_partners",
+      "breakpoints": true
+    },
+    {
+      "idx": 166,
+      "version": "7",
       "when": 1795394200000,
       "tag": "0166_studio",
       "breakpoints": true
     },
     {
-      "idx": 163,
+      "idx": 167,
       "version": "7",
       "when": 1795394202000,
       "tag": "0167_studio_access",

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.9.0
+  version: 3.11.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -177,7 +177,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (one door for both kinds of waiting change) in `src/lib/content/save.ts`; its rules are `src/domains/brand/checkout.ts`
   (save, preview and render run the same check; a part that fails a later rule renders as Frrata's default). A
   partner's change on an open store waits in `brand_proposals` with `kind = 'checkout'`: **one open change of each kind
-  a store**, so every read and write of a proposal names its kind. The store's pages read it with the record through
+  a store**, so every read and write of a proposal names its kind. A newer save is a new row (the older one
+  `replaced`), and an answer names the row and kind it showed (`decideBrand({ id, decision, kind })`): an answer to an
+  older row is refused in words ("Your partner sent a newer change."), never applied to the newer one. The store's pages read it with the record through
   `checkoutLook` (`settings` tag) and draw it with `BrandFrame` (`src/components/storefront/brand-frame.tsx`), whose
   rules travel inline (`brand-css.ts`): nothing a code-site page needs goes in the shop's shared sheet (15.9 kB).
   A Builder reads the live design's columns and the store's public delivery, returns and Pay on delivery facts.
@@ -233,6 +235,26 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   new owner's verified email for the shop's trial or ends it (one trial per business). A partner shop's trial starts at
   creation and it cannot be published until it has an owner (trigger in 0066). A partner's cap counts its
   shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
+- **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0164, proof § 89): ten
+  platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
+  `partner_credit_uses`, `partner_credit_entries`, `partner_client_budgets`, `partner_credit_notices`, `partner_credit_tries`,
+  `fx_rates`) that NO Frrata role reads (P2's pattern; `check:tenant` names them). The ledger is `partner_credit_entries`,
+  append-only lots and draws; a balance is a sum, never stored. Rows that point at each other carry the partner in a
+  composite foreign key on `(partner_id, id)` (`partner_links` and `partner_members` gained that key), and those keys are
+  RESTRICT: a tenant or partner person with Studio uses can't be deleted until an erase flow decides what happens to them.
+  Definers in four families: person `(session, stepup)` (the owner's writes; a Lead reads assigned budgets; a Builder only
+  a client's used and budget in Studio's panel), system ids-only (`app_pc_*`, called only from `src/lib/db/partner-credits.ts`
+  and `src/lib/studio/**`), turn- and site-keyed (V3a, V2a), and one Admin aggregate (`admin_partner_gst_rows`, unioned into
+  the GST export). A payment is believed only from the server's fetch of OUR order or the stored, verified webhook
+  (`app_pc_apply`, matched by order id, amount, INR and the server's test mode; refused money becomes `refund_due`). The
+  free 20 are granted by a trigger on `partners` (approval is a plain update). The SQL restates the pure rules in
+  `src/domains/studio/credits.ts`; `sql-drift.test.ts` pins the numbers. Their background work runs hourly in `/api/cron/credits`
+  (`src/lib/studio/run.ts`): stragglers, seat renewals and their notices, renewal orders, refunds, mandate cancels and the
+  partner's emails, never in the daily outbox job. ONE billing inbox serves both families (drizzle/0165):
+  `/api/webhooks/billing` and `app_apply_billing_event` route a partner's payment by OUR stored order id, a token event to
+  both merchant and partner mandates, and a refund Frrata didn't make or a dispute to a clawback (what was spent becomes a
+  debt, `app_pc_debt`, paid from bought credits). A change to the merchant billing webhook is a change to partner credits:
+  run 62-billing and proof § 89 both.
 - **Partner teams** (T1a, 2026-11-12; plan `docs/plans/2026-11-12-studio-build.md`, drizzle/0123–0124): a partner is a
   team in `partner_members` (owner | lead | builder, T1c; the owner moves Lead ↔ Builder with `app_partner_set_role`,
   fresh check) with `partner_assignments` (which stores a lead
@@ -457,26 +479,8 @@ period (frata-integrations § Domains). Build for daily; a beta schedule is an o
   closes; reads then run outside any transaction as `frata_builder` through `ctx.reads` (`src/lib/queries/builder.ts`,
   one connection per advance: `withBuilderScope`); a write is `ctx.write((tx, partnerId) => …)`, a store transaction the
   database bound again. The person gone at either point answers `actor`.
-- **Tools propose, a person applies:** tokens and logos are checked with saveBrand's own rules before a card shows them
-  and stored as `studio_proposals` (one per call); Apply runs the console's save as the person. No tool publishes, hands
-  over, opens a store, touches a domain or a key, or reads stock, orders, shoppers, costs or members.
-- **The advance** (`advance.ts`): a 90 s lease a session, events read by cursor (ids stored once; an idle before this
-  turn's `user.message` is the last turn's), calls accepted only inside the turn's window, a round answered in ONE send
-  with results kept until it succeeds, then the turn closed ended, paused or failed and the measured list cost settled.
-  No transaction is held across a runtime call.
 - **The store's key never reaches the model or the sandbox:** a build key in the session's vault, a header credential for
   `api.frrata.shop` only (ADR-0018's build-key amendment), looked up uncached; never reflected in an answer.
-- **The screen** (`/partner/studio`, V3a R7): `requireStudio()` or state 1. The chat reads `studioChat`
-  (`src/lib/queries/studio.ts`, under withStudio, the person's own latest session, keyset on `seq`) through the rows route,
-  whose `after()` runs `pollAdvance` on the person's own open turn (no id from the request; cross-site refused).
-  Apply (`src/lib/studio/apply.ts`) runs `saveBrand` with the version the person holds; a card reads Applied only when the
-  change went live; refused on a store with an owner until V3b. The preview pane frames `/console/preview`.
-- **Send and the cron**: `src/lib/studio/sessions.ts` (send, start, Stop, the poll's advance; imported by the Studio
-  actions and rows route only) and `src/lib/studio/cron.ts` (end, clean, delete from `app_studio_due`'s ids, no bind;
-  imported by the cron route only). With Studio unconfigured the cron still ends open sessions as `switch` and revokes
-  their keys. A run does the ends first, the advances four at once, then clean-ups and deletes, each kind starting only
-  with room for its longest step; its ends settle the runtime's measured cost capped at the reserve (`measure.ts`, the
-  one settle delta). A fresh start checks `agentMatches()` first. Migrations 0166–0167.
 - **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors
   (who may import the advance, asTurn, sessions.ts and cron.ts), no runtime call or cached loader inside a transaction,
   no id-shaped tool input.
@@ -492,3 +496,4 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 | [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
 | [reference/modules-themes-sites.md](reference/modules-themes-sites.md) | a module (apps), a theme (retiring, ADR-0014), or the kit and fleet rules for shop websites as code | Modules, Themes, Shop websites as code |
 | [reference/speed.md](reference/speed.md) | a page, query, cache or background job: the budgets, what holds each, and the findings P1–P15 | Speed |
+| [reference/studio.md](reference/studio.md) | Studio's agent: tools and Apply, the advance, the screen, Send, Stop and the cron as built (V3a) | Tools and Apply, The advance, The screen, Send and the cron |

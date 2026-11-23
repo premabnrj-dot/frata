@@ -3986,6 +3986,473 @@ do $$ declare r text; f text; begin
 end $$;
 rollback;
 
+-- § 89 · Studio credits (C1, 0163–0164; plan docs/plans/2026-11-22-c1-credits.md with its five reviews of 2026-11-22). G owns
+-- partner Nook (§ 82) with stores n1 and n2; D is a Builder on n1; E a Lead on n1; Y owns partner Yarn. Credits, purchases,
+-- invoices and budgets reach their own partner's owner alone (a Lead its assigned clients' budgets, a Builder a client's used
+-- and budget in Studio's panel); a payment buys only its own attempt, once, at its exact amount; a draw can't name another
+-- partner's lot; no Frrata role reads a row. Everything here rolls back.
+begin;
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000189', 'e89@nook.test', now()), ('aaaaaaaa-0000-0000-0000-000000000190', 'y89@yarn.test', now());
+set local role frata_app;
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000190', 'Yami', 'Yarn', '919845012389', 'Pune', '{}', '', '1-4', 1);
+reset role;
+-- the rate: typed by Frrata staff in Admin (frata_admin), never the app
+set local role frata_admin;
+select app_fx_rate_set((now() at time zone 'Asia/Kolkata')::date, 940000);
+reset role;
+update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; D uuid := current_setting('proof.nookd')::uuid; E uuid := 'aaaaaaaa-0000-0000-0000-000000000189';
+  Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; n1 uuid := current_setting('proof.nook1')::uuid; inv uuid; l1 uuid; l2 uuid; ly uuid;
+  b record; p record; py record; u record; u2 uuid; n int; t text; j jsonb; seat record; v_inv uuid; v_bal int;
+begin
+  perform proof.check(G); perform proof.check(D); perform proof.check(Y);
+  inv := app_partner_invite(G, proof.sess(G), proof.h(G), 'e89@nook.test', 'lead', array[n1]);
+  perform app_partner_accept(E, inv); perform proof.check(E);
+  select x.link_id into l1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1;
+  select x.link_id into l2 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id <> n1 limit 1;
+  -- no Frrata role reads the ledger
+  begin perform 1 from partner_credit_entries; raise exception 'FAIL: app reads the ledger'; exception when insufficient_privilege then null; end;
+  begin insert into partner_credit_entries (partner_id, kind, credits, expires_at) values (gen_random_uuid(), 'grant', 20, now()); raise exception 'FAIL: app wrote a lot';
+  exception when insufficient_privilege then null; end;
+  -- the free 20 at approval, once each (Y approved above; Nook approved in § 82)
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 20 then raise exception 'FAIL: Y has no free 20'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), true)->>'balance')::int <> 20 then raise exception 'FAIL: G has no free 20'; end if;
+  -- reads: the owner only; a Lead or Builder is refused; a wrong check is refused
+  foreach t in array array['lead', 'builder'] loop
+    begin perform app_partner_credits_overview(case t when 'lead' then E else D end, proof.sess(case t when 'lead' then E else D end), proof.h(case t when 'lead' then E else D end), false);
+      raise exception 'FAIL: a % read the overview', t;
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+    begin perform app_partner_credits_payments(case t when 'lead' then E else D end, proof.sess(case t when 'lead' then E else D end), proof.h(case t when 'lead' then E else D end));
+      raise exception 'FAIL: a % read payments', t;
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+    begin perform app_partner_credits_usage(case t when 'lead' then E else D end, proof.sess(case t when 'lead' then E else D end), proof.h(case t when 'lead' then E else D end), current_date, null, 50, null);
+      raise exception 'FAIL: a % read usage', t;
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  end loop;
+  begin perform app_partner_credits_overview(G, proof.sess(G), 'wrong', false); raise exception 'FAIL: a wrong check read the overview';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  -- no purchase before invoice details (architecture M10)
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: bought before invoice details';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'details_first' then raise; end if; end;
+  -- billing details: the owner's; a second partner with the same PAN loses its free credits (owner 2026-11-22), but only
+  -- once that PAN has been invoiced for real (security review 2026-11-23: typing another's GSTIN first voids nothing)
+  perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'Nook Studio LLP', '27AAACP1234R1Z5', null, '12 Hill Road, Mumbai', 'bills@nook.test');
+  begin perform app_partner_set_billing(E, proof.sess(E), proof.h(E), 'x', null, '27', 'x', null); raise exception 'FAIL: a Lead set billing details';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'x', '27AAACP1234R1Z', null, 'x', null); raise exception 'FAIL: a malformed GSTIN saved';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_gstin' then raise; end if; end;
+  perform app_partner_set_billing(Y, proof.sess(Y), proof.h(Y), 'Yarn', '29AAACP1234R1Z1', null, 'Bengaluru', null);
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 20 then raise exception 'FAIL: a PAN never invoiced voided free credits'; end if;
+  -- budgets: the owner sets; a Lead reads its assigned clients only; a Builder none; another partner can't name the link
+  perform app_partner_set_budget(G, proof.sess(G), proof.h(G), l1, 30);
+  begin perform app_partner_set_budget(E, proof.sess(E), proof.h(E), l1, 300); raise exception 'FAIL: a Lead raised a budget';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_set_budget(Y, proof.sess(Y), proof.h(Y), l1, 300); raise exception 'FAIL: another partner set a budget';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' and sqlerrm <> 'not_found' then raise; end if; end;
+  if (select count(*) from app_partner_credits_budgets(E, proof.sess(E), proof.h(E))) <> 1
+     or exists (select 1 from app_partner_credits_budgets(E, proof.sess(E), proof.h(E)) x where x.link_id <> l1 or x.new_site_budget is not null)
+  then raise exception 'FAIL: a Lead''s budgets'; end if;
+  begin perform app_partner_credits_budgets(D, proof.sess(D), proof.h(D)); raise exception 'FAIL: a Builder read budgets';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  -- Studio's panel: a Builder gets its client's used and budget, never the balance; not a store it isn't on
+  select * into b from app_partner_credits_panel(D, proof.sess(D), proof.h(D), l1, false);
+  if b.role <> 'builder' or b.balance is not null or b.budget <> 30 then raise exception 'FAIL: a Builder''s panel (%)', b; end if;
+  if l2 is not null then
+    begin perform app_partner_credits_panel(D, proof.sess(D), proof.h(D), l2, false); raise exception 'FAIL: a Builder read an unassigned store''s panel';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  end if;
+  -- a purchase: an attempt first; a wrong amount is refunded, the right one buys once; a payment never buys twice
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true,
+    'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  begin perform app_partner_credit_buy(E, proof.sess(E), proof.h(E), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: a Lead bought credits';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  if not app_pc_purchase_order(p.id, 'order_proof89g0001', false) then raise exception 'FAIL: order not stored'; end if;
+  if app_pc_purchase_order(p.id, 'order_proof89g0002', false) then raise exception 'FAIL: an order replaced'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0001', true, 999, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: a wrong amount bought credits'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0002', true, 235882, 'INR', false, null, null) = 'applied' then raise exception 'FAIL: live money bought a test attempt'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0003', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: the right payment bought nothing'; end if;
+  if app_pc_apply('order_proof89g0001', 'pay_proof89g0003', true, 235882, 'INR', true, null, null) <> 'duplicate' then raise exception 'FAIL: a payment applied twice'; end if;
+  if app_pc_apply('order_proof89nope1', 'pay_proof89g0004', true, 235882, 'INR', true, null, null) <> 'unknown' then raise exception 'FAIL: an unknown order applied'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> 120 then raise exception 'FAIL: G''s balance after a pack'; end if;
+  -- a test lot never pays where money is real (security H1)
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), true)->>'balance')::int <> 20 then raise exception 'FAIL: a test lot counted as real money'; end if;
+  select * into py from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true,
+    'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(py.id, 'order_proof89y0001', false);
+  if app_pc_apply('order_proof89y0001', 'pay_proof89g0003', true, 235882, 'INR', true, null, null) <> 'duplicate' then raise exception 'FAIL: G''s payment bought Y credits'; end if;
+  -- invoices: issued once on the test series; another partner can't read it
+  select (x->>'invoice_id')::uuid into v_inv from jsonb_array_elements(app_partner_credits_payments(G, proof.sess(G), proof.h(G))->'purchases') x where x->>'id' = p.id::text;
+  if v_inv is null or (select i.number from app_partner_invoice(G, proof.sess(G), proof.h(G), v_inv) i) not like 'FRR/T26-27/%' then raise exception 'FAIL: the invoice'; end if;
+  begin perform app_partner_invoice(Y, proof.sess(Y), proof.h(Y), v_inv); raise exception 'FAIL: another partner read an invoice';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  -- the door: the link, the assignment, the budget, the balance; the rate stored; settle never above the reserve
+  select * into u from app_pc_reserve(D, proof.sess(D), proof.h(D), l1, 'preview', 'home', 19, false);
+  if u.reserved <> 19 then raise exception 'FAIL: a Builder''s preview'; end if;
+  begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'page', 19, false); raise exception 'FAIL: past the client''s budget';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'budget' then raise; end if; end;
+  begin perform app_pc_reserve(Y, proof.sess(Y), proof.h(Y), l1, 'turn', 'page', 1, false); raise exception 'FAIL: another partner reserved on a link';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  if l2 is not null then
+    begin perform app_pc_reserve(E, proof.sess(E), proof.h(E), l2, 'turn', 'page', 1, false); raise exception 'FAIL: a Lead reserved on an unassigned store';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  end if;
+  if app_pc_settle(u.use_id, 1156000) <> 19 then raise exception 'FAIL: a page turn is 19 credits'; end if;
+  if app_pc_settle(u.use_id, 1) is not null then raise exception 'FAIL: settled twice'; end if;
+  select x.use_id into u2 from app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'edit', 5, false) x;
+  if app_pc_settle(u2, 99999999) <> 5 then raise exception 'FAIL: charged above the reserve'; end if;
+  select x.use_id into u2 from app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'edit', 4, false) x;
+  if not app_pc_return(u2, 'frrata') then raise exception 'FAIL: a return'; end if;
+  if app_pc_return(u2, 'frrata') then raise exception 'FAIL: a return twice'; end if;
+  if (select x.used from app_partner_credits_budgets(G, proof.sess(G), proof.h(G)) x where x.link_id = l1) <> 24 then raise exception 'FAIL: a client''s used credits'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> 96 then raise exception 'FAIL: G''s balance after use'; end if;
+  begin perform app_partner_set_budget(G, proof.sess(G), proof.h(G), l1, 10); raise exception 'FAIL: a budget below what is used';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'below_used' then raise; end if; end;
+  begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'nonsense', 1, false); raise exception 'FAIL: a use outside the vocabulary';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  perform set_config('proof.l1_89', l1::text, true); perform set_config('proof.l2_89', coalesce(l2::text, ''), true);
+  perform set_config('proof.y89p', py.id::text, true);
+  -- the seat: the real check, one live seat, the mandate from the payment; the owner alone changes it
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true,
+    'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89s0001', false);
+  if app_pc_apply('order_proof89s0001', 'pay_proof89s0001', true, 353882, 'INR', true, null, 'token_proof89s0001') <> 'applied' then raise exception 'FAIL: the seat'; end if;
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: two live seats';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'has_seat' then raise; end if; end;
+  begin perform app_partner_seat_change(E, proof.sess(E), proof.h(E), 'cancel', null); raise exception 'FAIL: a Lead cancelled the seat';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_partner_seat_change(G, proof.sess(G), proof.h(G), 'plan', 'plus');
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->'seat'->>'nextPlan') <> 'plus' then raise exception 'FAIL: a plan change at renewal'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->'mandate'->>'max')::bigint <> 360000
+     or (app_partner_credits_payments(G, proof.sess(G), proof.h(G))::text like '%token_proof89%') then raise exception 'FAIL: the mandate''s facts (or its token was returned)'; end if;
+  -- the token's own events find it by token id; a dispute claws back what is left of its lot
+  if not app_pc_token_event('token_proof89s0001', 'cancelled') then raise exception 'FAIL: a token event'; end if;
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  if not app_pc_dispute('pay_proof89s0001') then raise exception 'FAIL: a dispute not recorded'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal - 150
+  then raise exception 'FAIL: a dispute''s clawback (% before, % after)', v_bal, app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance'; end if;
+  -- a refused capture is due a refund, claimed once
+  select count(*) into n from app_pc_refunds_due(10) x where x.payment_id = 'pay_proof89g0001';
+  if n <> 1 then raise exception 'FAIL: a refund due'; end if;
+  select x.id into u2 from app_pc_refunds_due(10) x where x.payment_id = 'pay_proof89g0001';
+  if not app_pc_refund_claim(u2) then raise exception 'FAIL: a refund not claimed'; end if;
+  if app_pc_refund_claim(u2) then raise exception 'FAIL: a refund claimed twice'; end if;
+  -- the emails carry the owner (and a Lead for its client's 80%), never someone else
+  if exists (select 1 from app_pc_notices_claim(100, null) x where x.partner_id = G and ('y89@yarn.test' = any (x.owners) or 'y89@yarn.test' = any (x.leads))) then raise exception 'FAIL: Y got G''s email'; end if;
+  perform app_pc_refund_done(u2, 'rfnd_proof89');
+  if exists (select 1 from app_pc_refunds_due(10) x where x.id = u2) then raise exception 'FAIL: a refund done stays due'; end if;
+  -- a failed payment, then a late capture of the same attempt still buys (architecture M7)
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'credits', 20, null, null, null, 40000, 0, 0, 7200, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89c0001', false);
+  if app_pc_apply('order_proof89c0001', 'pay_proof89c0001', false, 47200, 'INR', true, 'declined', null) <> 'failed' then raise exception 'FAIL: a declined payment'; end if;
+  if app_pc_apply('order_proof89c0002', 'pay_proof89c0002', true, 47200, 'INR', true, null, null) <> 'unknown' then raise exception 'FAIL: an order not ours'; end if;
+  if app_pc_apply('order_proof89c0001', 'pay_proof89c0003', true, 47200, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a late capture bought nothing'; end if;
+  -- a real invoice: the real series, and its GSTIN locked
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, false, false, 'Frrata Pvt Ltd', '08AAACF0000A1Z5', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89l0001', false);
+  if app_pc_apply('order_proof89l0001', 'pay_proof89l0001', true, 235882, 'INR', false, null, null) <> 'applied' then raise exception 'FAIL: a live pack'; end if;
+  if not exists (select 1 from jsonb_array_elements(app_partner_credits_payments(G, proof.sess(G), proof.h(G))->'purchases') x
+                  where x->>'id' = p.id::text and x->>'invoice_number' like 'FRR/26-27/%') then raise exception 'FAIL: a real invoice on the real series'; end if;
+  begin perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'Nook Studio LLP', '27AAACQ1234R1Z5', null, '12 Hill Road, Mumbai', null); raise exception 'FAIL: a GSTIN changed after a real invoice';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'gstin_locked' then raise; end if; end;
+  -- now the PAN has a real invoice: a second partner under it loses its free 20
+  perform app_partner_set_billing(Y, proof.sess(Y), proof.h(Y), 'Yarn', '29AAACP1234R1Z1', null, 'Bengaluru', null);
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 0 then raise exception 'FAIL: a shared PAN kept a second free 20'; end if;
+  -- heads that don't follow the place of supply are refused (Frrata in 08, G in 27: IGST only)
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 17991, 17991, 0, false, false, 'Frrata Pvt Ltd', '08AAACF0000A1Z5', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: CGST + SGST across states';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  -- more than the balance holds
+  if l2 is not null then
+    begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l2, 'turn', 'page', 120, true); raise exception 'FAIL: a reserve above the real balance';
+    exception when sqlstate 'P0001' then if sqlerrm <> 'balance' then raise; end if; end;
+  end if;
+  -- an attempt left unpaid is listed, then closed with nothing taken
+  if not exists (select 1 from app_pc_unsettled(interval '-1 minute', 50) x where x.id = current_setting('proof.y89p')::uuid) then raise exception 'FAIL: an unpaid attempt unlisted'; end if;
+  if not app_pc_close(current_setting('proof.y89p')::uuid, 'Not paid') then raise exception 'FAIL: closing an unpaid attempt'; end if;
+end $$;
+reset role;
+-- the renewal chain: due seats listed, an attempt and its notice, its order once the email went, a debit claimed once,
+-- the plan frozen at notice, the seat's end and its mandate's cancel
+do $$ declare g uuid; begin
+  select pm.partner_id into g from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000092' and pm.role = 'owner';
+  update partner_seats set period_end = now() + interval '1 day' where partner_id = g and ended_at is null;
+  update partner_billing set mandate_revoked_at = null where partner_id = g;
+  perform set_config('proof.g89p', g::text, true);
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; r record; v uuid; n record; pe timestamptz; seat jsonb;
+begin
+  select * into r from app_pc_renewals(100, null, null) x where x.partner_id = gp;
+  if r.seat_id is null or not r.mandate or r.attempts <> 0 or not r.partner_live then raise exception 'FAIL: a due seat (%)', r; end if;
+  v := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if v is null then raise exception 'FAIL: a renewal attempt'; end if;
+  if app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27') is not null
+  then raise exception 'FAIL: two open renewal attempts'; end if;
+  if exists (select 1 from app_pc_renewals_notified(50) x where x.id = v) then raise exception 'FAIL: an order before the email went'; end if;
+  select * into n from app_pc_notices_claim(100, null) x where x.kind = 'predebit' and x.partner_id = gp;
+  if n.id is null or (n.data->>'total')::bigint <> 353882 or n.data->>'mandateRef' <> '0001' or not ('g@nook.test' = any (n.owners) or cardinality(n.owners) = 1)
+  then raise exception 'FAIL: the pre-debit notice (%)', n; end if;
+  perform app_pc_notice_done(n.id, true, null);
+  if not exists (select 1 from app_pc_renewals_notified(50) x where x.id = v) then raise exception 'FAIL: a renewal ready for its order'; end if;
+  if not app_pc_purchase_order(v, 'order_proof89r0001', true) then raise exception 'FAIL: a renewal order'; end if;
+  if not app_pc_claim(v) then raise exception 'FAIL: a debit claim'; end if;
+  if app_pc_claim(v) then raise exception 'FAIL: a debit claimed twice'; end if;
+  pe := r.period_end;
+  if app_pc_apply('order_proof89r0001', 'pay_proof89r0001', true, 353882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a renewal paid'; end if;
+  seat := app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->'seat';
+  if seat->>'plan' <> 'studio' or seat->>'nextPlan' <> 'plus' or (seat->>'periodEnd')::timestamptz <> pe + interval '1 month'
+  then raise exception 'FAIL: the plan frozen at notice (%)', seat; end if;
+  if not app_pc_seat_end(r.seat_id, false) then raise exception 'FAIL: a seat end'; end if;
+  if not exists (select 1 from app_pc_token_cancels(10) x where x.partner_id = gp and x.token_id = 'token_proof89s0001') then raise exception 'FAIL: the mandate to cancel'; end if;
+  perform app_pc_token_cancelled(gp, 'token_proof89s0001');
+  if exists (select 1 from app_pc_token_cancels(10) x where x.partner_id = gp) then raise exception 'FAIL: a cancelled mandate listed again'; end if;
+end $$;
+reset role;
+-- the billing webhook's one inbox routes a partner's payment by OUR order (0165): applied in the server's mode only; a
+-- refund Frrata didn't make claws the credits back; a token event finds a partner's mandate by its id
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; p record; ev uuid; v_bal int;
+begin
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0001', false);
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  -- a live-mode event for a test attempt buys nothing (its money goes back)
+  ev := app_store_billing_event('proof89-w0', 'payment.captured', '{"_test": false, "payload": {"payment": {"entity": {"id": "pay_proof89w0000", "order_id": "order_proof89w0001", "amount": 235882, "currency": "INR", "status": "captured"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a live-mode event bought test credits'; end if;
+  ev := app_store_billing_event('proof89-w1', 'payment.captured', '{"_test": true, "payload": {"payment": {"entity": {"id": "pay_proof89w0001", "order_id": "order_proof89w0001", "amount": 235882, "currency": "INR", "status": "captured"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal + 100 then raise exception 'FAIL: the webhook did not apply a partner''s payment'; end if;
+  ev := app_store_billing_event('proof89-w2', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89w001", "payment_id": "pay_proof89w0001", "amount": 235882}}, "payment": {"entity": {"id": "pay_proof89w0001"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a refund Frrata didn''t make kept the credits'; end if;
+end $$;
+reset role;
+update partner_billing set token_id = 'token_proof89w0001', mandate_method = 'upi', mandate_max = 360000, mandate_revoked_at = null where partner_id = current_setting('proof.g89p')::uuid;
+-- one token held by both families: a token event decides both, never only the first it finds (tenancy audit 2026-11-23)
+update billing_accounts set mandate_token_id = 'token_proof89w0001', mandate_revoked_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
+set local role frata_app;
+do $$ declare ev uuid; begin
+  ev := app_store_billing_event('proof89-w3', 'token.cancelled', '{"_test": true, "payload": {"token": {"entity": {"id": "token_proof89w0001", "status": "cancelled"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+end $$;
+reset role;
+do $$ begin
+  if (select mandate_revoked_at from partner_billing where partner_id = current_setting('proof.g89p')::uuid) is null then raise exception 'FAIL: a partner''s token event was lost'; end if;
+  if (select mandate_revoked_at from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is null then raise exception 'FAIL: a shared token''s merchant mandate was left'; end if;
+end $$;
+-- security review 2026-11-23: Frrata's own refund claws nothing back; a dispute through the route does, and what was
+-- already spent is owed (drawn from the other lots); a refund that arrives before its capture waits; a merchant's refund
+-- passes untouched; an order id merchant billing holds is never a partner's; a failed-then-wrongly-captured payment is refunded
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; p record; ev uuid; v_bal int; t text;
+begin
+  -- Frrata's own refund (its id is ours): the credits stay
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0002', false);
+  if app_pc_apply('order_proof89w0002', 'pay_proof89w0002', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a second pack'; end if;
+  perform set_config('proof.w2', p.id::text, true);
+end $$;
+reset role;
+update partner_credit_purchases set refund_gateway_id = 'rfnd_proof89w002' where id = current_setting('proof.w2')::uuid;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; p record; ev uuid; v_bal int; v_after int; t text;
+begin
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  ev := app_store_billing_event('proof89-w4', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89w002", "payment_id": "pay_proof89w0002", "amount": 235882}}, "payment": {"entity": {"id": "pay_proof89w0002", "order_id": "order_proof89w0002"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: Frrata''s own refund clawed credits back'; end if;
+  -- a merchant's refund (a payment no partner holds) is stored, applied and changes nothing of a partner's
+  ev := app_store_billing_event('proof89-w5', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89m001", "payment_id": "pay_proof89m0001", "amount": 100}}, "payment": {"entity": {"id": "pay_proof89m0001", "order_id": "order_proof89m0001"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a merchant refund touched a partner'; end if;
+  -- a refund before its capture is applied waits (stays unapplied), then claws back once the capture lands
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0003', false);
+  ev := app_store_billing_event('proof89-w6', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89w003", "payment_id": "pay_proof89w0003", "amount": 235882}}, "payment": {"entity": {"id": "pay_proof89w0003", "order_id": "order_proof89w0003"}}}}'::jsonb);
+  t := null;
+  begin perform app_apply_billing_event(ev); exception when others then t := sqlerrm; end;
+  if t is distinct from 'not_yet' then raise exception 'FAIL: a refund before its capture did not wait (%)', t; end if;
+  if app_pc_apply('order_proof89w0003', 'pay_proof89w0003', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: the late capture'; end if;
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal + 100 then raise exception 'FAIL: the late capture''s credits'; end if;
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a reordered refund kept the credits'; end if;
+  -- a dispute through the route on a pack partly spent: the lot's rest clawed back, the spent part drawn from other lots
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0004', false);
+  if app_pc_apply('order_proof89w0004', 'pay_proof89w0004', true, 235882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: a fourth pack'; end if;
+  perform set_config('proof.w4', p.id::text, true);
+  perform set_config('proof.w4bal', (v_bal + 100)::text, true);
+  -- a failed payment then captured at the wrong amount: the money goes back (security L6)
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0005', false);
+  if app_pc_apply('order_proof89w0005', 'pay_proof89w0005', false, 235882, 'INR', true, 'declined', null) <> 'failed' then raise exception 'FAIL: a failed payment'; end if;
+  if app_pc_apply('order_proof89w0005', 'pay_proof89w0005', true, 100, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: a wrong capture after a failure kept the money'; end if;
+  -- an order id merchant billing holds is never a partner's
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform set_config('proof.w6', p.id::text, true);
+end $$;
+reset role;
+-- 60 of the fourth pack's credits spent (a void draw stands in for the uses)
+insert into partner_credit_entries (partner_id, kind, credits, lot_id)
+  select partner_id, 'void', -60, id from partner_credit_entries where purchase_id = current_setting('proof.w4')::uuid and kind = 'pack';
+insert into billing_mandate_setups (tenant_id, gateway_order_id, gateway_customer_id, method, max_amount, created_by)
+  values ('22222222-2222-2222-2222-222222222222', 'order_proof89m0006', 'cust_proof89m', 'upi', 1500000, 'aaaaaaaa-0000-0000-0000-000000000092');
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; ev uuid; v_bal int; t text;
+begin
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  if v_bal <> current_setting('proof.w4bal')::int - 60 then raise exception 'FAIL: the spent stand-in (%)', v_bal; end if;
+  ev := app_store_billing_event('proof89-w7', 'payment.dispute.created', '{"_test": true, "payload": {"payment": {"entity": {"id": "pay_proof89w0004", "order_id": "order_proof89w0004"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal - 40 - 60 then raise exception 'FAIL: a dispute left the spent credits (%)', (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance'); end if;
+  t := null;
+  begin perform app_pc_purchase_order(current_setting('proof.w6')::uuid, 'order_proof89m0006', false); exception when others then t := sqlerrm; end;
+  if t is distinct from 'bad_input' then raise exception 'FAIL: a merchant''s order id taken for a partner''s attempt (%)', t; end if;
+end $$;
+reset role;
+do $$ begin
+  if app_pc_debt(current_setting('proof.g89p')::uuid, false) <> 0 then raise exception 'FAIL: a covered dispute still owed'; end if;
+  if (select sum(-c.credits) from partner_credit_entries c where c.purchase_id = current_setting('proof.w4')::uuid and c.kind = 'clawback') <> 100
+  then raise exception 'FAIL: a dispute''s clawback is not the whole purchase'; end if;
+end $$;
+-- a pre-debit email that failed for good closes its attempt (never a debit without its notice); an open use nobody
+-- closed is listed for the hourly return; the invoice's year is the day of issue (architecture review 2026-11-23)
+insert into partner_credit_notices (partner_id, kind, purchase_id, dedupe, tries)
+  values (current_setting('proof.g89p')::uuid, 'predebit', current_setting('proof.w6')::uuid, 'proof89-predebit-fail', 5);
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; u record; begin
+  select * into u from app_pc_reserve(G, proof.sess(G), proof.h(G), current_setting('proof.l1_89')::uuid, 'turn', 'edit', 2, false);
+  perform set_config('proof.stale', u.use_id::text, true);
+end $$;
+reset role;
+update partner_credit_uses set created_at = now() - interval '3 hours' where id = current_setting('proof.stale')::uuid;
+do $$ declare nid uuid; begin
+  select id into nid from partner_credit_notices where dedupe = 'proof89-predebit-fail';
+  perform set_config('proof.nfail', nid::text, true);
+end $$;
+set local role frata_app;
+do $$ begin
+  perform app_pc_notice_done(current_setting('proof.nfail')::uuid, false, 'suppressed');
+  if exists (select 1 from app_pc_unsettled(interval '-1 minute', 200) x where x.id = current_setting('proof.w6')::uuid) then
+    raise exception 'FAIL: an attempt whose notice failed for good stays open'; end if;
+  if not exists (select 1 from app_pc_stale_uses(interval '2 hours', 200) x where x.id = current_setting('proof.stale')::uuid)
+  then raise exception 'FAIL: an open use from 3 hours ago not listed for its return'; end if;
+end $$;
+reset role;
+do $$ declare fy text := to_char((now() at time zone 'Asia/Kolkata') - interval '3 months', 'YY') || '-' || to_char((now() at time zone 'Asia/Kolkata') + interval '9 months', 'YY');
+begin
+  if (select closed_at from partner_credit_purchases where id = current_setting('proof.w6')::uuid) is null then raise exception 'FAIL: the failed notice''s attempt not closed'; end if;
+  if exists (select 1 from partner_invoices i where i.partner_id = current_setting('proof.g89p')::uuid and i.number not like '%' || fy || '/%') then
+    raise exception 'FAIL: an invoice outside the year of its issue'; end if;
+  -- free credits never pay a debt
+  if exists (select 1 from partner_credit_entries c join partner_credit_entries l on l.id = c.lot_id where c.kind = 'clawback' and l.kind = 'grant') then
+    raise exception 'FAIL: a debt drawn from free credits'; end if;
+end $$;
+-- Frrata's GST export sees the real invoice and never a test one
+set local role frata_admin;
+do $$ begin
+  if not exists (select 1 from admin_partner_gst_rows(now() - interval '1 day', now() + interval '1 day') x where x.number like 'FRR/26-27/%' and x.total = 235882)
+  then raise exception 'FAIL: a real partner invoice missing from the GST export'; end if;
+  if exists (select 1 from admin_partner_gst_rows(now() - interval '1 day', now() + interval '1 day') x where x.number like 'FRR/T%') then raise exception 'FAIL: a test invoice in the GST export'; end if;
+end $$;
+reset role;
+-- credits drawn from a lot that has since ended come back as a new lot for 12 months
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; u record; begin
+  select * into u from app_pc_reserve(G, proof.sess(G), proof.h(G), current_setting('proof.l1_89')::uuid, 'turn', 'edit', 2, true);
+  perform set_config('proof.u89', u.use_id::text, true);
+end $$;
+reset role;
+update partner_credit_entries l set expires_at = now() - interval '1 second'
+ where l.id in (select e.lot_id from partner_credit_entries e where e.use_id = current_setting('proof.u89')::uuid and e.kind = 'reserve');
+set local role frata_app;
+do $$ begin if not app_pc_return(current_setting('proof.u89')::uuid, 'frrata') then raise exception 'FAIL: a return'; end if; end $$;
+reset role;
+do $$ begin
+  if (select sum(e.credits) from partner_credit_entries e where e.use_id = current_setting('proof.u89')::uuid and e.kind = 'return' and e.expires_at > now() + interval '11 months') <> 2
+  then raise exception 'FAIL: credits from an ended lot did not come back for 12 months'; end if;
+end $$;
+-- a draw can never name another partner's lot (the foreign key carries the partner: tenancy H2)
+do $$ declare g uuid; y uuid; lot uuid; begin
+  select pm.partner_id into g from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000092' and pm.role = 'owner';
+  select pm.partner_id into y from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000190' and pm.role = 'owner';
+  select e.id into lot from partner_credit_entries e where e.partner_id = g and e.kind = 'grant';
+  begin insert into partner_credit_entries (partner_id, kind, credits, lot_id) values (y, 'void', -1, lot); raise exception 'FAIL: a draw named another partner''s lot';
+  exception when foreign_key_violation then null; end;
+  -- no rate, no reserve
+  delete from fx_rates;
+  perform set_config('proof.g89', g::text, true);
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; l1 uuid; begin
+  select x.link_id into l1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id = current_setting('proof.nook1')::uuid;
+  begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l1, 'turn', 'edit', 1, false); raise exception 'FAIL: a reserve without a rate';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'rate' then raise; end if; end;
+end $$;
+reset role;
+-- a suspended partner reads and buys nothing
+update partners set suspended_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; begin
+  begin perform app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), false); raise exception 'FAIL: a suspended partner read credits';
+  exception when sqlstate 'P0001' then if sqlerrm not in ('not_owner', 'confirm_first') then raise; end if; end;
+end $$;
+reset role;
+rollback;
+begin;
+do $$ declare r text; f text; begin
+  foreach f in array array[
+    'app_partner_credit_try(uuid, uuid, text, text)', 'app_partner_credits_overview(uuid, uuid, text, boolean)',
+    'app_partner_credits_usage(uuid, uuid, text, date, uuid, integer, timestamptz)', 'app_partner_credits_budgets(uuid, uuid, text)',
+    'app_partner_credits_payments(uuid, uuid, text)', 'app_partner_invoice(uuid, uuid, text, uuid)', 'app_partner_credits_panel(uuid, uuid, text, uuid, boolean)',
+    'app_partner_set_budget(uuid, uuid, text, uuid, integer)', 'app_partner_set_site_budget(uuid, uuid, text, integer)',
+    'app_partner_set_alerts(uuid, uuid, text, boolean, boolean)', 'app_partner_set_billing(uuid, uuid, text, text, text, text, text, text)',
+    'app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text)',
+    'app_partner_seat_change(uuid, uuid, text, text, text)', 'app_pc_purchase_ctx(uuid)', 'app_pc_set_customer(uuid, text)',
+    'app_pc_purchase_order(uuid, text, boolean)', 'app_pc_claim(uuid)', 'app_pc_apply(text, text, boolean, bigint, text, boolean, text, text)',
+    'app_pc_unsettled(interval, integer)', 'app_pc_close(uuid, text)', 'app_pc_renewals(integer, timestamptz, uuid)',
+    'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
+    'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
+    'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',
+    'app_pc_dispute(text)', 'app_pc_notices_claim(integer, uuid[])', 'app_pc_notice_done(uuid, boolean, text)',
+    'app_fx_rate_latest()', 'app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean)', 'app_pc_settle(uuid, bigint)', 'app_pc_return(uuid, text)'] loop
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin'] loop
+      if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run %', r, f; end if;
+    end loop;
+    if not has_function_privilege('frata_app', f, 'execute') then raise exception 'FAIL: frata_app cannot run %', f; end if;
+  end loop;
+  foreach f in array array['app_pc_owner(uuid, uuid, text, boolean, boolean)', 'app_pc_lots(uuid, boolean)', 'app_pc_balance(uuid, boolean)',
+    'app_pc_charged(uuid)', 'app_pc_window(uuid)', 'app_pc_link_used(uuid, uuid)', 'app_pc_notice(uuid, text, text, uuid, uuid)',
+    'app_pc_on_partner_approved()', 'app_pc_issue(uuid)', 'app_pc_give_back(uuid, integer)',
+    'app_pc_debt(uuid, boolean)', 'app_pc_debt_draw(uuid, boolean)'] loop
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin', 'frata_app'] loop
+      if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run the internal %', r, f; end if;
+    end loop;
+  end loop;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_app'] loop
+    if has_function_privilege(r, 'admin_partner_gst_rows(timestamptz, timestamptz)', 'execute') then raise exception 'FAIL: % can run the GST rows', r; end if;
+  end loop;
+  if not has_function_privilege('frata_admin', 'admin_partner_gst_rows(timestamptz, timestamptz)', 'execute') then raise exception 'FAIL: frata_admin cannot read the GST rows'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_app'] loop
+    if has_function_privilege(r, 'app_fx_rate_set(date, integer)', 'execute') then raise exception 'FAIL: % can set the rate', r; end if;
+  end loop;
+  if not has_function_privilege('frata_admin', 'app_fx_rate_set(date, integer)', 'execute') then raise exception 'FAIL: Admin cannot set the rate'; end if;
+  foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
+    foreach f in array array['partner_billing', 'partner_seats', 'partner_credit_purchases', 'partner_invoices', 'partner_credit_uses',
+      'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates'] loop
+      if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') or has_table_privilege(r, f, 'update')
+         or has_table_privilege(r, f, 'delete') or has_table_privilege(r, f, 'truncate') then raise exception 'FAIL: % reaches %', r, f; end if;
+    end loop;
+  end loop;
+end $$;
+rollback;
+
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
@@ -4242,7 +4709,8 @@ commit;
 -- purpose (24 hours, a preview's 30 days); before the store ever opened it answers as a test key does; after opening only
 -- with a partner, and a partner person's key only while that person is live in the partner, still a member of the store
 -- and, for a Lead or a Builder, assigned to it. app_build_key_makers names the caller's own store's makers only;
--- app_delete_ended_build_keys deletes ended build keys and nothing else; the maker check itself runs for no role.
+-- app_delete_ended_build_keys deletes ended build keys (and, since 0162, ended device codes) and nothing else; the maker
+-- check itself runs for no role.
 insert into tenants (id, slug, name) values
   ('e8100000-0000-0000-0000-000000000001', 'proof-e81', 'Proof E81'),
   ('e8100000-0000-0000-0000-000000000002', 'proof-f81', 'Proof F81');
@@ -4412,67 +4880,259 @@ do $$ begin
      or not has_function_privilege('frata_app', 'app_store_building_keys()', 'execute')
   then raise exception 'FAIL: app_store_building_keys is not a pinned definer for frata_app alone'; end if;
 end $$;
--- G·3 (0159–0160): a device sign-in. No role reaches the table; the three definers are pinned and frata_app alone runs
--- them; a code binds only for a member of the store the CLI named; the CLI's poll claims it once; an ended code is gone.
+-- G·3 (0159–0160, 0162): a device sign-in. No role reaches the table; the definers are pinned and frata_app alone runs
+-- them (the two internal helpers run for no role); 0160's store-side peek and approve are gone. A code is looked at and
+-- given a key only by a live Partner owner or an assigned Lead of the store's partner, with a passkey challenge made for
+-- THAT code, taken once, by that person, the counter rising, and the store under its ceiling; the CLI's poll claims it
+-- once; Your computers lists and deletes only the person's own developer keys; an ended code is gone.
 do $$ begin
   if exists (select 1 from pg_tables where tablename = 'build_key_device_codes' and not rowsecurity) then raise exception 'FAIL: build_key_device_codes without RLS'; end if;
   if (select count(*) from pg_policies where tablename = 'build_key_device_codes' and policyname = 'definer_only' and permissive = 'RESTRICTIVE' and qual = 'false') <> 1 then raise exception 'FAIL: build_key_device_codes without its definer_only policy'; end if;
   if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
              where has_table_privilege(r, 'build_key_device_codes', p))
   then raise exception 'FAIL: a role reaches build_key_device_codes'; end if;
-  if exists (select 1 from unnest(array['app_device_code_start(text, text, text)', 'app_device_code_peek(uuid, text)', 'app_device_code_approve(uuid, text, text)', 'app_device_code_claim(text)', 'app_device_code_unclaim(text)']) f
+  if exists (select 1 from unnest(array['app_device_code_start(text, text, text, text)', 'app_device_code_look(uuid, uuid, text, text, text)',
+               'app_device_code_challenge(uuid, uuid, text, text, text, text, boolean)', 'app_device_code_take(uuid, uuid, text, text, text)',
+               'app_device_code_give(uuid, uuid, text, text, text, uuid, bigint)', 'app_device_code_claim(text)', 'app_device_code_unclaim(text)',
+               'app_partner_developer_keys(uuid, uuid, text)', 'app_partner_developer_key_delete(uuid, uuid, text, uuid)']) f
              where not (select prosecdef from pg_proc where oid = f::regprocedure)
                 or (select proconfig from pg_proc where oid = f::regprocedure) is distinct from array['search_path=""']
                 or not has_function_privilege('frata_app', f::regprocedure, 'execute')
                 or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r where has_function_privilege(r, f::regprocedure, 'execute'))
                 or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = f::regprocedure and a.grantee = 0))
   then raise exception 'FAIL: a device-code definer is not pinned to frata_app alone'; end if;
+  if exists (select 1 from unnest(array['app_device_partner_ok(uuid, uuid)', 'app_device_store_full(uuid)']) f, unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r
+             where has_function_privilege(r, f::regprocedure, 'execute'))
+  then raise exception 'FAIL: a role runs a device-code helper'; end if;
+  if to_regprocedure('app_device_code_peek(uuid, text)') is not null or to_regprocedure('app_device_code_approve(uuid, text, text)') is not null
+     or to_regprocedure('app_device_code_start(text, text, text)') is not null
+  then raise exception 'FAIL: 0160''s store-side peek, approve or three-argument start is still there'; end if;
 end $$;
+-- Each partner person has a passkey and a live check on one session (as the gate makes them); the store's owner has none.
+insert into partner_passkeys (id, partner_member_id, user_id, credential_id, public_key, name) values
+  ('e8100000-0000-0000-0000-0000000000c1', 'e8100000-0000-0000-0000-0000000000b1', 'e8100000-0000-0000-0000-0000000000f1', 'cred-f1', 'pk-f1', 'Laptop'),
+  ('e8100000-0000-0000-0000-0000000000c2', 'e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-0000000000f2', 'cred-f2', 'pk-f2', 'Laptop'),
+  ('e8100000-0000-0000-0000-0000000000c3', 'e8100000-0000-0000-0000-0000000000b3', 'e8100000-0000-0000-0000-0000000000f3', 'cred-f3', 'pk-f3', 'Laptop'),
+  ('e8100000-0000-0000-0000-0000000000c4', 'e8100000-0000-0000-0000-0000000000b4', 'e8100000-0000-0000-0000-0000000000f4', 'cred-f4', 'pk-f4', 'Laptop');
+insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at) values
+  ('e8100000-0000-0000-0000-0000000000b1', 'e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'e8100000-0000-0000-0000-0000000000c1', 'stepup-f1', now() + interval '1 hour'),
+  ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'e8100000-0000-0000-0000-0000000000c2', 'stepup-f2', now() + interval '1 hour'),
+  ('e8100000-0000-0000-0000-0000000000b3', 'e8100000-0000-0000-0000-0000000000f3', 'e8100000-0000-0000-0000-0000000000d3', 'e8100000-0000-0000-0000-0000000000c3', 'stepup-f3', now() + interval '1 hour'),
+  ('e8100000-0000-0000-0000-0000000000b4', 'e8100000-0000-0000-0000-0000000000f4', 'e8100000-0000-0000-0000-0000000000d4', 'e8100000-0000-0000-0000-0000000000c4', 'stepup-f4', now() + interval '1 hour');
+insert into storefront_keys (id, tenant_id, kind, purpose, name, hash, prefix, partner_id, created_by, expires_at) values
+  ('e8100000-0000-0000-0000-000000000031', 'e8100000-0000-0000-0000-000000000001', 'build', 'developer', 'To delete', repeat('e', 62) || '31', 'frs_build_e81ddd', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f2', now() + interval '24 hours');
 begin; set local role frata_app;
-do $$ declare t uuid; c record; n int; begin
-  perform app_device_code_start(repeat('a', 63) || '1', repeat('b', 63) || '1', 'proof-e81');
+do $$ declare c record; j jsonb; n int; s text;
+  f1 uuid := 'e8100000-0000-0000-0000-0000000000f1'; f2 uuid := 'e8100000-0000-0000-0000-0000000000f2'; f3 uuid := 'e8100000-0000-0000-0000-0000000000f3'; f4 uuid := 'e8100000-0000-0000-0000-0000000000f4';
+  d1 uuid := 'e8100000-0000-0000-0000-0000000000d1'; d2 uuid := 'e8100000-0000-0000-0000-0000000000d2'; d3 uuid := 'e8100000-0000-0000-0000-0000000000d3'; d4 uuid := 'e8100000-0000-0000-0000-0000000000d4';
+  net text := repeat('9', 64); code1 text := repeat('b', 63) || '1'; ch text := repeat('Q', 43);
+begin
+  perform app_device_code_start(repeat('a', 63) || '1', code1, 'proof-e81', net);
   perform app_device_code_start(repeat('a', 63) || '2', repeat('b', 63) || '2', 'proof-e81');
-  perform app_device_code_start(repeat('a', 63) || '3', repeat('b', 63) || '3', 'no-such-store');
+  perform app_device_code_start(repeat('a', 63) || '3', repeat('b', 63) || '3', 'no-such-store', net);
   begin perform app_device_code_start('x', repeat('b', 63) || '4', 'proof-e81'); raise exception 'FAIL: a device hash of another shape'; exception when invalid_parameter_value then null; end;
+  begin perform app_device_code_start(repeat('a', 63) || '5', repeat('b', 63) || '5', 'proof-e81', '10.0.0.0/24'); raise exception 'FAIL: a network stored as written'; exception when invalid_parameter_value then null; end;
   begin insert into build_key_device_codes (device_hash, code_hash, store_slug, expires_at) values (repeat('c', 64), repeat('d', 64), 'proof-e81', now() + interval '1 minute');
     raise exception 'FAIL: frata_app wrote a device code'; exception when insufficient_privilege then null; end;
-  -- pending until a member confirms
   select * into c from app_device_code_claim(repeat('a', 63) || '1');
   if c.state is distinct from 'pending' then raise exception 'FAIL: an unconfirmed sign-in is not pending'; end if;
-  -- a person with no members row on that store confirms nothing; the store's partner owner (a member of E) does
-  if exists (select 1 from app_device_code_peek('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1')) then raise exception 'FAIL: a non-member sees what a code for E names'; end if;
-  if (select store_name from app_device_code_peek('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1')) is distinct from 'Proof E81' then raise exception 'FAIL: E''s member does not see E named'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1', 'gone@studio81.test') is not null then raise exception 'FAIL: a non-member confirmed a sign-in for E'; end if;
-  t := app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1', 'owner@studio81.test');
-  if t is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s member did not confirm E''s sign-in'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1', 'x') is not null then raise exception 'FAIL: a code confirmed twice'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '3', 'x') is not null then raise exception 'FAIL: a code for an unknown store confirmed'; end if;
-  -- claimed once, as the person on the store now
+  -- who may look: the Partner owner (f1) and an assigned Lead (f2); not a Lead removed from the partner above (f4: their
+  -- check ended with them), a Builder (f3), the store's own owner (no partner check at all), or the Partner owner with
+  -- someone else's step-up
+  begin perform app_device_code_look(f4, d4, 'stepup-f4', code1, net); raise exception 'FAIL: a removed Lead looked at a code';
+  exception when raise_exception then if sqlerrm not in ('confirm_first') then raise; end if; end;
+  if app_device_code_look(f3, d3, 'stepup-f3', code1, net) is not null then raise exception 'FAIL: a Builder sees a code'; end if;
+  begin perform app_device_code_look('99999999-9999-9999-9999-999999999999', d1, 'stepup-f1', code1, net); raise exception 'FAIL: the store''s own owner looked at a code';
+  exception when raise_exception then if sqlerrm not in ('confirm_first') then raise; end if; end;
+  begin perform app_device_code_look(f1, d2, 'stepup-f2', code1, net); raise exception 'FAIL: a look with another person''s check';
+  exception when raise_exception then if sqlerrm not in ('confirm_first') then raise; end if; end;
+  j := app_device_code_look(f1, d1, 'stepup-f1', code1, net);
+  if j->>'store' is distinct from 'Proof E81' or (j->>'sameNetwork')::boolean is not true or (j->>'full')::boolean or not (j->>'hasPasskey')::boolean
+  then raise exception 'FAIL: the Partner owner does not see E, the same network, room and a passkey (got %)', j; end if;
+  if (app_device_code_look(f2, d2, 'stepup-f2', code1, repeat('8', 64))->>'sameNetwork')::boolean is not false then raise exception 'FAIL: another network not marked'; end if;
+  if app_device_code_look(f2, d2, 'stepup-f2', repeat('b', 63) || '2', net)->>'sameNetwork' is not null then raise exception 'FAIL: a code with no network compared'; end if;
+  if app_device_code_look(f1, d1, 'stepup-f1', repeat('b', 63) || '3', net) is not null then raise exception 'FAIL: a code for an unknown store looked at'; end if;
+  -- Give key: a challenge for THIS code; a Builder gets none; taken once, only by its asker, only with their own passkey
+  begin perform app_device_code_challenge(f3, d3, 'stepup-f3', code1, ch, null, true); raise exception 'FAIL: a Builder got a challenge';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 1); raise exception 'FAIL: a key given with no challenge';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  -- (owner, 2026-11-22, MED-1) unticked, a challenge only from the network the code started on: another one, or none at
+  -- all, is not_mine; the same network, or "This is my computer" ticked, is a challenge
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, repeat('8', 64), false); raise exception 'FAIL: a challenge from another network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, null, false); raise exception 'FAIL: a challenge from an unknown network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', repeat('b', 63) || '2', ch, net, false); raise exception 'FAIL: a challenge for a code with no network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, net, false);
+  if app_device_code_take(f2, d2, code1, ch, 'cred-f2') is not null then raise exception 'FAIL: another person took the challenge'; end if;
+  if app_device_code_take(f1, d1, code1, repeat('R', 43), 'cred-f1') is not null then raise exception 'FAIL: another challenge taken'; end if;
+  if app_device_code_take(f1, d1, code1, ch, 'cred-f2') is not null then raise exception 'FAIL: someone else''s passkey answered the challenge'; end if;
+  -- (that try spent the challenge, as a failed check does): ask again
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, null, true);
+  j := app_device_code_take(f1, d1, code1, ch, 'cred-f1');
+  if j->>'passkeyId' is distinct from 'e8100000-0000-0000-0000-0000000000c1' then raise exception 'FAIL: the asker''s own passkey not given back (got %)', j; end if;
+  if app_device_code_take(f1, d1, code1, ch, 'cred-f1') is not null then raise exception 'FAIL: a challenge taken twice'; end if;
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c2', 1); raise exception 'FAIL: a key given on another person''s passkey';
+  exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
+  s := app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 1);
+  if s is distinct from 'Proof E81' then raise exception 'FAIL: the Partner owner did not give E''s key (got %)', s; end if;
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 2); raise exception 'FAIL: a code given twice';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  if app_device_code_look(f1, d1, 'stepup-f1', code1, net) is not null then raise exception 'FAIL: a used code still looked at'; end if;
+  -- claimed once, as the person on the store now; a claim given back is claimable once more, while live
   select * into c from app_device_code_claim(repeat('a', 63) || '1');
-  if c.state is distinct from 'approved' or c.tenant_id is distinct from 'e8100000-0000-0000-0000-000000000001' or c.user_id is distinct from 'e8100000-0000-0000-0000-0000000000f1' or c.role is distinct from 'partner'
+  if c.state is distinct from 'approved' or c.tenant_id is distinct from 'e8100000-0000-0000-0000-000000000001' or c.user_id is distinct from f1 or c.role is distinct from 'partner'
   then raise exception 'FAIL: the claim is not the confirming person on E'; end if;
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
   if n <> 0 then raise exception 'FAIL: a sign-in claimed twice'; end if;
-  -- a claim given back (its mint failed) is claimable once more, while live
   perform app_device_code_unclaim(repeat('a', 63) || '1');
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
   if n <> 1 then raise exception 'FAIL: a given-back claim is not claimable again'; end if;
   select count(*) into n from app_device_code_claim(repeat('f', 64));
   if n <> 0 then raise exception 'FAIL: an unknown device answered'; end if;
+  -- Your computers: the Lead's own developer keys on stores they still reach (E's two; not F's, unassigned above), not
+  -- the Partner owner's view of them; delete only one's own, and never on a store they left (tenancy audit HIGH)
+  if jsonb_array_length(app_partner_developer_keys(f2, d2, 'stepup-f2')) <> 2 then raise exception 'FAIL: the Lead does not list just their two developer keys on E (got %)', app_partner_developer_keys(f2, d2, 'stepup-f2'); end if;
+  if app_partner_developer_keys(f2, d2, 'stepup-f2')::text like '%Proof F81%' then raise exception 'FAIL: the Lead still sees F''s name after leaving it'; end if;
+  if app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000023') then raise exception 'FAIL: the Lead deleted a key on a store they left'; end if;
+  if jsonb_array_length(app_partner_developer_keys(f1, d1, 'stepup-f1')) <> 0 then raise exception 'FAIL: the Partner owner lists the Lead''s keys'; end if;
+  if app_partner_developer_key_delete(f1, d1, 'stepup-f1', 'e8100000-0000-0000-0000-000000000031') then raise exception 'FAIL: the Partner owner deleted the Lead''s key'; end if;
+  if not app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000031') then raise exception 'FAIL: the Lead could not delete their own key'; end if;
+  if app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000031') then raise exception 'FAIL: a key deleted twice'; end if;
+  if app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000011') then raise exception 'FAIL: the Lead deleted the store''s own key'; end if;
 end $$;
 commit;
 do $$ begin
   if (select count(*) from audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'build_key.device_confirmed' and actor_user_id = 'e8100000-0000-0000-0000-0000000000f1') <> 1
   then raise exception 'FAIL: a confirmed sign-in did not leave exactly one audit row'; end if;
+  if (select count(*) from audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'storefront_key.delete' and target = 'e8100000-0000-0000-0000-000000000031') <> 1
+  then raise exception 'FAIL: a deleted computer key did not leave exactly one audit row'; end if;
+  if (select revoked_by from storefront_keys where id = 'e8100000-0000-0000-0000-000000000031') is distinct from 'e8100000-0000-0000-0000-0000000000f2' then raise exception 'FAIL: the deleted key is not revoked by its Lead'; end if;
+  if (select counter from partner_passkeys where id = 'e8100000-0000-0000-0000-0000000000c1') <> 1 then raise exception 'FAIL: Give key did not raise the passkey''s counter'; end if;
 end $$;
+-- (tenancy audit MEDIUM) the cases the access rule exists for: the live owner of ANOTHER partner, a Lead of the store's
+-- own partner no longer assigned to it (f2 on F), and a person on a live support visit look at nothing, get no
+-- challenge, and give no key.
+insert into auth.users (id, email, email_confirmed_at) values ('e8100000-0000-0000-0000-0000000000f5', 'owner@other82.test', now());
+insert into partners (id, user_id, email, name, business_name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('e8100000-0000-0000-0000-0000000000a2', 'e8100000-0000-0000-0000-0000000000f5', 'owner@other82.test', 'Ravi', 'Other 82', '919876543282', 'Pune', '0', 1, now(), now());
+insert into partner_members (id, partner_id, user_id, email, role, accepted_at) values
+  ('e8100000-0000-0000-0000-0000000000b5', 'e8100000-0000-0000-0000-0000000000a2', 'e8100000-0000-0000-0000-0000000000f5', 'owner@other82.test', 'owner', now());
+insert into partner_passkeys (id, partner_member_id, user_id, credential_id, public_key, name) values
+  ('e8100000-0000-0000-0000-0000000000c5', 'e8100000-0000-0000-0000-0000000000b5', 'e8100000-0000-0000-0000-0000000000f5', 'cred-f5', 'pk-f5', 'Laptop');
+insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at) values
+  ('e8100000-0000-0000-0000-0000000000b5', 'e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'e8100000-0000-0000-0000-0000000000c5', 'stepup-f5', now() + interval '1 hour');
+begin; set local role frata_app;
+do $$ declare codeE text := repeat('b', 63) || '7'; codeF text := repeat('b', 63) || '8'; begin
+  perform app_device_code_start(repeat('a', 63) || '7', codeE, 'proof-e81');
+  perform app_device_code_start(repeat('a', 63) || '8', codeF, 'proof-f81');
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, null) is not null then raise exception 'FAIL: another partner''s owner looked at E''s code'; end if;
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, repeat('W', 43), null, true); raise exception 'FAIL: another partner''s owner got a challenge for E';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, null) is not null then raise exception 'FAIL: a Lead unassigned from F looked at F''s code'; end if;
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, repeat('W', 43), null, true); raise exception 'FAIL: an unassigned Lead got a challenge for F';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+end $$;
+commit;
+-- (security LOW-4) with passkeys switched off, Give key still needs a passkey made for that code: no passkey stays
+-- no_passkey, no challenge stays no_challenge. And a code given before a support visit mints nothing at the poll.
+insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 hour', 'proof', 'proof § 81');
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b1' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ declare code9 text := repeat('b', 63) || '9'; ch text := repeat('X', 43); begin
+  perform app_device_code_start(repeat('a', 63) || '9', code9, 'proof-e81');
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', code9, ch, null, true); raise exception 'FAIL: passkeys off gave a challenge to a person with no passkey';
+  exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20); raise exception 'FAIL: passkeys off gave a key with no challenge';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, null, true);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code9, ch, 'cred-f1');
+  if app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20) is distinct from 'Proof E81'
+  then raise exception 'FAIL: the Partner owner could not give a key with passkeys off'; end if;
+end $$;
+commit;
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' where id = 'e8100000-0000-0000-0000-0000000000c2';
+delete from platform_switches where key = 'passkeys_off';
+insert into support_sessions (id, tenant_id, staff_user_id, staff_email, reason, expires_at) values
+  ('e8100000-0000-0000-0000-0000000000e9', 'e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000f1', 'owner@studio81.test', 'setup_help', now() + interval '1 hour');
+begin; set local role frata_app;
+do $$ begin
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', null) is not null then raise exception 'FAIL: a person on a support visit looked at a code'; end if;
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', repeat('W', 43), null, true); raise exception 'FAIL: a person on a support visit got a challenge';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  if (select count(*) from app_device_code_claim(repeat('a', 63) || '9')) <> 0 then raise exception 'FAIL: a code given before a support visit minted at the poll'; end if;
+end $$;
+commit;
+delete from support_sessions where id = 'e8100000-0000-0000-0000-0000000000e9';
+-- The ceiling: at 50 live build keys the dialog says so and Give key refuses, even with a passkey check
+insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at)
+  select 'e8100000-0000-0000-0000-000000000001', 'build', 'session', 'Filler', md5('e81f' || g) || md5(g || 'e81f'), 'frs_build_e81fff', '99999999-9999-9999-9999-999999999999', now() + interval '1 hour' from generate_series(1, 50) g;
+begin; set local role frata_app;
+do $$ declare code2 text := repeat('b', 63) || '2'; ch text := repeat('S', 43); begin
+  if not (app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, null)->>'full')::boolean
+  then raise exception 'FAIL: a store at its ceiling not shown full'; end if;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, null, true);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code2, ch, 'cred-f1');
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, 'e8100000-0000-0000-0000-0000000000c1', 30);
+    raise exception 'FAIL: a key given past the ceiling';
+  exception when raise_exception then if sqlerrm <> 'full' then raise; end if; end;
+end $$;
+commit;
+delete from storefront_keys where tenant_id = 'e8100000-0000-0000-0000-000000000001' and name = 'Filler';
 update build_key_device_codes set created_at = now() - interval '11 minutes', expires_at = now() - interval '1 minute' where device_hash = repeat('a', 63) || '2';
 begin; set local role frata_app;
 do $$ declare n int; begin
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '2', 'x') is not null then raise exception 'FAIL: an ended code confirmed'; end if;
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '2', null) is not null then raise exception 'FAIL: an ended code looked at'; end if;
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '2');
   if n <> 0 then raise exception 'FAIL: an ended sign-in answered'; end if;
 end $$;
 commit;
+-- (0162, impact review) the refusals that guard a mint: no passkey at all; the person's own passkey whose counter does
+-- not rise; a challenge older than 5 minutes at take, or taken more than 2 minutes before give. Then the daily delete
+-- takes the ended code (its network and challenge with it) and keeps a live one.
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b1' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ declare code4 text := repeat('b', 63) || '6'; ch text := repeat('T', 43);
+  f1 uuid := 'e8100000-0000-0000-0000-0000000000f1'; d1 uuid := 'e8100000-0000-0000-0000-0000000000d1';
+  f2 uuid := 'e8100000-0000-0000-0000-0000000000f2'; d2 uuid := 'e8100000-0000-0000-0000-0000000000d2'; begin
+  perform app_device_code_start(repeat('a', 63) || '6', code4, 'proof-e81');
+  if (app_device_code_look(f2, d2, 'stepup-f2', code4, null)->>'hasPasskey')::boolean then raise exception 'FAIL: a person with no passkey shown one'; end if;
+  begin perform app_device_code_challenge(f2, d2, 'stepup-f2', code4, ch, null, true); raise exception 'FAIL: a challenge for a person with no passkey';
+  exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code4, ch, null, true);
+  perform app_device_code_take(f1, d1, code4, ch, 'cred-f1');
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code4, ch, 'e8100000-0000-0000-0000-0000000000c1', 1); raise exception 'FAIL: a counter that did not rise gave a key';
+  exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
+end $$;
+commit;
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('U', 43), null, true); end $$;
+commit;
+update build_key_device_codes set challenge_at = now() - interval '6 minutes' where device_hash = repeat('a', 63) || '6';
+begin; set local role frata_app;
+do $$ begin
+  if app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', repeat('b', 63) || '6', repeat('U', 43), 'cred-f1') is not null
+  then raise exception 'FAIL: a challenge older than 5 minutes taken'; end if;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('V', 43), null, true);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', repeat('b', 63) || '6', repeat('V', 43), 'cred-f1');
+end $$;
+commit;
+update build_key_device_codes set challenge_used_at = now() - interval '3 minutes' where device_hash = repeat('a', 63) || '6';
+begin; set local role frata_app;
+do $$ declare n int; begin
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('V', 43), 'e8100000-0000-0000-0000-0000000000c1', 9);
+    raise exception 'FAIL: a challenge taken more than 2 minutes ago gave a key';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  perform app_delete_ended_build_keys();
+end $$;
+commit;
+do $$ begin
+  if exists (select 1 from build_key_device_codes where device_hash = repeat('a', 63) || '2') then raise exception 'FAIL: the daily delete kept an ended device code'; end if;
+  if not exists (select 1 from build_key_device_codes where device_hash = repeat('a', 63) || '6') then raise exception 'FAIL: the daily delete took a live device code'; end if;
+end $$;
 -- the two readers that list keys leave build keys out: Admin's API page (E has build keys only, no Website) and the
 -- Accept screen's list
 do $$ begin

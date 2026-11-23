@@ -13,7 +13,7 @@ export type Done<T = unknown> = { ok: true; value?: T } | { ok: false; error: st
 export type PasskeyEndpoint = '/admin/passkey' | '/partner/passkey'
 const NOT_CONFIRMED = 'Not confirmed. Try again, or use your other passkey.'
 /** The device's prompt closed without a passkey: cancelled, or this device holds none of this person's passkeys. */
-const NO_PASSKEY_HERE = 'No passkey found here. Try again and pick Use a phone or tablet.'
+export const NO_PASSKEY_HERE = 'No passkey found here. Try again and pick Use a phone or tablet.'
 
 export function passkeyClient(endpoint: PasskeyEndpoint) {
   async function call<T>(op: string, extra: Record<string, unknown> = {}): Promise<Done<T>> {

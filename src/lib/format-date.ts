@@ -69,6 +69,9 @@ export function momentIN(at: Date | string, now: Date): string {
   return `${key.slice(0, 4) === today.slice(0, 4) ? dayMonthIN(d) : dayIN(d)}, ${time}`
 }
 
+/** momentIN inside a sentence: "today, 10:44 am" · "yesterday, 9:02 pm" · "13 Nov, 10:06 pm". */
+export const momentInLine = (at: Date | string, now: Date) => momentIN(at, now).replace(/^(Today|Yesterday)/, (m) => m.toLowerCase())
+
 /** "7:42 pm" (IST): a time later today, as a wait says it (EkCode's "Try again at"). */
 export const timeIN = (d: Date) =>
   d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: IST })

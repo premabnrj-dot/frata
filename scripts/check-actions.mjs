@@ -42,6 +42,7 @@ const ENTRY_POINTS = {
   'src/app/api/cron/drain/route.ts': ['Vercel Cron, every 5 minutes (email plan)', 'isCronRequest('],
   'src/app/api/cron/infra/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/cron/studio/route.ts': ['Vercel Cron, every minute (Studio V3a: ids only from app_studio_due)', 'isCronRequest('],
+  'src/app/api/cron/credits/route.ts': ['Vercel Cron, hourly (Studio credits, C1)', 'isCronRequest('],
   'src/app/api/webhooks/whatsapp/route.ts': ['Meta webhook: HMAC of the raw body with Frrata\'s app secret; each item routed by its own id through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/ekcode/route.ts': ['Meta webhook for EkCode\'s number: HMAC of the raw body with EkCode\'s app secret; only its own number\'s statuses, through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { after, NextResponse } from 'next/server'
-import { webhookSigned } from '@/lib/billing/gateway'
+import { billingGatewayIsTest, webhookSigned } from '@/lib/billing/gateway'
 import { applyBillingEvent, storeBillingEvent } from '@/lib/db/platform'
 import { errName } from '@/lib/log'
 
@@ -13,15 +13,23 @@ export const maxDuration = 60
 // from the stored row. Status only moves forward (app_apply_billing_event).
 export const dynamic = 'force-dynamic'
 const LIMIT = 256 * 1024
-const KEEP = new Set(['payment.captured', 'payment.failed', 'token.cancelled', 'token.rejected', 'token.paused', 'token.confirmed'])
+// Studio credits (C1, drizzle/0165) add a partner's refunds and disputes: credits bought with money that went back are
+// clawed back. Merchant billing ignores both, as it ignored every type it didn't name.
+const KEEP = new Set(['payment.captured', 'payment.failed', 'token.cancelled', 'token.rejected', 'token.paused', 'token.confirmed',
+  'refund.processed', 'payment.dispute.created', 'payment.dispute.lost'])
 
-type Event = { event?: string; created_at?: number; payload?: { payment?: { entity?: Record<string, unknown> }; token?: { entity?: Record<string, unknown> } } }
+type Event = { event?: string; created_at?: number; payload?: { payment?: { entity?: Record<string, unknown> }; token?: { entity?: Record<string, unknown> }; refund?: { entity?: Record<string, unknown> } } }
 
-/** Only what applying needs: ids, status, the order and the bank's reason. Nothing about the payer. */
+/** Only what applying needs: ids, status, the order, the mandate's token and the bank's reason. Nothing about the payer.
+ *  `_test` is OURS, written here from the server's own keys (never read from the payload): a Studio credit payment is
+ *  believed only in the mode its attempt was made in (C1, security M3). */
 function trimmed(e: Event) {
-  const p = e.payload?.payment?.entity, t = e.payload?.token?.entity
+  const p = e.payload?.payment?.entity, t = e.payload?.token?.entity, r = e.payload?.refund?.entity
   const pick = (o: Record<string, unknown> | undefined, keys: string[]) => (o ? Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, typeof o[k] === 'string' ? String(o[k]).slice(0, 160) : o[k]])) : undefined)
-  return { event: e.event, payload: { ...(p ? { payment: { entity: pick(p, ['id', 'order_id', 'status', 'amount', 'currency', 'error_description']) } } : {}), ...(t ? { token: { entity: pick(t, ['id', 'status']) } } : {}) } }
+  return { event: e.event, _test: billingGatewayIsTest(), payload: {
+    ...(p ? { payment: { entity: pick(p, ['id', 'order_id', 'status', 'amount', 'currency', 'error_description', 'token_id']) } } : {}),
+    ...(t ? { token: { entity: pick(t, ['id', 'status']) } } : {}),
+    ...(r ? { refund: { entity: pick(r, ['id', 'payment_id', 'amount']) } } : {}) } }
 }
 
 /** The body, read with a byte count: a chunked body with no length stops at the cap, never read whole first. */

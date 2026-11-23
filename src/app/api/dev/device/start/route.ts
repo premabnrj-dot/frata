@@ -3,7 +3,7 @@ import { ipFrom } from '@/lib/http/client-ip'
 import { startDeviceSignIn } from '@/lib/storefront-api/device'
 import { errName } from '@/lib/log'
 
-// G·3: the CLI (`npx frrata dev <store>`) starts a device sign-in. No sign-in here and no shop read: the answer is the
+// G·3: the CLI (`npm run frrata` in the starter; `npx frrata dev <store>` once published) starts a device sign-in. No sign-in here and no shop read: the answer is the
 // same for any well-formed store name; the person confirms in Frrata, signed in. Limited per network, failing closed.
 export const dynamic = 'force-dynamic'
 export const maxDuration = 10
@@ -11,9 +11,9 @@ const json = (status: number, body: object) => new Response(JSON.stringify(body)
 
 // Each answer keeps its code for machines and says in one line what the person at the CLI does next (words review).
 const SAY = {
-  too_large: 'That request was too large.', bad_request: 'Run `npx frrata dev <your store>` again.',
+  too_large: 'Run `npm run frrata` again.', bad_request: 'Run `npm run frrata` again.',
   busy: 'Too many tries. Wait a minute, then run it again.', unavailable: 'Frrata could not answer. Try again in a minute.',
-  not_found: 'This sign-in ended. Run `npx frrata dev` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
+  not_found: 'This sign-in ended. Run `npm run frrata` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
 } as const
 const fail = (status: number, error: keyof typeof SAY) => json(status, { error, message: SAY[error] })
 /** A body over 512 bytes is refused before it is read (security LOW-5). */

@@ -7,7 +7,7 @@
 // record through the console's own save; a logo card refused because the brand changed since (state 9), then applied
 // after Reload Brand; Not this; Code and Checks empty (state 8); the store's own preview (state 7); a request at its
 // limit (state 4) and Continue request; a Send refused at today's limit (state 6); a request that failed on Frrata's
-// side (state 5). axe finds nothing serious at 1280 and 390. Screenshots e2e/.out/97-studio-agent-*.png are what
+// side (state 5). axe finds nothing serious at 1280 and 390. Screenshots e2e/.out/99-studio-agent-*.png are what
 // mockup-parity-reviewer compares with the states mockup.
 // Guards: a person who is not staff in Studio; an Apply that skips the console's save or its version; a key or a cost
 // on screen.
@@ -58,7 +58,7 @@ export default {
       await p.getByRole('heading', { name: 'Studio isn’t open yet' }).waitFor()
       await p.getByText('Frrata is testing it on one store.').waitFor()
       await p.getByRole('link', { name: 'Open Clients' }).waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-1-closed.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-1-closed.png' })
       await ctx.close()
     })
 
@@ -72,7 +72,7 @@ export default {
     await t.step('state 2: no request yet, the store named', async () => {
       await chat.getByText('No requests yet').waitFor()
       await chat.getByText('Kesar test').waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-2-empty.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-2-empty.png' })
     })
 
     await t.step('a request: work lines, a card with the exact colour, Apply through the console’s save', async () => {
@@ -82,7 +82,7 @@ export default {
       await until(async () => { if (!(await card.isVisible())) { await cron(); return false } return true }, 30_000)
       await card.getByText('#7A2A1E').waitFor()
       await card.getByText('1 to apply').waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-3-card.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-3-card.png' })
       await card.getByRole('button', { name: 'Apply' }).click()
       await card.getByText('Applied').waitFor()
       const [b] = await db`select color_accent, version from brand_tokens where tenant_id = ${S}`
@@ -100,7 +100,7 @@ export default {
       await card.getByRole('button', { name: 'Apply' }).click()
       await card.getByText('Not applied').waitFor()
       await card.getByRole('button', { name: 'Reload Brand' }).waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-9-refused.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-9-refused.png' })
       await card.getByRole('button', { name: 'Reload Brand' }).click()
       await p.waitForLoadState('networkidle')
       await card.getByRole('button', { name: 'Not this' }).click()
@@ -118,7 +118,7 @@ export default {
       await insp.getByText('No code yet').waitFor()
       await insp.getByRole('tab', { name: 'Checks' }).click()
       await insp.getByText('No checks yet').waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-8-empty-tabs.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-8-empty-tabs.png' })
       await insp.getByRole('tab', { name: 'Design' }).click()
       await insp.getByText('Headings font').waitFor()
     })
@@ -128,14 +128,14 @@ export default {
       const stop = chat.getByText('This request reached its limit')
       await until(async () => { if (!(await stop.isVisible())) { await cron(); return false } return true }, 40_000)
       await chat.getByRole('button', { name: 'Continue request' }).waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-4-limit.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-4-limit.png' })
       await db`insert into studio_spend_people (day, user_id, reserved_micro) values (${day}, ${P.id}, 2900000) on conflict (day, user_id) do update set reserved_micro = studio_spend_people.reserved_micro + 2900000`
       try {
         await say('Add a size chart to Product')
         await chat.getByText('Studio reached today’s limit. Ask again from 12:00 am.').waitFor()
         assert.equal(await ask.getAttribute('aria-invalid'), 'true')
         assert.equal(await ask.inputValue(), 'Add a size chart to Product', 'what was typed stays')
-        await p.screenshot({ path: 'e2e/.out/97-studio-agent-6-refused.png' })
+        await p.screenshot({ path: 'e2e/.out/99-studio-agent-6-refused.png' })
       } finally { await db`update studio_spend_people set reserved_micro = greatest(0, reserved_micro - 2900000) where day = ${day} and user_id = ${P.id}` }
     })
 
@@ -146,7 +146,7 @@ export default {
       await chat.getByText('We couldn’t finish this request').waitFor()
       await chat.getByText('Nothing was changed.').first().waitFor()
       await chat.getByRole('button', { name: 'Try again' }).waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-5-failed.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-5-failed.png' })
       assert.deepEqual(await audit(p), [], 'axe at 1280')
     })
     await t.step('state 3: a slow step: what was done, what is running, Stop', async () => {
@@ -167,7 +167,7 @@ export default {
       assert.ok(lines.findIndex((l) => l.startsWith('Read the brand')) < lines.findIndex((l) => l.startsWith('Checking the colours')), lines.join(' | '))
       await chat.getByText('Working · you can still type').waitFor()
       await chat.getByRole('button', { name: 'Stop' }).waitFor()
-      await p.screenshot({ path: 'e2e/.out/97-studio-agent-3-working.png' })
+      await p.screenshot({ path: 'e2e/.out/99-studio-agent-3-working.png' })
       await chat.getByRole('button', { name: 'Stop' }).click()
       await chat.getByRole('button', { name: 'Send' }).waitFor()
       assert.equal((await db`select end_reason from studio_sessions where id = ${s3.id}`)[0].end_reason, 'stopped')
@@ -177,7 +177,7 @@ export default {
     await t.step('390: the chat on a phone, axe clean', async () => {
       const { ctx: c2, p: q } = await open({ width: 390, height: 844 })
       await q.getByRole('complementary', { name: 'Chat' }).getByRole('textbox', { name: 'Ask for a change' }).waitFor()
-      await q.screenshot({ path: 'e2e/.out/97-studio-agent-phone.png' })
+      await q.screenshot({ path: 'e2e/.out/99-studio-agent-phone.png' })
       assert.deepEqual(await audit(q), [], 'axe at 390')
       await c2.close()
     })

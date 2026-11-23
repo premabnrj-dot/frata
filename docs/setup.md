@@ -591,3 +591,23 @@ for the platform per day, open sessions) live in the database and `src/domains/s
    revokes keys. There is no Frrata Admin screen for this yet (owner call 4).
 5. **Before the first live turn:** the R8 probe (domain fronting) runs in `frata-studio-eval` on the orchestrator's
    word, against a Frrata-owned echo preview (`SPIKE_FRONT_ECHO_HOST`). The workspace's spend limit stays on.
+
+### Studio credits — Frrata's own Razorpay before the first real sale (C1, plan `docs/plans/2026-11-22-c1-credits.md`)
+Partners buy credits and the Studio seat from Frrata's own Razorpay account (the one merchant billing uses). Until each
+step is done, buying on Production refuses with "Payments aren't set up yet" or takes nothing it can't account for.
+1. **Migrations first.** 0163, 0164 and 0165 are applied to production (`scripts/prod-migrate.mjs`) BEFORE the push that
+   ships the code: the route stores refund and dispute events from that push on, and 0140's routing would mark them
+   done unread.
+2. **The billing webhook's events.** Razorpay Dashboard (Frrata's account, Live mode) → Accounts & Settings → Webhooks →
+   the hook to `https://frata.vercel.app/api/webhooks/billing` (secret `RAZORPAY_BILLING_WEBHOOK_SECRET`). Tick
+   `payment.captured`, `payment.failed`, `token.confirmed`, `token.cancelled`, `token.rejected`, `token.paused`, and
+   for C1 also **`refund.processed`, `payment.dispute.created`, `payment.dispute.lost`**. Without the last three a
+   chargeback never claws credits back. Then confirm one test-mode event reaches `billing_events` (Production had none
+   on 2026-11-22).
+3. **Recurring payments on.** The Studio seat pays by UPI AutoPay or a card mandate: Razorpay's Recurring Payments must be
+   enabled on the account (Dashboard → Subscriptions / Recurring, or ask Razorpay support).
+4. **Card types off.** Dashboard → Payment Methods: turn off Amex, Diners and international cards. The 2.99× price
+   multiple holds only at the 2% domestic fee (unit-economics review 2026-11-23).
+5. **The day's dollar rate.** Studio's credits are priced from a rate Frrata staff type (owner, 2026-11-22). The writer
+   exists (`src/lib/admin/fx-rate.ts`, audited) but no Admin screen calls it yet (A1a); a rate older than 4 days stops
+   every Studio turn. Needed before V3 starts turns, not for buying.

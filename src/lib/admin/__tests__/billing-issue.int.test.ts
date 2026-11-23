@@ -55,6 +55,8 @@ describe.skipIf(!host)('issuing Frrata invoices on a real database', () => {
     // Never in the CA's export.
     const gst = await b2.gstRows(staff, ist('2026-11-01T00:00:00'), ist('2027-12-01T00:00:00'))
     expect(gst.filter((g) => g.number === d.invoice.number || g.number === cn)).toEqual([])
+    // Studio credit invoices (C1) join the export through admin_partner_gst_rows; a test one never does.
+    expect(gst.some((g) => /\/T\d{2}-/.test(g.number))).toBe(false)
   })
 
   it('the shop reads its own invoice; staff cannot; an issued invoice never changes', async () => {
