@@ -32,7 +32,7 @@ export async function sendStaffNotices(limit = 20): Promise<number> {
     const mail = frrataEmail({ preview: w.subject, heading: w.subject, message: w.body,
       // An owner's request goes to Frrata's admins too (they make the call): its button opens Admin › Partners.
       button: r.kind === 'store_invite' ? { label: `Sign in to ${r.about}`.slice(0, 80), href: `https://${CONSOLE_HOST}/login` }
-        : r.kind === 'store_partner_invite' ? { label: 'Open invitation', href: `https://${CONSOLE_HOST}/partner/clients` }
+        : r.kind === 'store_partner_invite' ? { label: 'Open invitation', href: `https://${CONSOLE_HOST}/partner` }
         : r.kind === 'partner_request_made' ? { label: 'Open Frrata Admin › Partners', href: `https://${CONSOLE_HOST}/admin/partners?view=approved` }
         : partner ? { label: 'Open the partner workspace', href: `https://${CONSOLE_HOST}/partner` } : { label: 'Open Frrata Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
       footer: r.kind === 'store_invite' || r.kind === 'store_partner_invite' ? 'Not expecting this? Ignore it. Nothing happens until you sign in and accept.'

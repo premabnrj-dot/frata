@@ -35,6 +35,9 @@ within 10 minutes of the last; partner invitations 5 a day per store. All invita
 A store already over its limit keeps everyone; it adds no one until it is under (an open invitation's claim is skipped
 and stays open until it expires; People still lists it). The accountant's old definers (0072) are revoked from the app:
 during the deploy window, old code that invites an accountant gets a refusal in words, nothing else.
+Security re-review on the build: SAFE. Taken: security emails claimed before invitations, 300 invitation emails an hour
+across Frrata. Left as LOW for the owner: a store name is the merchant's text in the invitation's subject (escaped,
+capped at 60); anyone can use up an address's 3 invitation emails a day (the invitation still works at sign-in).
 Left for later (impact review MEDIUM, accepted as debt): the owner-only notice kinds are listed in TS and SQL (both
 updated, no pin test yet); `ROLES_GIVEN_BY` sits beside `CAPABILITIES` rather than inside it.
 

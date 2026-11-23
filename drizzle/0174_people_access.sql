@@ -76,6 +76,8 @@ begin
   if (select count(*) from public.staff_notices n where n.to_email = p_to and n.kind in ('store_invite', 'store_partner_invite')
        and n.created_at > now() - interval '1 day') >= 3 then return; end if;
   if exists (select 1 from public.staff_notices n where n.to_email = p_to and n.kind = p_kind and n.created_at > now() - interval '10 minutes') then return; end if;
+  -- And at most 300 invitation emails an hour across Frrata (security re-review M1): past it, the invitation still works at sign-in.
+  if (select count(*) from public.staff_notices n where n.kind in ('store_invite', 'store_partner_invite') and n.created_at > now() - interval '1 hour') >= 300 then return; end if;
   insert into public.staff_notices (to_email, kind, about, by_email, detail)
     values (p_to, p_kind, left(p_about, 60), (select lower(u.email) from auth.users u where u.id = p_by), p_detail);
 end $$;
@@ -394,3 +396,16 @@ grant execute on function app_partner_clients(uuid, uuid, text) to frata_app;
 -- nothing invites past the people limit, the rate limits or the owner's notice (impact review 2026-11-23).
 revoke execute on function app_invite_accountant(uuid, uuid, text), app_remove_accountant(uuid, uuid, uuid), app_accountant_invites(uuid),
   app_revoke_accountant_invite(uuid, uuid, uuid) from frata_app;
+
+--> statement-breakpoint
+-- Security re-review M1: store invitations share the staff security emails' queue; the security kinds go first, so no
+-- burst of invitations delays a takeover alert. Same signature: its grants stay.
+create or replace function app_staff_notices_claim(p_limit int) returns table (id uuid, to_email text, kind text, about text, by_email text, detail text, created_at timestamptz)
+  language sql security definer set search_path = '' as $$
+  with gone as (delete from public.staff_notices o where o.created_at < now() - interval '90 days' and (o.sent_at is not null or o.attempts >= 5))
+  update public.staff_notices n set attempts = n.attempts + 1, claimed_at = now()
+   where n.id in (select n2.id from public.staff_notices n2 where n2.sent_at is null and n2.attempts < 5
+                   and (n2.claimed_at is null or n2.claimed_at < now() - interval '2 minutes')
+                   order by (n2.kind in ('store_invite', 'store_partner_invite')), n2.created_at limit least(greatest(p_limit, 1), 50) for update skip locked)
+  returning n.id, n.to_email, n.kind, n.about, n.by_email, n.detail, n.created_at
+$$;
