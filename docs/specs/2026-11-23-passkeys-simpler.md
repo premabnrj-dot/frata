@@ -1,10 +1,12 @@
 # Passkeys, simpler: one check for a person, no phone calls, a clear way in on a new device
-Status: parked by the owner, 2026-11-23 · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`) · Approved: — ·
+Status: active · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`) · Approved: owner, 2026-11-23 (call 8 reversed) ·
 Owner (2026-11-23): "Please simplify the process, see the complexities issues with passcodes and make it simpler,
 easier. remove redundancies." · Owner (2026-11-23): "there is no calling feature setup, neither we want one." ·
 Fits with lane D's Studio entry card (https://claude.ai/artifact/8gL1SMBEUifHiqV6PRPTak, approved).
 
-**Parked** (owner, 2026-11-23): "on passkey, could you please park the plan and just add option in admin to disable passkeys … it's too early for passkeys in the system, let it be just email and password login. I don't understand the need of passkey system … just wish to get started for now". Nothing here is built. The map (§ A, § B), the reviews (§ D) and the mockup stay as they are for when it is picked up again.
+History: parked by the owner earlier on 2026-11-23 ("on passkey, could you please park the plan and just add option in admin to disable passkeys … it's too early for passkeys in the system, let it be just email and password login. I don't understand the need of passkey system … just wish to get started for now"), then approved the same day (below). Nothing here was built while parked. The map (§ A, § B), the reviews (§ D) and the mockup stay as they are for when it is picked up again.
+
+**Approved** (owner, 2026-11-23, relayed by the orchestrator): "let's finishup the passkey plan, It's approved but along with it also give me option to switch off passkey when I feel so." The mockup (version 2) and the calls as recommended, with **call 8 reversed**: the passkeys-off switch is NOT removed. Lane D builds its control in Frrata Admin (on and off whenever the owner chooses, no forced end) and releases first; P3 here becomes "every screen behaves while the switch is off". Call 5 stands as drawn.
 
 ## Goal
 Ranked problem (5), a premium storefront built by partners: partners are the builders (ADR-0014), and today the first
@@ -172,13 +174,21 @@ saved (password manager, saved, last used) and **Use another device** and **Ask 
 device works: **Save a passkey on this device**. Staff passkeys record their password manager's name too (`nameFor`).
 WebAuthn cannot tell "none here" from "cancelled", so the help follows either.
 
-### C6. The `passkeys_off` switch (question vi) — removed, last
-It hid the prompts for weeks, nobody could see it, and a stolen admin cookie could turn it on for everyone (security L2).
-Removed in the last phase, after the no-call path is live and the owner has passed a check on each browser
-(architecture 2): delete the live row (the trigger audits it), replace `app_access_for` and `app_partner_need` with the
-real check, drop `app_passkeys_off`, the trigger and `platform_switches`, remove `requirePartner`'s empty-step-up path,
-turn proof § 88 and § 81's switch block into "no way in without a step-up". E2e seeding stays unreachable in production.
-*Turned down:* keep it visible (a screen, a banner, 24 hours).
+### C6. The `passkeys_off` switch (question vi) — kept, with a control (owner, 2026-11-23, reversing call 8)
+The owner keeps the switch: "give me option to switch off passkey when I feel so." **Lane D** builds its control in
+Frrata Admin (on and off whenever the owner chooses, no forced end) and makes off mean off everywhere, Studio's door and
+turns and Give key included; it releases first. What this plan adds is that every screen here behaves while it is off:
+- no passkey prompt, no "Save a passkey" screen and no nag on any surface (the gate is never rendered: off counts as
+  checked, as today);
+- the first-passkey 7-day window (C2) counts only days with passkeys on: it starts at the latest of the approval or
+  acceptance, the release day, and the last time the switch was turned back on (`platform.passkeys_on` audit row). So a
+  person invited while passkeys are off gets their full 7 days once they are on. This needs no owner call: it is the
+  same rule as "the release day", applied each time passkeys come back;
+- a lost-passkey request cannot be made while off (nothing to recover); the Lead's 24-hour self path counts only hours
+  with passkeys on, the same way, so turning passkeys off and on never shortens a wait an approver relies on;
+- the security review's warning stands and is the owner's to accept: while off, an inbox alone opens Frrata Admin and
+  the partner workspace (S5 reopened), and a stolen admin cookie within 5 minutes of its check could turn it off.
+*Earlier recommendation (removed, call 8) — overruled by the owner.*
 
 ### C7. What a non-technical partner sees (question vii) — counted on the mockup
 | Journey | Today | Proposed |
@@ -206,16 +216,20 @@ a new staff check or staff sign-out ends `app_turn_actor`. § 81 and § 88 — t
 can neither Allow nor Stop.
 
 ## Phases (each usable alone; migrations numbered at merge, after lanes C, D and F)
-- **P0 · no migration:** the "first passkey" heading bug (B6, `partner-gate.tsx`); C5's "No passkey on this browser";
+- **P0 · no migration:** the "first passkey" heading bug (B6, `partner-gate.tsx`); C5's "No passkey on this browser" (its list of saved passkeys lands with P1's migration);
   staff "Save a passkey on this device"; `nameFor` for staff; one gate body for both surfaces (the frames stay apart);
-  the pure `passkey-door.ts`.
-- **P1 · migration A:** C1 (the derived partner row, the staff check through Frrata Admin's route, unique credential
+  the words of the drawn screens ("Save passkey", "No passkey here?", "Ask for a new passkey").
+- **P1 · migration A (after lane D's switch is on main; numbers after lane D's):** screen 2's list of where the
+  person's passkeys are saved (a definer returning names and dates before a check: needs the migration, so it moves here
+  from P0); C1 (the derived partner row, the staff check through Frrata Admin's route, unique credential
   ids); Studio with one prompt; the new proofs. Ends the owner's dead end.
 - **P2 · migration B:** C2 and C3 (first passkey at first sign-in; Allow passkey with the approver's code; Lead
   self-serve 24 hours from sent emails; Stop request; the owner's 72-hour limits); one `PasskeyRequestCard` in Frrata
   Admin › Staff, Frrata Admin › Partners and Team; `ReadCode`, the Approval step and "Did you start this call yourself?"
   retired; open requests closed and each person emailed; new email words (`staff-security.ts`, `staff-notices.ts`).
-- **P3 · migration C:** C6, after P2 is in production and the owner has passed a check on each browser.
+- **P3 · no removal (call 8 reversed):** every screen here behaves while lane D's switch is off (C6): no prompt, no
+  nag, the 7-day and 24-hour clocks count only time with passkeys on. Built into P2's rules and tested with the switch
+  both ways.
 - **Regression net first** (rule 5): e2e 75 (code → Allow with a code), 80 (call, decline and code go), 40 (Frrata Admin
   › Partners › Passkeys), 86 (a Builder's first passkey), 97 (Give key after a staff check); unit tests for
   `passkey-door.ts`; the proofs above.
