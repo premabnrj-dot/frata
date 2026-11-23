@@ -51,6 +51,7 @@
     "check:billing-read": "node scripts/check-billing-read.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.12.0",
     "@react-pdf/renderer": "4.9.0",
     "@simplewebauthn/browser": "14.0.0",
     "@simplewebauthn/server": "14.0.3",
@@ -76,7 +77,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "1.12.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.10.0",
     "@types/papaparse": "5.5.2",
