@@ -113,6 +113,16 @@ on 25 shell pages; partner workspace pages still load 1.8–2.4 kB twice (Submit
 dialog, the passkey client) and Admin 0.8–1.3 kB; sign-in and start load the Toaster twice (2.4 kB, not budgeted). A
 second cache group for the partner workspace and Admin would take them; no page needs it today.
 
+## Found while running the flows: a refresh the lighter pages lose
+e2e `90-ux` failed its support-mode step in 4 of 8 runs on this branch, 0 of 4 on main. A debug flow repeating those
+steps logged why: the support banner should leave after a visit ends elsewhere (TenantCheck asks which shop, then
+refreshes) or runs out (ExpiryRefresh refreshes on time). In the failures the refresh either came back 200 and never
+committed, or never left after an in-app move. That is Next 15.5 dropping a refresh while the page's response still
+streams (frata-gotchas); the lighter pages load sooner and meet it more often (2 of 36 rounds; main 0 of 24). Both now call
+`settle(router)`, the codebase's remedy (a second refresh 700 ms later). After: 54 of 54 rounds and 7 of 8 `ux` runs
+green; the eighth was a single React #418 on Admin › Merchants at 200 % that did not come back in 7 more runs (not
+explained). Files: `src/components/shell/tenant-check.tsx`, `src/components/nav/expiry-refresh.tsx`.
+
 ## Point 3 · the runtime tax, and the shop (needs the owner's word; nothing here is built)
 **Measured.** webpack's runtime (`static/chunks/webpack-*.js`, 2.52 kB gzipped) is shipped by every page, the shop's
 included. 0.64 kB of it is the map of every lazy chunk in the app (39 today: the console's 13, the customizer's 9,
@@ -159,6 +169,8 @@ studio-agent, primitives (the toast and the shell's keys), ux (every Console and
 ## Shared files touched
 - `next.config.ts` (the `appShell` cache group; every console, Admin, partner workspace and customizer page).
 - `src/lib/utils.ts` (one annotation).
+- `src/components/shell/tenant-check.tsx`, `src/components/nav/expiry-refresh.tsx` (settle instead of one refresh: every
+  staff page and every support visit).
 - `scripts/check-storefront-build.mjs`, `scripts/lib/app-budget.mjs` (the gate every build runs: the pins, the customizer's
   ceiling and checkout's back to 120), `scripts/__tests__/practices-gates.test.ts`, and the budget row in
   `.claude/skills/frata-architecture/reference/speed.md`.
