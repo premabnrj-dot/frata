@@ -52,7 +52,7 @@ export function ConfirmSteps({ endpoint, onAsk, onDone, canSave, headingClass, t
     if (r.ok) { if (r.value?.crossDevice && canSave) setStep('save'); else onDone(); return }
     // Closed, or nothing here: not an error. Said politely; on screen 1 focus moves to "No passkey here?", on screen 2 it
     // stays on "Use another device" (busy kept it there).
-    if (r.error === NO_PASSKEY_HERE) { announce('Not confirmed.'); if (step === 'confirm') noneLink.current?.focus(); return }
+    if (r.error === NO_PASSKEY_HERE) { announce('No passkey found. Try another device.'); if (step === 'confirm') noneLink.current?.focus(); return }
     toast.error(r.error)
   }
   const save = async () => {
