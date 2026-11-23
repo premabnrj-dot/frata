@@ -44,6 +44,8 @@ begin
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
   values (null, p_uid, left(v_email, 320), 'staff', case when p_off then 'platform.passkeys_off' else 'platform.passkeys_on' end, 'passkeys_off',
           jsonb_build_object('via', 'admin'));
+  -- Every master admin is emailed either way (security review MED, 2026-11-23): off has no end date.
+  perform public.app_staff_notify(case when p_off then 'passkeys_off' else 'passkeys_on' end, v_email, v_email, null);
   return p_off;
 end $$;--> statement-breakpoint
 

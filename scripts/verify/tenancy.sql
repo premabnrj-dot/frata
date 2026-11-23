@@ -5911,6 +5911,9 @@ begin
     then raise exception 'FAIL: 88b passkeys off from Admin has an end date'; end if;
   if (select count(*) from public.audit_events where action = 'platform.passkeys_off' and actor_kind = 'staff' and actor_user_id = adm) <> n + 1
     then raise exception 'FAIL: 88b no audit row names the Admin'; end if;
+  if not exists (select 1 from public.staff_notices where kind = 'passkeys_off' and about = 'admin2@frata.test')
+     or (select count(distinct to_email) from public.staff_notices where kind = 'passkeys_off') < (select count(*) from public.platform_staff where role = 'admin')
+    then raise exception 'FAIL: 88b turning passkeys off emailed not every master admin'; end if;
   if (public.app_passkeys_state()->>'off')::boolean is not true or public.app_passkeys_state()->>'by' <> 'admin2@frata.test'
     then raise exception 'FAIL: 88b the state does not say who turned passkeys off'; end if;
   if (select prosrc from pg_proc where proname = 'app_studio_proved') !~ 'app_passkeys_off' then raise exception 'FAIL: 88b Studio ignores the switch'; end if;
@@ -5932,6 +5935,11 @@ begin
     then raise exception 'FAIL: 88b Give key while off left no audit row saying so'; end if;
   if public.app_admin_passkeys_set(adm, gen_random_uuid(), null, false) is not false then raise exception 'FAIL: 88b an Admin could not turn passkeys on'; end if;
   if public.app_passkeys_off() then raise exception 'FAIL: 88b passkeys still off after an Admin turned them on'; end if;
+  -- While on, the doors that follow the switch refuse a missing step-up again (security review LOW, 2026-11-23).
+  if exists (select 1 from public.app_studio_proved(adm, '00000000-0000-0000-0000-000000000000', null, null)) then raise exception 'FAIL: 88b Studio binds with no step-up while on'; end if;
+  begin perform public.app_staff_list(adm, gen_random_uuid(), null); raise exception 'FAIL: 88b the staff list read with no passkey while on';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  if not exists (select 1 from public.staff_notices where kind = 'passkeys_on' and about = 'admin2@frata.test') then raise exception 'FAIL: 88b turning passkeys on emailed no one'; end if;
   begin perform public.app_device_code_give_off(adm, s, null, 'x', null, true); raise exception 'FAIL: 88b Give key without a passkey while passkeys are on';
   exception when others then if sqlerrm <> 'no_challenge' then raise; end if; end;
   delete from public.staff_stepups where token_hash = 'h88b'; delete from public.staff_passkeys where id = k;

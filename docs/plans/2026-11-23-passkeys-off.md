@@ -2,8 +2,8 @@
 Status: active, built on `claude/lane-d-passkeys-off`; released by the orchestrator after the reviews below.
 **Mockup:** https://claude.ai/artifact/XgZaLXACLGze8bcv4ZGztn (`docs/mockups/2026-11-23-admin-passkeys-switch.html`, at 4e51273)
 **Approved:** owner, 2026-11-23 ("passkey switch mockup approved."; the four calls as recommended)
-**Review:** security-reviewer on the changed definers and actions, 2026-11-23 (verdict in § Reviews)
-**Review:** tenancy-auditor on the changed definers, 2026-11-23 (verdict in § Reviews)
+**Review:** security-reviewer SAFE (1 medium, fixed; 3 low), 2026-11-23
+**Review:** tenancy-auditor SAFE, no cross-tenant path (4 medium, 2 low), 2026-11-23
 **Review:** words-reviewer and mockup-parity-reviewer on the control; impact-reviewer once on the whole diff, 2026-11-23
 Migrations: `drizzle/0170_passkeys_off.sql` (generated) and `drizzle/0171_passkeys_off_access.sql` (custom). Proof:
 `scripts/verify/tenancy.sql` § 88, § 88 (cont.), § 91.
@@ -76,4 +76,25 @@ after both. `scripts/prod-migrate.mjs` prints each file's SQL and drizzle row.
 
 ## Reviews
 
-Filled in from each agent's report before release.
+**security-reviewer, SAFE.** Nothing lets anyone skip or make a passkey while passkeys are on.
+- MED, fixed: turning passkeys off emailed no one. Off and on now email every master admin (`app_staff_notify`, kinds
+  `passkeys_off` and `passkeys_on`; proof § 88b).
+- LOW, fixed: the proof read the code instead of calling it. § 88b now calls the Studio and staff-list doors while on.
+- LOW, owner informed: a Build key given while off lasts its 24 hours, and a handover invite its 14 days, after passkeys
+  are on again.
+
+**tenancy-auditor, SAFE.** A rollback-only probe while off found no path to another store's or partner's rows. That
+covered Studio binding, Give key, the staff list and handover.
+- MED, owner informed: while off, the database trusts the server's signed-in user and session for a Studio bind, as
+  `app_access_for` does for every request while off. Supabase verifies both (`getClaims()`); no step-up row backs
+  them. The suggested `auth.sessions` check would make the local proof and e2e stack copy Supabase's session table.
+  Not built.
+- MED, owner informed (both reviewers): while off, signing out does not end a Studio turn already running. It still
+  ends at its next check once passkeys are on, when the person loses their staff place, store or partner, or at its
+  ceiling.
+- MED, the owner's call: handover follows the switch. The approved mockup's call 1 names handover ("That covers Admin,
+  the partner workspace, money and team actions, handover, Studio and Give key").
+- MED, fixed: the proof gained Give key while off, an off-made Studio turn, the emails and the while-on refusals.
+- LOW, kept: `app_passkeys_state` gives `frata_app` the master admin's email. It is read on the server; only Admin
+  renders it.
+- LOW, fixed: ADR-0020 § 4–5's text is amended, and so are ADR-0007 and ADR-0015.

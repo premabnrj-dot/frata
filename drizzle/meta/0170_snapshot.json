@@ -17503,7 +17503,7 @@
       "checkConstraints": {
         "staff_notices_kind": {
           "name": "staff_notices_kind",
-          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed')"
+          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed','passkeys_off','passkeys_on')"
         }
       },
       "isRLSEnabled": false

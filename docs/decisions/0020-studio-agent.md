@@ -68,8 +68,11 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
    Studio is staff-only, an owner or an assigned Lead on the current store, both REAL step-ups live) through
    `withStudio`, and `app_studio_bind_turn` (an open turn whose person `app_turn_actor` still answers for) for `asTurn`
    and the cron's advance. Sessions are made, their vendor ids and build key written once, turns opened and closed and
-   spend settled only through definers matching the bound person. Studio ignores the passkeys-off switch: a turn keeps
-   the ids of its person's step-up rows, so sign-out or expiry ends it. Ending, cleaning and deleting a session go
+   spend settled only through definers matching the bound person. With passkeys on, a turn keeps
+   the ids of its person's step-up rows, so sign-out or expiry ends it. **Amended (owner, 2026-11-23,
+   `docs/plans/2026-11-23-passkeys-off.md`):** while passkeys are off from Admin › Staff, the person binds and a turn
+   runs with no step-up (`app_passkeys_off()`, drizzle/0171). Such a turn ends at its next check once passkeys are on,
+   when its staff place, store or partner goes, or at its ceiling. Signing out alone does not end it while off. Ending, cleaning and deleting a session go
    through definers that read no partner's rows (an unbound end settles at most the reserve). The cron's work list
    (`app_studio_due`) answers ids only; its callers and `app_studio_bind_turn`'s are pinned by `check:studio` (a code
    boundary; a separate database login for the runner is the database-held version, before partners use Studio). The
