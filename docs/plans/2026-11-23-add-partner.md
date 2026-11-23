@@ -28,7 +28,7 @@ counting, the partner's people not).
 7. The invited partner's pages say "No share" (`app_partner_clients` carries `share_bps`). Done.
 8. Reviews on the diff; mockup parity. Below.
 
-## Limits as built (owner has seen them on version 2 only)
+## Limits as built (owner saw the numbers and said "go ahead.", 2026-11-23)
 Launch 3 · Growth 10 · Scale 25 people (`plan_versions.people_limit`, 0174). Invitations: 20 an hour per person and per
 store, 50 a day per person (failing closed); per recipient at most 3 invitation emails a day across all stores and none
 within 10 minutes of the last; partner invitations 5 a day per store. All invitations last 14 days.
