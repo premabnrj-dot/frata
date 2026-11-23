@@ -385,3 +385,9 @@ end $$;
 revoke all on function app_partner_clients(uuid, uuid, text) from public, anon, authenticated, service_role, frata_admin, frata_builder;
 --> statement-breakpoint
 grant execute on function app_partner_clients(uuid, uuid, text) to frata_app;
+
+--> statement-breakpoint
+-- The accountant's own definers (0072) are replaced by app_invite_person and friends: the app runs them no more, so
+-- nothing invites past the people limit, the rate limits or the owner's notice (impact review 2026-11-23).
+revoke execute on function app_invite_accountant(uuid, uuid, text), app_remove_accountant(uuid, uuid, uuid), app_accountant_invites(uuid),
+  app_revoke_accountant_invite(uuid, uuid, uuid) from frata_app;

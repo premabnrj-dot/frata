@@ -32,6 +32,11 @@ counting, the partner's people not).
 Launch 3 · Growth 10 · Scale 25 people (`plan_versions.people_limit`, 0174). Invitations: 20 an hour per person and per
 store, 50 a day per person (failing closed); per recipient at most 3 invitation emails a day across all stores and none
 within 10 minutes of the last; partner invitations 5 a day per store. All invitations last 14 days.
+A store already over its limit keeps everyone; it adds no one until it is under (an open invitation's claim is skipped
+and stays open until it expires; People still lists it). The accountant's old definers (0072) are revoked from the app:
+during the deploy window, old code that invites an accountant gets a refusal in words, nothing else.
+Left for later (impact review MEDIUM, accepted as debt): the owner-only notice kinds are listed in TS and SQL (both
+updated, no pin test yet); `ROLES_GIVEN_BY` sits beside `CAPABILITIES` rather than inside it.
 
 ## Deviations
 | Mockup element | What was built | Reason | Owner seen |

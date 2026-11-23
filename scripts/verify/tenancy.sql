@@ -2227,9 +2227,10 @@ do $$ begin
 end $$;
 
 -- 52. The Accountant (0072): only an owner or admin of THIS shop invites, lists or revokes an accountant; the role is
--- fixed; remove takes accountants only; no API role or staff runs the definers.
+-- fixed; remove takes accountants only; no API role or staff runs the definers. Since 0174 the app runs none of them
+-- (Settings › People's app_invite_person replaced them): their own checks are proved here as the definer's owner.
 insert into members (tenant_id, user_id, role) values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'staff');
-begin; set local role frata_app;
+begin;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ declare i uuid; begin
   begin perform app_invite_accountant('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'ca@example.in'); raise exception 'FAIL: staff invited an accountant';
@@ -2249,7 +2250,7 @@ do $$ declare i uuid; begin
 end $$;
 rollback;
 do $$ begin
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_app']) r,
              unnest(array['app_invite_accountant(uuid,uuid,text)', 'app_remove_accountant(uuid,uuid,uuid)', 'app_accountant_invites(uuid)', 'app_revoke_accountant_invite(uuid,uuid,uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
 end $$;
@@ -6739,10 +6740,19 @@ do $$ declare i uuid; r uuid; t uuid; begin
   t := app_partner_answer_request('10300000-0000-0000-0000-0000000000f3', null, null, r, true);
   if t is distinct from '10300000-0000-0000-0000-0000000000a1' then raise exception 'FAIL: 103 accept returned another store'; end if;
 end $$;
--- The other store sees none of it.
+-- Store B: the owner invites the other partner, who declines; the store then reads the decline, and the slot is free.
 select set_config('app.tenant_id', '10300000-0000-0000-0000-0000000000a2', true);
+do $$ declare r uuid; begin
+  r := app_partner_request_send('10300000-0000-0000-0000-0000000000f7', 'other@p103.test');
+  if app_partner_answer_request('10300000-0000-0000-0000-0000000000f5', null, null, r, false) is not null then raise exception 'FAIL: 103 a decline returned a store'; end if;
+  if (select count(*) from partner_requests where declined_at is not null) <> 1 then raise exception 'FAIL: 103 the store does not read its decline'; end if;
+  if exists (select 1 from partner_links where tenant_id = '10300000-0000-0000-0000-0000000000a2') then raise exception 'FAIL: 103 a decline linked the partner'; end if;
+  perform app_partner_request_send('10300000-0000-0000-0000-0000000000f7', 'other@p103.test');
+  perform app_partner_request_cancel('10300000-0000-0000-0000-0000000000f7');
+end $$;
+-- The other store sees none of store A's rows.
 do $$ begin
-  if exists (select 1 from partner_requests) then raise exception 'FAIL: 103 a store reads another store''s partner requests'; end if;
+  if exists (select 1 from partner_requests where tenant_id <> '10300000-0000-0000-0000-0000000000a2') then raise exception 'FAIL: 103 a store reads another store''s partner requests'; end if;
   if exists (select 1 from app_person_invites('10300000-0000-0000-0000-0000000000f7')) then raise exception 'FAIL: 103 a store reads another store''s invites'; end if;
   begin insert into partner_requests (tenant_id, email, created_by, expires_at) values ('10300000-0000-0000-0000-0000000000a2', 'z@p103.test', '10300000-0000-0000-0000-0000000000f7', now());
     raise exception 'FAIL: 103 frata_app wrote a partner request';
@@ -6764,6 +6774,14 @@ do $$ begin
   perform app_claim_invites('10300000-0000-0000-0000-0000000000f6');
   if (select role from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f6') is distinct from 'admin'
     then raise exception 'FAIL: 103 claim gave the wrong role'; end if;
+  -- Store A is now at its limit (2 Managers + 1 open Staff invite of 3): a further invite's claim is skipped and stays open.
+  insert into invites (tenant_id, email, role, created_by, expires_at) values ('10300000-0000-0000-0000-0000000000a1', 'x2@p103.test', 'staff', '10300000-0000-0000-0000-0000000000f1', now() + interval '1 day')
+    on conflict do nothing;
+  insert into auth.users (id, email, email_confirmed_at) values ('10300000-0000-0000-0000-0000000000f8', 'x2@p103.test', now());
+  insert into members (tenant_id, user_id, role) values ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f9', 'staff');
+  perform app_claim_invites('10300000-0000-0000-0000-0000000000f8');
+  if exists (select 1 from members where user_id = '10300000-0000-0000-0000-0000000000f8') then raise exception 'FAIL: 103 a claim passed the limit'; end if;
+  if not exists (select 1 from invites where email = 'x2@p103.test' and accepted_at is null and revoked_at is null) then raise exception 'FAIL: 103 a refused claim closed the invite'; end if;
   if exists (select 1 from members where user_id = '10300000-0000-0000-0000-0000000000f6' and tenant_id <> '10300000-0000-0000-0000-0000000000a1')
     then raise exception 'FAIL: 103 claim joined another store'; end if;
 end $$;
