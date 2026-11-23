@@ -1,5 +1,5 @@
 # Settings › People: add people by role, and a partner
-Status: draft · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/J5gH384tpfF93oDHjCpYpm · Approved: —
+Status: active · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/J5gH384tpfF93oDHjCpYpm · Approved: owner, 2026-11-23 ("redrawn approved")
 
 ## The owner's words (2026-11-23)
 - "how do a merchant change his partner? align one? i'm unable to do that. pleaes guide if feature isn't there, please plan and execute."
@@ -24,7 +24,7 @@ alone. Today a store can't add Staff or a Manager at all, and can't take on a pa
 - No plan limits people. `plan_versions` holds `monthly_price`, `included_orders`, `fee_bps`, `features`.
 
 ## What each role can do (from `CAPABILITIES`, as the code grants today; nothing new)
-- **Manager:** everything the owner does, costs and profit included, but removing the partner.
+- **Manager:** everything the owner does, payments and costs included, but adding a Manager or the partner.
 - **Staff:** orders, shoppers, products, sending parcels. Never costs, profit, payments, GST or store settings.
 - **Accountant:** GST and documents only. No orders, costs or profit.
 - **Partner:** orders, shoppers, products, the look, content and website keys. Costs only before the store has an owner.
