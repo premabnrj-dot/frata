@@ -39,12 +39,23 @@ a cost arrives that needs it.
 
 ### The data (platform scope, no tenant)
 
-Two tables, migration `0170_admin_costs.sql`, platform-scope like `infra_usage_daily`: `frata_admin`
-only; `frata_app`, `frata_builder`, `anon`, `authenticated` hold nothing, RLS on, a restrictive
-`definer_only` policy (the P2 pattern; `check:tenant` names them).
+Two tables, migration `0170_admin_costs.sql`, in the shape of `infra_usage_daily` (drizzle/0093), **not** the P2
+`definer_only` pattern (which would lock `frata_admin` out too; tenancy review 2026-11-23):
+
+```
+revoke all on cost_items, cost_payments from public, anon, authenticated, service_role, frata_app, frata_builder;
+alter table cost_items enable row level security;  alter table cost_payments enable row level security;
+grant select, insert, update on cost_items to frata_admin;     -- no delete: an item is ended, never removed
+grant select, insert, delete on cost_payments to frata_admin;  -- delete is Undo
+create policy admin_costs on cost_items    for all to frata_admin using (true) with check (true);
+create policy admin_costs on cost_payments for all to frata_admin using (true) with check (true);
+```
+
+The database cannot tell a master admin from support staff (one connection), so every exported function in
+`src/lib/admin/costs.ts` checks `ADMIN_ONLY` on the `StaffOk` itself, as `setFxRate` does.
 
 `cost_items` — the thing we pay for
-- `id`, `name` (≤ 80), `vendor` (≤ 80, optional), `category` (text + CHECK + exported tuple)
+- `id`, `name` (1–80), `vendor` (≤ 80, optional), `category` (text + CHECK + exported tuple `COST_CATEGORIES`: infrastructure, ai, messaging, software, marketing, legal, people, design, other)
 - `kind` `recurring | one_time`, `cadence` `monthly | quarterly | yearly` (null for one-time; CHECK pairs them)
 - `amount_minor bigint` (paise or cents), `currency` `INR | USD`, `varies boolean`
 - `anchor_on date` — a date it falls due; later dues are derived from it, month-end clamped
@@ -54,12 +65,15 @@ only; `frata_app`, `frata_builder`, `anon`, `authenticated` hold nothing, RLS on
 - `id`, `item_id` (FK), `period_for date` (which due date this settles; for one-time, the paid date)
 - `paid_on date`, `amount_minor bigint`, `currency`, `inr_paise bigint` (what left the account, in rupees)
 - `gst_paise bigint null` (the GST part, for the CA's input credit), `note`
-- unique `(item_id, period_for)` so Mark paid twice is a no-op, never a double
+- unique `(item_id, period_for)` so Mark paid twice is a no-op, never a double (`on conflict do nothing`); index `(paid_on, id)`
+- CHECKs: kind and cadence paired (`(kind = 'recurring') = (cadence is not null)`); currency in INR, USD; amounts between 1 and
+  1e10; `inr_paise = amount_minor` when INR; `gst_paise` between 0 and `inr_paise`; dates between 2020-01-01 and 2100-12-31;
+  a one-time item is never `varies` and has no `ends_on`; text caps (note ≤ 300, `created_by` ≤ 320); FK `item_id` on delete restrict
 
 Grants: items select, insert, update (no delete — end it instead); payments select, insert, delete
 (delete is Undo for a mistaken payment). Money is integer minor units end to end (ADR-0004); USD is
 cents, shown as dollars only where a person reads it. `inr_paise` for a USD cost is prefilled from the
-latest `fx_rates` row (`app_fx_latest`, already there) and editable: the card statement wins.
+latest `fx_rates` row (a new definer `admin_fx_rate_latest()` in 0170, granted to `frata_admin` only, revoked from everyone else; `app_fx_rate_latest` stays `frata_app`'s) and editable: the card statement wins.
 
 ### What is derived, never stored (SSOT)
 
@@ -107,7 +121,7 @@ one, many, overdue, ended, USD row, no permission (support staff), phone.
 
 Master admin only (the stored role `admin`, `ADMIN_ONLY`), the same door as the fx rate. Support staff get a
 panel: "Only a master admin can open Costs". No fresh-passkey step: nothing here moves money, it records it. Every write is audited
-in its own transaction (`costs.item.add`, `.edit`, `.end`, `.pay`, `.unpay`; `auditStaff`, names of
+in the same transaction as the write (`tenantId` null) (`costs.item.add`, `.edit`, `.end`, `.pay`, `.unpay`; `auditStaff`, names of
 changed fields only), and `costs` joins `MASTER_ONLY_WORDS` so support staff never see these rows in Activity.
 
 ### Reminders (phase 2)

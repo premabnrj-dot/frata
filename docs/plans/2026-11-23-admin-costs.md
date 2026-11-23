@@ -3,7 +3,7 @@
 **Mockup:** https://claude.ai/artifact/MEoxVFhu7EUHpfzbA8obvA
 **Approved:** owner, 2026-11-23
 **Review:** architecture-reviewer pending, 2026-11-23
-**Review:** tenancy-auditor pending, 2026-11-23
+**Review:** tenancy-auditor 9 findings fixed in the spec and task 3, 2026-11-23
 **Review:** security-reviewer pending, 2026-11-23
 **Review:** speed-reviewer pending, 2026-11-23
 
@@ -19,7 +19,7 @@ Goal and design are in the spec; this file is the order of work. The spec's task
 |---|---|---|
 | 1 | Engine tests, then `src/domains/admin/costs.ts`: due dates (month-end clamp, 29 Feb, quarterly, yearly), next due, overdue count, monthly equivalent, burn, IST month and FY | `npx vitest run src/domains/admin` |
 | 2 | Schema `src/lib/db/schema-costs.ts`; `drizzle/0170_admin_costs.sql` (`--custom`): grants to `frata_admin` only, RLS, `definer_only` policy, CHECKs | `npm run db:generate` shows no drift; `npm run check:migrations` |
-| 3 | `check:tenant` names both tables; `scripts/verify/tenancy.sql` block: no role but `frata_admin` reads or writes | `npm run check:tenant`; `npm run verify:tenancy` on a throwaway Postgres |
+| 3 | `check:tenant` rule: a grant on either table to any role but `frata_admin` (or a privilege beyond the spec's lists), or a policy not `to frata_admin`, fails; the table names are fenced to `src/lib/admin/costs.ts` (and `today.ts` in C2). `tenancy.sql` block after § 101: no other role holds any privilege; exact `frata_admin` privileges; RLS on, one permissive policy each; `frata_app` and `frata_builder` get `insufficient_privilege`; a positive round trip as `frata_admin` (insert, read, duplicate payment is one row, delete item refused, delete payment works, each CHECK rejects a bad row); `admin_fx_rate_latest()` runs for `frata_admin` only | `npm run check:tenant`; `npm run verify:tenancy` on a throwaway Postgres |
 | 4 | `src/lib/admin/costs.ts`: reads (one `adminDb` call, two parallel statements) and writes, each with its `auditStaff` row; `costs` joins `MASTER_ONLY_WORDS`; activity words | unit tests with the admin db fake; `npm run gates` |
 | 5 | Actions `costs/actions.ts` (`requireStaff(ADMIN_ONLY)` first, Zod caps, `ActionResult`) | `npm run check:actions`; tests per action |
 | 6 | Page and dialogs as drawn: Overview, All costs panel, Add, Mark paid, states, phone; nav item in the Money group | `npm run e2e` flow `costs` at phone and desktop; `mockup-parity-reviewer`, `design-system-reviewer`, `words-reviewer` |
