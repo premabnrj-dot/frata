@@ -6607,6 +6607,16 @@ do $$ declare r text; t text; p text; begin
   then raise exception 'FAIL: 102 a function reads the Costs tables'; end if;
   if exists (select 1 from pg_auth_members m where m.member in (select oid from pg_roles where rolname in ('frata_app', 'frata_admin', 'frata_builder')) and m.roleid in (select oid from pg_roles where rolname like 'frata\_%'))
   then raise exception 'FAIL: 102 a frata role holds another frata role'; end if;
+  -- nothing copies a row out: no rule or trigger on the tables, no function that depends on them (a `begin atomic` body records its
+  -- dependencies), no publication that carries them (tenancy re-audit 2026-11-23, finding 1)
+  if exists (select 1 from pg_rewrite where ev_class in ('public.cost_items'::regclass, 'public.cost_payments'::regclass))
+  then raise exception 'FAIL: 102 a rule on a Costs table'; end if;
+  if exists (select 1 from pg_trigger where tgrelid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and not tgisinternal)
+  then raise exception 'FAIL: 102 a trigger on a Costs table'; end if;
+  if exists (select 1 from pg_depend where classid = 'pg_proc'::regclass and refobjid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass))
+  then raise exception 'FAIL: 102 a function depends on a Costs table'; end if;
+  if exists (select 1 from pg_publication_tables where schemaname = 'public' and tablename in ('cost_items', 'cost_payments'))
+  then raise exception 'FAIL: 102 a publication carries a Costs table'; end if;
 end $$;
 begin; set local role frata_app;
 do $$ begin
