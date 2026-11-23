@@ -252,7 +252,7 @@
     "why": "Owner, 2026-11-22: the Studio step is named Website, not Site (the brand's own site built as code, glossary § Surfaces); the Studio workbench shell (WB·3)"
   },
   {
-    "file": "src/app/(partner)/partner/fixtures/studio/_workbench/workbench.tsx",
+    "file": "src/components/studio/shell.tsx",
     "rule": "W4",
     "text": "Website",
     "why": "Owner, 2026-11-22: the Studio step is named Website, not Site (the brand's own site built as code, glossary § Surfaces); the Studio workbench shell (WB·3)"
