@@ -10,7 +10,7 @@ import type { TodayArea } from '@/domains/admin/today'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { adminHealth } from '@/lib/admin/health'
-import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
 import { gateState } from '@/lib/admin/passkeys'
 import { StaffGate } from '@/components/passkeys/passkey-gate'
@@ -72,6 +72,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staffItem = item('/admin/staff', 'Staff', 'staff', 'staff')
   const plans = item('/admin/plans', 'Plans', 'plans')
   const billingItem = item('/admin/billing', 'Billing', 'payments', 'billing')
+  // Costs is a master admin's page; support staff are not shown it (the page and every action refuse them too).
+  const costsItems = (ADMIN_ONLY as readonly string[]).includes(staff.role) ? [item('/admin/costs', 'Costs', 'costs')] : []
   const appsItem = item('/admin/apps', 'Apps', 'apps')
   const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people')
   const themesItem = item('/admin/themes', 'Themes', 'themes', 'themes')
@@ -84,12 +86,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: '', items: [today] },
     { label: 'Merchants', items: [merchants, trialsItem, offersItem, namesItem, apiItem] },
     { label: 'People', items: [partnersItem, staffItem] },
-    { label: 'Money', items: [plans, billingItem] },
+    { label: 'Money', items: [plans, billingItem, ...costsItems] },
     { label: 'Platform', items: [appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity] },
   ]
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Frrata Admin" groups={groups}
-      tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, apiItem, staffItem, plans, billingItem, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
+      tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, apiItem, staffItem, plans, billingItem, ...costsItems, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>
   )

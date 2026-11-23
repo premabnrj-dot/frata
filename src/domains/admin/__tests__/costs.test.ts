@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { istDayKey } from '@/domains/time/day'
 import {
-  anchorMayMove, burnOf, byCategory, cleanText, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
+  anchorMayMove, burnOf, byCategory, cleanText, costsCsv, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
   type CostItem, type CostPayment,
 } from '../costs'
 
@@ -198,5 +198,18 @@ describe('what a person types', () => {
     expect(parseDay('2031-01-01', '2030-01-01')).toBeNull()
     expect(parseDay('2026-02-28', '2030-01-01')).toBe('2026-02-28')
     expect(parseDay('26-02-28', '2030-01-01')).toBeNull()
+  })
+})
+
+describe('the CA export', () => {
+  const row = (o: object = {}) => ({ id: 'p', itemId: 'i', periodFor: '2026-11-26', paidOn: '2026-11-23', amount: 20_000_000, currency: 'USD', inrPaise: 188_400, gstPaise: null, createdAt: new Date(0), category: 'Infrastructure', name: 'Vercel Pro', vendor: 'Vercel', ...o })
+  it('one quoted line a payment, dollars and rupees, with a header', () => {
+    expect(costsCsv([row()]).split('\r\n')).toEqual([
+      '"Cost","Vendor","Category","Paid on","For the bill due","Currency","Billed","In rupees","GST in rupees"',
+      '"Vercel Pro","Vercel","Infrastructure","2026-11-23","2026-11-26","USD","20.00","1884.00",""', '',
+    ])
+  })
+  it('a name that starts like a formula is made text', () => {
+    expect(costsCsv([row({ name: '=HYPERLINK("x")', vendor: '+1' })])).toContain(`"'=HYPERLINK(""x"")","'+1"`)
   })
 })

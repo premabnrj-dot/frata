@@ -7,6 +7,7 @@
 // Amounts are paise for INR and micro-dollars for USD (`MicroUsd`); a dollar total converts at the day's rate
 // (rupees × 10,000) and rounds once, on the sum.
 // =============================================================================
+import { csvCell } from '@/domains/billing/document'
 import { addMonths } from '@/domains/time/month'
 
 export const COST_CATEGORIES = ['infrastructure', 'ai', 'messaging', 'software', 'marketing', 'legal', 'people', 'design', 'other'] as const
@@ -212,4 +213,20 @@ export function parseDay(text: string, max: string): string | null {
   const d = new Date(`${text}T00:00:00Z`)
   if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== text) return null
   return text >= '2020-01-01' && text <= max ? text : null
+}
+
+// ── The CA's CSV ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+const quote = (v: string | number) => csvCell(v)
+const rupees = (p: number) => (p / 100).toFixed(2)
+const dollars = (micro: number) => (micro / 1e6).toFixed(2)
+
+/** One financial year's payments, oldest first: the cost, its vendor and category, the bill's day and period, what was
+ *  billed, what left the account in rupees, and the GST part. Every cell quoted and formula-safe. */
+export function costsCsv(rows: readonly (PaymentRow & { name: string; vendor: string | null })[]): string {
+  const head = ['Cost', 'Vendor', 'Category', 'Paid on', 'For the bill due', 'Currency', 'Billed', 'In rupees', 'GST in rupees']
+  const lines = rows.map((r) => [
+    r.name, r.vendor ?? '', r.category, r.paidOn, r.periodFor, r.currency, r.currency === 'USD' ? dollars(r.amount) : rupees(r.amount), rupees(r.inrPaise), r.gstPaise === null ? '' : rupees(r.gstPaise),
+  ].map(quote).join(','))
+  return [head.map(quote).join(','), ...lines].join('\r\n') + '\r\n'
 }
