@@ -25,9 +25,10 @@ export function onePerConnection<T extends Sql>(sql: T, max: number): T {
   let running = 0
   const waiting: (() => void)[] = []
   const slot = async <R>(work: () => Promise<R>): Promise<R> => {
-    while (running >= max) await new Promise<void>((r) => waiting.push(r))
-    running++
-    try { return await work() } finally { running--; waiting.shift()?.() }
+    // A freed slot passes straight to the longest waiter (security review): a newcomer never jumps the queue.
+    if (running < max) running++
+    else await new Promise<void>((r) => waiting.push(r))
+    try { return await work() } finally { const next = waiting.shift(); if (next) next(); else running-- }
   }
   const unsafe = sql.unsafe.bind(sql)
   const held = ((query: string, params?: unknown[], options?: object) => {

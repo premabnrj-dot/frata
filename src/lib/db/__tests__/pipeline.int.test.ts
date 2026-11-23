@@ -71,11 +71,13 @@ describe.skipIf(!host)('no query sent behind another on a pooled connection', ()
     const { px, raw, db } = await open(true)
     try {
       const [tx, reads] = await Promise.all([
-        db.transaction(async (t) => { await t.execute(sql`select 1`); return (await t.execute(sql`select 2 as n`))[0] }),
-        Promise.all(Array.from({ length: 6 }, (_, i) => db.execute(sql`select ${i}::int as n`))),
+        // Held open while the reads run: it holds one of the two connections, so the reads share the other one at a time.
+        db.transaction(async (t) => { await t.execute(sql`select pg_sleep(0.2)`); return (await t.execute(sql`select 2 as n`))[0] }),
+        // Parameterless, as the counter sees them (a parameterised query's first message has no Sync).
+        Promise.all(Array.from({ length: 6 }, () => db.execute(sql`select 7 as n, pg_sleep(0.02)`))),
       ])
       expect(tx).toEqual({ n: 2 })
-      expect(reads.map((r) => r[0])).toEqual([0, 1, 2, 3, 4, 5].map((n) => ({ n })))
+      expect(reads.map((r) => r[0]?.n)).toEqual([7, 7, 7, 7, 7, 7])
       await expect(db.execute(sql`select * from no_such_table`)).rejects.toThrow()
       expect(px.most()).toBe(1)
     } finally { await raw.end({ timeout: 1 }); await px.close() }
