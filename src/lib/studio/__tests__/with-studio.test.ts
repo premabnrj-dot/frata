@@ -10,14 +10,19 @@ const s = {
   member: { ok: true, userId: 'u1', membership: { tenantId: 't1', tenantName: 'Kesar', role: 'partner', supportSessionId: null } } as Record<string, unknown>,
   staffProof: { sessionId: 'b1', hash: 'sh' } as { sessionId: string; hash: string } | null,
   partnerProof: { sessionId: 'b1', hash: 'ph' } as { sessionId: string; hash: string } | null,
+  staffPasskeys: 2,
+  memberships: [{ tenantId: 't1', tenantName: 'Kesar', role: 'partner', supportSessionId: null }] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[],
+  reads: 0,
 }
 vi.mock('@/lib/env', () => ({ get STUDIO_OPEN() { return s.open }, isStudioConfigured: () => s.configured }))
 vi.mock('@/lib/auth/require-staff', () => ({ ANY_STAFF: ['admin', 'support'], requireStaff: vi.fn(async () => s.staff) }))
 vi.mock('@/lib/auth/require-partner', () => ({ requirePartner: vi.fn(async () => s.partner) }))
 vi.mock('@/lib/auth/require-member', () => ({ requireMember: vi.fn(async (roles: string[]) => (s.member.ok && !roles.includes((s.member.membership as { role: string }).role) ? { ok: false } : s.member)) }))
-vi.mock('@/lib/auth/session', () => ({ staffProof: vi.fn(async () => s.staffProof), partnerProof: vi.fn(async () => s.partnerProof), oncePerCall: <T>(w: () => Promise<T>) => w() }))
+vi.mock('@/lib/auth/session', () => ({ staffProof: vi.fn(async () => s.staffProof), partnerProof: vi.fn(async () => s.partnerProof), oncePerCall: <T>(w: () => Promise<T>) => w(),
+  accessOf: vi.fn(async () => { s.reads++; return { memberships: s.memberships } }) }))
+vi.mock('@/lib/admin/passkeys', () => ({ gateState: vi.fn(async () => { s.reads++; return { passkeys: s.staffPasskeys, request: null } }) }))
 vi.mock('@/lib/db/tenant', () => ({ withTenant: vi.fn() }))
-const { requireStudio } = await import('../with-studio')
+const { requireStudio, studioEntry } = await import('../with-studio')
 
 const base = structuredClone({ ...s, staff: { ...s.staff, confirmedAt: 0 } })
 describe('requireStudio', () => {
@@ -54,5 +59,54 @@ describe('requireStudio', () => {
     expect((await requireStudio()).ok).toBe(false)
     Object.assign(s, structuredClone(base)); s.staff = { ...s.staff, sessionId: 'b3' }
     expect((await requireStudio()).ok).toBe(false)
+  })
+})
+
+// Studio's entry states (owner 2026-11-23, docs/mockups/2026-11-23-studio-door.html): only a person who is staff AND a
+// live partner person, as one user, learns the missing step; for anyone else nothing more is read (no oracle).
+describe('studioEntry', () => {
+  const staffNeeds = () => ({ ok: false, reason: 'needs_passkey', identity: { kind: 'staff-identity', userId: 'u1', email: 'a@x.in', role: 'support', sessionId: 'b1' } })
+  const partnerNeeds = () => ({ ok: false, reason: 'needs_passkey', identity: { kind: 'partner-identity', userId: 'u1', email: 'a@x.in', sessionId: 'b1' } })
+  beforeEach(() => { Object.assign(s, structuredClone(base)) })
+  it('the same as requireStudio when it opens, or when Studio is off', async () => {
+    expect(await studioEntry()).toMatchObject({ ok: true, tenantId: 't1' })
+    s.open = 'off'; s.staff = staffNeeds(); s.staffProof = null
+    expect(await studioEntry()).toEqual(await requireStudio())
+    expect(s.reads).toBe(0)
+  })
+  it('no oracle: not staff, not a partner, or two people read today\'s answer and nothing else is read', async () => {
+    for (const set of [
+      () => { s.staff = { ok: false, reason: 'not_staff' }; s.staffProof = null },
+      () => { s.partner = { ok: false, reason: 'not_partner' }; s.partnerProof = null },
+      () => { s.staff = { ok: false, reason: 'signed_out' } },
+      () => { s.partner = { ...s.partner, userId: 'u2' }; s.staffProof = null },
+      () => { s.staff = staffNeeds(); s.partner = { ok: false, reason: 'in_review' } },
+    ]) {
+      Object.assign(s, structuredClone(base)); set()
+      const door = await requireStudio()
+      s.reads = 0
+      expect(await studioEntry()).toEqual(door)
+      expect(s.reads).toBe(0)
+    }
+  })
+  it('1b: a check missing names which, staff first; a check on another sign-in counts as missing', async () => {
+    s.staff = staffNeeds(); s.staffProof = null; s.partner = partnerNeeds(); s.partnerProof = null
+    expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'check', staff: false, partner: false } })
+    Object.assign(s, structuredClone(base)); s.partner = partnerNeeds(); s.partnerProof = null
+    expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'check', staff: true, partner: false } })
+    Object.assign(s, structuredClone(base)); s.staffProof = { sessionId: 'old', hash: 'sh' }
+    expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'check', staff: false, partner: true } })
+  })
+  it('1c: no staff passkey at all', async () => {
+    s.staff = staffNeeds(); s.staffProof = null; s.staffPasskeys = 0
+    expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'staff_passkey' } })
+  })
+  it('1a: both checks made, on another store: the person\'s own partner stores, never a support visit', async () => {
+    s.member = { ok: true, userId: 'u1', membership: { tenantId: 't9', tenantName: 'Own shop', role: 'owner', supportSessionId: null } }
+    s.memberships = [{ tenantId: 't9', tenantName: 'Own shop', role: 'owner', supportSessionId: null }, { tenantId: 't1', tenantName: 'Kesar', role: 'partner', supportSessionId: null },
+      { tenantId: 't7', tenantName: 'Visited', role: 'partner', supportSessionId: 'sv' }]
+    expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'store', stores: [{ tenantId: 't1', name: 'Kesar' }] } })
+    s.memberships = [{ tenantId: 't9', tenantName: 'Own shop', role: 'owner', supportSessionId: null }]
+    expect(await studioEntry()).toMatchObject({ ok: false, reason: 'no_store' })
   })
 })

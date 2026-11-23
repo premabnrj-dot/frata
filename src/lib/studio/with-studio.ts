@@ -4,9 +4,11 @@ import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { isStudioConfigured, STUDIO_OPEN } from '@/lib/env'
 import { requireMember } from '@/lib/auth/require-member'
+import type { MemberRole } from '@/domains/tenancy/roles'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { oncePerCall, partnerProof, staffProof } from '@/lib/auth/session'
+import { accessOf, oncePerCall, partnerProof, staffProof } from '@/lib/auth/session'
+import { gateState } from '@/lib/admin/passkeys'
 
 // =============================================================================
 // FILE: src/lib/studio/with-studio.ts — STUDIO'S DOOR FOR A PERSON (plan docs/plans/2026-11-22-v3a-runtime.md ruling k;
@@ -26,6 +28,8 @@ export type StudioOk = {
 export type StudioClosed = { ok: false; reason: 'closed' | 'not_staff' | 'not_partner' | 'no_store'; message: string }
 
 export const STUDIO_CLOSED = 'Studio isn’t open yet'
+/** The store role Studio runs as: the door's requireMember tuple, and the stores the entry state 1a offers. */
+const STUDIO_ROLES = ['partner'] as const satisfies readonly MemberRole[]
 
 /** One Supabase check and one access query for the whole door, in a page, an action or the poll (oncePerCall). */
 export function requireStudio(): Promise<StudioOk | StudioClosed> {
@@ -37,12 +41,53 @@ async function studioDoor(): Promise<StudioOk | StudioClosed> {
   const [staff, partner] = await Promise.all([requireStaff(ANY_STAFF), requirePartner()])
   if (!staff.ok) return { ok: false, reason: 'not_staff', message: STUDIO_CLOSED }
   if (!partner.ok || partner.userId !== staff.userId) return { ok: false, reason: 'not_partner', message: STUDIO_CLOSED }
-  const member = await requireMember(['partner'])
+  const member = await requireMember(STUDIO_ROLES)
   if (!member.ok || member.userId !== staff.userId || member.membership.supportSessionId) return { ok: false, reason: 'no_store', message: STUDIO_CLOSED }
   const [sp, pp] = await Promise.all([staffProof(staff.userId), partnerProof(staff.userId)])
   if (!sp || !pp || sp.sessionId !== pp.sessionId || sp.sessionId !== staff.sessionId) return { ok: false, reason: 'not_staff', message: STUDIO_CLOSED }
   return { ok: true, userId: staff.userId, email: staff.email, tenantId: member.membership.tenantId, tenantName: member.membership.tenantName,
     authSession: sp.sessionId, staffHash: sp.hash, partnerHash: pp.hash }
+}
+
+/** What a person who is Frrata staff and a live partner person, as one user, still needs to open Studio (the entry
+ *  states, owner 2026-11-23, docs/mockups/2026-11-23-studio-door.html): their other partner store(s) to open, their
+ *  passkey checks on this sign-in, or a first staff passkey. Anyone else gets StudioClosed, word for word as before. */
+export type StudioStep =
+  | { kind: 'store'; stores: { tenantId: string; name: string }[] }
+  | { kind: 'check'; staff: boolean; partner: boolean }
+  | { kind: 'staff_passkey' }
+export type StudioEntry = StudioOk | StudioClosed | { ok: false; reason: 'step'; step: StudioStep }
+
+/** The Studio page's door: requireStudio, and when it refuses a person who is Frrata staff AND a live partner person
+ *  (each signed in, at most missing their passkey check, the same user), the one step they miss. Nothing is read for
+ *  anyone else, so their answer is today's card and tells them nothing (the no-oracle rule). */
+export function studioEntry(): Promise<StudioEntry> {
+  return oncePerCall(entry)
+}
+
+async function entry(): Promise<StudioEntry> {
+  const door = await studioDoor()
+  if (door.ok || door.reason === 'closed') return door
+  const [staff, partner] = await Promise.all([requireStaff(ANY_STAFF), requirePartner()])
+  const s = staff.ok ? staff : staff.reason === 'needs_passkey' ? staff.identity : null
+  const p = partner.ok ? partner : partner.reason === 'needs_passkey' ? partner.identity : null
+  if (!s || !p || s.userId !== p.userId || !s.sessionId || s.sessionId !== p.sessionId) return door
+  const [sp, pp] = await Promise.all([staffProof(s.userId), partnerProof(s.userId)])
+  const staffDone = staff.ok && sp?.sessionId === s.sessionId
+  const partnerDone = partner.ok && pp?.sessionId === s.sessionId
+  if (!staffDone || !partnerDone) {
+    if (!staffDone) {
+      // The person's own staff passkeys only (app_staff_state on their own user and session).
+      const g = await gateState({ kind: 'staff-identity', userId: s.userId, email: s.email, role: s.role, sessionId: s.sessionId }).catch(() => null)
+      if (g && g.passkeys === 0) return { ok: false, reason: 'step', step: { kind: 'staff_passkey' } }
+    }
+    return { ok: false, reason: 'step', step: { kind: 'check', staff: staffDone, partner: partnerDone } }
+  }
+  // Both checks made: the switcher's store is not one where they are the partner. Their own partner stores, never a
+  // support visit (app_access_for's list for this user; the switch re-checks it).
+  const stores = ((await accessOf(s.userId).catch(() => null))?.memberships ?? [])
+    .filter((m) => (STUDIO_ROLES as readonly string[]).includes(m.role) && !m.supportSessionId).map((m) => ({ tenantId: m.tenantId, name: m.tenantName }))
+  return stores.length ? { ok: false, reason: 'step', step: { kind: 'store', stores } } : door
 }
 
 export class StudioUnbound extends Error { override name = 'StudioUnbound' }

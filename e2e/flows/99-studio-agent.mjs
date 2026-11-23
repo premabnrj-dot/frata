@@ -15,7 +15,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
-import { CONSOLE, PORTS, USERS, partnerOn, signedIn, until } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, partnerOn, seedStaffStepup, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const URL = CONSOLE + '/partner/studio'
@@ -63,6 +63,62 @@ export default {
     })
 
     await db`insert into platform_staff (user_id, email, role) values (${P.id}, ${P.email}, 'support') on conflict (user_id) do nothing`
+
+    // The entry states (owner 2026-11-23, docs/mockups/2026-11-23-studio-door.html): staff who are the store's partner
+    // learn the one step they miss.
+    const entry = async (opts, tenant = S) => {
+      const c = await signedIn(t.browser, 'partner', { viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce', ...opts })
+      await c.addCookies([{ name: 'frata_tenant', value: tenant, domain: 'localhost', path: '/' }])
+      const q = await c.newPage(); q.setDefaultTimeout(15_000); q.on('pageerror', (e) => t.errors.push(e.message))
+      await q.goto(URL)
+      return { c, q }
+    }
+    await t.step('1c: no staff passkey yet', async () => {
+      await db`delete from staff_stepups where user_id = ${P.id}`; await db`delete from staff_passkeys where user_id = ${P.id}`
+      const { c, q } = await entry({ passkey: false })
+      await q.getByRole('heading', { name: 'Add a staff passkey' }).waitFor()
+      assert.equal(await q.getByRole('link', { name: 'Add staff passkey' }).getAttribute('href'), '/admin')
+      assert.deepEqual(await audit(q), [])
+      await q.screenshot({ path: 'e2e/.out/99-studio-agent-1c-staff-passkey.png' })
+      await c.close()
+    })
+    await t.step('1b: the checks this sign-in still needs, staff first', async () => {
+      await db`insert into staff_passkeys (user_id, credential_id, public_key, name) values (${P.id}, ${'e2e-seed-' + P.id}, 'e2e', 'e2e seed') on conflict (credential_id) do nothing`
+      const { c, q } = await entry({ passkey: false })
+      await q.getByRole('heading', { name: 'Confirm your passkeys' }).waitFor()
+      assert.deepEqual(await q.getByRole('listitem').allTextContents(), ['Staff passkey', 'Partner passkey'])
+      await q.getByRole('button', { name: 'Confirm staff passkey' }).waitFor()
+      await seedStaffStepup(c, 'partner'); await q.reload()
+      await q.getByRole('listitem').filter({ hasText: 'Staff passkey: Done' }).waitFor()
+      await q.getByRole('button', { name: 'Confirm partner passkey' }).waitFor()
+      assert.deepEqual(await audit(q), [])
+      await q.screenshot({ path: 'e2e/.out/99-studio-agent-1b-check.png' })
+      await q.setViewportSize({ width: 390, height: 844 })
+      assert.equal(await q.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll at 390')
+      await q.getByRole('button', { name: 'Confirm partner passkey' }).waitFor()
+      await q.screenshot({ path: 'e2e/.out/99-studio-agent-1b-check-390.png' })
+      await c.close()
+    })
+    await t.step('1a: both checks made, on another store: Open the test store, then Studio', async () => {
+      const [{ id: other }] = await db`insert into tenants (slug, name) values (${'e2e-studio-other-' + Date.now().toString(36)}, 'Other shop') returning id`
+      await db`insert into members (tenant_id, user_id, role) values (${other}, ${P.id}, 'staff')`
+      // One partner store, as drawn: earlier flows link this partner to their stores too (several read state 1).
+      const paused = await db`update partner_links l set removed_at = now() from partners p
+        where p.id = l.partner_id and p.user_id = ${P.id} and l.tenant_id <> ${S} and l.removed_at is null returning l.tenant_id`
+      try {
+        const { c, q } = await entry({}, other)
+        await q.getByRole('heading', { name: 'Studio runs on Kesar test' }).waitFor()
+        assert.deepEqual(await audit(q), [])
+        await q.screenshot({ path: 'e2e/.out/99-studio-agent-1a-store.png' })
+        await q.getByRole('button', { name: 'Open Kesar test' }).click()
+        await q.waitForURL(/\/partner\/studio$/)
+        await q.getByText('No requests yet').waitFor()
+        await c.close()
+      } finally {
+        if (paused.length) await db`update partner_links set removed_at = null where tenant_id in ${db(paused.map((r) => r.tenant_id))} and removed_at > now() - interval '10 minutes'`
+        await db`delete from members where tenant_id = ${other}`.catch(() => {}); await db`delete from tenants where id = ${other}`.catch(() => {})
+      }
+    })
     const { ctx, p } = await open({ width: 1280, height: 860 })
     const chat = p.getByRole('complementary', { name: 'Chat' }), insp = p.getByRole('complementary', { name: 'Inspector' })
     const ask = chat.getByRole('textbox', { name: 'Ask for a change' })

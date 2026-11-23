@@ -72,6 +72,7 @@ const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth
 const ADMIN_LIB_IN_APP = {
   'src/app/api/cron/drain/route.ts': 'The 5-minute drain sends the staff security emails through frata_admin (CRON_SECRET via isCronRequest; staff passkeys, security re-review F2)',
   'src/app/api/cron/outbox/route.ts': 'The daily run issues this month\'s bills on the 1st to 3rd through frata_admin, issueMonthAuto only (CRON_SECRET via isCronRequest; billing rework R2, owner decision 3)',
+  'src/lib/studio/with-studio.ts': 'Studio\'s entry states (owner 2026-11-23): gateState for the signed-in staff member\'s OWN staff passkeys only, from their requireStaff identity, after both staff and partner checks name the same user',
   'src/app/api/cron/infra/route.ts': 'Admin › Infrastructure\'s hourly pull of vendor usage (CRON_SECRET via isCronRequest; writes platform rows only, plan 2026-11-11 I·1)',
 }
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
