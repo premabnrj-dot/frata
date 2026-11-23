@@ -3,7 +3,7 @@
 **Mockup:** https://claude.ai/artifact/MEoxVFhu7EUHpfzbA8obvA
 **Approved:** owner, 2026-11-23
 **Review:** architecture-reviewer 18 findings fixed in the spec and plan, 2026-11-23
-**Review:** tenancy-auditor 9 findings fixed in the spec and task 3, 2026-11-23
+**Review:** tenancy-auditor 9 findings fixed in the spec and task 3; re-audit of 0170 SAFE, 9 gate and proof findings fixed, 2026-11-23
 **Review:** security-reviewer 8 findings fixed in the spec, one for the owner (a passkey on edits and old Undo), 2026-11-23
 **Review:** speed-reviewer 4 findings fixed in the spec, 2026-11-23
 

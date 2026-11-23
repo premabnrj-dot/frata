@@ -180,3 +180,35 @@ export function byCategory(payments: readonly CostPayment[], ym: string): { cate
 
 export const fyStartOf = (day: string) => (Number(day.slice(5, 7)) >= 4 ? Number(day.slice(0, 4)) : Number(day.slice(0, 4)) - 1)
 export const fyRange = (startYear: number) => ({ from: `${startYear}-04-01`, to: `${startYear + 1}-03-31` })
+
+// ── What a person types ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The most one cost may be: ₹1 crore in paise, or $200,000 in micro-dollars (the ₹50 to ₹200 band's top). */
+export const AMOUNT_MAX = { INR: 1_000_000_000, USD: 200_000_000_000 } as const
+
+/** "1,380" or "57.50" or "0.000125" → paise (INR, up to 2 decimals) or micro-dollars (USD, up to 6), exactly, never
+ *  through a float; null when it is not an amount above zero, has too many decimals, or is over the ceiling. */
+export function parseAmount(text: string, currency: CostCurrency): number | null {
+  const m = /^(\d{1,12})(?:\.(\d{1,6}))?$/.exec(text.trim().replace(/[,\s₹$]/g, ''))
+  if (!m) return null
+  const decimals = currency === 'INR' ? 2 : 6
+  const frac = m[2] ?? ''
+  if (frac.length > decimals) return null
+  const v = Number(m[1]) * 10 ** decimals + Number(frac.padEnd(decimals, '0'))
+  return v >= 1 && v <= AMOUNT_MAX[currency] ? v : null
+}
+
+/** Rupees typed for a GST part or a dollar bill's rupees: paise, 0 allowed. */
+export const parseRupees = (text: string): number | null => (/^\s*0+(\.0{1,2})?\s*$/.test(text) ? 0 : parseAmount(text, 'INR'))
+
+/** A person's text, cleaned for storage and display: trimmed, control and bidi characters removed, spaces collapsed. */
+export const cleanText = (text: string) =>
+  text.replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]/g, ' ').replace(/\s+/g, ' ').trim()
+
+/** A real "YYYY-MM-DD" (February 30th is not one), between 2020-01-01 and `max`. */
+export function parseDay(text: string, max: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+  const d = new Date(`${text}T00:00:00Z`)
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== text) return null
+  return text >= '2020-01-01' && text <= max ? text : null
+}

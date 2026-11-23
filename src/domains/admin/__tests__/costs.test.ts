@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { istDayKey } from '@/domains/time/day'
 import {
-  anchorMayMove, burnOf, byCategory, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
+  anchorMayMove, burnOf, byCategory, cleanText, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
   type CostItem, type CostPayment,
 } from '../costs'
 
@@ -166,5 +166,37 @@ describe('more cases', () => {
       const start = fyStartOf(day)
       expect(fiscalYear(new Date(`${day}T06:00:00Z`))).toBe(`${String(start % 100).padStart(2, '0')}-${String((start + 1) % 100).padStart(2, '0')}`)
     }
+  })
+})
+
+describe('what a person types', () => {
+  it('amounts are exact: rupees to paise, dollars to micro-dollars', () => {
+    expect(parseAmount('1,380', 'INR')).toBe(138_000)
+    expect(parseAmount('₹1,299.50', 'INR')).toBe(129_950)
+    expect(parseAmount('57.50', 'USD')).toBe(57_500_000)
+    expect(parseAmount('0.000125', 'USD')).toBe(125)
+    expect(parseAmount('19.99', 'USD')).toBe(19_990_000)
+  })
+  it('refuses zero, too many decimals, words, negatives and anything over the ceiling', () => {
+    for (const bad of ['0', '0.00', '', 'abc', '-5', '1.234', '10000000.01', '1e5']) expect(parseAmount(bad, 'INR'), bad).toBeNull()
+    expect(parseAmount('10000000', 'INR')).toBe(1_000_000_000)
+    expect(parseAmount('200000', 'USD')).toBe(200_000_000_000)
+    expect(parseAmount('200000.01', 'USD')).toBeNull()
+  })
+  it('rupees for GST may be zero', () => {
+    expect(parseRupees('0')).toBe(0)
+    expect(parseRupees('0.00')).toBe(0)
+    expect(parseRupees('381.36')).toBe(38_136)
+    expect(parseRupees('x')).toBeNull()
+  })
+  it('clean text drops control and direction characters and collapses spaces', () => {
+    expect(cleanText('  Vercel\u202e  Pro\n\t ')).toBe('Vercel Pro')
+  })
+  it('days must be real and in range', () => {
+    expect(parseDay('2026-02-30', '2030-01-01')).toBeNull()
+    expect(parseDay('2019-12-31', '2030-01-01')).toBeNull()
+    expect(parseDay('2031-01-01', '2030-01-01')).toBeNull()
+    expect(parseDay('2026-02-28', '2030-01-01')).toBe('2026-02-28')
+    expect(parseDay('26-02-28', '2030-01-01')).toBeNull()
   })
 })

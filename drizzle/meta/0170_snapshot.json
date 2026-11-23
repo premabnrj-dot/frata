@@ -1,5 +1,5 @@
 {
-  "id": "5a2d7ab3-8b78-47e6-94cf-b36d0bf023fd",
+  "id": "90ae0a94-2fcf-49eb-a302-259290268113",
   "prevId": "ad67fa06-5c6e-4f3c-9ca8-6762e49a0d8e",
   "version": "7",
   "dialect": "postgresql",
@@ -23618,7 +23618,7 @@
         },
         "cost_items_amount": {
           "name": "cost_items_amount",
-          "value": "\"cost_items\".\"amount\" between 1 and 1000000000000"
+          "value": "(\"cost_items\".\"currency\" = 'INR' and \"cost_items\".\"amount\" between 1 and 1000000000) or (\"cost_items\".\"currency\" = 'USD' and \"cost_items\".\"amount\" between 1 and 200000000000)"
         },
         "cost_items_name": {
           "name": "cost_items_name",
@@ -23779,7 +23779,7 @@
         },
         "cost_payments_amount": {
           "name": "cost_payments_amount",
-          "value": "\"cost_payments\".\"amount\" between 1 and 1000000000000 and \"cost_payments\".\"inr_paise\" between 1 and 1000000000000"
+          "value": "((\"cost_payments\".\"currency\" = 'INR' and \"cost_payments\".\"amount\" between 1 and 1000000000) or (\"cost_payments\".\"currency\" = 'USD' and \"cost_payments\".\"amount\" between 1 and 200000000000)) and \"cost_payments\".\"inr_paise\" between 1 and 1000000000"
         },
         "cost_payments_inr": {
           "name": "cost_payments_inr",

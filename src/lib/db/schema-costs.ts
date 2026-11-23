@@ -9,14 +9,15 @@
 
 import { sql } from 'drizzle-orm'
 import { boolean, check, date, foreignKey, index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-import { COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, COST_KINDS } from '@/domains/admin/costs'
+import { AMOUNT_MAX, COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, COST_KINDS } from '@/domains/admin/costs'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, id, money } from './schema'
 
 const list = (xs: readonly string[]) => sql.raw(sqlList(xs))
 const DAY_MIN = sql.raw(`'2020-01-01'`)
 const DAY_MAX = sql.raw(`'2100-12-31'`)
-const CEILING = 1_000_000_000_000
+/** The spec's ceilings: ₹1 crore in paise, $200,000 in micro-dollars (src/domains/admin/costs.ts AMOUNT_MAX). */
+const INR_MAX = AMOUNT_MAX.INR, USD_MAX = AMOUNT_MAX.USD
 
 /** What Frrata pays for: a repeating cost (with its cadence and next due anchor) or a one-time one. */
 export const costItems = pgTable('cost_items', {
@@ -40,7 +41,7 @@ export const costItems = pgTable('cost_items', {
   check('cost_items_kind_cadence', sql`(${t.kind} = 'recurring') = (${t.cadence} is not null)`),
   check('cost_items_currency', sql`${t.currency} in (${list(COST_CURRENCIES)})`),
   check('cost_items_category', sql`${t.category} in (${list(COST_CATEGORIES)})`),
-  check('cost_items_amount', sql`${t.amount} between 1 and ${sql.raw(String(CEILING))}`),
+  check('cost_items_amount', sql`(${t.currency} = 'INR' and ${t.amount} between 1 and ${sql.raw(String(INR_MAX))}) or (${t.currency} = 'USD' and ${t.amount} between 1 and ${sql.raw(String(USD_MAX))})`),
   check('cost_items_name', sql`length(btrim(${t.name})) between 1 and 80`),
   check('cost_items_vendor', sql`${t.vendor} is null or length(${t.vendor}) <= 80`),
   check('cost_items_note', sql`${t.note} is null or length(${t.note}) <= 300`),
@@ -66,7 +67,7 @@ export const costPayments = pgTable('cost_payments', {
   uniqueIndex('cost_payments_period').on(t.itemId, t.periodFor),
   index('cost_payments_paid').on(t.paidOn, t.id),
   check('cost_payments_currency', sql`${t.currency} in (${list(COST_CURRENCIES)})`),
-  check('cost_payments_amount', sql`${t.amount} between 1 and ${sql.raw(String(CEILING))} and ${t.inrPaise} between 1 and ${sql.raw(String(CEILING))}`),
+  check('cost_payments_amount', sql`((${t.currency} = 'INR' and ${t.amount} between 1 and ${sql.raw(String(INR_MAX))}) or (${t.currency} = 'USD' and ${t.amount} between 1 and ${sql.raw(String(USD_MAX))})) and ${t.inrPaise} between 1 and ${sql.raw(String(INR_MAX))}`),
   check('cost_payments_inr', sql`${t.currency} <> 'INR' or ${t.inrPaise} = ${t.amount}`),
   check('cost_payments_gst', sql`${t.gstPaise} is null or ${t.gstPaise} between 0 and ${t.inrPaise}`),
   check('cost_payments_days', sql`${t.paidOn} between ${DAY_MIN} and ${DAY_MAX} and ${t.periodFor} between ${DAY_MIN} and ${DAY_MAX}`),

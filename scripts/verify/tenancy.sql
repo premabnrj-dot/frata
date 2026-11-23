@@ -6517,6 +6517,21 @@ do $$ declare r text; t text; p text; begin
   if not has_function_privilege('frata_admin', 'public.admin_fx_rate_latest()', 'execute') then raise exception 'FAIL: 102 Admin cannot read the rate'; end if;
   if not coalesce((select p2.prosecdef and 'search_path=""' = any(p2.proconfig) from pg_proc p2 where p2.oid = 'public.admin_fx_rate_latest()'::regprocedure), false)
     then raise exception 'FAIL: 102 admin_fx_rate_latest is not a definer with an empty search_path'; end if;
+  -- exactly these grants, and no column-level grant on either table (re-audit 2026-11-23, findings 6–7)
+  if (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cost_items'::regclass and a.grantee <> c.relowner) <> 'INSERT,SELECT,UPDATE'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cost_payments'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT'
+     or exists (select 1 from pg_class c, aclexplode(c.relacl) a where c.oid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and a.grantee <> c.relowner and a.grantee <> 'frata_admin'::regrole)
+  then raise exception 'FAIL: 102 the Costs tables carry a grant beyond the spec'; end if;
+  if exists (select 1 from pg_attribute where attrelid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and attacl is not null)
+  then raise exception 'FAIL: 102 a column-level grant on the Costs tables'; end if;
+  if (select pg_get_function_result('public.admin_fx_rate_latest()'::regprocedure)) <> 'TABLE(day date, rate_e4 integer)' then raise exception 'FAIL: 102 admin_fx_rate_latest returns more than the rate'; end if;
+  -- no view, rule or function reads the tables (the Admin library is the only reader), and no role holds another's powers
+  if exists (select 1 from pg_depend d join pg_rewrite w on w.oid = d.objid where d.refobjid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and w.ev_class not in ('public.cost_items'::regclass, 'public.cost_payments'::regclass))
+  then raise exception 'FAIL: 102 a view or rule reads the Costs tables'; end if;
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosrc ~ 'cost_(items|payments)')
+  then raise exception 'FAIL: 102 a function reads the Costs tables'; end if;
+  if exists (select 1 from pg_auth_members m where m.member in (select oid from pg_roles where rolname in ('frata_app', 'frata_admin', 'frata_builder')) and m.roleid in (select oid from pg_roles where rolname like 'frata\_%'))
+  then raise exception 'FAIL: 102 a frata role holds another frata role'; end if;
 end $$;
 begin; set local role frata_app;
 do $$ begin
@@ -6553,7 +6568,18 @@ do $$ declare bad text; begin
     $q$insert into cost_items (name, category, kind, amount, currency, anchor_on, ends_on) values ('x', 'ai', 'one_time', 1, 'INR', '2026-11-01', '2026-12-01')$q$,
     $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2499999)$q$,
     $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, gst_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2500000, 2500001)$q$,
-    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values (gen_random_uuid(), '2026-11-09', '2026-11-09', 1, 'INR', 1)$q$
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values (gen_random_uuid(), '2026-11-09', '2026-11-09', 1, 'INR', 1)$q$,
+    $q$insert into cost_items (name, vendor, category, kind, cadence, amount, currency, anchor_on) values ('x', repeat('v', 81), 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on, note) values ('x', 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01', repeat('n', 301))$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'daily', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values (repeat('n', 81), 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 1000000001, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 200000000001, 'USD', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on, ends_on) values ('x', 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01', '2101-01-01')$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 1, 'EUR', 1)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, note) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2500000, repeat('n', 301))$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2101-01-01', 2500000, 'INR', 2500000)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 1000000001, 'INR', 1000000001)$q$
   ] loop
     begin execute bad; raise exception 'FAIL: 102 a bad cost row was accepted: %', bad;
     exception when check_violation or foreign_key_violation then null; end;
