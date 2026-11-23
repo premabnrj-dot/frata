@@ -27,7 +27,7 @@
 // this file, docs/decisions/0020-studio-agent.md and docs/plans/2026-11-22-v3a-runtime.md must stay clean.
 // =============================================================================
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join, normalize } from 'node:path'
 
 const failures = []
 const fail = (what, why) => failures.push(`${what}  ${why}`)
@@ -67,11 +67,23 @@ const DEFINERS = {
 /** Who may import the turn's doors (tenancy audit of R5, M): a turn id reaches them only from the cron's ids-only work
  *  list or from the person's own open session read under withStudio (sessions.ts), never from a request. */
 const IMPORTERS = {
-  '@/lib/studio/advance': ['src/app/api/cron/studio/route.ts', 'src/lib/studio/sessions.ts'],
+  'src/lib/studio/advance': ['src/app/api/cron/studio/route.ts', 'src/lib/studio/sessions.ts'],
   // asTurn and its bind step (withTurnBound) are reached only through this module: the advance, and the tools, which
-  // only ever get the turn asTurn hands them.
-  '@/lib/studio/as-turn': ['src/lib/studio/advance.ts'],
-  './as-turn': ['src/lib/studio/advance.ts'],
+  // only ever get the turn asTurn hands them (their exemption is this module's only).
+  'src/lib/studio/as-turn': ['src/lib/studio/advance.ts'],
+}
+/** Every module a file reaches at run time (static imports, `export … from`, dynamic imports), as repo paths without an
+ *  extension; type-only imports aside (security re-review of R5: a relative or re-exported path passed the first pin). */
+function reached(file, text) {
+  const out = []
+  const re = /\b(import|export)\s+(type\s+)?[^'"`;]*?from\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g
+  for (const m of text.matchAll(re)) {
+    if (m[2]) continue
+    const spec = m[3] ?? m[4]
+    const path = spec.startsWith('@/') ? 'src/' + spec.slice(2) : spec.startsWith('.') ? normalize(join(dirname(file), spec)) : null
+    if (path) out.push(path.replace(/\\/g, '/').replace(/\.(ts|tsx|js|mjs)$/, '').replace(/\/index$/, ''))
+  }
+  return out
 }
 const TX_OPENERS = /\b(withTenant|withStudio|write)\s*\(/g
 const RUNTIME_CALL = /\b(runtime|managedRuntime|rt)\s*\.\s*\w+\s*\(/
@@ -94,9 +106,10 @@ function sourceRules(file, text) {
   for (const [fn, allowed] of Object.entries(DEFINERS)) {
     if (new RegExp(`\\b${fn}\\s*\\(`).test(text) && !allowed.includes(file)) fail(file, `definers: calls ${fn}( — only ${allowed.join(', ')}`)
   }
-  for (const m of text.matchAll(/import\s+(type\s+)?[^'"]*?from\s+['"]([^'"]+)['"]/g)) {
-    const allowed = IMPORTERS[m[2]]
-    if (!m[1] && allowed && !allowed.includes(file) && !file.startsWith('src/lib/studio/tools/')) fail(file, `doors: imports ${m[2]} — only ${allowed.join(', ')} (a turn id never comes from a request)`)
+  for (const path of reached(file, text)) {
+    const allowed = IMPORTERS[path]
+    const toolType = path === 'src/lib/studio/as-turn' && file.startsWith('src/lib/studio/tools/')
+    if (allowed && !allowed.includes(file) && !toolType) fail(file, `doors: reaches ${path} — only ${allowed.join(', ')} (a turn id never comes from a request)`)
   }
   if (file.startsWith('src/lib/studio/')) {
     const cached = [...text.matchAll(/import\s+\{([^}]*)\}\s+from\s+['"]@\/lib\/queries\/[\w/-]+['"]/g)]
