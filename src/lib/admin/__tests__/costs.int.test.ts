@@ -178,4 +178,17 @@ describe.skipIf(!host)('Admin › Costs', () => {
     const data = await costs.costsData(staff, TODAY)
     expect(data.payments.some((p) => p.itemId === id && p.paidOn === TODAY)).toBe(true)
   })
+
+  it('Today lists a cost overdue or due within a week, one item each, and only for a master admin', async () => {
+    const staff = master()
+    const late = ((await costs.addCost(staff, recurring('TodayLate', { anchorOn: '2026-11-20' }), TODAY)) as { id: string }).id
+    const soon = ((await costs.addCost(staff, recurring('TodaySoon', { anchorOn: '2026-11-26', varies: true }), TODAY)) as { id: string }).id
+    const far = ((await costs.addCost(staff, recurring('TodayFar', { anchorOn: '2026-12-20' }), TODAY)) as { id: string }).id
+    const items = (await costs.dueCostItems(staff, TODAY)).filter((i) => i.key.startsWith(late) || i.key.startsWith(soon) || i.key.startsWith(far))
+    expect(items.map((i) => i.title)).toEqual([`TodayLate ${stamp} is overdue 3 days`, `TodaySoon ${stamp} is due in 3 days`])
+    expect(items.map((i) => i.href)).toEqual([`/admin/costs?view=all&id=${late}`, `/admin/costs?view=all&id=${soon}`])
+    expect(items[1]!.line).toMatch(/^About ₹1,884 · 26 Nov$/)
+    expect(items.every((i) => i.kind === 'cost_due' && i.action === 'Mark paid')).toBe(true)
+    await expect(costs.dueCostItems(support, TODAY)).rejects.toThrow('ADMIN_ONLY')
+  })
 })

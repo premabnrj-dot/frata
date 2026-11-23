@@ -121,6 +121,18 @@ export default {
         await ctx.close()
       })
 
+      await t.step('Today lists the overdue cost with one action, and the nav counts it', async () => {
+        const { ctx, p } = await open('frata')
+        await p.goto(CONSOLE + '/admin')
+        await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
+        const row = p.getByText(`${OVERDUE} is overdue 3 days`).first()
+        await row.waitFor()
+        await p.getByRole('link', { name: 'Mark paid' }).first().waitFor()
+        assert.match(await p.getByRole('link', { name: /^Costs/ }).first().textContent(), /\d/, 'the nav counts it')
+        await p.screenshot({ path: t.out('today') })
+        await ctx.close()
+      })
+
       await t.step('All costs: a row opens beside the list; End asks for the last day and keeps the history', async () => {
         const { ctx, p } = await open('frata')
         await p.goto(CONSOLE + '/admin/costs?view=all')
