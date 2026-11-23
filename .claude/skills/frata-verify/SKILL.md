@@ -67,7 +67,7 @@ loopback (`PORTS.anthropic`) and sets the Studio settings for `next start`; a fl
 
 ```bash
 # the throwaway Postgres above, its role passwords set (alter role frata_app/frata_admin/frata_builder password 'x')
-INT_DB_HOST=localhost:54330 ADMIN_URL=postgres://postgres@localhost:54330/frata_proof npx vitest run src/lib/studio
+INT_DB_HOST=localhost:54330 ADMIN_URL=postgres://postgres@localhost:54330/frata_proof npx vitest run src/lib/studio   # or 54340, the e2e stack's cluster
 npm run e2e -- --only studio-agent,studio     # the live screen on the fake, and the workbench fixture
 ```
 The int tests share one database: `runStudioCron(…, onlyStore)` keeps a file's cron to its own store, and each file ends
@@ -165,7 +165,8 @@ stock taken once), a price change mid-checkout, a double submit. Then
 
 ## Header and cookie proof — before claiming a security fix
 
-- `curl -sI` a console page, a shop page and `/console/theme-preview/*`. Read the
+- `curl -sI` a console page, a shop page, `/console/theme-preview/*` and `/console/preview` (both SAMEORIGIN on the
+  console host only). Read the
   CSP, X-Frame-Options and the `Set-Cookie` flags (HttpOnly, Secure, SameSite,
   Max-Age).
 - Send a POST from another Origin to each changed route: expect 403.

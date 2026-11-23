@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.7.0
+  version: 3.8.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -273,7 +273,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   script on the console origin (the Meta SDK, the look preview) into a stolen
   staff session (`sessionCookieOptions`, src/lib/security-headers.ts). Signed-in console pages
   carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
-  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security).
+  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security). Framed only by the
+  console itself (SAMEORIGIN, `frame-ancestors 'self'`, on the console host; DENY elsewhere): `/console/theme-preview/*`
+  and, for Studio's preview pane, `/console/preview[/*]` (`src/lib/__tests__/framing.test.ts`).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does; `requireShop` also weighs `Sec-Fetch-Site` (`src/lib/auth/fetch-site.ts`: sibling stores
@@ -461,8 +463,18 @@ period (frata-integrations § Domains). Build for daily; a beta schedule is an o
   No transaction is held across a runtime call.
 - **The store's key never reaches the model or the sandbox:** a build key in the session's vault, a header credential for
   `api.frrata.shop` only (ADR-0018's build-key amendment), looked up uncached; never reflected in an answer.
-- **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors,
-  no runtime call or cached loader inside a transaction, no id-shaped tool input.
+- **The screen** (`/partner/studio`, V3a R7): `requireStudio()` or state 1. The chat reads `studioChat`
+  (`src/lib/queries/studio.ts`, under withStudio, the person's own latest session, keyset on `seq`) through the rows route,
+  whose `after()` runs `pollAdvance` on the person's own open turn (no id from the request; cross-site refused).
+  Apply (`src/lib/studio/apply.ts`) runs `saveBrand` with the version the person holds; a card reads Applied only when the
+  change went live; refused on a store with an owner until V3b. The preview pane frames `/console/preview`.
+- **Send and the cron**: `src/lib/studio/sessions.ts` (send, start, Stop, the poll's advance; imported by the Studio
+  actions and rows route only) and `src/lib/studio/cron.ts` (end, clean, delete from `app_studio_due`'s ids, no bind;
+  imported by the cron route only). With Studio unconfigured the cron still ends open sessions as `switch` and revokes
+  their keys. Migrations 0166–0167.
+- **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors
+  (who may import the advance, asTurn, sessions.ts and cron.ts), no runtime call or cached loader inside a transaction,
+  no id-shaped tool input.
 
 ## Reference files — open the one for the work in hand
 
