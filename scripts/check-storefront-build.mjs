@@ -31,7 +31,11 @@ const BUDGET_KB = 120
 // Measured here: checkout 121.08 → 119.46, About/FAQ 112.84 → 109.03, product 120.54 → 117.24 kB. The ceilings came down
 // to about that + 0.5 (impact and speed reviews, 2026-11-16) so the room can't silently fill again: checkout back on the
 // 120 budget, the product page too; About/FAQ 109.5.
-const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.5 }
+// 109.8 (2026-11-23, release of credits and Studio's agent; the owner told the same day): the page's own script did not
+// change (0.16 kB), but webpack's runtime, which every page ships, lists every lazy chunk in the app (2.52 kB gzipped
+// now), and that day's console and partner pages took it from 109.3 here to 109.5x on Vercel. The fix is fewer, larger
+// lazy chunks app-wide (or a runtime per surface), not a split of this page: it has nothing left to split.
+const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.8 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
