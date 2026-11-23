@@ -417,7 +417,8 @@ Verify: `npm run e2e -- --only neel-settings,owner-only,signup,products-pr0` pas
 difference is fixed or goes into § Deviations, shown to the owner. Verify: the reviewers' verdicts.
 
 ### C1c · Adding a category (the proof; no new category ships)
-**C1c·1 · A fixture pack, end to end.** The test is the task: `packs/__tests__/add-a-pack.test.ts` defines
+**C1c·1 · A fixture pack, end to end.** The test is the task: `src/lib/catalogue/__tests__/add-a-pack.test.ts` (in `src/lib`, not
+`packs/__tests__`, because it renders the schema's CHECK and `check:layers` keeps Drizzle out of domain tests) defines
 `pet_supplies` (`as const satisfies Pack`, its own `ReturnLine`, rank 25, `label: true`) only in the test, and mocks
 `@/domains/catalogue/packs/list` (`vi.mock`) with `[...PACKS, pet_supplies]` (finding 3). It then re-imports the REAL readers, none
 of which names the fixture, and asserts the new pack flows through each:
@@ -434,7 +435,7 @@ of which names the fixture, and asserts the new pack flows through each:
 `sell-tiles.test.ts` renders the 10 tiles with the fixture's words and path once C1a·6 has built `<SellTiles>`.
 No reader file changes in this task: `git diff --stat <C1a's last commit> -- src ':!**/__tests__/**'` prints nothing (finding 3:
 the diff is taken against C1a's last commit, not `main`, so C1a's own reader edits do not hide a C1c one).
-Verify: `npx vitest run src/domains/catalogue/packs scripts/__tests__/check-packs.test.ts` passed.
+Verify: `npx vitest run src/domains/catalogue/packs src/lib/catalogue/__tests__/add-a-pack.test.ts scripts/__tests__/check-packs.test.ts` passed.
 
 **C1c·2 · The recipe in the skill.** `reference/catalogue-and-content.md` § Category packs gains "Adding a category":
 1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, `as const satisfies Pack`;
