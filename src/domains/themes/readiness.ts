@@ -1,6 +1,7 @@
 import type { Design } from './blocks'
 import { accordionItems, fillFor, fillableOf } from './design-tree'
-import { PROMISES, sectionName, type SectionInstance } from './sections'
+import { PROMISES, sectionName } from './sections-facts'
+import type { SectionInstance } from './sections'
 
 // =============================================================================
 // FILE: src/domains/themes/readiness.ts — what blocks Publish, and what a section shows nothing for (the second

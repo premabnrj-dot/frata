@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { BRAND_COLOUR_PICKS as BRAND_PICKS, BRAND_COLOUR_START } from '@/domains/themes/catalogue/kit'
 import type { Choices } from '@/domains/themes/choices'
-import { brandColourProblem } from '@/domains/themes/layer'
+import { brandColourProblem } from '@/domains/themes/layer-facts'
 import { FOOTER_NAMES, HEADER_NAMES, PAIRING_NAMES, type FooterVariant, type HeaderVariant, type Pairing, type Scheme, type ThemeSettings } from '@/domains/themes/types'
 import { ContentLink } from './content-link'
 import { Field, Group, Offered, OfferedSwitch, Segmented, Switch, Tiles, type LinkTarget } from './controls'

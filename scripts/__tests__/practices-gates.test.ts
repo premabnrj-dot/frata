@@ -148,6 +148,74 @@ describe('check:storefront-build, Console budget', async () => {
   })
 })
 
+describe('the margin under a limit (Vercel builds a page ~0.3 kB heavier)', async () => {
+  const { appBudgetRows, marginProblems, closest, VERCEL_MARGIN_KB } = await import('../lib/app-budget.mjs')
+  const row = (page: string, kb: number, limit: number) => ({ page, kb, limit })
+  it('fails a page under its limit by less than the margin, and passes one with the margin to spare', () => {
+    expect(VERCEL_MARGIN_KB).toBe(0.5)
+    const out = marginProblems([row('/near', 149.6, 150), row('/fine', 149.4, 150), row('/pinned-near', 133.0, 133.4)])
+    expect(out).toEqual([expect.stringMatching(/^\/near {2}ships 149\.60 kB .*within 0\.5 kB of its limit \(150 kB\)/), expect.stringMatching(/^\/pinned-near /)])
+  })
+  it('leaves a page over its limit to the limit check (one line a problem)', () => {
+    expect(marginProblems([row('/over', 150.2, 150)])).toEqual([])
+  })
+  it('names the three pages with the least room, least first', () => {
+    const line = closest([row('/a', 140, 150), row('/b', 149, 150), row('/c', 118, 120), row('/d', 100, 150)])
+    expect(line).toBe('/b 149.0/150 kB (1.0 kB room); /c 118.0/120 kB (2.0 kB room); /a 140.0/150 kB (10.0 kB room)')
+  })
+  it('shows a shop page\'s whole and own numbers, ranked by its smaller room', () => {
+    const shop = { page: '/s/a', kb: 108, limit: 110, own: { kb: 4.4, limit: 4.9 } }
+    const line = closest([row('/c', 148, 150), shop, row('/d', 100, 150)], 2)
+    expect(line).toBe('/s/a 108.0/110 kB (2.0 kB room), own files 4.40/4.9 kB (0.50 kB room); /c 148.0/150 kB (2.0 kB room)')
+  })
+  it('tells a shop page that a lazy chunk elsewhere may be the cause', () => {
+    expect(marginProblems([row('/s/[host]/(shop)/pages/[handle]/page', 109.4, 109.8)])[0]).toMatch(/A shop page: .*runtime/)
+    expect(marginProblems([row('/(console)/console/x/page', 149.8, 150)])[0]).toMatch(/\*-facts\.ts half/)
+  })
+  it('reads each budgeted page with its pin or the budget', () => {
+    const kb = (n: number) => n * 1024
+    const build = { '/layout': ['r.js'], '/(console)/console/x/page': ['x.js'], '/(admin)/admin/y/page': ['y.js'], '/s/[host]/page': ['x.js'] }
+    const sizes: Record<string, number> = { 'r.js': kb(100), 'x.js': kb(40), 'y.js': kb(10) }
+    expect(appBudgetRows(build, (f: string) => sizes[f], 150, { '/(admin)/admin/y/page': 112 })).toEqual([
+      { page: '/(console)/console/x/page', kb: 140, limit: 150 }, { page: '/(admin)/admin/y/page', kb: 110, limit: 112 }])
+  })
+})
+
+describe('the shop\'s own files and the runtime\'s hashes (the owner\'s options E and A)', async () => {
+  const { ownKb, ownProblems, runtimeHashProblems } = await import('../lib/app-budget.mjs')
+  const kb = (n: number) => n * 1024
+  it('counts a page\'s own files without the framework (rootMainFiles) and without CSS', () => {
+    const sizes: Record<string, number> = { 'webpack-a.js': kb(2.3), 'react.js': kb(53), 'shop.js': kb(4), 'page.js': kb(1.5), 'a.css': kb(9) }
+    expect(ownKb(['webpack-a.js', 'react.js', 'shop.js', 'page.js', 'a.css'], new Set(['webpack-a.js', 'react.js']), (f: string) => sizes[f])).toBe(5.5)
+  })
+  it('fails a page over its own ceiling, and a ceiling naming a page the build no longer has', () => {
+    const rows = [{ page: '/s/a', kb: 100, limit: 110, own: { kb: 8.8, limit: 8.7 } }, { page: '/s/b', kb: 100, limit: 120, own: { kb: 8, limit: 8.7 } }]
+    expect(ownProblems(rows, ['/s/a', '/s/b', '/s/a'])).toEqual([expect.stringMatching(/^\/s\/a {2}ships 8\.80 kB of its own script .*ceiling 8\.7 kB.*next\/link/)])
+    expect(ownProblems(rows, ['/s/b', '/s/renamed'])).toEqual([expect.stringMatching(/^\/s\/a {2}ships/), expect.stringMatching(/^\/s\/renamed {2}has a shop ceiling .* no longer builds/)])
+  })
+  it('passes 8-character lazy chunk hashes, fails 16, and fails a runtime where it can see none', () => {
+    expect(runtimeHashProblems('a.u=e=>"static/chunks/"+e+"."+({504:"15cac9d4",815:"bfbf5123"})[e]+".js"', 2)).toEqual([])
+    expect(runtimeHashProblems('({504:"15cac9d43764ab1a"})', 1)).toEqual([expect.stringMatching(/longer than 8 characters/)])
+    expect(runtimeHashProblems('({"504":"15cac9d4"})', 1)).toEqual([expect.stringMatching(/format changed/)])
+    expect(runtimeHashProblems('no lazy chunks at all', 0)).toEqual([])
+  })
+})
+
+describe('what a first load may not carry (zod; the shell twice)', async () => {
+  const { zodProblems, appShellProblems } = await import('../lib/app-budget.mjs')
+  const text: Record<string, string> = { 'r.js': 'react', 'z.js': 'c=u("ZodError",x)', 'm.js': 'n=u("$ZodError",x)', 'p.js': 'page', 'app-shell-0a1b.js': 'shell' }
+  const read = (f: string) => text[f] ?? ''
+  it('fails a page whose first load holds zod or zod/mini, through a layout too', () => {
+    const build = { '/layout': ['r.js'], '/(console)/console/a/page': ['p.js', 'z.js'], '/(console)/console/b/layout': ['m.js'], '/(console)/console/b/c/page': ['p.js'], '/(console)/console/d/page': ['p.js'] }
+    expect(zodProblems(build, read)).toEqual([expect.stringMatching(/^\/\(console\)\/console\/a\/page {2}loads zod .*z\.js/), expect.stringMatching(/^\/\(console\)\/console\/b\/c\/page {2}loads zod .*m\.js/)])
+  })
+  it('fails when a Console page loads no shell chunk, and passes when every one does (through its layout)', () => {
+    expect(appShellProblems({ '/(console)/console/layout': ['app-shell-0a1b.js'], '/(console)/console/a/page': ['p.js'] })).toEqual([])
+    expect(appShellProblems({ '/(console)/console/a/page': ['p.js'], '/(admin)/admin/page': ['p.js'] })).toEqual([expect.stringMatching(/^1 Console page\(s\) load no app-shell/)])
+    expect(appShellProblems({ '/(admin)/admin/page': ['p.js'] })).toEqual([expect.stringMatching(/no Console pages found/)])
+  })
+})
+
 describe('eval runner locks', async () => {
   const { childEnv, answerArgs, judgeArgs, secretIn, gradeVerdict, scenarios } = await import('../eval.mjs')
   it('a verdict passes only when every behaviour is graded once and met', () => {

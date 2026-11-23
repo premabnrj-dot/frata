@@ -1,16 +1,16 @@
 import { z } from 'zod'
-import { ON_COLOUR } from './catalogue/kit'
 import { choicesFor } from './choices'
-import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance, VIDEO_KEYS, type VideoKey } from './sections'
 import { SiteSchema, siteProblem } from './site'
-
-import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
+import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
 // FILE: src/domains/themes/layer.ts — the merchant's layer: its save schema, the brand colour rule, switching
 // themes (carryOver). Pure. (The publish dialog's change list went with Look v3: Publish is one line, owner 2026-11-09.)
 // =============================================================================
+
+// The brand colour's rules live in layer-facts.ts, which a browser may load (no zod).
+export * from './layer-facts'
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/).transform((h) => h.toUpperCase() as Hex)
 /** The announcement bar as released manifests carry it (`null`; the manifest schema reads it). The store's bar is its
@@ -94,16 +94,6 @@ export function layerProblems(layer: unknown): string[] {
   if (new Set(ids).size !== ids.length) out.push('Two sections share an id')
   return out
 }
-
-/** The brand colour replaces the accent on the light schemes (paper, tint); it must read on each of them (spec § Theme settings). */
-export function brandColourProblem(colour: string, schemes: Scheme[]): string | null {
-  if (!/^#[0-9A-Fa-f]{6}$/.test(colour)) return 'Pick a colour.'
-  for (const s of schemes) if (contrast(colour, s.bg) < 3) return 'Too light on this background. Pick a deeper shade.'
-  if (contrast(colour, ON_COLOUR.light) < 4.5 && contrast(colour, ON_COLOUR.dark) < 4.5) return 'Text on it would be hard to read. Pick a deeper or lighter shade.'
-  return null
-}
-/** Text on a brand-colour fill: white when readable, else ink. */
-export const onColour = (c: string): Hex => (contrast(c, ON_COLOUR.light) >= 4.5 ? ON_COLOUR.light : ON_COLOUR.dark)
 
 /**
  * Trying another theme: what the merchant set that the new theme allows comes across, the rest takes its defaults

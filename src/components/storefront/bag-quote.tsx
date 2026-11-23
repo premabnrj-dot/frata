@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, inr, type PublicQuote } from './shop-client'
 import { useBag, useOfferCode } from './bag-store'
-import { saysOnline } from '@/domains/checkout/offer-text'
+import { saysOnline } from '@/domains/checkout/says-online'
 
 // The bag's price from the server and its offer lines: the bag's lines (bag-contents.tsx) and the checkout read them.
 // Apart from the header's bag button (bag.tsx), so a shop page loads none of it until the bag opens.

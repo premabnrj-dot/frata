@@ -1,7 +1,8 @@
 'use client'
 
 import { Icon } from '@/components/icons/icon'
-import { MAX_CARDS, type SectionOf } from '@/domains/themes/sections'
+import { MAX_CARDS } from '@/domains/themes/sections-facts'
+import type { SectionOf } from '@/domains/themes/sections'
 import { ImageField, LinkPicker, Text } from './controls'
 import type { FormCtx } from './section-form'
 

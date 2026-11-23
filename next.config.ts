@@ -3,6 +3,9 @@ import { ADMIN_PASSKEY_HEADERS, FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, pla
 import { apiRedirects, apiRewrites, shopRewrites } from './src/domains/tenancy/host'
 import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
+/** The client entries that render AppShell (their layouts import it): webpack names an entry by its app path. */
+const APP_SHELL_ENTRY = /^app\/\((?:console|admin|lookeditor)\)\/|^app\/\(partner\)\/partner\/\(workspace\)\//
+
 const config: NextConfig = {
   reactStrictMode: true,
   // Documents (D0): React-PDF runs on the server only, as itself; its fonts are files read at render, so they are
@@ -58,11 +61,29 @@ const config: NextConfig = {
   // its own copy beside the layouts' (speed review 2026-11-16: about 1.3 kB twice on checkout and the product page, the
   // counter 0.5 kB twice on the product page). check:storefront-build holds the pages' weight.
   webpack(config, { dev, isServer }) {
+    // A lazy chunk's file name carries 8 hex characters of its content hash, not Next's 16 (page weight 2026-11-23, the
+    // owner's option A): webpack's runtime, which every page ships, lists each lazy chunk's hash, and 8 characters fewer
+    // each is 0.22 kB gzipped off every page. Nothing reads the length (no service worker; the CSP uses a nonce; the
+    // checks and e2e match whole file names). Collision exposure: a new version of one chunk would need the same 32-bit
+    // hash as its old one to be served stale from a browser's cache, about 1 in 4.3 billion per changed chunk.
+    if (!dev && !isServer && config.output && config.output.chunkFilename === 'static/chunks/[name].[contenthash].js') {
+      config.output.chunkFilename = 'static/chunks/[name].[contenthash:8].js'
+    }
     const split = config.optimization?.splitChunks
     if (!dev && !isServer && split && split.cacheGroups) {
       split.cacheGroups.shopShared = {
         name: 'shop-shared', chunks: 'all', enforce: true, priority: 20,
         test: /[\\/]src[\\/](components[\\/]storefront[\\/](bag-store|bag-words|close-mark|landing|chunk|sections[\\/]rail-counter)\.tsx?|domains[\\/]checkout[\\/]bag-fill\.ts)$/,
+      }
+      // The shell's browser modules (AppShell's navs, Toaster, progress bar and live region, and the Button and cn()
+      // every page beside them uses), in ONE chunk for the pages that draw the shell: Console, Admin, the partner
+      // workspace and the customizer. Each was in the layout's chunk AND again in a page's shared chunk, the same
+      // minSize split as the shop's above (page weight 2026-11-23: 4.6–7.1 kB gzipped twice on most of those pages).
+      // Only those surfaces' chunks take part: a page elsewhere that imports Button keeps its own copy, never the navs.
+      split.cacheGroups.appShell = {
+        name: 'app-shell', enforce: true, priority: 20,
+        chunks: (chunk: { name?: string | null }) => APP_SHELL_ENTRY.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](shell[\\/](nav|nav-progress|rail-toggle|announce)|ui[\\/](toast|toast-context|button|use-shortcuts)|icons[\\/]icon)\.tsx?|lib[\\/]utils\.ts|domains[\\/]ui[\\/]shortcuts\.ts)$/,
       }
     }
     return config

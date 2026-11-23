@@ -12,9 +12,9 @@ Budgets. Each says whether a gate holds it yet:
 
 | Budget | Held by |
 |---|---|
-| Shop first-load JS ≤ 120 kB gz | `check:storefront-build` |
+| Shop first-load JS ≤ 120 kB gz; About/FAQ and checkout also have an own-files ceiling (first load minus `rootMainFiles`, measured + 0.5) and a whole-page one (measured + 1.5, ≤ 120), page weight 2026-11-23; lazy chunk hashes are 8 characters (next.config.ts) | `check:storefront-build` |
 | Every shop route ISR; second visit HIT | build + `check:payload` |
-| Console/Admin/partner first-load JS ≤ 150 kB gz (pages pinned at their 2026-11-16 size + 2 kB; customizer 208; sign-in, start, join and the look editor and preview groups not budgeted) | `check:storefront-build` |
+| Console/Admin/partner first-load JS ≤ 150 kB gz (pinned pages at their measured size + 2 kB, last lowered 2026-11-23; customizer 149.7; sign-in, start, join and the preview group not budgeted). Off Vercel a page within 0.5 kB of its limit fails (Vercel builds ~0.3 kB heavier); zod in any first load fails; the shell loads once (`appShell` in next.config.ts) | `check:storefront-build` |
 | Largest shop page HTML ≤ 300 kB raw, RSC ≤ 150 kB; lists paged | lists page at 48 (`PAGE_SIZE`, `/products/page/N`, e2e 13-paging); HTML bytes a review |
 | A cached loader entry ≤ 1 MB (Next refuses > 2 MB, silently) | `catalogue-size.int.test.ts` (880 kB at 600 products with an offer; `src/lib/storefront/catalogue-entry.ts`) |
 | A cold shop page ≤ 12 statements, none repeated | review (loaders are `cache()`d since P3) |
