@@ -4,7 +4,7 @@
 // paise. ONE function, `monthRow`, makes every month's row (a past month from what happened, a coming month from what is due), so the
 // table, the runway, the floor and the Today item all read the same series and no formula is written twice. Nothing here is stored.
 // =============================================================================
-import { dueDates, usdToPaise, type CostItem } from './costs'
+import { cleanText, dueDates, usdToPaise, type CostItem } from './costs'
 import { monthKey, monthRange } from '@/domains/time/month'
 
 export const CASH_KINDS = ['funding', 'loan', 'grant', 'owner_capital', 'other_in', 'gst_paid', 'tds_paid', 'tax_paid', 'loan_repayment', 'owner_draw', 'other_out'] as const
@@ -202,3 +202,6 @@ export function parseCashAmount(text: string, allowZero = false): number | null 
   if (v === null || v < 0 || (v === 0 && !allowZero)) return null
   return v
 }
+
+/** A person's text for storage: trimmed, control and direction characters removed, spaces collapsed (the Costs cleaner, one copy). */
+export const cleanTextLocal = cleanText
