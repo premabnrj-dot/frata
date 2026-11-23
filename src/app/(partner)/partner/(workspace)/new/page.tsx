@@ -12,7 +12,7 @@ export const metadata = { title: 'New client store' }
 export default async function NewClientStorePage() {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />
-  // A Builder makes no store (T1c; app_partner_create_shop refuses it too).
+  // A Builder makes no store (T1c; app_partner_create_shop_v2 refuses it too).
   if (!partnerCan(auth.partner.memberRole, 'createShop')) return <Panel title="Only your partner’s owner and Leads make client stores" />
   return (
     <>

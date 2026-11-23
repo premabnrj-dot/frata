@@ -18,7 +18,7 @@ import { cleanMobile } from '@/domains/checkout/mobile'
 import { checkCode, sendCode, signupCodeOn } from '@/lib/trials/signup-code'
 
 // Creating a shop: the signed-in person (requireUser → getUser) becomes its
-// owner through app_create_shop, which re-checks everything in one transaction.
+// owner through app_create_shop_v3 (drizzle/0166), which re-checks everything in one transaction.
 
 export async function checkAddress(slug: string): Promise<AddressCheck> {
   const auth = await requireUser()

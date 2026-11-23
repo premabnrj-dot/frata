@@ -1170,6 +1170,13 @@
       "when": 1795424794457,
       "tag": "0166_signup_without_pickup",
       "breakpoints": true
+    },
+    {
+      "idx": 167,
+      "version": "7",
+      "when": 1795443467175,
+      "tag": "0167_signup_drop_old_definers",
+      "breakpoints": true
     }
   ]
 }

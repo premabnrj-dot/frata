@@ -20,7 +20,7 @@ export const PARTNER_CAN = {
   manageTeam: ['owner'],
   seeDetails: ['owner'],
   handOver: ['owner'],
-  /** "New client store": the owner and Leads (app_partner_create_shop refuses a Builder). */
+  /** "New client store": the owner and Leads (app_partner_create_shop_v2 refuses a Builder). */
   createShop: ['owner', 'lead'],
   /** A store's owner email, open invite, plan and the partner's share: the owner only (T1c, owner question 6). */
   seeClientTerms: ['owner'],

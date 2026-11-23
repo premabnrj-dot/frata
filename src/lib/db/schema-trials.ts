@@ -58,7 +58,7 @@ export const trialClaims = pgTable('trial_claims', {
 /**
  * A sign-up code sent by WhatsApp (trials TR1; tenancy finding R2): platform data with NO tenant and no grant to any
  * app role — definers only. Keyed HMACs of the phone and the code (never the values); 10 minutes; at most 5 tries;
- * consumed once by app_create_shop_v2, which claims the phone for one trial per business.
+ * consumed once by app_create_shop_v3 (v2 before O1), which claims the phone for one trial per business.
  */
 export const signupCodes = pgTable('signup_codes', {
   id: id(),
