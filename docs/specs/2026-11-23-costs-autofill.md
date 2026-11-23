@@ -1,5 +1,5 @@
 # Admin › Costs — bills filled in from the vendors
-Status: draft · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/1tQ7VNtR4jKhSYhy5NWSAm § 8 (`docs/mockups/2026-11-23-admin-cashflow.html`) · Approved: pending, owner
+Status: active · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/1tQ7VNtR4jKhSYhy5NWSAm § 8 (`docs/mockups/2026-11-23-admin-cashflow.html`) · Approved: owner, 2026-11-23 (screens and the recommended calls; Anthropic and Supabase auto-fill skipped for now)
 
 ## In short
 Costs gets a way to take a vendor's own figure for a bill. It never writes a payment you have not seen: the figure
@@ -58,7 +58,7 @@ the bill typed by hand; never a zero. Tenancy: platform scope only. Unit economi
 
 ## Phases
 **A1** Vercel and Mux: the source choice, the prefilled bill, Confirm rupees (no new connector). **A2** Recording on, per vendor.
-**A3** Anthropic: the admin key, the cost connector, its rows in Infrastructure. Supabase stays manual.
+**A3** Anthropic: the admin key, the cost connector, its rows in Infrastructure. **Deferred by the owner, 2026-11-23: A3 and Supabase wait.** Supabase stays manual.
 
 ## Out of scope, with the signal that brings it back
 Supabase (a billing API appears), reading invoices or PDFs (a vendor offers an invoice API), several workspaces (a second

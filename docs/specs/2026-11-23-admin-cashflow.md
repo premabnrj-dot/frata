@@ -1,5 +1,5 @@
 # Admin › Cashflow — cash in the bank, money in, money out, and the next six months
-Status: draft · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/1tQ7VNtR4jKhSYhy5NWSAm (`docs/mockups/2026-11-23-admin-cashflow.html`) · Approved: pending, owner
+Status: active · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/1tQ7VNtR4jKhSYhy5NWSAm (`docs/mockups/2026-11-23-admin-cashflow.html`) · Approved: owner, 2026-11-23 (screens and the recommended calls; Anthropic and Supabase auto-fill skipped for now)
 
 ## In short
 One Admin page, **Cashflow**, in the Money group beside Costs. Four figures answer the questions a founder asks:
