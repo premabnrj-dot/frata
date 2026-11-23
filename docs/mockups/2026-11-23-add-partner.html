@@ -1,0 +1,301 @@
+<title>Add A Partner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a reference page of frames. Desktop console, phone at 390, then states.
+   Neel tokens copied from docs/mockups/2026-11-13-design-language-neel.html. */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark }
+* { box-sizing:border-box }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3,h4 { margin:0; text-wrap:balance }
+.num { font-variant-numeric:tabular-nums }
+.code { font-family:var(--mono); font-size:12px }
+button { font:inherit; color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+
+/* The reference page */
+.doc { max-width:1320px; margin:0 auto }
+.doc-top { padding:28px 0 8px; border-bottom:1px solid var(--line); margin-bottom:8px }
+.doc-top h1 { font:600 28px/34px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin:6px 0 0 }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 4px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; color:var(--text); text-decoration:none; background:var(--surface) }
+.part { margin-top:44px; scroll-margin-top:16px }
+.part > h2 { font:600 18px/24px var(--font); margin-bottom:4px }
+.part > .cap { color:var(--text-2); font-size:13px; margin:0 0 14px; max-width:90ch }
+.row-frames { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start }
+
+/* Neel primitives (as the gallery draws them) */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.ghost { background:transparent; border-color:transparent; box-shadow:none; color:var(--text-2) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { background:var(--sunk); color:var(--text-3); box-shadow:none; cursor:default }
+.btn.danger { color:var(--bad-fg) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:none }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.overline { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3) }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle }
+.tip svg { width:14px; height:14px }
+.sect { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e1); padding:16px 20px }
+.sect + .sect { margin-top:12px }
+.sect-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+.sect-h h3 { font:600 16px/24px var(--font) }
+.sect-h .sp { flex:1 }
+.list { display:grid }
+.item { display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line-soft) }
+.item:first-child { border-top:0 }
+.item.notext { grid-template-columns:minmax(0,1fr) auto }
+.item b { font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.item .meta { color:var(--text-2); font-size:13px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; margin-top:2px }
+.item .acts { display:flex; gap:4px; align-items:center }
+.value { font-weight:500 }
+.field { display:grid; gap:6px; margin-bottom:14px }
+.field label, .field .lab { font-size:13px; font-weight:500; display:flex; justify-content:space-between; gap:8px }
+.field .count { color:var(--text-3); font-weight:400 }
+.input { min-height:44px; border:1px solid var(--field); border-radius:8px; background:var(--surface); padding:0 12px; display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); min-width:0 }
+.input.sel::after { content:""; margin-left:auto; width:8px; height:8px; border-right:1.5px solid var(--text-2); border-bottom:1.5px solid var(--text-2); transform:rotate(45deg) translateY(-3px) }
+.input.bad { border-color:var(--bad-fg); box-shadow:0 0 0 3px var(--bad-bg) }
+.err { color:var(--bad-fg); font-size:13px; display:flex; gap:6px; align-items:center }
+.err::before { content:"!"; display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--bad-dot); color:#fff; font-size:11px; font-weight:600 }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.ro { background:var(--sunk); border:1px solid var(--line); border-radius:8px; padding:10px 12px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.ro .k { font-size:12px; color:var(--text-2) }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* Desktop console frame */
+.desk { width:100%; max-width:1280px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--page); box-shadow:var(--e2) }
+.desk-in { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:760px }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 14px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:var(--g950); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px }
+.sb .store b { display:block; font-size:14px } .sb .store span { font-size:12px; color:var(--text-2) }
+.sb .grp { margin:12px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none }
+.nav svg { width:18px; height:18px; flex:none }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border:1px solid var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.main { padding:28px 32px; min-width:0 }
+.ph { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap }
+.ph h1 { font:600 22px/28px var(--font) }
+.ph .meta { color:var(--text-2); font-size:13px; margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+.ph .sp { flex:1 }
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:18px 0 18px; overflow-x:auto; scrollbar-width:none }
+.tabs button { border:0; background:none; padding:10px 12px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap; cursor:pointer; display:inline-flex; gap:6px; align-items:center }
+.tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.pill { background:var(--neu-bg); color:var(--neu-fg); border-radius:999px; font-size:12px; padding:0 7px; font-variant-numeric:tabular-nums }
+
+/* Phone frame */
+.phone { width:390px; max-width:100%; border:1px solid var(--line); border-radius:28px; padding:8px; background:var(--g950) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); min-height:760px; display:flex; flex-direction:column; position:relative }
+.p-top { padding:14px 16px 0 }
+.p-top .back { font-size:14px; color:var(--text-2) }
+.p-top h1 { font:600 20px/26px var(--font); margin-top:4px }
+.p-body { padding:12px 16px 16px; display:grid; gap:12px; flex:1; align-content:start }
+.p-body .sect { padding:14px 16px }
+.p-tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:10px 0 0; overflow-x:auto; scrollbar-width:none; padding:0 12px }
+.p-tabs button { border:0; background:none; padding:10px 10px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap }
+.p-tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2) }
+.bottom div { padding:8px 0 10px; display:grid; gap:2px; justify-items:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.sheet-scrim { position:absolute; inset:0; background:rgba(23,22,21,.45); display:flex; align-items:flex-end }
+.sheet { background:var(--surface); width:100%; border-radius:16px 16px 0 0; padding:16px 16px 18px; box-shadow:var(--e3); max-height:85%; overflow:auto }
+.sheet h3 { font:600 17px/24px var(--font); margin-bottom:14px }
+.sheet .grab { width:36px; height:4px; border-radius:2px; background:var(--g300); margin:0 auto 12px }
+.acts-row { display:flex; gap:8px; justify-content:flex-end; margin-top:6px }
+.acts-row .btn { min-height:44px }
+.toast { position:absolute; left:16px; right:16px; bottom:72px; background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:12px 14px; display:flex; align-items:center; gap:10px; font-size:14px }
+.toast .ok { width:18px; height:18px; border-radius:50%; background:var(--ok-dot); display:grid; place-items:center; flex:none }
+.toast .ok::after { content:""; width:8px; height:4px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.toast .sp { flex:1 }
+.toast a { color:var(--bar-link); font-weight:500; text-decoration:none }
+.ib { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:var(--surface); display:grid; place-items:center }
+.ib svg { width:16px; height:16px }
+
+/* Small frames */
+.mini { width:520px; max-width:100%; border:1px solid var(--line); border-radius:12px; background:var(--page); padding:18px; box-shadow:var(--e1) }
+.mini .lbl { font-size:12px; color:var(--text-3); margin-bottom:10px }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr)); gap:20px }
+.dlg { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e3); padding:20px; max-width:460px }
+.dlg h3 { font:600 17px/24px var(--font); margin-bottom:12px }
+.dlg ul { margin:0 0 14px; padding-left:20px; color:var(--text-2) } .dlg li { margin:2px 0 }
+.found { border:1px solid var(--line); border-radius:8px; padding:10px 12px; display:flex; gap:10px; align-items:center; margin-bottom:14px }
+.av { width:32px; height:32px; border-radius:50%; background:var(--n100); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:13px; flex:none }
+.codebox { font-family:var(--mono); font-size:18px; letter-spacing:.08em; background:var(--sunk); border:1px solid var(--line); border-radius:8px; padding:8px 12px }
+.mail { border:1px solid var(--line); border-radius:12px; background:var(--surface); max-width:520px; overflow:hidden }
+.mail .hd { padding:10px 16px; border-bottom:1px solid var(--line); font-size:13px; color:var(--text-2) }
+.mail .bd { padding:18px 16px; display:grid; gap:12px }
+.mail .bd h3 { font:600 18px/24px var(--font) }
+table.t { border-collapse:collapse; width:100%; font-size:13.5px; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden }
+.t th, .t td { text-align:left; padding:9px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.t th { background:var(--sunk); font-weight:600; font-size:12.5px; border-top:0 }
+.rec { color:var(--ok-fg); font-weight:500 }
+.tblwrap { overflow-x:auto }
+@media (max-width:700px) { .desk-in { grid-template-columns:1fr } .sb { display:none } .main { padding:18px 16px } }
+</style>
+<div class="doc">
+<header class="doc-top">
+  <h1>Add a partner</h1>
+  <p>A store owner takes on a partner, or changes one. Lane H · 2026-11-23 · spec docs/specs/2026-11-23-add-partner.md</p>
+  <nav class="toc"><a href="#short">In short</a><a href="#audit">Today</a><a href="#take">What to take</a><a href="#calls">Your calls</a><a href="#desk">People, desktop</a><a href="#states">States</a><a href="#partner">Partner workspace</a><a href="#mail">Emails</a><a href="#phone">Phone</a></nav>
+</header>
+
+<section class="part" id="short"><h2>In short</h2>
+<table class="t"><tbody>
+<tr><th>What</th><td>Settings › People gets "Add a partner". The owner types the partner's code. The partner accepts. Changing partner is Remove, then Add.</td></tr>
+<tr><th>Why now</th><td>You asked. A store started by its owner, like House Of Ayuda, can never get a partner today.</td></tr>
+<tr><th>Cost</th><td>One table, one code per partner, four emails. With call 2 as recommended, Frrata keeps its full fee.</td></tr>
+<tr><th>Needed from you</th><td>The five calls below, and approval of these screens.</td></tr>
+</tbody></table></section>
+
+<section class="part" id="audit"><h2>Today</h2>
+<div class="tblwrap"><table class="t"><thead><tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead><tbody>
+<tr><td>A partner joins a store only by creating it</td><td>A brand that started alone, or removed its partner, is stuck</td><td>The owner adds one from People</td></tr>
+<tr><td>People › "Remove Kesar Studio", owner only</td><td>Remove has no way back in</td><td>Keep Remove. Add "Add a partner" when none is linked</td></tr>
+<tr><td>One partner per store (database rule)</td><td>Right as it is</td><td>Unchanged. An invitation waits only while none is linked</td></tr>
+</tbody></table></div></section>
+
+<section class="part" id="take"><h2>What to take</h2>
+<div class="grid">
+<div class="sect"><div class="overline">Shopify</div><p>Collaborator requests. The owner approves in Users, and can require a collaborator code.</p><p><b>Take:</b> a code the owner gives in, and the owner's yes.</p></div>
+<div class="sect"><div class="overline">Razorpay partners</div><p>The partner sends a link and the account holder accepts.</p><p><b>Skip:</b> that is our hand-over, the other way round.</p></div>
+<div class="sect"><div class="overline">Linear</div><p>An invite is a pending row with an expiry and a Revoke.</p><p><b>Take:</b> a pending row with Cancel and a date.</p></div>
+</div></section>
+
+<section class="part" id="calls"><h2>Your calls</h2>
+<div class="tblwrap"><table class="t"><thead><tr><th>#</th><th>Call</th><th>Options</th><th>Recommended</th></tr></thead><tbody>
+<tr><td>1</td><td>How the owner names the partner</td><td>(a) The partner owner's email. Frrata emails an invitation.<br>(b) A partner code from the workspace, typed by the owner.</td><td class="rec">(b) Code. The owner sees the partner's name before sending. Nobody can test emails to learn who is a partner. A wrong code says the same thing every time.</td></tr>
+<tr><td>2</td><td>Share for a partner who didn't bring the store</td><td>A. 20% for 24 months, as today: ₹875.80 a month, ₹21,019.20 over the term.<br>B. 10% for 12 months: ₹437.90 a month, ₹5,254.80 in all.<br>C. No share. The brand pays the partner for the work.</td><td class="rec">C. The share pays for bringing a new brand. A brand that swaps partners pays twice. The old share runs 90 more days. Before the build we ask 5 partners if they would accept.</td></tr>
+<tr><td>3</td><td>Who may send the invitation</td><td>Owner only, or owner and Manager</td><td class="rec">Owner only, like Remove. A Manager sees the row, without buttons.</td></tr>
+<tr><td>4</td><td>How long an invitation lasts</td><td>3, 7 or 14 days</td><td class="rec">7 days, like the hand-over.</td></tr>
+<tr><td>5</td><td>"Change partner" as one step</td><td>Now, or later</td><td class="rec">Later. Remove then Add covers it. It comes back if owners ask.</td></tr>
+</tbody></table></div>
+<p class="cap" style="margin-top:10px">Figures from <span class="code">shareExample()</span>: a Launch brand, 120 delivered orders a month at ₹1,200. Frrata collects ₹4,379 a month from it. The brand pays the same under A, B and C.</p>
+</section>
+<section class="part" id="desk"><h2>Settings › People, desktop</h2>
+<p class="cap">The owner of House Of Ayuda has sent an invitation. Step by step: Add a partner, type the code, Find partner, Send invitation. The row waits until the partner answers.</p>
+<div class="desk"><div class="desk-in">
+<aside class="sb"><div class="store"><div class="mono-mark">H</div><div><b>House Of Ayuda</b><span>Owner</span></div></div>
+<a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Home</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Orders</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Products</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Shoppers</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Marketing</a>
+<div class="grp overline">Store</div><a class="nav on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Settings</a></aside>
+<main class="main">
+<div class="ph"><div><h1>Settings</h1></div></div>
+<div class="tabs" role="tablist"><button>General</button><button aria-selected="true">People</button><button>Payments</button><button>Shipping</button><button>Website</button></div>
+<div class="sect"><div class="sect-h"><h3>People</h3><span class="sp"></span><button class="btn sm">Invite someone</button></div>
+<div class="list">
+<div class="item notext"><div><b>Prem Banerjee</b><div class="meta"><span class="chip neu">Owner</span><span>You</span></div></div><div></div></div>
+<div class="item notext"><div><b>Asha Rao</b><div class="meta"><span class="chip neu">Manager</span><span>Since 2 Oct</span></div></div><div></div></div>
+</div></div>
+<div class="sect"><div class="sect-h"><h3>Partner</h3></div>
+<div class="list"><div class="item notext"><div><b>Kesar Studio</b><div class="meta"><span class="chip warn">Invitation sent</span><span>Expires 30 Nov</span></div></div><div class="acts"><button class="btn sm danger">Cancel invitation</button></div></div></div>
+</div>
+</main></div></div></section>
+<section class="part" id="states"><h2>The Partner card, every state</h2><div class="grid">
+<div class="mini"><div class="lbl">1 · No partner (owner)</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>No partner</b></div><div class="acts"><button class="btn sm primary">Add a partner</button></div></div></div></div></div>
+<div class="mini"><div class="lbl">2 · Invitation sent</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>Kesar Studio</b><div class="meta"><span class="chip warn">Invitation sent</span><span>Expires 30 Nov</span></div></div><div class="acts"><button class="btn sm danger">Cancel invitation</button></div></div></div></div></div>
+<div class="mini"><div class="lbl">3 · Accepted (as today)</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>Kesar Studio</b><div class="meta"><span class="chip info">Partner</span><span>Since 23 Nov</span></div></div><div class="acts"><button class="btn sm danger">Remove Kesar Studio</button></div></div></div></div></div>
+<div class="mini"><div class="lbl">4 · Declined</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>No partner</b><div class="meta"><span class="chip neu">Kesar Studio declined</span></div></div><div class="acts"><button class="btn sm primary">Add a partner</button></div></div></div></div></div>
+<div class="mini"><div class="lbl">5 · Expired</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>No partner</b><div class="meta"><span class="chip neu">Invitation expired</span></div></div><div class="acts"><button class="btn sm primary">Add a partner</button></div></div></div></div></div>
+<div class="mini"><div class="lbl">6 · Paused by Frrata (as today)</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>Kesar Studio</b><div class="meta"><span class="chip warn">Partner · Paused</span><span>Paused by Frrata</span></div></div><div class="acts"><button class="btn sm danger">Remove Kesar Studio</button></div></div></div></div></div>
+<div class="mini"><div class="lbl">7 · Manager, Staff or a support visit</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>Kesar Studio</b><div class="meta"><span class="chip warn">Invitation sent</span><span>Expires 30 Nov</span></div></div><div></div></div></div></div></div>
+<div class="mini"><div class="lbl">8 · Manager, no partner</div><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>No partner</b></div><div></div></div></div></div></div>
+</div>
+<h3 style="margin:28px 0 12px;font:600 16px/24px var(--font)">Add a partner dialog</h3>
+<div class="grid">
+<div class="dlg"><h3>Add a partner</h3><div class="field"><label for="c1">Partner code</label><div class="input code" id="c1" style="font-size:14px;letter-spacing:.06em">7Q4M-K2XP</div></div><div class="acts-row"><button class="btn">Cancel</button><button class="btn primary">Find partner</button></div></div>
+<div class="dlg"><h3>Add a partner</h3><div class="found"><div class="av">KS</div><div><b>Kesar Studio</b><div class="meta" style="color:var(--text-2);font-size:13px">Jaipur</div></div></div><ul><li>When they accept, they see your orders and shoppers' names, phones and addresses.</li><li>Your Frrata fee stays the same.</li></ul><div class="acts-row"><button class="btn">Change code</button><button class="btn primary">Send invitation</button></div></div>
+<div class="dlg"><h3>Add a partner</h3><div class="field"><label for="c2">Partner code</label><div class="input code bad" id="c2" style="font-size:14px;letter-spacing:.06em">7Q4M-K2XB</div><div class="err">No partner has this code. Check it with your partner.</div></div><div class="acts-row"><button class="btn">Cancel</button><button class="btn primary">Find partner</button></div></div>
+<div class="dlg"><h3>Add a partner</h3><div class="field"><label for="c3">Partner code</label><div class="input code bad" id="c3" style="font-size:14px;letter-spacing:.06em">7Q4M-K2XP</div><div class="err">This is your own code. Enter your partner's code.</div></div><div class="acts-row"><button class="btn">Cancel</button><button class="btn primary">Find partner</button></div></div>
+<div class="dlg"><h3>Add a partner</h3><div class="field"><label for="c4">Partner code</label><div class="input code bad" id="c4" style="font-size:14px;letter-spacing:.06em">7Q4M-K2XP</div><div class="err">Too many tries. Try again in 1 hour.</div></div><div class="acts-row"><button class="btn">Cancel</button><button class="btn primary" aria-disabled="true">Find partner</button></div></div>
+<div class="dlg"><h3>Cancel the invitation to Kesar Studio?</h3><div class="acts-row"><button class="btn">Keep invitation</button><button class="btn primary" style="background:var(--bad-fg);border-color:var(--bad-fg);color:#fff">Cancel invitation</button></div></div>
+</div>
+<p class="cap" style="margin-top:12px">"Store already has a partner": no Add button is shown (state 3). A second invitation is refused by the database too.</p>
+</section>
+<section class="part" id="partner"><h2>Partner workspace › Clients</h2>
+<p class="cap">Only the partner owner sees the code and answers. A Lead sees neither. Step by step: Copy code, send it to the brand, then Accept when the invitation comes.</p>
+<div class="desk"><div class="desk-in">
+<aside class="sb"><div class="store"><div class="mono-mark rani">K</div><div><b>Kesar Studio</b><span>Partner owner</span></div></div>
+<a class="nav on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Clients</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Team</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Credits</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Developer</a><a class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Details</a></aside>
+<main class="main">
+<div class="ph"><div><h1>Clients</h1></div><span class="sp"></span><button class="btn primary">New store</button></div>
+<div class="sect" style="margin-top:18px"><div class="sect-h"><h3>Invitations</h3><span class="pill">1</span></div>
+<div class="list"><div class="item notext"><div><b>House Of Ayuda</b><div class="meta"><span>From Prem Banerjee</span><span>Expires 30 Nov</span></div></div><div class="acts"><button class="btn sm">Decline invitation</button><button class="btn sm primary">Accept House Of Ayuda</button></div></div></div></div>
+<div class="sect"><div class="sect-h"><h3>Your partner code</h3><button class="tip" aria-label="About your partner code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button></div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="codebox">7Q4M-K2XP</span><button class="btn sm">Copy code</button><button class="btn sm ghost">Make a new code</button></div></div>
+<div class="sect"><div class="sect-h"><h3>Stores</h3><span class="pill">4</span></div>
+<div class="list"><div class="item notext"><div><b>Noor Handloom</b><div class="meta"><span class="chip ok">Open</span><span>Owner Riya Shah</span></div></div><div></div></div>
+<div class="item notext"><div><b>Indigo Lane</b><div class="meta"><span class="chip neu">Building</span></div></div><div></div></div></div></div>
+</main></div></div>
+<p class="cap" style="margin-top:12px">The (i) says: "Give this to a brand that wants you as its partner."</p>
+<div class="grid" style="margin-top:16px">
+<div class="dlg"><h3>Become House Of Ayuda's partner?</h3><ul><li>You and your Leads get Partner access.</li><li>You choose which Builders work on this store.</li><li>No revenue share on this store.</li><li>The owner can remove you at any time.</li></ul><div class="acts-row"><button class="btn">Keep waiting</button><button class="btn primary">Accept House Of Ayuda</button></div></div>
+<div class="dlg"><h3>Decline House Of Ayuda?</h3><div class="acts-row"><button class="btn">Keep invitation</button><button class="btn primary" style="background:var(--bad-fg);border-color:var(--bad-fg);color:#fff">Decline invitation</button></div></div>
+<div class="dlg"><h3>Make a new code?</h3><ul><li>Your current code stops working now.</li></ul><div class="acts-row"><button class="btn">Keep this code</button><button class="btn primary">Make a new code</button></div></div>
+</div>
+<p class="cap" style="margin-top:12px">The accept dialog's second line follows call 2. Under A it reads "20% of Frrata's fee for 24 months after the store opens."</p>
+</section>
+
+<section class="part" id="mail"><h2>Emails</h2><div class="grid">
+<div class="mail"><div class="hd">To the partner owner · From Frrata</div><div class="bd"><h3>House Of Ayuda wants you as its partner</h3><p>Prem Banerjee sent it. It expires on 30 Nov.</p><div><a class="btn primary" style="text-decoration:none">Open invitation</a></div></div></div>
+<div class="mail"><div class="hd">To the store owner, on send · From Frrata</div><div class="bd"><h3>You invited Kesar Studio to House Of Ayuda</h3><p>If they accept, they see your orders and shoppers. This wasn't you? Cancel it in People.</p><div><a class="btn" style="text-decoration:none">Open People</a></div></div></div>
+<div class="mail"><div class="hd">To the store owner · From Frrata</div><div class="bd"><h3>Kesar Studio is now your partner</h3><p>They can work on House Of Ayuda from today.</p><div><a class="btn primary" style="text-decoration:none">Open People</a></div></div></div>
+<div class="mail"><div class="hd">To the store owner · From Frrata</div><div class="bd"><h3>Kesar Studio declined your invitation</h3><p>You can add another partner from People.</p><div><a class="btn" style="text-decoration:none">Open People</a></div></div></div>
+</div></section>
+
+<section class="part" id="phone"><h2>Phone</h2><div class="row-frames">
+<div class="phone"><div class="scr"><div class="p-top"><div class="back">Settings</div><h1>People</h1></div>
+<div class="p-body">
+<div class="sect"><div class="sect-h"><h3>People</h3></div><div class="list"><div class="item notext"><div><b>Prem Banerjee</b><div class="meta"><span class="chip neu">Owner</span><span>You</span></div></div><div></div></div><div class="item notext"><div><b>Asha Rao</b><div class="meta"><span class="chip neu">Manager</span></div></div><div></div></div></div></div>
+<div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>No partner</b></div><div class="acts"><button class="btn sm primary">Add a partner</button></div></div></div></div>
+</div></div></div>
+<div class="phone"><div class="scr"><div class="p-top"><div class="back">Settings</div><h1>People</h1></div>
+<div class="p-body"><div class="sect"><div class="sect-h"><h3>Partner</h3></div><div class="list"><div class="item notext"><div><b>No partner</b></div><div></div></div></div></div></div>
+<div class="sheet-scrim"><div class="sheet"><div class="grab"></div><h3>Add a partner</h3><div class="found"><div class="av">KS</div><div><b>Kesar Studio</b><div style="color:var(--text-2);font-size:13px">Jaipur</div></div></div><ul style="margin:0 0 14px;padding-left:20px;color:var(--text-2)"><li>When they accept, they see your orders and shoppers' names, phones and addresses.</li><li>Your Frrata fee stays the same.</li></ul><div class="acts-row"><button class="btn">Change code</button><button class="btn primary">Send invitation</button></div></div></div>
+</div></div>
+<div class="phone"><div class="scr"><div class="p-top"><div class="back">Partner workspace</div><h1>Clients</h1></div>
+<div class="p-body"><div class="sect"><div class="sect-h"><h3>Invitations</h3><span class="pill">1</span></div><div class="list"><div class="item notext" style="grid-template-columns:1fr"><div><b>House Of Ayuda</b><div class="meta"><span>Expires 30 Nov</span></div></div><div class="acts"><button class="btn sm">Decline invitation</button><button class="btn sm primary">Accept House Of Ayuda</button></div></div></div></div>
+<div class="sect"><div class="sect-h"><h3>Your partner code</h3></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="codebox">7Q4M-K2XP</span><button class="btn sm">Copy code</button></div></div></div>
+<div class="toast"><span class="ok"></span><span>Code copied.</span></div>
+</div></div>
+</div></section>
+</div>
