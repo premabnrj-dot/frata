@@ -51,7 +51,7 @@ export function ProposalCard({ card, busy, onApply, onDismiss, onReload }: {
         </div>
       ))}
       {svg ? <img alt="The proposed logo" src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} className="h-12 max-w-full justify-self-start object-contain" /> : null}
-      {card.state === 'applied' ? <Badge tone="ok">Applied</Badge> : card.state === 'dismissed' ? <Badge tone="neutral">Not used</Badge> : null}
+      {card.state === 'applied' ? <Badge tone="ok" className="justify-self-start">Applied</Badge> : card.state === 'dismissed' ? <Badge tone="neutral" className="justify-self-start">Not used</Badge> : null}
       {card.state === 'refused' ? <><Badge tone="danger" className="justify-self-start">Not applied</Badge><FieldError id={`card-${card.id}`} message={refusedLine(card)} /></> : null}
       {open
         ? <div className="flex gap-1.5">

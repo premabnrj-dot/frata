@@ -48,6 +48,7 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
   const [busyCard, setBusyCard] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const tries = useRef(0)
+  const feedEnd = useRef<HTMLDivElement>(null)
   const working = chat.turn?.state === 'sending' || chat.turn?.state === 'running'
 
   // The poll: after the last line, while a turn runs; each answer resets the wait when something new came.
@@ -71,14 +72,21 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
     return () => clearTimeout(t)
   }, [working, poll, chat])
 
+  // The newest line in view whenever the chat grows or the turn changes state.
+  const turnState = chat.turn?.state
+  useEffect(() => { feedEnd.current?.scrollIntoView({ block: 'end' }) }, [chat.lines.length, turnState, refused])
+
   const send = (words: string) => start(async () => {
     setRefused(null)
     const r = await sendAction({ text: words })
     if (!r.ok) {
       const line = refusedWords(r.why)
       setDayLimit(r.why === 'person_day' || r.why === 'platform_day')
+      // A Send that became a turn (and failed on our side) is in the chat now: the box is cleared for the next one.
+      if (r.why === 'start' || r.why === 'send' || r.why === 'budget') setText('')
       if (line) setRefused(line)
-      else toast.error(W.failed.title, { sub: W.failed.line })
+      // start, send, budget: the turn's own card says so (state 5); an error that left no turn, a toast.
+      else if (r.why === 'error') toast.error(W.failed.title, { sub: W.failed.line })
       await poll()
       return
     }
@@ -111,8 +119,8 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
         const card = l.proposalId ? cards.get(l.proposalId) : undefined
         return card ? <Agent key={l.id}><ProposalCard card={card} busy={busyCard === card.id && pending} onApply={() => apply(card)} onDismiss={() => dismiss(card)} onReload={() => router.refresh()} /></Agent> : null
       })}
-      {chat.turn && (working || chat.turn.work.length) && chat.turn.state !== 'failed'
-        ? (working || chat.turn.work.length ? <Agent><WorkLines lines={working && !chat.turn.work.some((w) => !w.done) ? [...chat.turn.work, { words: 'Working', done: false }] : chat.turn.work} /></Agent> : null)
+      {chat.turn && working
+        ? <Agent><WorkLines lines={chat.turn.work.some((w) => !w.done) ? chat.turn.work : [...chat.turn.work, { words: 'Working', done: false }]} /></Agent>
         : null}
       {chat.turn?.state === 'paused'
         ? <Agent><StopCard tone="warn" title={W.paused.title} line={W.paused.line} action={<Button size="sm" variant="secondary" busy={pending} onClick={() => send('Continue')}>{W.paused.action}</Button>} /></Agent>
@@ -121,6 +129,7 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
       {chat.turn?.state === 'failed'
         ? <Agent><StopCard tone="bad" title={W.failed.title} line={W.failed.line} action={lastAsk ? <Button size="sm" variant="secondary" busy={pending} onClick={() => send(lastAsk)}>{W.failed.action}</Button> : undefined} /></Agent>
         : null}
+      <div ref={feedEnd} aria-hidden="true" />
     </div>
   )
 

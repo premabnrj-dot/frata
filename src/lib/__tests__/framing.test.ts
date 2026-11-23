@@ -25,6 +25,20 @@ describe('framing headers', () => {
     expect(framed.headers.find((h) => h.key === 'Content-Security-Policy')?.value).toMatch(/frame-ancestors 'self'; object-src 'none'; base-uri 'self'/)
     expect(preview.find((r) => frameOf(r) === 'DENY')!.missing?.[0]).toMatchObject({ type: 'host' })
   })
+  it('the store preview Studio frames (V3a R7): SAMEORIGIN on the console host only; nothing near it is opened', async () => {
+    const rules = await config.headers!()
+    const frameOf = (r: (typeof rules)[number]) => r.headers.find((h) => h.key === 'X-Frame-Options')?.value
+    const global = rules.find((r) => r.source.startsWith('/:path'))!
+    const re = new RegExp(`^${global.source.replace('/:path(', '/(')}$`)
+    for (const p of ['/console/preview', '/console/preview/products/x']) expect(re.test(p)).toBe(false)
+    for (const p of ['/console/previews', '/console/preview-x', '/console/products', '/partner/studio']) expect(re.test(p)).toBe(true)
+    for (const source of ['/console/preview', '/console/preview/:path*']) {
+      const these = rules.filter((r) => r.source === source)
+      expect(these.map(frameOf).sort()).toEqual(['DENY', 'SAMEORIGIN'])
+      expect(these.find((r) => frameOf(r) === 'SAMEORIGIN')!.has?.[0]).toMatchObject({ type: 'host' })
+      expect(these.find((r) => frameOf(r) === 'DENY')!.missing?.[0]).toMatchObject({ type: 'host' })
+    }
+  })
 })
 
 import { isSignedInPath, sessionCookieOptions, signedInCsp } from '../security-headers'

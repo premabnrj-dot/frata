@@ -39,7 +39,8 @@ export function startFakeAnthropic({ port = 0, key = 'sk-ant-fake' } = {}) {
     queueNext: 0,
   }
   let clock = Date.now()
-  const at = () => new Date(++clock).toISOString()
+  // Real time, strictly increasing: a turn adopts only a message created no earlier than it was sent (src/domains/studio/events.ts).
+  const at = () => new Date((clock = Math.max(Date.now(), clock + 1))).toISOString()
   const id = (p) => `${p}_${randomBytes(9).toString('hex')}`
 
   function push(s, ev) { const t = at(); const e = { id: id('sevt'), created_at: t, processed_at: t, ...ev }; s.events.push(e); return e }
@@ -90,6 +91,8 @@ export function startFakeAnthropic({ port = 0, key = 'sk-ant-fake' } = {}) {
     let body = {}
     if (ctype.includes('application/json') && raw.length) { try { body = JSON.parse(raw.toString('utf8')) } catch { return bad(res, 400, 'invalid_request_error', 'json') } }
     const route = `${req.method} ${url.pathname}`
+    // The e2e flow's own control (loopback only, no key): fail the next N calls of a path, as tests set state.failNext.
+    if (route === 'POST /_test/fail') { state.failNext[String(body.path)] = Number(body.n) || 1; return send(res, 200, { ok: true }) }
     const keyOk = req.headers['x-api-key'] === key || req.headers.authorization === `Bearer ${key}`
     state.requests.push({ route, query: Object.fromEntries(url.searchParams), body, headers: { beta: req.headers['anthropic-beta'] ?? '', key: keyOk } })
     if (!keyOk) return bad(res, 401, 'authentication_error', 'key')
