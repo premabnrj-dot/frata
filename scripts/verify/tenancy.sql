@@ -6445,6 +6445,11 @@ do $$ declare t uuid; begin
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs past its staff check'; end if;
   update staff_stepups set expires_at = now() + interval '1 hour' where user_id = 'a9100000-0000-0000-0000-000000000002';
   if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
+  -- A suspended partner's turn stops at its next check (stress list, 2026-11-23); reinstated, it runs again.
+  update partners set suspended_at = now() where id = (select partner_id from studio_turns where id = t);
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a suspended partner''s turn still runs'; end if;
+  update partners set suspended_at = null where id = (select partner_id from studio_turns where id = t);
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the reinstated partner''s turn has no actor'; end if;
   -- A turn opened while passkeys were off from Admin (0171) holds no step-up: it runs only while they stay off, and ends
   -- at its next check once an Admin turns them on (orchestrator 2026-11-23: "that is the right direction").
   create temp table k91 on commit drop as select turn_id, staff_stepup_id, partner_stepup_id from studio_turn_keys where turn_id = t;
