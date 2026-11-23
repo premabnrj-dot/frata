@@ -4242,7 +4242,8 @@ commit;
 -- purpose (24 hours, a preview's 30 days); before the store ever opened it answers as a test key does; after opening only
 -- with a partner, and a partner person's key only while that person is live in the partner, still a member of the store
 -- and, for a Lead or a Builder, assigned to it. app_build_key_makers names the caller's own store's makers only;
--- app_delete_ended_build_keys deletes ended build keys and nothing else; the maker check itself runs for no role.
+-- app_delete_ended_build_keys deletes ended build keys (and, since 0162, ended device codes) and nothing else; the maker
+-- check itself runs for no role.
 insert into tenants (id, slug, name) values
   ('e8100000-0000-0000-0000-000000000001', 'proof-e81', 'Proof E81'),
   ('e8100000-0000-0000-0000-000000000002', 'proof-f81', 'Proof F81');
@@ -4412,67 +4413,259 @@ do $$ begin
      or not has_function_privilege('frata_app', 'app_store_building_keys()', 'execute')
   then raise exception 'FAIL: app_store_building_keys is not a pinned definer for frata_app alone'; end if;
 end $$;
--- G·3 (0159–0160): a device sign-in. No role reaches the table; the three definers are pinned and frata_app alone runs
--- them; a code binds only for a member of the store the CLI named; the CLI's poll claims it once; an ended code is gone.
+-- G·3 (0159–0160, 0162): a device sign-in. No role reaches the table; the definers are pinned and frata_app alone runs
+-- them (the two internal helpers run for no role); 0160's store-side peek and approve are gone. A code is looked at and
+-- given a key only by a live Partner owner or an assigned Lead of the store's partner, with a passkey challenge made for
+-- THAT code, taken once, by that person, the counter rising, and the store under its ceiling; the CLI's poll claims it
+-- once; Your computers lists and deletes only the person's own developer keys; an ended code is gone.
 do $$ begin
   if exists (select 1 from pg_tables where tablename = 'build_key_device_codes' and not rowsecurity) then raise exception 'FAIL: build_key_device_codes without RLS'; end if;
   if (select count(*) from pg_policies where tablename = 'build_key_device_codes' and policyname = 'definer_only' and permissive = 'RESTRICTIVE' and qual = 'false') <> 1 then raise exception 'FAIL: build_key_device_codes without its definer_only policy'; end if;
   if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
              where has_table_privilege(r, 'build_key_device_codes', p))
   then raise exception 'FAIL: a role reaches build_key_device_codes'; end if;
-  if exists (select 1 from unnest(array['app_device_code_start(text, text, text)', 'app_device_code_peek(uuid, text)', 'app_device_code_approve(uuid, text, text)', 'app_device_code_claim(text)', 'app_device_code_unclaim(text)']) f
+  if exists (select 1 from unnest(array['app_device_code_start(text, text, text, text)', 'app_device_code_look(uuid, uuid, text, text, text)',
+               'app_device_code_challenge(uuid, uuid, text, text, text, text, boolean)', 'app_device_code_take(uuid, uuid, text, text, text)',
+               'app_device_code_give(uuid, uuid, text, text, text, uuid, bigint)', 'app_device_code_claim(text)', 'app_device_code_unclaim(text)',
+               'app_partner_developer_keys(uuid, uuid, text)', 'app_partner_developer_key_delete(uuid, uuid, text, uuid)']) f
              where not (select prosecdef from pg_proc where oid = f::regprocedure)
                 or (select proconfig from pg_proc where oid = f::regprocedure) is distinct from array['search_path=""']
                 or not has_function_privilege('frata_app', f::regprocedure, 'execute')
                 or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r where has_function_privilege(r, f::regprocedure, 'execute'))
                 or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = f::regprocedure and a.grantee = 0))
   then raise exception 'FAIL: a device-code definer is not pinned to frata_app alone'; end if;
+  if exists (select 1 from unnest(array['app_device_partner_ok(uuid, uuid)', 'app_device_store_full(uuid)']) f, unnest(array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role']) r
+             where has_function_privilege(r, f::regprocedure, 'execute'))
+  then raise exception 'FAIL: a role runs a device-code helper'; end if;
+  if to_regprocedure('app_device_code_peek(uuid, text)') is not null or to_regprocedure('app_device_code_approve(uuid, text, text)') is not null
+     or to_regprocedure('app_device_code_start(text, text, text)') is not null
+  then raise exception 'FAIL: 0160''s store-side peek, approve or three-argument start is still there'; end if;
 end $$;
+-- Each partner person has a passkey and a live check on one session (as the gate makes them); the store's owner has none.
+insert into partner_passkeys (id, partner_member_id, user_id, credential_id, public_key, name) values
+  ('e8100000-0000-0000-0000-0000000000c1', 'e8100000-0000-0000-0000-0000000000b1', 'e8100000-0000-0000-0000-0000000000f1', 'cred-f1', 'pk-f1', 'Laptop'),
+  ('e8100000-0000-0000-0000-0000000000c2', 'e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-0000000000f2', 'cred-f2', 'pk-f2', 'Laptop'),
+  ('e8100000-0000-0000-0000-0000000000c3', 'e8100000-0000-0000-0000-0000000000b3', 'e8100000-0000-0000-0000-0000000000f3', 'cred-f3', 'pk-f3', 'Laptop'),
+  ('e8100000-0000-0000-0000-0000000000c4', 'e8100000-0000-0000-0000-0000000000b4', 'e8100000-0000-0000-0000-0000000000f4', 'cred-f4', 'pk-f4', 'Laptop');
+insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at) values
+  ('e8100000-0000-0000-0000-0000000000b1', 'e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'e8100000-0000-0000-0000-0000000000c1', 'stepup-f1', now() + interval '1 hour'),
+  ('e8100000-0000-0000-0000-0000000000b2', 'e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'e8100000-0000-0000-0000-0000000000c2', 'stepup-f2', now() + interval '1 hour'),
+  ('e8100000-0000-0000-0000-0000000000b3', 'e8100000-0000-0000-0000-0000000000f3', 'e8100000-0000-0000-0000-0000000000d3', 'e8100000-0000-0000-0000-0000000000c3', 'stepup-f3', now() + interval '1 hour'),
+  ('e8100000-0000-0000-0000-0000000000b4', 'e8100000-0000-0000-0000-0000000000f4', 'e8100000-0000-0000-0000-0000000000d4', 'e8100000-0000-0000-0000-0000000000c4', 'stepup-f4', now() + interval '1 hour');
+insert into storefront_keys (id, tenant_id, kind, purpose, name, hash, prefix, partner_id, created_by, expires_at) values
+  ('e8100000-0000-0000-0000-000000000031', 'e8100000-0000-0000-0000-000000000001', 'build', 'developer', 'To delete', repeat('e', 62) || '31', 'frs_build_e81ddd', 'e8100000-0000-0000-0000-0000000000a1', 'e8100000-0000-0000-0000-0000000000f2', now() + interval '24 hours');
 begin; set local role frata_app;
-do $$ declare t uuid; c record; n int; begin
-  perform app_device_code_start(repeat('a', 63) || '1', repeat('b', 63) || '1', 'proof-e81');
+do $$ declare c record; j jsonb; n int; s text;
+  f1 uuid := 'e8100000-0000-0000-0000-0000000000f1'; f2 uuid := 'e8100000-0000-0000-0000-0000000000f2'; f3 uuid := 'e8100000-0000-0000-0000-0000000000f3'; f4 uuid := 'e8100000-0000-0000-0000-0000000000f4';
+  d1 uuid := 'e8100000-0000-0000-0000-0000000000d1'; d2 uuid := 'e8100000-0000-0000-0000-0000000000d2'; d3 uuid := 'e8100000-0000-0000-0000-0000000000d3'; d4 uuid := 'e8100000-0000-0000-0000-0000000000d4';
+  net text := repeat('9', 64); code1 text := repeat('b', 63) || '1'; ch text := repeat('Q', 43);
+begin
+  perform app_device_code_start(repeat('a', 63) || '1', code1, 'proof-e81', net);
   perform app_device_code_start(repeat('a', 63) || '2', repeat('b', 63) || '2', 'proof-e81');
-  perform app_device_code_start(repeat('a', 63) || '3', repeat('b', 63) || '3', 'no-such-store');
+  perform app_device_code_start(repeat('a', 63) || '3', repeat('b', 63) || '3', 'no-such-store', net);
   begin perform app_device_code_start('x', repeat('b', 63) || '4', 'proof-e81'); raise exception 'FAIL: a device hash of another shape'; exception when invalid_parameter_value then null; end;
+  begin perform app_device_code_start(repeat('a', 63) || '5', repeat('b', 63) || '5', 'proof-e81', '10.0.0.0/24'); raise exception 'FAIL: a network stored as written'; exception when invalid_parameter_value then null; end;
   begin insert into build_key_device_codes (device_hash, code_hash, store_slug, expires_at) values (repeat('c', 64), repeat('d', 64), 'proof-e81', now() + interval '1 minute');
     raise exception 'FAIL: frata_app wrote a device code'; exception when insufficient_privilege then null; end;
-  -- pending until a member confirms
   select * into c from app_device_code_claim(repeat('a', 63) || '1');
   if c.state is distinct from 'pending' then raise exception 'FAIL: an unconfirmed sign-in is not pending'; end if;
-  -- a person with no members row on that store confirms nothing; the store's partner owner (a member of E) does
-  if exists (select 1 from app_device_code_peek('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1')) then raise exception 'FAIL: a non-member sees what a code for E names'; end if;
-  if (select store_name from app_device_code_peek('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1')) is distinct from 'Proof E81' then raise exception 'FAIL: E''s member does not see E named'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f4', repeat('b', 63) || '1', 'gone@studio81.test') is not null then raise exception 'FAIL: a non-member confirmed a sign-in for E'; end if;
-  t := app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1', 'owner@studio81.test');
-  if t is distinct from 'e8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: E''s member did not confirm E''s sign-in'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '1', 'x') is not null then raise exception 'FAIL: a code confirmed twice'; end if;
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '3', 'x') is not null then raise exception 'FAIL: a code for an unknown store confirmed'; end if;
-  -- claimed once, as the person on the store now
+  -- who may look: the Partner owner (f1) and an assigned Lead (f2); not a Lead removed from the partner above (f4: their
+  -- check ended with them), a Builder (f3), the store's own owner (no partner check at all), or the Partner owner with
+  -- someone else's step-up
+  begin perform app_device_code_look(f4, d4, 'stepup-f4', code1, net); raise exception 'FAIL: a removed Lead looked at a code';
+  exception when raise_exception then if sqlerrm not in ('confirm_first') then raise; end if; end;
+  if app_device_code_look(f3, d3, 'stepup-f3', code1, net) is not null then raise exception 'FAIL: a Builder sees a code'; end if;
+  begin perform app_device_code_look('99999999-9999-9999-9999-999999999999', d1, 'stepup-f1', code1, net); raise exception 'FAIL: the store''s own owner looked at a code';
+  exception when raise_exception then if sqlerrm not in ('confirm_first') then raise; end if; end;
+  begin perform app_device_code_look(f1, d2, 'stepup-f2', code1, net); raise exception 'FAIL: a look with another person''s check';
+  exception when raise_exception then if sqlerrm not in ('confirm_first') then raise; end if; end;
+  j := app_device_code_look(f1, d1, 'stepup-f1', code1, net);
+  if j->>'store' is distinct from 'Proof E81' or (j->>'sameNetwork')::boolean is not true or (j->>'full')::boolean or not (j->>'hasPasskey')::boolean
+  then raise exception 'FAIL: the Partner owner does not see E, the same network, room and a passkey (got %)', j; end if;
+  if (app_device_code_look(f2, d2, 'stepup-f2', code1, repeat('8', 64))->>'sameNetwork')::boolean is not false then raise exception 'FAIL: another network not marked'; end if;
+  if app_device_code_look(f2, d2, 'stepup-f2', repeat('b', 63) || '2', net)->>'sameNetwork' is not null then raise exception 'FAIL: a code with no network compared'; end if;
+  if app_device_code_look(f1, d1, 'stepup-f1', repeat('b', 63) || '3', net) is not null then raise exception 'FAIL: a code for an unknown store looked at'; end if;
+  -- Give key: a challenge for THIS code; a Builder gets none; taken once, only by its asker, only with their own passkey
+  begin perform app_device_code_challenge(f3, d3, 'stepup-f3', code1, ch, null, true); raise exception 'FAIL: a Builder got a challenge';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 1); raise exception 'FAIL: a key given with no challenge';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  -- (owner, 2026-11-22, MED-1) unticked, a challenge only from the network the code started on: another one, or none at
+  -- all, is not_mine; the same network, or "This is my computer" ticked, is a challenge
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, repeat('8', 64), false); raise exception 'FAIL: a challenge from another network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, null, false); raise exception 'FAIL: a challenge from an unknown network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  begin perform app_device_code_challenge(f1, d1, 'stepup-f1', repeat('b', 63) || '2', ch, net, false); raise exception 'FAIL: a challenge for a code with no network without This is my computer';
+  exception when raise_exception then if sqlerrm <> 'not_mine' then raise; end if; end;
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, net, false);
+  if app_device_code_take(f2, d2, code1, ch, 'cred-f2') is not null then raise exception 'FAIL: another person took the challenge'; end if;
+  if app_device_code_take(f1, d1, code1, repeat('R', 43), 'cred-f1') is not null then raise exception 'FAIL: another challenge taken'; end if;
+  if app_device_code_take(f1, d1, code1, ch, 'cred-f2') is not null then raise exception 'FAIL: someone else''s passkey answered the challenge'; end if;
+  -- (that try spent the challenge, as a failed check does): ask again
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code1, ch, null, true);
+  j := app_device_code_take(f1, d1, code1, ch, 'cred-f1');
+  if j->>'passkeyId' is distinct from 'e8100000-0000-0000-0000-0000000000c1' then raise exception 'FAIL: the asker''s own passkey not given back (got %)', j; end if;
+  if app_device_code_take(f1, d1, code1, ch, 'cred-f1') is not null then raise exception 'FAIL: a challenge taken twice'; end if;
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c2', 1); raise exception 'FAIL: a key given on another person''s passkey';
+  exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
+  s := app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 1);
+  if s is distinct from 'Proof E81' then raise exception 'FAIL: the Partner owner did not give E''s key (got %)', s; end if;
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code1, ch, 'e8100000-0000-0000-0000-0000000000c1', 2); raise exception 'FAIL: a code given twice';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  if app_device_code_look(f1, d1, 'stepup-f1', code1, net) is not null then raise exception 'FAIL: a used code still looked at'; end if;
+  -- claimed once, as the person on the store now; a claim given back is claimable once more, while live
   select * into c from app_device_code_claim(repeat('a', 63) || '1');
-  if c.state is distinct from 'approved' or c.tenant_id is distinct from 'e8100000-0000-0000-0000-000000000001' or c.user_id is distinct from 'e8100000-0000-0000-0000-0000000000f1' or c.role is distinct from 'partner'
+  if c.state is distinct from 'approved' or c.tenant_id is distinct from 'e8100000-0000-0000-0000-000000000001' or c.user_id is distinct from f1 or c.role is distinct from 'partner'
   then raise exception 'FAIL: the claim is not the confirming person on E'; end if;
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
   if n <> 0 then raise exception 'FAIL: a sign-in claimed twice'; end if;
-  -- a claim given back (its mint failed) is claimable once more, while live
   perform app_device_code_unclaim(repeat('a', 63) || '1');
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '1');
   if n <> 1 then raise exception 'FAIL: a given-back claim is not claimable again'; end if;
   select count(*) into n from app_device_code_claim(repeat('f', 64));
   if n <> 0 then raise exception 'FAIL: an unknown device answered'; end if;
+  -- Your computers: the Lead's own developer keys on stores they still reach (E's two; not F's, unassigned above), not
+  -- the Partner owner's view of them; delete only one's own, and never on a store they left (tenancy audit HIGH)
+  if jsonb_array_length(app_partner_developer_keys(f2, d2, 'stepup-f2')) <> 2 then raise exception 'FAIL: the Lead does not list just their two developer keys on E (got %)', app_partner_developer_keys(f2, d2, 'stepup-f2'); end if;
+  if app_partner_developer_keys(f2, d2, 'stepup-f2')::text like '%Proof F81%' then raise exception 'FAIL: the Lead still sees F''s name after leaving it'; end if;
+  if app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000023') then raise exception 'FAIL: the Lead deleted a key on a store they left'; end if;
+  if jsonb_array_length(app_partner_developer_keys(f1, d1, 'stepup-f1')) <> 0 then raise exception 'FAIL: the Partner owner lists the Lead''s keys'; end if;
+  if app_partner_developer_key_delete(f1, d1, 'stepup-f1', 'e8100000-0000-0000-0000-000000000031') then raise exception 'FAIL: the Partner owner deleted the Lead''s key'; end if;
+  if not app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000031') then raise exception 'FAIL: the Lead could not delete their own key'; end if;
+  if app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000031') then raise exception 'FAIL: a key deleted twice'; end if;
+  if app_partner_developer_key_delete(f2, d2, 'stepup-f2', 'e8100000-0000-0000-0000-000000000011') then raise exception 'FAIL: the Lead deleted the store''s own key'; end if;
 end $$;
 commit;
 do $$ begin
   if (select count(*) from audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'build_key.device_confirmed' and actor_user_id = 'e8100000-0000-0000-0000-0000000000f1') <> 1
   then raise exception 'FAIL: a confirmed sign-in did not leave exactly one audit row'; end if;
+  if (select count(*) from audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'storefront_key.delete' and target = 'e8100000-0000-0000-0000-000000000031') <> 1
+  then raise exception 'FAIL: a deleted computer key did not leave exactly one audit row'; end if;
+  if (select revoked_by from storefront_keys where id = 'e8100000-0000-0000-0000-000000000031') is distinct from 'e8100000-0000-0000-0000-0000000000f2' then raise exception 'FAIL: the deleted key is not revoked by its Lead'; end if;
+  if (select counter from partner_passkeys where id = 'e8100000-0000-0000-0000-0000000000c1') <> 1 then raise exception 'FAIL: Give key did not raise the passkey''s counter'; end if;
 end $$;
+-- (tenancy audit MEDIUM) the cases the access rule exists for: the live owner of ANOTHER partner, a Lead of the store's
+-- own partner no longer assigned to it (f2 on F), and a person on a live support visit look at nothing, get no
+-- challenge, and give no key.
+insert into auth.users (id, email, email_confirmed_at) values ('e8100000-0000-0000-0000-0000000000f5', 'owner@other82.test', now());
+insert into partners (id, user_id, email, name, business_name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('e8100000-0000-0000-0000-0000000000a2', 'e8100000-0000-0000-0000-0000000000f5', 'owner@other82.test', 'Ravi', 'Other 82', '919876543282', 'Pune', '0', 1, now(), now());
+insert into partner_members (id, partner_id, user_id, email, role, accepted_at) values
+  ('e8100000-0000-0000-0000-0000000000b5', 'e8100000-0000-0000-0000-0000000000a2', 'e8100000-0000-0000-0000-0000000000f5', 'owner@other82.test', 'owner', now());
+insert into partner_passkeys (id, partner_member_id, user_id, credential_id, public_key, name) values
+  ('e8100000-0000-0000-0000-0000000000c5', 'e8100000-0000-0000-0000-0000000000b5', 'e8100000-0000-0000-0000-0000000000f5', 'cred-f5', 'pk-f5', 'Laptop');
+insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at) values
+  ('e8100000-0000-0000-0000-0000000000b5', 'e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'e8100000-0000-0000-0000-0000000000c5', 'stepup-f5', now() + interval '1 hour');
+begin; set local role frata_app;
+do $$ declare codeE text := repeat('b', 63) || '7'; codeF text := repeat('b', 63) || '8'; begin
+  perform app_device_code_start(repeat('a', 63) || '7', codeE, 'proof-e81');
+  perform app_device_code_start(repeat('a', 63) || '8', codeF, 'proof-f81');
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, null) is not null then raise exception 'FAIL: another partner''s owner looked at E''s code'; end if;
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f5', 'e8100000-0000-0000-0000-0000000000d5', 'stepup-f5', codeE, repeat('W', 43), null, true); raise exception 'FAIL: another partner''s owner got a challenge for E';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, null) is not null then raise exception 'FAIL: a Lead unassigned from F looked at F''s code'; end if;
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', codeF, repeat('W', 43), null, true); raise exception 'FAIL: an unassigned Lead got a challenge for F';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+end $$;
+commit;
+-- (security LOW-4) with passkeys switched off, Give key still needs a passkey made for that code: no passkey stays
+-- no_passkey, no challenge stays no_challenge. And a code given before a support visit mints nothing at the poll.
+insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 hour', 'proof', 'proof § 81');
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b1' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ declare code9 text := repeat('b', 63) || '9'; ch text := repeat('X', 43); begin
+  perform app_device_code_start(repeat('a', 63) || '9', code9, 'proof-e81');
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f2', 'e8100000-0000-0000-0000-0000000000d2', 'stepup-f2', code9, ch, null, true); raise exception 'FAIL: passkeys off gave a challenge to a person with no passkey';
+  exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20); raise exception 'FAIL: passkeys off gave a key with no challenge';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, null, true);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code9, ch, 'cred-f1');
+  if app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code9, ch, 'e8100000-0000-0000-0000-0000000000c1', 20) is distinct from 'Proof E81'
+  then raise exception 'FAIL: the Partner owner could not give a key with passkeys off'; end if;
+end $$;
+commit;
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' where id = 'e8100000-0000-0000-0000-0000000000c2';
+delete from platform_switches where key = 'passkeys_off';
+insert into support_sessions (id, tenant_id, staff_user_id, staff_email, reason, expires_at) values
+  ('e8100000-0000-0000-0000-0000000000e9', 'e8100000-0000-0000-0000-000000000001', 'e8100000-0000-0000-0000-0000000000f1', 'owner@studio81.test', 'setup_help', now() + interval '1 hour');
+begin; set local role frata_app;
+do $$ begin
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', null) is not null then raise exception 'FAIL: a person on a support visit looked at a code'; end if;
+  begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '7', repeat('W', 43), null, true); raise exception 'FAIL: a person on a support visit got a challenge';
+  exception when raise_exception then if sqlerrm <> 'not_found' then raise; end if; end;
+  if (select count(*) from app_device_code_claim(repeat('a', 63) || '9')) <> 0 then raise exception 'FAIL: a code given before a support visit minted at the poll'; end if;
+end $$;
+commit;
+delete from support_sessions where id = 'e8100000-0000-0000-0000-0000000000e9';
+-- The ceiling: at 50 live build keys the dialog says so and Give key refuses, even with a passkey check
+insert into storefront_keys (tenant_id, kind, purpose, name, hash, prefix, created_by, expires_at)
+  select 'e8100000-0000-0000-0000-000000000001', 'build', 'session', 'Filler', md5('e81f' || g) || md5(g || 'e81f'), 'frs_build_e81fff', '99999999-9999-9999-9999-999999999999', now() + interval '1 hour' from generate_series(1, 50) g;
+begin; set local role frata_app;
+do $$ declare code2 text := repeat('b', 63) || '2'; ch text := repeat('S', 43); begin
+  if not (app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, null)->>'full')::boolean
+  then raise exception 'FAIL: a store at its ceiling not shown full'; end if;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, null, true);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', code2, ch, 'cred-f1');
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', code2, ch, 'e8100000-0000-0000-0000-0000000000c1', 30);
+    raise exception 'FAIL: a key given past the ceiling';
+  exception when raise_exception then if sqlerrm <> 'full' then raise; end if; end;
+end $$;
+commit;
+delete from storefront_keys where tenant_id = 'e8100000-0000-0000-0000-000000000001' and name = 'Filler';
 update build_key_device_codes set created_at = now() - interval '11 minutes', expires_at = now() - interval '1 minute' where device_hash = repeat('a', 63) || '2';
 begin; set local role frata_app;
 do $$ declare n int; begin
-  if app_device_code_approve('e8100000-0000-0000-0000-0000000000f1', repeat('b', 63) || '2', 'x') is not null then raise exception 'FAIL: an ended code confirmed'; end if;
+  if app_device_code_look('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '2', null) is not null then raise exception 'FAIL: an ended code looked at'; end if;
   select count(*) into n from app_device_code_claim(repeat('a', 63) || '2');
   if n <> 0 then raise exception 'FAIL: an ended sign-in answered'; end if;
 end $$;
 commit;
+-- (0162, impact review) the refusals that guard a mint: no passkey at all; the person's own passkey whose counter does
+-- not rise; a challenge older than 5 minutes at take, or taken more than 2 minutes before give. Then the daily delete
+-- takes the ended code (its network and challenge with it) and keeps a live one.
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b1' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ declare code4 text := repeat('b', 63) || '6'; ch text := repeat('T', 43);
+  f1 uuid := 'e8100000-0000-0000-0000-0000000000f1'; d1 uuid := 'e8100000-0000-0000-0000-0000000000d1';
+  f2 uuid := 'e8100000-0000-0000-0000-0000000000f2'; d2 uuid := 'e8100000-0000-0000-0000-0000000000d2'; begin
+  perform app_device_code_start(repeat('a', 63) || '6', code4, 'proof-e81');
+  if (app_device_code_look(f2, d2, 'stepup-f2', code4, null)->>'hasPasskey')::boolean then raise exception 'FAIL: a person with no passkey shown one'; end if;
+  begin perform app_device_code_challenge(f2, d2, 'stepup-f2', code4, ch, null, true); raise exception 'FAIL: a challenge for a person with no passkey';
+  exception when raise_exception then if sqlerrm <> 'no_passkey' then raise; end if; end;
+  perform app_device_code_challenge(f1, d1, 'stepup-f1', code4, ch, null, true);
+  perform app_device_code_take(f1, d1, code4, ch, 'cred-f1');
+  begin perform app_device_code_give(f1, d1, 'stepup-f1', code4, ch, 'e8100000-0000-0000-0000-0000000000c1', 1); raise exception 'FAIL: a counter that did not rise gave a key';
+  exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
+end $$;
+commit;
+update partner_passkeys set partner_member_id = 'e8100000-0000-0000-0000-0000000000b2' where id = 'e8100000-0000-0000-0000-0000000000c2';
+begin; set local role frata_app;
+do $$ begin perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('U', 43), null, true); end $$;
+commit;
+update build_key_device_codes set challenge_at = now() - interval '6 minutes' where device_hash = repeat('a', 63) || '6';
+begin; set local role frata_app;
+do $$ begin
+  if app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', repeat('b', 63) || '6', repeat('U', 43), 'cred-f1') is not null
+  then raise exception 'FAIL: a challenge older than 5 minutes taken'; end if;
+  perform app_device_code_challenge('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('V', 43), null, true);
+  perform app_device_code_take('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', repeat('b', 63) || '6', repeat('V', 43), 'cred-f1');
+end $$;
+commit;
+update build_key_device_codes set challenge_used_at = now() - interval '3 minutes' where device_hash = repeat('a', 63) || '6';
+begin; set local role frata_app;
+do $$ declare n int; begin
+  begin perform app_device_code_give('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', 'stepup-f1', repeat('b', 63) || '6', repeat('V', 43), 'e8100000-0000-0000-0000-0000000000c1', 9);
+    raise exception 'FAIL: a challenge taken more than 2 minutes ago gave a key';
+  exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  perform app_delete_ended_build_keys();
+end $$;
+commit;
+do $$ begin
+  if exists (select 1 from build_key_device_codes where device_hash = repeat('a', 63) || '2') then raise exception 'FAIL: the daily delete kept an ended device code'; end if;
+  if not exists (select 1 from build_key_device_codes where device_hash = repeat('a', 63) || '6') then raise exception 'FAIL: the daily delete took a live device code'; end if;
+end $$;
 -- the two readers that list keys leave build keys out: Admin's API page (E has build keys only, no Website) and the
 -- Accept screen's list
 do $$ begin

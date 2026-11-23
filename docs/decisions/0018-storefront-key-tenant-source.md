@@ -197,6 +197,16 @@ or a body, never a URL path. So a third key kind.
    listed on the Accept screen or Admin's API page and never make a store a code site (0157).
    *As built (G·3, 2026-11-22):* the developer's device sign-in is built server-side (0159–0160, `src/lib/storefront-api/device.ts`):
    start, confirm and a single-use claim that mints through `mintBuildKey`. Its confirm page waits for a mockup.
+   *As built (G·3 page, 2026-11-22; four screens § 2, owner-approved, security review folded in; 0162):* point 1's
+   "`requireCapability`, a passkey check in the last 5 minutes" is replaced. The person at the terminal confirms their
+   OWN code in Partner workspace › Developer: a Partner owner, or a Lead assigned to the store, of the store's linked
+   partner (the maker rule above); never the store's own people (owners and Managers hold no passkey, and an owner
+   approving someone else's code is the device-code phishing flow), a Builder, or anyone on a support visit. Give key
+   asks for a passkey made for THAT code (its challenge on the code's row; an earlier check never counts, the
+   passkeys-off switch neither), checks the store's ceiling under its settings lock, and approves with the store's audit
+   row in one definer. The dialog shows where the code started (a sha256 of the CLI's /64 or /24, gone with the code).
+   Your computers lists and deletes the person's own developer keys; the store's owner still sees and deletes them on
+   Settings › Website (point 8).
 8. **The owner sees and deletes them.** Settings › Website lists every build key with its maker and its end; the owner
    or a Manager deletes one there. A kill switch, removing a partner or a person (ADR-0014 amendment 6), and a stopped
    session delete their build keys.

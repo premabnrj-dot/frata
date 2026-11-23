@@ -48,7 +48,7 @@ The nine rules (board Rules), binding on every Admin screen and mockup:
 ## Partner workspace (approved mockup 2026-11-07)
 
 - `/partner` uses the console's `AppShell` with `tag="PARTNER"` (info pair).
-  Admin keeps ink + STAFF. Nav: Clients, Team (owner), Passkeys, Your details.
+  Admin keeps ink + STAFF. Nav: Clients, Team (owner), Passkeys, Developer, Your details.
 - A store with no owner shows the **building banner** (info pair, sticky, one
   line: "Building for <shop> · No owner yet · Hand over") on every console page. Hand over is a link (a full page
   load) to Clients, where the dialog asks for the passkey (T1b).
@@ -91,6 +91,16 @@ The nine rules (board Rules), binding on every Admin screen and mockup:
   with the console's one switch for single keys; never in a text box. A phone shows one region from its bar (Chat,
   Website, More: Design, Checks, Versions), no Code tab. The agent's progress goes to one polite region, once a step. Code, Checks and
   Versions load with next/dynamic; no diff or highlight library.
+- **Developer** (G·3, four screens § 2, owner-approved 2026-11-22): the person at the terminal confirms their OWN code.
+  Two cards: Sign in this computer (one field "Code from your terminal", mono, capitals; Check code) and Your computers
+  (store, a Build tag, "Confirmed <momentIN> · ends in 21 hours", Delete key). Mistakes stay at the field ("Type the 8
+  characters from your terminal.", "This code has ended. Run the command again for a new one." for ended, used or not a
+  client's, "Too many tries. Wait a minute."). The confirm dialog lists Store, Code, Started (with an ok chip "Your
+  network" or a warn chip "Another network") and The key, with "Frrata never asks you for a code." From another network,
+  or one Frrata can't tell, "Don’t give key" is the primary button and a checkbox "This is my computer" must be ticked
+  before Give key turns on (owner, 2026-11-22; the server refuses it too). Give key asks for the passkey there and then; a store at its limit or a person
+  with no passkey turns Give key off with its reason. A Builder's page is one panel: "Only a Partner owner or a Lead can
+  sign in a computer."
 - **F3 store switcher**: in the account block at every width and in More on
   phones, only with two or more places to go; it lists what app_access_for
   returned, current one marked.

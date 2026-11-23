@@ -97,7 +97,10 @@ export interface PasskeyStore {
 const refused = (code: string) => Object.assign(new Error(code), { cause: { message: code } })
 export const dbCodeOf = (err: unknown): string => (err as { cause?: { message?: string } })?.cause?.message ?? ''
 
-/** `nameFor`: the name to store from the authenticator's AAGUID (a password manager's name), else the name typed. */
+/** `nameFor`: the name to store from the authenticator's AAGUID (a password manager's name), else the name typed.
+ *  Two consumers rely on confirmVerify's order (take, verify the signature, then confirm with the challenge, the passkey's
+ *  id and its new counter): the staff and partner check, and the device-code Give key (src/lib/storefront-api/device.ts,
+ *  whose confirm IS the approval). Change the order and src/lib/storefront-api/__tests__/device.int.test.ts must still pass. */
 export function passkeyCeremony(o: { rpName: string; tag: string; says: Record<string, string>; tokenHash: (token: string) => string; store: PasskeyStore; nameFor?: (aaguid: string) => string | null }) {
   const { store, says } = o
   async function run<T>(what: string, fn: () => Promise<T>): Promise<Result<T>> {

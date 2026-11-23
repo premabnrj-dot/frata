@@ -193,7 +193,7 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 ## Lane B's plan check (2026-11-22; the orchestrator's rulings, for the owner where marked)
 | Item | Ruling |
 |---|---|
-| G·3 the page where a person confirms the device code (Settings › Developer) | Drawn in no approved mockup. The server parts are built; the page waits for a mockup. **Owner** |
+| G·3 the page where a person confirms the device code | Drawn and approved since in § "Four screens drawn for the owner": Partner workspace › Developer, built on `claude/lane-b-g3-page` |
 | D0·2 a Renew button on a Test key | Not drawn. The chip is built; the button waits. **Owner** |
 | D0·3 what "no proved address" means before `app_website_of` exists | Open my store refuses when the store holds a Test or Build key that still answers and has no Website on a proved, live domain |
 | G·4 G14 the compliance certificate | Frrata holds no such record; G14 waits on what it is and where the merchant enters it. **Owner** |
@@ -307,3 +307,31 @@ own notice and its never-resent rule; its own fix before the first real monthly 
   Admin from the bank's actual rate, monthly); merchant billing's missing notification object (its own fix).
 - **Resume:** the owner's usage limit resets at 05:45 IST on 23 Nov; one-shot scheduled tasks wake lanes B, C and D at
   05:48 and the orchestrator at 05:50 to check each lane, release what is ready and report.
+
+### G·3 page, lane B: the plan check's rulings and the Deviations (BUILT AS DRAWN; for the owner before it ships)
+Rulings (orchestrator, 2026-11-22): a code is looked at and given a key only by a live Partner owner, or a Lead assigned
+to the store, of the store's linked partner; everyone else reads "This code has ended…" (the security review's point:
+store owners and Managers do not confirm). Your computers lists and deletes the person's own developer keys. The key's
+name is the whole email when it fits the key name's 40 characters (`KEY_NAME_MAX`), else the part before the @. The
+network is IPv6 /64 or IPv4 /24, kept as a sha256 and deleted with its code at the first daily run after its 10 minutes.
+Check code 10 and Give key 5 a minute a person, failing closed. Any live support session is refused. The poll answers
+409 `full` at the store's ceiling. Give key's passkey challenge is bound to the code and taken with the approval.
+
+| Mockup element | What was built | Reason | Owner seen |
+|---|---|---|---|
+| Undrawn: a person with no passkey at Give key | Give key off; the dialog's line "Add a passkey to give a key."; a secondary "Add passkey" opening Partner workspace › Passkeys | Give key always needs a passkey made for that code, and while passkeys are switched off a partner person may have none (orchestrator ruling 6) | yes, 2026-11-23 (owner: "approved") |
+| The dialog's "Your network" / "Another network" | A mark only, never a refusal | Indian mobile networks (CGNAT, Wi-Fi and 4G) often read "Another network" for the real person; the mark swaps the main button and nothing else (ruling 4) | yes, 2026-11-23 (owner: "approved") |
+| The terminal's `$ npx frrata dev house-of-ayuda` | `npm run frrata` in the starter (`kit/starter/scripts/frrata-dev.mjs`), same words; the start's answer carries Open and Code | The `frrata` package is not published yet (kit spec § 2); ruling 8 | yes, 2026-11-23 (owner: "approved") |
+| Undrawn: what Delete key says after it is done | An ok toast "Key deleted." | The feedback rule: success is an ok toast (frata-design-language § Feedback 2) | yes, 2026-11-23 (owner: "approved") |
+| Delete key · confirm: "Delete key" as the primary button | The destructive button (red), "Keep key" secondary with focus | A delete is the destructive variant everywhere in the console and workspace (design language § Neel primitives: Button) | yes, 2026-11-23 (owner: "approved") |
+| Your computers: the row's "Delete key" as a plain secondary button | The danger button (red text), as Passkeys' Delete | A row action that loses something is the danger variant in the workspace (design language § Neel primitives: Button; design-system review) | yes, 2026-11-23 (owner: "approved") |
+| Undrawn: where Give key's reason sits when it is off | Beside the button, wrapping under it in a narrow dialog (Button's `reason`) | The primitive ties the reason to the button for a screen reader; no drawing for the off state | yes, 2026-11-23 (owner: "approved") |
+| Undrawn: "Started somewhere else" gives a key with one click | A checkbox "This is my computer" when the code started from another network or one Frrata can't tell (read as another); Give key off until it is ticked ("Tick This is my computer first."); the server refuses Give key from another network without it | Security review MED-1: a code a phisher sends must not be one click from a key | yes, 2026-11-22 |
+| Four screens § 2, "The store’s owner · Settings › Website, as built": the key row with a plain Build tag, "Made by …, Neel Studio · ends in 21 hours" and a secondary Delete key | The row as built from the one-address mockup § 4 (approved earlier): a chip "Build · ends 23 Nov", the "Made by …" line, a "Used …" line and the red Delete | The two approved mockups draw the same row differently; the later one labels its drawing "as built", so the earlier, fuller drawing governs (mockup-parity, 2026-11-22) | yes, 2026-11-23 (owner: "approved") |
+
+Proposed for `docs/decisions/accepted-findings.md` (the owner's words go in its Ruling column; not added until then):
+| Finding | Ruling and the condition it rests on | Source |
+|---|---|---|
+| A device code's network is kept as an unkeyed sha256 of its /64 or /24, so a reader of the row recovers the /24 (security review LOW-2, G·3 page) | Accepted while `build_key_device_codes` has no reader but its definers (no role's grant, proof § 81) and a row is gone at the first daily run after its 10 minutes; a keyed hash (a server secret) if the row ever lives longer than a day or gains a reader (orchestrator, 2026-11-22, for the owner) | security-reviewer, 2026-11-22 |
+
+Security review MED-1, built (owner, 2026-11-22: "yes, this is my computer"): see the Deviations row above.

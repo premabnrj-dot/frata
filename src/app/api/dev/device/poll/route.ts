@@ -11,9 +11,10 @@ const json = (status: number, body: object) => new Response(JSON.stringify(body)
 
 // Each answer keeps its code for machines and says in one line what the person at the CLI does next (words review).
 const SAY = {
-  too_large: 'That request was too large.', bad_request: 'Run `npx frrata dev <your store>` again.',
+  too_large: 'Run `npm run frrata` again.', bad_request: 'Run `npm run frrata` again.',
   busy: 'Too many tries. Wait a minute, then run it again.', unavailable: 'Frrata could not answer. Try again in a minute.',
-  not_found: 'This sign-in ended. Run `npx frrata dev` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
+  not_found: 'This sign-in ended. Run `npm run frrata` again.', not_allowed: 'This sign-in was refused. Start again and confirm it in Frrata.',
+  full: 'The store has its limit of keys. Delete one first, then run it again.',
 } as const
 const fail = (status: number, error: keyof typeof SAY) => json(status, { error, message: SAY[error] })
 /** A body over 512 bytes is refused before it is read (security LOW-5). */
@@ -31,6 +32,7 @@ export async function POST(req: Request): Promise<Response> {
     if (!r) return fail(404, 'not_found')
     if (r.status === 'pending') return json(202, { status: 'pending' })
     if (r.status === 'busy') return fail(429, 'busy')
+    if (r.status === 'full') return fail(409, 'full')
     if (r.status === 'refused') return fail(403, 'not_allowed')
     return json(200, { key: r.key, expiresAt: r.expiresAt })
   } catch (err) {
