@@ -38,7 +38,8 @@ export const studioSessions = pgTable('studio_sessions', {
   fileId: text('file_id'),
   /** The 24-hour build key minted for this session; written in the mint's transaction, before any vault call. */
   buildKeyId: uuid('build_key_id'),
-  /** Where the next event read starts (Anthropic's opaque page cursor), and the advance lease (§ Advance). */
+  /** Where the next event read starts: the `processed_at` of the last event read (events are listed by it, ascending;
+   *  ids already stored are skipped), and the advance lease (§ Advance). */
   eventCursor: text('event_cursor'),
   advancingUntil: at('advancing_until'),
   lastReadAt: at('last_read_at'),
@@ -124,6 +125,7 @@ export const studioProposals = pgTable('studio_proposals', {
   foreignKey({ name: 'studio_proposals_session', columns: [t.tenantId, t.partnerId, t.sessionId], foreignColumns: [studioSessions.tenantId, studioSessions.partnerId, studioSessions.id] }).onDelete('cascade'),
   foreignKey({ name: 'studio_proposals_call', columns: [t.tenantId, t.partnerId, t.toolCallId], foreignColumns: [studioToolCalls.tenantId, studioToolCalls.partnerId, studioToolCalls.id] }).onDelete('cascade'),
   unique('studio_proposals_once').on(t.toolCallId),
+  unique('studio_proposals_scope').on(t.tenantId, t.partnerId, t.id),
   index('studio_proposals_session').on(t.sessionId, t.createdAt),
   check('studio_proposals_kind', sql`${t.kind} in (${sql.raw(sqlList(PROPOSAL_KINDS))})`),
   check('studio_proposals_caps', sql`octet_length(${t.value}::text) <= ${sql.raw(String(INPUT_MAX_BYTES))} and (${t.refusedReason} is null or length(${t.refusedReason}) <= 300)`),
@@ -140,8 +142,12 @@ export const studioMessages = pgTable('studio_messages', {
   /** Plain text the person or the agent wrote (never a tool's input or output, a key or an email). */
   text: text('text'),
   proposalId: uuid('proposal_id'),
+  /** The runtime event an agent line came from: stored once, whichever trigger read it first. */
+  eventId: text('event_id'),
   createdAt: createdAt(),
 }, (t) => [
+  uniqueIndex('studio_messages_event').on(t.sessionId, t.eventId).where(sql`${t.eventId} is not null`),
+  foreignKey({ name: 'studio_messages_proposal', columns: [t.tenantId, t.partnerId, t.proposalId], foreignColumns: [studioProposals.tenantId, studioProposals.partnerId, studioProposals.id] }).onDelete('cascade'),
   foreignKey({ name: 'studio_messages_session', columns: [t.tenantId, t.partnerId, t.sessionId], foreignColumns: [studioSessions.tenantId, studioSessions.partnerId, studioSessions.id] }).onDelete('cascade'),
   index('studio_messages_keyset').on(t.sessionId, t.seq),
   check('studio_messages_kind', sql`${t.kind} in (${sql.raw(sqlList(MESSAGE_KINDS))})`),
@@ -192,3 +198,14 @@ export const studioSpendPeople = pgTable('studio_spend_people', {
   reservedMicro: bigint('reserved_micro', { mode: 'number' }).notNull().default(0),
   measuredMicro: bigint('measured_micro', { mode: 'number' }).notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.day, t.userId] })])
+
+/** Who Studio's partner lock answers for in THIS transaction: a random token in the `app.studio_bind` setting, written
+ *  only by the binding definers with the transaction's id, so setting the variable by hand binds nothing (tenancy audit
+ *  of R2, HIGH). Old rows are swept by the next bind. */
+export const studioBinds = pgTable('studio_binds', {
+  token: text('token').primaryKey(),
+  xact: text('xact').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
+  partnerId: uuid('partner_id').notNull(),
+  createdAt: createdAt(),
+}, (t) => [index('studio_binds_age').on(t.createdAt)])

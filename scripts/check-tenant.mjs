@@ -253,7 +253,7 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 }
 // Studio's agent (V3a, drizzle/*_studio_access.sql): a turn's person and step-ups and every spend row are platform scope;
 // no role holds a grant; the app_studio_* definers and app_turn_actor are the only door (ADR-0020 § 5 as amended).
-for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(studio_(?:turn_keys|spend_[a-z]+))\b[^;]*?\bto\b/g)) {
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(studio_(?:turn_keys|binds|spend_[a-z]+))\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — Studio's turn keys and spend rows have no table grants; the app_studio_* definers are the only door (V3a)`)
 }
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')

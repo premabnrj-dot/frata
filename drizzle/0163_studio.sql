@@ -1,3 +1,11 @@
+CREATE TABLE "studio_binds" (
+	"token" text PRIMARY KEY NOT NULL,
+	"xact" text NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"partner_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "studio_messages" (
 	"seq" bigint GENERATED ALWAYS AS IDENTITY (sequence name "studio_messages_seq_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -7,6 +15,7 @@ CREATE TABLE "studio_messages" (
 	"kind" text NOT NULL,
 	"text" text,
 	"proposal_id" uuid,
+	"event_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "studio_messages_kind" CHECK ("studio_messages"."kind" in ('person','agent','card','status')),
 	CONSTRAINT "studio_messages_text" CHECK ("studio_messages"."text" is null or length("studio_messages"."text") <= 2000)
@@ -27,6 +36,7 @@ CREATE TABLE "studio_proposals" (
 	"refused_reason" text,
 	"dismissed_at" timestamp with time zone,
 	CONSTRAINT "studio_proposals_once" UNIQUE("tool_call_id"),
+	CONSTRAINT "studio_proposals_scope" UNIQUE("tenant_id","partner_id","id"),
 	CONSTRAINT "studio_proposals_kind" CHECK ("studio_proposals"."kind" in ('tokens','logo')),
 	CONSTRAINT "studio_proposals_caps" CHECK (octet_length("studio_proposals"."value"::text) <= 73728 and ("studio_proposals"."refused_reason" is null or length("studio_proposals"."refused_reason") <= 300))
 );
@@ -129,6 +139,7 @@ CREATE TABLE "studio_turns" (
 	CONSTRAINT "studio_turns_reason" CHECK (("studio_turns"."failed_at" is null) = ("studio_turns"."failed_reason" is null) and ("studio_turns"."failed_reason" is null or "studio_turns"."failed_reason" in ('start','send','budget','runtime','actor','switch','expired','workspace')))
 );
 --> statement-breakpoint
+ALTER TABLE "studio_messages" ADD CONSTRAINT "studio_messages_proposal" FOREIGN KEY ("tenant_id","partner_id","proposal_id") REFERENCES "public"."studio_proposals"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_messages" ADD CONSTRAINT "studio_messages_session" FOREIGN KEY ("tenant_id","partner_id","session_id") REFERENCES "public"."studio_sessions"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_proposals" ADD CONSTRAINT "studio_proposals_session" FOREIGN KEY ("tenant_id","partner_id","session_id") REFERENCES "public"."studio_sessions"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_proposals" ADD CONSTRAINT "studio_proposals_call" FOREIGN KEY ("tenant_id","partner_id","tool_call_id") REFERENCES "public"."studio_tool_calls"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -141,6 +152,8 @@ ALTER TABLE "studio_tool_calls" ADD CONSTRAINT "studio_tool_calls_session" FOREI
 ALTER TABLE "studio_tool_calls" ADD CONSTRAINT "studio_tool_calls_turn" FOREIGN KEY ("tenant_id","partner_id","turn_id") REFERENCES "public"."studio_turns"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_turn_keys" ADD CONSTRAINT "studio_turn_keys_turn_id_studio_turns_id_fk" FOREIGN KEY ("turn_id") REFERENCES "public"."studio_turns"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_turns" ADD CONSTRAINT "studio_turns_session" FOREIGN KEY ("tenant_id","partner_id","session_id") REFERENCES "public"."studio_sessions"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "studio_binds_age" ON "studio_binds" USING btree ("created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "studio_messages_event" ON "studio_messages" USING btree ("session_id","event_id") WHERE "studio_messages"."event_id" is not null;--> statement-breakpoint
 CREATE INDEX "studio_messages_keyset" ON "studio_messages" USING btree ("session_id","seq");--> statement-breakpoint
 CREATE INDEX "studio_proposals_session" ON "studio_proposals" USING btree ("session_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "studio_sessions_runtime" ON "studio_sessions" USING btree ("runtime_id");--> statement-breakpoint

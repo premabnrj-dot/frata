@@ -53,13 +53,19 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
    session. Studio's rows and the credit ledger are written by `frata_app` definers keyed on the turn: each checks
    `turn.tenant_id = app_current_tenant()`, that the turn is open and that `app_turn_actor` is live; settle caps at the
    reserve; EXECUTE is revoked from public, anon, authenticated, service_role, frata_builder and frata_admin.
-   **Amended 2026-11-22 (V3a plan check, ruling c; orchestrator agreed; built in drizzle/0164):** `requireMember` and
-   `requireCapability` stay unchanged (a `Membership` carries no partner, and setting it there would touch every console
-   request). `app.partner_id` is set only by two definers: `app_studio_partner` (the signed-in person's live partner
-   membership on the current store, Frrata staff while Studio is staff-only, an owner or an assigned Lead) for Studio's
-   pages and actions through `withStudio`, and `app_studio_bind` (a session of the current store) for `asTurn` and the
-   cron; `check:studio` holds both callers. The restrictive policies are `to public`; frata_builder and frata_admin hold
-   no grant on any `studio_*` table in V3a. Proof § 91.
+   **Amended 2026-11-22/23 (V3a plan check, ruling c; orchestrator agreed; the R2 tenancy audit folded in; built in
+   drizzle/0164):** `requireMember` and `requireCapability` stay unchanged (a `Membership` carries no partner, and setting
+   it there would touch every console request). The partner lock is held **by the database**, not by a setting code
+   could write: `app_current_partner()` answers only for a row in the definer-only `studio_binds` whose random token is
+   in the `app.studio_bind` setting AND whose transaction id is the current transaction's, for the current store. Only
+   two definers write that row: `app_studio_partner` (the signed-in person's live partner membership on the current store,
+   Frrata staff while Studio is staff-only, an owner or an assigned Lead, both REAL step-ups live) for Studio's pages and
+   actions through `withStudio`, and `app_studio_bind_turn` (an open turn whose person `app_turn_actor` still answers
+   for) for `asTurn` and the cron's advance. Studio ignores the passkeys-off switch: sign-out deletes the step-ups and so
+   ends a cron turn. Ending, cleaning and deleting a session go through definers that read no partner's rows. The
+   cron's work list (`app_studio_due`) answers ids only; its callers and `app_studio_bind_turn`'s are pinned by
+   `check:studio`. The restrictive policies are `to public`; frata_builder and frata_admin hold no grant on any
+   `studio_*` table in V3a. Proof § 91.
 6. **Nothing the agent writes reaches a store without a person's tap.** Content, brand words, tokens and logos are rows
    in `studio_proposals`, each drawn with its exact value and Apply; Apply runs the console's own save as that person.
    No tool publishes, hands over, opens the store, touches a domain or a key, changes a price, stock, product or order,

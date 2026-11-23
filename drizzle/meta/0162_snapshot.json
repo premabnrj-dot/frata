@@ -1,5 +1,5 @@
 {
-  "id": "a30d10d5-3498-4b16-8ba2-0b4af1d87625",
+  "id": "82552ec7-cd60-40e9-acc4-7c44e1c15f0f",
   "prevId": "351e778f-e239-4137-a050-8947e34ca2b0",
   "version": "7",
   "dialect": "postgresql",
@@ -19898,6 +19898,66 @@
       },
       "isRLSEnabled": false
     },
+    "public.studio_binds": {
+      "name": "studio_binds",
+      "schema": "",
+      "columns": {
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "xact": {
+          "name": "xact",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "partner_id": {
+          "name": "partner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "studio_binds_age": {
+          "name": "studio_binds_age",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.studio_messages": {
       "name": "studio_messages",
       "schema": "",
@@ -19962,6 +20022,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -19971,6 +20037,28 @@
         }
       },
       "indexes": {
+        "studio_messages_event": {
+          "name": "studio_messages_event",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"studio_messages\".\"event_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "studio_messages_keyset": {
           "name": "studio_messages_keyset",
           "columns": [
@@ -19994,6 +20082,23 @@
         }
       },
       "foreignKeys": {
+        "studio_messages_proposal": {
+          "name": "studio_messages_proposal",
+          "tableFrom": "studio_messages",
+          "tableTo": "studio_proposals",
+          "columnsFrom": [
+            "tenant_id",
+            "partner_id",
+            "proposal_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "partner_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "studio_messages_session": {
           "name": "studio_messages_session",
           "tableFrom": "studio_messages",
@@ -20178,6 +20283,15 @@
           "nullsNotDistinct": false,
           "columns": [
             "tool_call_id"
+          ]
+        },
+        "studio_proposals_scope": {
+          "name": "studio_proposals_scope",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "partner_id",
+            "id"
           ]
         }
       },
