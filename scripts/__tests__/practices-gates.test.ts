@@ -163,6 +163,11 @@ describe('the margin under a limit (Vercel builds a page ~0.3 kB heavier)', asyn
     const line = closest([row('/a', 140, 150), row('/b', 149, 150), row('/c', 118, 120), row('/d', 100, 150)])
     expect(line).toBe('/b 149.0/150 kB (1.0 kB room); /c 118.0/120 kB (2.0 kB room); /a 140.0/150 kB (10.0 kB room)')
   })
+  it('shows a shop page\'s whole and own numbers, ranked by its smaller room', () => {
+    const shop = { page: '/s/a', kb: 108, limit: 110, own: { kb: 4.4, limit: 4.9 } }
+    const line = closest([row('/c', 148, 150), shop, row('/d', 100, 150)], 2)
+    expect(line).toBe('/s/a 108.0/110 kB (2.0 kB room), own files 4.40/4.9 kB (0.50 kB room); /c 148.0/150 kB (2.0 kB room)')
+  })
   it('tells a shop page that a lazy chunk elsewhere may be the cause', () => {
     expect(marginProblems([row('/s/[host]/(shop)/pages/[handle]/page', 109.4, 109.8)])[0]).toMatch(/A shop page: .*runtime/)
     expect(marginProblems([row('/(console)/console/x/page', 149.8, 150)])[0]).toMatch(/\*-facts\.ts half/)

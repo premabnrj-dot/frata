@@ -1,5 +1,5 @@
 # Page weight · every page builds on Vercel with room under its script limit
-Status: active (points 1, 2 and 4 built on the branch, speed review folded in; point 3 waits on the owner's word) · Date: 2026-11-23 · Lane F, branch `claude/lane-f-page-weight`
+Status: active (points 1, 2 and 4 built; point 3's A and E built on the owner's word, 2026-11-23; B declined, theme fonts later) · Date: 2026-11-23 · Lane F, branch `claude/lane-f-page-weight`
 · Asked by: the owner, 2026-11-23 ("start a lane on the page size job"), after five production builds failed a fraction of a kB over a page's limit
 · Gates: `check:storefront-build` (`scripts/check-storefront-build.mjs`, `scripts/lib/app-budget.mjs`) · Skill: `frata-architecture` § Speed
 **Mockup:** none — nothing a person sees changes: the same code is loaded in fewer or different chunks, and constants move between files
@@ -97,9 +97,11 @@ never by raising a number. Each pin that frees up comes down to what the page me
 | Admin (most pages) | 142.7 | 137.5 | 150 | 12.5 |
 | Studio (live screen, lane D) | 131.0 | 131.0 | 133.4 | 2.4 |
 | Studio workbench fixture (lane D) | 131.6 | 131.6 | 133.4 | 1.8 |
-| Shop › checkout | 119.8 | 118.7 | 120 (120.5 on main after 6acad4f) → 120 | 1.3 |
-| Shop › a product | 117.5 | 117.8 | 120 | 2.2 |
-| Shop › About/FAQ page | 109.3 | 109.3 | 109.8 | 0.5 |
+| Shop › checkout, whole page (after A) | 119.8 | 118.5 | 120 (120.5 on main after 6acad4f) → 120 | 1.5 |
+| Shop › checkout, own files (E) | — | 17.59 | 18.1 | 0.51 |
+| Shop › a product (after A) | 117.5 | 117.6 | 120 | 2.4 |
+| Shop › About/FAQ page, whole page (after A) | 109.3 | 109.1 | 109.8 → 110.6 (E: now the runtime's room) | 1.5 |
+| Shop › About/FAQ page, own files (E) | — | 8.13 | 8.7 | 0.57 |
 
 Vercel adds about 0.3 kB: 2.0 kB of local room is about 1.7 on Vercel. Every Console, Admin and partner page meets the
 goal. **Three pages miss it:** the shop's About/FAQ page (0.5 local), the checkout (1.3) and the Studio fixture (1.8;
@@ -123,7 +125,29 @@ streams (frata-gotchas); the lighter pages load sooner and meet it more often (2
 green; the eighth was a single React #418 on Admin › Merchants at 200 % that did not come back in 7 more runs (not
 explained). Files: `src/components/shell/tenant-check.tsx`, `src/components/nav/expiry-refresh.tsx`.
 
-## Point 3 · the runtime tax, and the shop (needs the owner's word; nothing here is built)
+## Point 3 · built: A and E (the owner's word, 2026-11-23, through the orchestrator)
+- **A.** `next.config.ts` names lazy chunks `static/chunks/[name].[contenthash:8].js` (Next's own is 16 characters):
+  webpack's runtime 2,562 → 2,339 bytes gzipped, about 0.22 kB off every page. Checked first that nothing reads the
+  length: the 16-hex patterns in the repo are share-card and icon file names; there is no service worker; the CSP uses a
+  nonce, not file hashes; check scripts and e2e (`laterChunks`) match whole file names; `vercel.json` routes no chunk.
+  **Collision exposure:** a new version of one chunk would have to share its old version's 32-bit hash to be served stale
+  from a browser's cache, about 1 in 4.3 billion per changed chunk. `check:storefront-build` fails if the runtime lists a
+  hash longer than 8 characters (Next renamed its pattern and the line stopped applying); planted, it fires.
+- **E.** Two numbers for the shop's two closest pages (`check-storefront-build.mjs`, TIGHT and SHOP_OWN, the script says
+  what each measures and why there are two): **own files**, the first load minus `rootMainFiles` (webpack's runtime, React,
+  Next's router), at measured + 0.5 (About/FAQ 8.7, checkout 18.1), so the shop's code only comes down and a lazy chunk
+  added in the console no longer fails a shop page; and **whole page** at measured + 1.5, never over 120 (About/FAQ
+  110.6, checkout stays 120), so the runtime and the framework can't grow unseen. A successful build prints both for the
+  three closest pages. The local 0.5 kB margin applies to the whole page only: Vercel's extra weight is in the framework.
+  **Proved:** a build with a Vercel-style `NEXT_DEPLOYMENT_ID` (skew protection appends it to chunk URLs) weighs 0.23 kB
+  more on every page, all of it in Next's router chunk (`1255`: 45.32 → 45.55); the shop's own files are the same size to
+  the byte (About/FAQ 8.13, checkout 17.59).
+- **B** (fewer lazy chunks): no, for now (it changes when forms download). **The theme faces' stylesheet:** after this
+  release, proposed as its own small step.
+- About/FAQ's whole-page number moves 109.8 → 110.6 because it now measures something else (the runtime's and framework's
+  room); its own code is held at 8.7. Both shop pages have 1.5 kB of whole-page room locally (about 1.2 on Vercel).
+
+## Point 3 · the analysis as proposed (kept for the record)
 **Measured.** webpack's runtime (`static/chunks/webpack-*.js`, 2.52 kB gzipped) is shipped by every page, the shop's
 included. 0.64 kB of it is the map of every lazy chunk in the app (39 today: the console's 13, the customizer's 9,
 Studio and the partner workspace's 10, the shop and modules' 14), about 16 bytes gzipped each. So each next/dynamic added

@@ -41,7 +41,21 @@ const BUDGET_KB = 120
 // code: check the three closest pages before adding any.
 // Back on the 120 budget the same day (lane F, page weight): the checkout's offer rows read one rule (says-online.ts)
 // instead of every offer sentence, 119.8 → 118.7 kB here.
-const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.8 }
+// TWO NUMBERS for the shop's two closest pages (the owner's option E, 2026-11-23; docs/plans/2026-11-23-page-weight.md
+// § Point 3). WHOLE (TIGHT, or the 120 budget): everything the page loads first, React, Next and webpack's runtime
+// included — what a shopper's phone downloads, so the runtime and the framework can't grow without anyone seeing; set at
+// what the page measured that day + 1.5 kB, never above the budget. OWN (SHOP_OWN): only the files this app adds, the
+// first load minus build-manifest's rootMainFiles (webpack's runtime, React and Next's router: every page loads them,
+// and a lazy chunk added anywhere grows the runtime by ~16 bytes); set at measured + 0.5, so the shop's own code still
+// only comes down, and a console page's next/dynamic no longer fails a shop page nobody touched. Two because neither
+// holds both: whole alone failed on other surfaces' lazy chunks; own alone would let the framework grow unseen.
+// Vercel's extra ~0.3 kB is in the framework files (skew protection appends the deployment id to chunk URLs there),
+// which OWN leaves out, so the local margin applies to WHOLE only.
+// Set 2026-11-23 after option A (8-character chunk hashes: the runtime 2.50 → 2.28 kB): About/FAQ 109.06 whole, 8.13 own;
+// checkout 118.52 whole (its whole limit stays the 120 budget), 17.59 own. About/FAQ's whole number moves 109.8 → 110.6
+// because it now holds a different thing: the runtime's room; the page's own code is held at 8.7.
+const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 110.6 }
+const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.7, '/s/[host]/(checkout)/checkout/page': 18.1 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
@@ -74,6 +88,15 @@ for (const k of shopPages) {
 }
 
 const build = read('app-build-manifest.json').pages ?? {}
+// What every page loads, the app's own code aside: webpack's runtime, React, Next's router (SHOP_OWN subtracts these).
+const rootMain = new Set(read('build-manifest.json').rootMainFiles ?? [])
+if (!rootMain.size) failures.push('build-manifest.json lists no rootMainFiles: the shop\'s own-files ceilings would count the framework')
+// Option A (next.config.ts): the runtime lists each lazy chunk's hash in 8 hex characters, not Next's 16.
+{
+  const runtime = [...rootMain].find((f) => /(^|\/)webpack-[0-9a-f]+\.js$/.test(f))
+  if (!runtime) failures.push('no webpack runtime in rootMainFiles')
+  else if (/\d+:"[0-9a-f]{9,}"/.test(readFileSync(join('.next', runtime), 'utf8'))) failures.push(`${runtime}  lists lazy chunks by hashes longer than 8 characters: next.config.ts's chunkFilename (option A) no longer applies`)
+}
 const sizes = new Map()
 const gz = (f) => sizes.get(f) ?? sizes.set(f, gzipSync(readFileSync(join('.next', f))).length).get(f)
 for (const [k, files] of Object.entries(build)) {
@@ -104,7 +127,11 @@ for (const [k, files] of Object.entries(build)) {
   const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
   if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
-  rows.push({ page: k, kb, limit })
+  const ownLimit = SHOP_OWN[k]
+  const ownKb = all.filter((f) => f.endsWith('.js') && !rootMain.has(f)).reduce((a, f) => a + gz(f), 0) / 1024
+  rows.push({ page: k, kb, limit, ...(ownLimit ? { own: { kb: ownKb, limit: ownLimit } } : {}) })
+  if (process.env.SHOW_BUDGETS && ownLimit) console.log(`  ${k}: own files ${ownKb.toFixed(2)} kB JS (ceiling ${ownLimit})`)
+  if (ownLimit && ownKb > ownLimit) failures.push(`${k}  ships ${ownKb.toFixed(2)} kB of its own script gzipped (the framework and runtime aside; ceiling ${ownLimit} kB) — the shop's own code only comes down: split what the first paint does not need`)
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }
 

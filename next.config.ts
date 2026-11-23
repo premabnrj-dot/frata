@@ -61,6 +61,14 @@ const config: NextConfig = {
   // its own copy beside the layouts' (speed review 2026-11-16: about 1.3 kB twice on checkout and the product page, the
   // counter 0.5 kB twice on the product page). check:storefront-build holds the pages' weight.
   webpack(config, { dev, isServer }) {
+    // A lazy chunk's file name carries 8 hex characters of its content hash, not Next's 16 (page weight 2026-11-23, the
+    // owner's option A): webpack's runtime, which every page ships, lists each lazy chunk's hash, and 8 characters fewer
+    // each is 0.22 kB gzipped off every page. Nothing reads the length (no service worker; the CSP uses a nonce; the
+    // checks and e2e match whole file names). Collision exposure: a new version of one chunk would need the same 32-bit
+    // hash as its old one to be served stale from a browser's cache, about 1 in 4.3 billion per changed chunk.
+    if (!dev && !isServer && config.output && config.output.chunkFilename === 'static/chunks/[name].[contenthash].js') {
+      config.output.chunkFilename = 'static/chunks/[name].[contenthash:8].js'
+    }
     const split = config.optimization?.splitChunks
     if (!dev && !isServer && split && split.cacheGroups) {
       split.cacheGroups.shopShared = {

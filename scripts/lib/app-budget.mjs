@@ -103,9 +103,12 @@ export function appShellProblems(build) {
   return without.length ? [`${without.length} Console page(s) load no app-shell-*.js, e.g. ${without[0]}: next.config's appShell group matched nothing (were the entries renamed?), so the shell is loaded twice`] : []
 }
 
-/** The `n` pages with the least room under their limits, least first, as one line for the success message.
- * @param {{ page: string, kb: number, limit: number }[]} rows */
+/** The `n` pages with the least room under their limits, least first, as one line for the success message. A shop page
+ * with an own-files ceiling (`own`, check-storefront-build's SHOP_OWN) shows both numbers and counts its smaller room.
+ * @param {{ page: string, kb: number, limit: number, own?: { kb: number, limit: number } }[]} rows */
 export function closest(rows, n = 3) {
-  return [...rows].sort((a, b) => (a.limit - a.kb) - (b.limit - b.kb)).slice(0, n)
-    .map((r) => `${r.page} ${r.kb.toFixed(1)}/${r.limit} kB (${(r.limit - r.kb).toFixed(1)} kB room)`).join('; ')
+  const room = (r) => Math.min(r.limit - r.kb, r.own ? r.own.limit - r.own.kb : Infinity)
+  return [...rows].sort((a, b) => room(a) - room(b)).slice(0, n)
+    .map((r) => `${r.page} ${r.kb.toFixed(1)}/${r.limit} kB (${(r.limit - r.kb).toFixed(1)} kB room)` +
+      (r.own ? `, own files ${r.own.kb.toFixed(2)}/${r.own.limit} kB (${(r.own.limit - r.own.kb).toFixed(2)} kB room)` : '')).join('; ')
 }
