@@ -1,12 +1,10 @@
 'use client'
 
 import { useId, useState } from 'react'
-import { FieldMessage } from '@/components/ui/action-form'
-import { DateField } from '@/components/ui/date-field'
 import { FIELD } from '@/components/ui/field'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
-import { UnitField } from '@/components/ui/unit-field'
+import { Day, Money as SharedMoney, Row } from '../../_components/field-parts'
 import { CADENCE_WORDS, CATEGORY_WORDS, COST_CADENCES, COST_CATEGORIES, type CostCategory, type CostCurrency } from '@/domains/admin/costs'
 import type { CostFacts, PaidTarget } from './forms'
 
@@ -16,24 +14,11 @@ import type { CostFacts, PaidTarget } from './forms'
 // stay out of the page's first-load script (Admin's 150 kB budget).
 // =============================================================================
 
-const SYMBOL: Record<CostCurrency, string> = { INR: 'INR', USD: 'USD' } // as drawn: the currency in words
-// The mistake sits beside the label, never inside it: a field's name stays "Name", not "Name Add a name.".
-const Row = ({ label, name, children }: { label: string; name: string; children: React.ReactNode }) => (
-  <div className="flex min-w-0 flex-col gap-1 text-sm"><label className="flex min-w-0 flex-col gap-1"><span className="font-medium">{label}</span>{children}</label><FieldMessage name={name} /></div>
-)
-const categoryOptions = COST_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_WORDS[c]}</option>)
-
-function Day({ label, name, value, today, max }: { label: string; name: string; value: string; today: string; max?: string }) {
-  const [day, setDay] = useState(value)
-  return (
-    <div className="flex min-w-0 flex-col gap-1 text-sm"><span aria-hidden="true" className="font-medium">{label}</span>
-      <input type="hidden" name={name} value={day} /><DateField label={label} value={day} onChange={setDay} today={today} {...(max ? { max } : {})} /><FieldMessage name={name} /></div>
-  )
-}
-
+/** A cost's money field: the currency in words (as drawn) over the shared field. */
 function Money({ name, label, currency, defaultValue, autoFocus, placeholder }: { name: string; label: string; currency: CostCurrency; defaultValue?: string; autoFocus?: boolean; placeholder?: string }) {
-  return <Row label={label} name={name}><UnitField unit={SYMBOL[currency]} name={name} inputMode="decimal" autoComplete="off" defaultValue={defaultValue} placeholder={placeholder} data-autofocus={autoFocus ? '' : undefined} /></Row>
+  return <SharedMoney name={name} label={label} unit={currency} {...(defaultValue !== undefined ? { defaultValue } : {})} {...(autoFocus ? { autoFocus } : {})} {...(placeholder ? { placeholder } : {})} />
 }
+const categoryOptions = COST_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_WORDS[c]}</option>)
 
 function Varies({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   const id = useId()

@@ -83,6 +83,8 @@ export const frrataInvoices = pgTable('frrata_invoices', {
   unique('frrata_invoices_tenant_id_key').on(t.tenantId, t.id),
   uniqueIndex('frrata_invoices_number').on(t.number),
   index('frrata_invoices_period').on(t.periodStart),
+  // Admin › Cashflow (speed review): the few test invoices, so "not a test invoice" is an anti-join on a tiny index.
+  index('frrata_invoices_test').on(t.tenantId, t.id).where(sql`${t.testMode}`),
   check('frrata_invoices_issued', sql`${t.number} is null or ${t.issuedAt} is not null`),
   check('frrata_invoices_money', sql`${t.taxable} >= 0 and ${t.cgst} >= 0 and ${t.sgst} >= 0 and ${t.igst} >= 0 and (${t.total} = ${t.taxable} + ${t.cgst} + ${t.sgst} + ${t.igst} or ${t.rolled})`),
   check('frrata_invoices_period_order', sql`${t.periodEnd} > ${t.periodStart}`),
@@ -203,6 +205,9 @@ export const frrataPayments = pgTable('frrata_payments', {
   check('frrata_payments_refund_whole', sql`(${t.refundAmount} is null) = (${t.refundUtr} is null) and (${t.refundUtr} is null) = (${t.refundedAt} is null) and (${t.refundedAt} is null) = (${t.refundedBy} is null)`),
   uniqueIndex('frrata_payments_refund_utr').on(sql`upper(btrim(${t.refundUtr}))`).where(sql`${t.refundUtr} is not null`),
   index('frrata_payments_to_refund').on(t.createdAt).where(sql`${t.overPaid} > 0 and ${t.refundedAt} is null`),
+  // Admin › Cashflow (plan task 3, speed review): money in by month is an index range, not a scan of every payment.
+  index('frrata_payments_captured').on(t.capturedAt).where(sql`${t.capturedAt} is not null`),
+  index('frrata_payments_refunded').on(t.refundedAt).where(sql`${t.refundedAt} is not null`),
 ])
 
 /** Frrata's credit note to a shop (B2): a waiver or correction against an issued invoice, its own series; final. */

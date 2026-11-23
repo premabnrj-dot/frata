@@ -6,7 +6,7 @@ import { Button, button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { Tag } from '@/components/ui/badge'
 import { FIELD } from '@/components/ui/field'
-import { ACTIVITY_KIND_KEYS, ACTIVITY_KINDS, actionWords } from '@/domains/admin/activity-words'
+import { ACTIVITY_KIND_KEYS, ACTIVITY_KINDS, actionWords, visibleKindKeys } from '@/domains/admin/activity-words'
 import { activityPeople, listActivity } from '@/lib/admin/activity'
 import { merchantName } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
@@ -49,7 +49,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
         <label className="flex flex-col gap-1"><span className="text-muted-foreground">Person</span>
           <select name="who" defaultValue={q.who ?? ''} className={FIELD}><option value="">Everyone</option>{people.map((p) => <option key={p.userId} value={p.userId}>{p.email}</option>)}</select></label>
         <label className="flex flex-col gap-1"><span className="text-muted-foreground">Kind</span>
-          <select name="kind" defaultValue={q.kind ?? ''} className={FIELD}><option value="">Everything</option>{ACTIVITY_KIND_KEYS.filter((k) => isMasterAdmin(staff.role) || k !== 'billing').map((k) => <option key={k} value={k}>{ACTIVITY_KINDS[k].label}</option>)}</select></label>
+          <select name="kind" defaultValue={q.kind ?? ''} className={FIELD}><option value="">Everything</option>{visibleKindKeys(isMasterAdmin(staff.role)).map((k) => <option key={k} value={k}>{ACTIVITY_KINDS[k].label}</option>)}</select></label>
         <Button type="submit" variant="secondary">Show</Button>
         {filtered && <Link href="/admin/activity" className="inline-flex h-9 items-center text-sm underline-offset-2 hover:underline">Clear filters</Link>}
       </form>

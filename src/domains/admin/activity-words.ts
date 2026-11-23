@@ -10,6 +10,9 @@ export const ACTIVITY_KINDS = {
   address: { label: 'Addresses', words: ['address', 'name', 'domain'] },
   partner: { label: 'Partners', words: ['partner'] },
   billing: { label: 'Billing', words: ['billing'] },
+  costs: { label: 'Costs', words: ['costs'] },
+  rate: { label: 'Dollar rate', words: ['credits'] },
+  cash: { label: 'Cashflow', words: ['cash'] },
   app: { label: 'Apps', words: ['module', 'addon'] },
   theme: { label: 'Themes', words: ['theme', 'look'] },
   support: { label: 'Support visits', words: ['support'] },
@@ -21,7 +24,11 @@ export type ActivityKind = keyof typeof ACTIVITY_KINDS
 export const ACTIVITY_KIND_KEYS = Object.keys(ACTIVITY_KINDS) as ActivityKind[]
 
 /** Rows only a master admin reads (money; the security review on the plan, M3). */
-export const MASTER_ONLY_WORDS: readonly string[] = ['billing']
+export const MASTER_ONLY_WORDS: readonly string[] = ['billing', 'costs', 'credits', 'cash']
+
+/** The kinds a person may filter Activity by: a kind with any master-only word is a master admin's (one rule, the page reads it). */
+export const visibleKindKeys = (master: boolean): ActivityKind[] =>
+  ACTIVITY_KIND_KEYS.filter((k) => master || !ACTIVITY_KINDS[k].words.some((w) => MASTER_ONLY_WORDS.includes(w)))
 
 const SAID: Record<string, string> = {
   'plan.change': 'changed the plan',
@@ -41,6 +48,19 @@ const SAID: Record<string, string> = {
   'billing.credit_note': 'issued a credit note',
   'billing.drafts.run': 'ran drafts',
   'billing.collect.run': 'ran collection',
+  'costs.item.add': 'added a cost',
+  'costs.item.edit': 'edited a cost',
+  'costs.item.end': 'ended a cost',
+  'costs.pay': 'marked a cost paid',
+  'costs.unpay': 'removed a payment',
+  'credits.rate.set': 'set the dollar rate',
+  'cash.balance.set': 'recorded a balance',
+  'cash.balance.undo': 'removed a balance',
+  'cash.entry.add': 'added a cash entry',
+  'cash.entry.edit': 'edited a cash entry',
+  'cash.entry.delete': 'removed a cash entry',
+  'cash.account.add': 'added a cash account',
+  'cash.settings.set': 'changed the minimum cash or the main account',
   'theme.stage': 'added a pilot store',
   'theme.unstage': 'removed a pilot store',
   'theme.release': 'released a theme version',

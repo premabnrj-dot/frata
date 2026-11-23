@@ -290,3 +290,27 @@ export async function dueCostItems(staff: StaffOk, today: string): Promise<Today
     }
   })
 }
+
+// ── Admin › Cashflow reads Costs only through these exports (check:tenant § 10: no other file names the cost tables) ────────────────
+
+/** What was paid between two days (`from` inclusive, `to` exclusive), in paise, by month or as one total (key ''). */
+export async function costOut(staff: StaffOk, from: string, to: string, by: 'month' | 'total'): Promise<Record<string, number>> {
+  adminOnly(staff)
+  const where = and(gte(costPayments.paidOn, from), sql`${costPayments.paidOn} < ${to}::date`)
+  if (by === 'total') {
+    const [r] = await adminDb().select({ n: sql<string>`coalesce(sum(${costPayments.inrPaise}), 0)::text` }).from(costPayments).where(where)
+    return { '': Number(r?.n ?? 0) }
+  }
+  const key = sql<string>`to_char(${costPayments.paidOn}, 'YYYY-MM')`
+  const rows = await adminDb().select({ k: key, n: sql<string>`coalesce(sum(${costPayments.inrPaise}), 0)::text` }).from(costPayments).where(where).groupBy(key)
+  return Object.fromEntries(rows.map((r) => [r.k, Number(r.n)]))
+}
+
+/** Payments with the cost's name, for a month's Movements: newest first, capped, one row past the cap says there is more. */
+export async function costPaymentsBetween(staff: StaffOk, from: string, to: string, cap: number): Promise<{ rows: { id: string; itemId: string; name: string; category: string; paidOn: string; inrPaise: number }[]; more: boolean }> {
+  adminOnly(staff)
+  const rows = await adminDb().select({ id: costPayments.id, itemId: costPayments.itemId, name: costItems.name, category: costItems.category, paidOn: costPayments.paidOn, inrPaise: costPayments.inrPaise })
+    .from(costPayments).innerJoin(costItems, eq(costItems.id, costPayments.itemId))
+    .where(and(gte(costPayments.paidOn, from), sql`${costPayments.paidOn} < ${to}::date`)).orderBy(desc(costPayments.paidOn), desc(costPayments.id)).limit(cap + 1)
+  return { rows: rows.slice(0, cap), more: rows.length > cap }
+}

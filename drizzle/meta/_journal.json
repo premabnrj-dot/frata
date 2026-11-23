@@ -1226,6 +1226,13 @@
       "when": 1795457936176,
       "tag": "0174_people_access",
       "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1795460873899,
+      "tag": "0175_admin_cash",
+      "breakpoints": true
     }
   ]
 }
