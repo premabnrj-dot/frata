@@ -165,6 +165,8 @@ export default {
       await pia.context().close()
     } finally {
       await db`delete from partner_assignments where partner_member_id in (select id from partner_members where user_id = ${L.id})`
+      // Every store's seat for the Lead (80-partner-team, run before, gives the same Lead other stores), then Kesar's.
+      await db`delete from members where partner_member_id in (select id from partner_members where user_id = ${L.id})`
       await db`delete from members where user_id = ${L.id} and tenant_id = ${KESAR}`
       await db`delete from partner_members where user_id = ${L.id}`
       await clean()
