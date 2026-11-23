@@ -191,4 +191,14 @@ describe.skipIf(!host)('Admin › Costs', () => {
     expect(items.every((i) => i.kind === 'cost_due' && i.action === 'Mark paid')).toBe(true)
     await expect(costs.dueCostItems(support, TODAY)).rejects.toThrow('ADMIN_ONLY')
   })
+
+  it('support staff read none of the cost rows in Activity; a master admin reads them', async () => {
+    const staff = master()
+    await costs.addCost(staff, recurring('Quiet'), TODAY)
+    const activity = await import('../activity')
+    const seen = (await activity.listActivity(support)).rows.filter((r) => r.action.startsWith('costs.') || r.action.startsWith('credits.'))
+    expect(seen).toEqual([])
+    const mine = (await activity.listActivity(staff)).rows.filter((r) => r.action.startsWith('costs.'))
+    expect(mine.length).toBeGreaterThan(0)
+  })
 })
