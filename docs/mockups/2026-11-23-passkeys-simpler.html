@@ -1,0 +1,462 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passkeys, simpler</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a reference page of screens, grouped by journey (sign in · first time · every day · safety). Sign-in screens
+   are a brand surface (ink header, woven edge, ink buttons with the rani thread); workspace screens (Team, Passkeys,
+   the hand-over check) wear the console's Neel. Research: docs/research/2026-11-15-partner-login.md. */
+:root {
+  --paper:#FAFAF9; --card:#FFFFFF; --ink:#1C1917; --sub:#5F5A55; --line:#E3E1DD; --field:#8C857F; --muted:#F2F1EF;
+  --rani:#D61F69; --haldi:#E8A317; --haldi-soft:#FBEFD2; --neel:#3A44C2; --neel-soft:#EEF0FD; --neel-text:#2F37A3;
+  --ok:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A; --bad:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B;
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --display:'Bricolage Grotesque','Inter',sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper:#141312; --card:#1C1A18; --ink:#F3F1EE; --sub:#A9A29B; --line:#38342F; --field:#8A837C; --muted:#262320;
+  --haldi-soft:#3A2E14; --neel:#7C86EE; --neel-soft:#1C1F3D; --neel-text:#A3ABF5;
+  --ok:#12291C; --ok-fg:#7FD3A6; --warn:#33270B; --warn-fg:#F2C14E; --bad:#3A1617; --bad-fg:#F59A9C; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --paper:#141312; --card:#1C1A18; --ink:#F3F1EE; --sub:#A9A29B; --line:#38342F; --field:#8A837C; --muted:#262320;
+  --haldi-soft:#3A2E14; --neel:#7C86EE; --neel-soft:#1C1F3D; --neel-text:#A3ABF5;
+  --ok:#12291C; --ok-fg:#7FD3A6; --warn:#33270B; --warn-fg:#F2C14E; --bad:#3A1617; --bad-fg:#F59A9C; color-scheme:dark }
+* { box-sizing:border-box }
+body { margin:0; background:var(--paper); color:var(--ink); font:400 14px/20px var(--font);
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+button { font:inherit; color:inherit }
+:focus-visible { outline:2px solid var(--neel); outline-offset:2px }
+.doc { max-width:1320px; margin:0 auto }
+.doc-top { padding:24px 0 6px }
+.doc-top h1 { font:600 26px/32px var(--font) }
+.doc-top p { color:var(--sub); margin:6px 0 0 }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; color:var(--ink); text-decoration:none; background:var(--card) }
+.part { margin-top:40px; scroll-margin-top:16px }
+.part > h2 { font:600 18px/24px var(--font) }
+.part > .cap { color:var(--sub); font-size:13px; margin:4px 0 14px }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:22px; align-items:start }
+.lab { font-size:12px; color:var(--sub); margin:0 0 8px; display:flex; gap:8px; align-items:center }
+.lab b { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--ink); color:var(--paper); font-size:11px }
+
+/* Brand surface frame */
+.bs { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--paper); box-shadow:var(--e1); min-height:470px; display:flex; flex-direction:column }
+.stage { background:#171615; color:#FAFAF9; padding:14px 16px; display:flex; align-items:center; justify-content:space-between }
+.mark { font:600 18px/1 var(--display); letter-spacing:-.01em; display:flex; align-items:center; gap:8px }
+.mark i { width:22px; height:22px; border-radius:6px; background:var(--rani); display:grid; place-items:center; font-style:normal; color:#fff; font-size:13px }
+.ptag { font-size:10.5px; font-weight:600; letter-spacing:.08em; border:1px solid rgba(250,250,249,.35); border-radius:999px; padding:2px 8px }
+.selv { height:6px; background:repeating-linear-gradient(90deg, var(--haldi) 0 6px, transparent 6px 10px); opacity:.85 }
+.body { padding:22px 20px 20px; display:grid; gap:14px; flex:1; align-content:start }
+.body h3 { font:600 22px/28px var(--display); letter-spacing:-.01em }
+.sub { color:var(--sub); font-size:13.5px }
+.field { display:grid; gap:6px }
+.field label { font-size:13px; font-weight:500 }
+.input { min-height:44px; border:1px solid var(--field); border-radius:8px; background:var(--card); padding:0 12px; display:flex; align-items:center; gap:8px; font-size:15px }
+.input.locked { background:var(--muted); color:var(--sub) }
+.input.code { font:500 22px/1 var(--mono); letter-spacing:.32em; justify-content:center }
+.btn { position:relative; display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 16px; border-radius:8px; border:1px solid var(--line); background:var(--card); font-weight:500; font-size:15px; cursor:pointer }
+.btn.primary { background:var(--ink); color:var(--paper); border-color:var(--ink) }
+.btn.primary::after { content:""; position:absolute; left:33%; right:33%; bottom:0; height:2px; border-radius:2px; background:var(--rani) }
+.btn.neel { background:var(--neel); border-color:var(--neel); color:#fff }
+.btn.sm { min-height:32px; font-size:13px; padding:0 12px }
+.lnk { background:none; border:0; padding:0; color:var(--ink); text-decoration:underline; text-underline-offset:3px; font-size:13.5px; cursor:pointer; min-height:24px; justify-self:start }
+.row { display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+.row .sp { flex:1 }
+.muted { color:var(--sub); font-size:13px }
+.hint { display:flex; gap:10px; align-items:flex-start; background:var(--muted); border-radius:10px; padding:10px 12px; font-size:13px }
+.hint svg { flex:none; width:18px; height:18px; color:var(--sub) }
+.warnbox { background:var(--warn); color:var(--warn-fg); border-radius:10px; padding:10px 12px; font-size:13px; font-weight:500 }
+.steps { display:flex; gap:6px; align-items:center; font-size:12px; color:var(--sub) }
+.steps span { display:inline-flex; align-items:center; gap:5px }
+.steps i { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--field); display:grid; place-items:center; font-style:normal; font-size:10.5px; font-weight:600 }
+.steps .done i { background:var(--ok-dot); border-color:var(--ok-dot); color:#fff }
+.steps .now { color:var(--ink); font-weight:500 } .steps .now i { border-color:var(--ink) }
+.steps span + span::before { content:""; width:14px; height:1px; background:var(--field); margin-right:4px }
+.bigcode { font:600 34px/1 var(--mono); letter-spacing:.14em; text-align:center; padding:14px 0; border:1px dashed var(--field); border-radius:12px; background:var(--card) }
+.ok-line { display:flex; gap:8px; align-items:center; color:var(--ok-fg); font-weight:500; font-size:14px }
+.ok-line::before { content:""; width:18px; height:18px; border-radius:50%; background:var(--ok-dot); box-shadow:inset 0 0 0 5px var(--ok-dot) }
+.key { width:52px; height:52px; border-radius:14px; background:var(--haldi-soft); display:grid; place-items:center }
+.key svg { width:28px; height:28px }
+/* the autofill drop-down and the system prompt */
+.af { border:1px solid var(--line); border-radius:10px; background:var(--card); box-shadow:var(--e2); overflow:hidden; margin-top:-8px }
+.af div { display:flex; gap:10px; align-items:center; padding:10px 12px; font-size:13.5px }
+.af div + div { border-top:1px solid var(--line) }
+.af small { color:var(--sub); display:block; font-size:12px }
+.sys { border-radius:14px; background:#2B2A28; color:#F3F1EE; padding:16px; display:grid; gap:10px; box-shadow:var(--e3) }
+.sys .t { font-weight:600 } .sys .s { color:#BDB8B2; font-size:12.5px }
+.sys .fp { width:46px; height:46px; border-radius:50%; border:2px solid #8FB4FF; margin:4px auto; display:grid; place-items:center; color:#8FB4FF }
+.sys .alt { color:#8FB4FF; font-size:13px; text-align:center }
+.email { border:1px solid var(--line); border-radius:12px; background:var(--card); overflow:hidden; font-size:13px }
+.email .hd { padding:10px 12px; border-bottom:1px solid var(--line); background:var(--muted) }
+.email .hd b { display:block } .email .bd { padding:14px 12px; display:grid; gap:10px }
+/* Workspace (Neel) frames */
+.ws { border:1px solid var(--line); border-radius:14px; background:var(--card); box-shadow:var(--e1); padding:16px; display:grid; gap:12px }
+.ws h4 { margin:0; font-size:16px; font-weight:600 }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor }
+.chip.ok { background:var(--ok); color:var(--ok-fg) } .chip.warn { background:var(--warn); color:var(--warn-fg) } .chip.neu { background:var(--muted); color:var(--sub) } .chip.info { background:var(--neel-soft); color:var(--neel-text) }
+.person { display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--line) }
+.person:first-of-type { border-top:0 }
+.av { width:36px; height:36px; border-radius:50%; background:var(--neel-soft); color:var(--neel-text); display:grid; place-items:center; font-weight:600; font-size:13px }
+.person b { font-weight:500; display:block } .person .muted { font-size:12.5px }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px } .kv span { color:var(--sub) }
+.q { border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:grid; gap:8px }
+.seg { display:inline-flex; background:var(--muted); border-radius:8px; padding:2px }
+.seg button { border:0; background:none; padding:5px 12px; border-radius:6px; font-size:13px; min-height:30px; cursor:pointer }
+.seg button[aria-pressed="true"] { background:var(--card); box-shadow:var(--e1) }
+.dialog { border:1px solid var(--line); border-radius:16px; background:var(--card); box-shadow:var(--e3); padding:20px; display:grid; gap:12px; max-width:380px }
+.dialog h4 { font-size:17px }
+.pk { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; align-items:center; padding:10px 0; border-top:1px solid var(--line) }
+.pk:first-of-type { border-top:0 }
+@media (max-width:420px) { .grid { grid-template-columns:1fr } }
+
+/* Passkeys, simpler (2026-11-23): this page adds a width switch, the proposal's tables and cards, and the "today"
+   frames of the audit. Every screen reuses the partner sign-in mockup's classes (2026-11-15), so a built screen can
+   be checked against both. */
+.ctl { position:sticky; top:0; z-index:5; background:var(--paper); border-bottom:1px solid var(--line); padding:8px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+.ctl .muted { font-size:12px }
+.frames[data-w="desk"] .grid { grid-template-columns:1fr }
+.frames[data-w="desk"] .bs .body { width:100%; max-width:400px; margin:0 auto; padding-top:40px }
+.frames[data-w="desk"] .bs { min-height:420px }
+.frames[data-w="desk"] .ws { max-width:980px }
+.frames[data-w="phone"] .grid { grid-template-columns:repeat(auto-fill, minmax(min(100%, 330px), 390px)) }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px }
+.card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:6px; align-content:start; background:var(--card); min-width:0 }
+.card h3 { font:600 15px/22px var(--font) }
+.card p { margin:0; color:var(--sub); font-size:13.5px }
+.card .src { font-size:12px; color:var(--sub) }
+.take { color:var(--ok-fg); font-weight:500 } .skip { color:var(--bad-fg); font-weight:500 }
+.tw { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--card) }
+table { border-collapse:collapse; width:100%; min-width:640px; font-size:13.5px }
+th, td { text-align:left; vertical-align:top; padding:9px 12px; border-bottom:1px solid var(--line) }
+th { background:var(--muted); font-weight:500; font-size:12.5px; color:var(--sub) }
+tr:last-child td { border-bottom:0 }
+td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
+.gone { text-decoration:line-through; color:var(--sub) }
+.today { outline:2px dashed var(--bad-dot); outline-offset:3px }
+.tag { display:inline-flex; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--sub); white-space:nowrap }
+.banner { display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-radius:10px; padding:10px 12px; font-size:13px; background:var(--neel-soft); color:var(--neel-text) }
+.banner.warn { background:var(--warn); color:var(--warn-fg) }
+.banner b { font-weight:500 }
+.banner .sp { flex:1 }
+.toast { background:#171615; color:#FAFAF9; border-radius:10px; padding:9px 12px; display:flex; gap:10px; align-items:center; font-size:13px; box-shadow:var(--e3) }
+.toast::before { content:""; width:16px; height:16px; border-radius:50%; background:var(--ok-dot); flex:none }
+.wsbar { display:flex; gap:10px; align-items:center; border-bottom:1px solid var(--line); padding-bottom:10px; font-size:13px; color:var(--sub); flex-wrap:wrap }
+.wsbar b { color:var(--ink); font-weight:600 }
+.pklist { display:grid; border:1px solid var(--line); border-radius:10px; padding:2px 12px; background:var(--card) }
+.pklist .pk small { color:var(--sub); font-size:12px; display:block }
+.calls { display:grid; gap:10px }
+.call { border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:var(--card); display:grid; gap:4px }
+.call h3 { font:600 14.5px/20px var(--font) }
+.call p { margin:0; color:var(--sub); font-size:13.5px }
+.call .rec { color:var(--ink); font-weight:500 }
+.vs { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; align-items:start }
+.vs > div > .lab { margin-bottom:8px }
+.removed { display:grid; gap:6px; padding:0; margin:0; list-style:none }
+.removed li { display:flex; gap:8px; align-items:baseline; font-size:13.5px }
+.removed li::before { content:""; width:10px; height:2px; background:var(--bad-dot); flex:none; transform:translateY(-3px) }
+.panel { border:1px solid var(--line); border-radius:12px; padding:20px; display:grid; gap:10px; justify-items:start; background:var(--card) }
+.panel h4 { margin:0; font:600 16px/24px var(--font) }
+.panel ol { margin:0; padding-left:18px; display:grid; gap:4px; color:var(--sub) }
+@media (max-width:640px) { .frames[data-w="desk"] .grid { grid-template-columns:1fr } }
+.wsbar + .person { border-top:0 }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></symbol>
+  <symbol id="fp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 11v3a6 6 0 0 1-1.5 4M8.5 9.5A4 4 0 0 1 16 11v2M6 8a7 7 0 0 1 12 3M9 14c0 2-1 4-2.5 5M15 15.5c-.2 1.6-.8 3-1.6 4"/></symbol>
+  <symbol id="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
+</svg>
+<div class="doc">
+  <header class="doc-top">
+    <h1>Passkeys, simpler</h1>
+    <p>One check for a person, no phone calls, a clear way in on a new device. Draft for the owner, 23 Nov 2026.</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#short">In short</a><a href="#audit">Today</a><a href="#take">What to take</a><a href="#daily">Every day</a>
+      <a href="#first">First time</a><a href="#lost">Lost passkey</a><a href="#approve">Approvers</a><a href="#studio">Studio</a>
+      <a href="#count">Before and after</a><a href="#calls">Your calls</a>
+    </nav>
+  </header>
+
+  <!-- ═══ IN SHORT ═══ -->
+  <section class="part" id="short">
+    <h2>In short</h2>
+    <div class="cards" style="margin-top:12px">
+      <div class="card"><h3>What changes</h3><p>No phone calls. Your first passkey saves at your first sign-in. A staff passkey works in the partner workspace too.</p></div>
+      <div class="card"><h3>Why now</h3><p>Nobody is set up to call. Partners couldn't get in on their first day. You couldn't open Studio.</p></div>
+      <div class="card"><h3>What it costs</h3><p>No new service. Today's screens get fewer. The second person is gone from a first passkey.</p></div>
+      <div class="card"><h3>What I need</h3><p>A yes or no on the seven calls at the end.</p></div>
+    </div>
+  </section>
+
+  <!-- ═══ AUDIT ═══ -->
+  <section class="part" id="audit">
+    <h2>Today</h2>
+    <p class="cap">Drawn from the code on 23 Nov. The red outline marks what goes.</p>
+    <div class="vs">
+      <div><p class="lab"><b>A</b>A partner owner's first passkey</p>
+        <div class="bs today" style="min-height:0"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body"><h3>Frrata approves your first passkey</h3><p class="sub">We call you on +91 98450 •••21.<br>Read us this code.</p><button class="btn primary">Request a call</button></div></div></div>
+      <div><p class="lab"><b>B</b>A Lead's first passkey</p>
+        <div class="bs today" style="min-height:0"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body"><div class="steps"><span class="done"><i></i>Join</span><span class="now"><i>2</i>Approval</span><span><i>3</i>Passkey</span></div>
+            <h3>Ask Pia to call you</h3><p class="sub">Read Pia this code</p><div class="bigcode">482 913</div></div></div></div>
+      <div><p class="lab"><b>C</b>Frrata Admin › Partners › Passkeys</p>
+        <div class="ws today"><h4>Partner owner’s passkeys</h4><div class="q"><div class="row"><b style="font-weight:500">Asked for a new passkey</b><span class="chip warn">Waiting 24 hours</span></div>
+          <div class="kv"><span>Call</span>+91 98450 12321<span>Device</span>Chrome on Mac<span>Where</span>Bengaluru</div>
+          <div class="field"><label>Code the partner owner reads out</label><div class="input code" style="max-width:180px">——————</div></div><button class="btn sm" style="justify-self:start">Approve passkey</button></div></div></div>
+    </div>
+    <div class="tw" style="margin-top:16px"><table>
+      <thead><tr><th>What a person meets</th><th>Why it gets in the way</th><th>What it protected</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>A phone call for a first passkey (A, B)</td><td>Nobody is set up to call. A person can wait a day.</td><td>A stolen inbox making the first passkey</td><td>Saved at the first sign-in, everyone told (screen 4)</td></tr>
+        <tr><td>Approving your own request (A)</td><td>The database refuses it. With no other admin, nobody could approve you.</td><td>One person approving themself</td><td>Your staff passkey counts here (screen 1)</td></tr>
+        <tr><td>Two passkey kinds for one person</td><td>At /partner the browser offered only the partner one. It was in another Google account.</td><td>A partner-approved passkey opening Frrata Admin</td><td>One way only. A staff passkey counts as partner (screen 1).</td></tr>
+        <tr><td>Two prompts to open Studio</td><td>One sign-in, two fingerprints, two places</td><td>Proving both roles</td><td>One prompt (screen 14)</td></tr>
+        <tr><td>“Not confirmed. Try again” on a browser with no passkey</td><td>It never says where your passkeys are saved</td><td>Nothing</td><td>Where they are, and another device (screen 2)</td></tr>
+        <tr><td>A lost owner passkey waits 24 hours, then a call</td><td>The call never comes</td><td>The wait is the protection</td><td>Allow now, or save it yourself after 24 hours (screens 7–9)</td></tr>
+        <tr><td>“First passkey” shown to an owner who has one</td><td>Wrong words until the button is pressed</td><td>Nothing</td><td>One gate, one set of words</td></tr>
+        <tr><td>Passkeys off, set in SQL</td><td>Hid every prompt for weeks. No screen showed it.</td><td>Nothing while on</td><td>Removed (call 6)</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <!-- ═══ WHAT TO TAKE ═══ -->
+  <section class="part" id="take">
+    <h2>What to take</h2>
+    <p class="cap">Help pages read 23 Nov. Only the Google Workspace page shows a date (10 Nov 2026).</p>
+    <div class="cards">
+      <div class="card"><h3>GitHub</h3><p>Add a passkey after a fresh sign-in. Nobody approves it. Sudo mode lasts two hours.</p><p><span class="take">Take:</span> no human for a first passkey. <span class="skip">Skip:</span> recovery by support review.</p><p class="src">docs.github.com · no page date</p></div>
+      <div class="card"><h3>Shopify</h3><p>A verified email is enough to make a passkey. A lost one is removed after an email-code sign-in.</p><p><span class="take">Take:</span> the email proves the person, the device lock does the rest.</p><p class="src">help.shopify.com · no page date</p></div>
+      <div class="card"><h3>Stripe</h3><p>One passkey for each Stripe account. A verification step comes first.</p><p><span class="skip">Skip:</span> a passkey per account. Here it means two for one person.</p><p class="src">support.stripe.com · no page date</p></div>
+      <div class="card"><h3>Google Workspace</h3><p>An admin removes a user's passkey. No waiting period, no call.</p><p><span class="take">Take:</span> the approver acts in one click.</p><p class="src">knowledge.workspace.google.com · 10 Nov 2026</p></div>
+    </div>
+  </section>
+
+  <div class="ctl" role="group" aria-label="Width">
+    <span class="muted">Width</span>
+    <div class="seg"><button type="button" aria-pressed="true" data-w="phone">Phone</button><button type="button" aria-pressed="false" data-w="desk">Desktop</button></div>
+  </div>
+
+  <div class="frames" data-w="phone">
+
+  <!-- ═══ EVERY DAY ═══ -->
+  <section class="part" id="daily">
+    <h2>Every day</h2>
+    <p class="cap">One gate for Frrata Admin and the partner workspace. A staff passkey opens both.</p>
+    <div class="grid">
+      <div><p class="lab"><b>1</b>Confirm it's you</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>Confirm it's you</h3>
+            <div class="sys" role="img" aria-label="The browser's passkey prompt"><div class="t">Use a passkey for frata.vercel.app?</div><div class="s">pia@pixelthread.in · Staff and partner passkeys</div><div class="fp"><svg width="24" height="24"><use href="#fp"/></svg></div><div class="alt">Use a phone or tablet</div></div>
+            <button class="btn primary">Use passkey</button>
+            <button class="lnk">No passkey here?</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>2</b>No passkey on this browser</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>No passkey on this browser</h3>
+            <div class="pklist">
+              <div class="pk"><span>Google Password Manager<small>Saved 16 Nov · Used 18 Nov</small></span><span class="tag">Partner</span></div>
+              <div class="pk"><span>iCloud Keychain<small>Saved 12 Nov · Used 21 Nov</small></span><span class="tag">Staff</span></div>
+            </div>
+            <button class="btn primary">Use another device</button>
+            <button class="lnk">I've lost my passkeys</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>3</b>After another device worked</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <span class="key"><svg><use href="#fp"/></svg></span>
+            <h3>Save a passkey on this device</h3>
+            <p class="sub">Anyone who can unlock this device can sign in.</p>
+            <button class="btn primary">Save passkey</button>
+            <button class="lnk">Not now</button>
+          </div></div></div>
+    </div>
+    <p class="cap" style="margin-top:14px">States of 1: busy (the button's spinner) · cancelled (stays, “No passkey here?” in focus) · signed out (“Sign in again”). Frrata Admin shows the same card in its own frame.</p>
+  </section>
+
+  <!-- ═══ FIRST TIME ═══ -->
+  <section class="part" id="first">
+    <h2>First time</h2>
+    <p class="cap">The invite, the partner approval or being added to staff is the approval. Nobody calls.</p>
+    <div class="grid">
+      <div><p class="lab"><b>4</b>A Lead, after Join</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <div class="steps"><span class="done"><i></i>Join</span><span class="now"><i>2</i>Passkey</span></div>
+            <span class="key"><svg><use href="#fp"/></svg></span>
+            <h3>Save a passkey</h3>
+            <p class="sub">Anyone who can unlock this device can sign in.</p>
+            <button class="btn primary">Save passkey</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>5</b>Saved · their clients open</p>
+        <div class="ws" style="min-height:300px;align-content:start">
+          <div class="wsbar"><b>Pixel &amp; Thread</b><span>Clients</span></div>
+          <div class="person"><span class="av">K</span><span><b>Kesar Studio</b><span class="muted">Building · 2 pages</span></span><span class="chip info">Assigned</span></div>
+          <div class="person"><span class="av">N</span><span><b>Noor Label</b><span class="muted">Live</span></span><span class="chip ok">Live</span></div>
+          <div class="toast" style="margin-top:auto">Passkey saved to Google Password Manager</div>
+        </div></div>
+
+      <div><p class="lab"><b>6</b>More than 7 days after the invite</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>Ask Pia for your passkey</h3>
+            <p class="sub">Your invite is more than 7 days old.</p>
+            <button class="btn primary">Ask Pia</button>
+          </div></div></div>
+    </div>
+    <p class="cap" style="margin-top:14px">A partner owner sees 4 without the steps, after Frrata approves the partner. Staff see it in Frrata Admin after being added. Everyone concerned gets an email (screen 13).</p>
+  </section>
+
+  <!-- ═══ LOST ═══ -->
+  <section class="part" id="lost">
+    <h2>Lost passkey</h2>
+    <p class="cap">From screen 2. Who allows it: Pia for a Lead or Builder, Frrata for a partner owner, another master admin for staff.</p>
+    <div class="grid">
+      <div><p class="lab"><b>7</b>Ask</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>Ask Pia for a new passkey</h3>
+            <button class="btn primary">Ask Pia</button>
+            <button class="lnk">Use my passkey</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>8</b>Waiting</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>Waiting for Pia</h3>
+            <div class="kv"><span>Asked</span>Today, 10:42 am<span>Or save it</span>24 Nov, 10:42 am</div>
+            <button class="lnk">Use my passkey</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>9</b>Allowed, or 24 hours passed</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <span class="chip ok" style="justify-self:start">Allowed by Pia</span>
+            <h3>Save a passkey</h3>
+            <p class="sub">Anyone who can unlock this device can sign in.</p>
+            <button class="btn primary">Save passkey</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>10</b>Stopped</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>Pia stopped this request</h3>
+            <button class="btn primary">Ask Pia again</button>
+          </div></div></div>
+    </div>
+    <p class="cap" style="margin-top:14px">A partner owner reads “Frrata”. Staff read “another master admin” and have no date in 8: only a person allows it. Signing in with a passkey you still have ends the request.</p>
+  </section>
+
+  <!-- ═══ APPROVERS ═══ -->
+  <section class="part" id="approve">
+    <h2>Approvers</h2>
+    <p class="cap">One row and two buttons. No call, no code.</p>
+    <div class="grid">
+      <div><p class="lab"><b>11</b>Partner › Team, Pia's view</p>
+        <div class="ws">
+          <div class="wsbar"><b>Team</b><span>3 people</span></div>
+          <div class="person"><span class="av">AR</span><span><b>Arjun Rao · Lead</b><span class="muted">Chrome on Android · Pune · Today, 10:42 am</span></span><span class="chip warn">Asked for a passkey</span></div>
+          <div class="row"><button class="btn sm neel">Allow now</button><button class="btn sm">Stop it</button></div>
+          <div class="person"><span class="av">MS</span><span><b>Meera Shah · Builder</b><span class="muted">New passkey · Safari on iPhone · Mumbai · Yesterday, 6:10 pm</span></span><button class="btn sm">Delete passkey</button></div>
+        </div></div>
+
+      <div><p class="lab"><b>12</b>Frrata Admin › Partners › Passkeys</p>
+        <div class="ws">
+          <h4>Partner owner’s passkeys</h4>
+          <p class="muted">pia@pixelthread.in · 1 passkey</p>
+          <div class="q"><div class="row"><b style="font-weight:500">Asked for a new passkey</b><span class="chip warn">Waiting</span></div>
+            <div class="kv"><span>Device</span>Chrome on Mac<span>Where</span>Bengaluru<span>Asked</span>Today, 10:42 am<span>Or saves it</span>24 Nov, 10:42 am</div>
+            <div class="row"><button class="btn sm neel">Allow now</button><button class="btn sm">Stop it</button></div></div>
+        </div>
+        <p class="lab" style="margin-top:14px">Frrata Admin › Staff shows the same row for a staff member, with no date.</p></div>
+
+      <div><p class="lab"><b>13</b>The email to everyone concerned</p>
+        <div class="email"><div class="hd"><b>Arjun Rao asked for a new passkey</b><span class="muted">Frrata · to pia@pixelthread.in</span></div>
+          <div class="bd"><span>Chrome on Android, Pune, today at 10:42 am.</span><span>Arjun can save one from 24 Nov, 10:42 am.</span><button class="btn primary">Allow or stop it</button></div></div>
+        <div class="email" style="margin-top:12px"><div class="hd"><b>Arjun Rao saved a passkey</b><span class="muted">Frrata · to pia@pixelthread.in</span></div>
+          <div class="bd"><span>Google Password Manager, Chrome on Android, Pune.</span><button class="btn">Open Team</button></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═══ STUDIO ═══ -->
+  <section class="part" id="studio">
+    <h2>Studio</h2>
+    <p class="cap">Lane D's card 1b, with a staff passkey proving both roles.</p>
+    <div class="vs">
+      <div><p class="lab"><b>14</b>Studio, a check is missing</p>
+        <div class="panel"><h4>Confirm it's you</h4><button class="btn sm neel">Use passkey</button></div></div>
+      <div><p class="lab"><b>14a</b>Lane D's 1b, today's rule</p>
+        <div class="panel today"><h4>Confirm your passkeys</h4><ol><li>Staff passkey: Done</li><li>Partner passkey</li></ol><button class="btn sm neel">Confirm partner passkey</button></div></div>
+      <div><p class="lab"><b>15</b>Partner › Passkeys, for a staff person</p>
+        <div class="ws">
+          <div class="wsbar"><b>Passkeys</b></div>
+          <div class="pk"><span>iCloud Keychain<small class="muted" style="display:block">Saved 12 Nov · Used today</small></span><span class="tag">Staff</span></div>
+          <div class="pk"><span>Google Password Manager<small class="muted" style="display:block">Saved 12 Nov · Used 20 Nov</small></span><span class="tag">Staff</span></div>
+          <div class="pk"><span>Google Password Manager<small class="muted" style="display:block">Saved 16 Nov · Used 18 Nov</small></span><button class="btn sm">Delete</button></div>
+        </div>
+        <p class="lab" style="margin-top:8px">Staff passkeys are deleted in Frrata Admin › Staff.</p></div>
+    </div>
+  </section>
+  </div>
+
+  <!-- ═══ COUNT ═══ -->
+  <section class="part" id="count">
+    <h2>Before and after</h2>
+    <div class="tw" style="margin-top:12px"><table>
+      <thead><tr><th>Journey</th><th>Today</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>A Lead, invite to clients</td><td class="n">8 screens · 6 decisions · a call from Pia</td><td class="n">6 screens · 5 decisions · nobody else</td></tr>
+        <tr><td>Pia, for that Lead</td><td class="n">A call · 4 steps in Team</td><td class="n">Nothing. One email.</td></tr>
+        <tr><td>A partner owner, approved to clients</td><td class="n">7 screens · a call from Frrata</td><td class="n">5 screens · 4 decisions</td></tr>
+        <tr><td>A new laptop, passkey on the phone</td><td class="n">4 screens</td><td class="n">4 screens, and where it is saved</td></tr>
+        <tr><td>Every passkey lost</td><td class="n">Lead: a call · Owner: 24 hours, then a call</td><td class="n">One click by Pia or Frrata, else 24 hours</td></tr>
+        <tr><td>Staff and partner, opening Studio</td><td class="n">2 prompts</td><td class="n">1 prompt</td></tr>
+      </tbody></table></div>
+    <h3 style="margin:18px 0 8px;font-size:15px">Screens that go</h3>
+    <ul class="removed">
+      <li>“Frrata approves your first passkey · Request a call”</li>
+      <li>“Ask Pia to call you · Read Pia this code”</li>
+      <li>“Frrata approves it after 24 hours” with a code to read</li>
+      <li>Team's code box and “Did you start this call yourself?”</li>
+      <li>Frrata Admin › Partners' Call line and code box</li>
+      <li>Frrata Admin › Staff's code box</li>
+      <li>Approval, step 2 of Join</li>
+    </ul>
+  </section>
+
+  <!-- ═══ CALLS ═══ -->
+  <section class="part" id="calls">
+    <h2>Your calls</h2>
+    <div class="calls" style="margin-top:12px">
+      <div class="call"><h3>1 · A staff passkey counts in the partner workspace</h3><p>One way. A partner passkey never opens Frrata Admin.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>2 · First passkey at the first sign-in, nobody approves</h3><p>Within 7 days of the invite, partner approval or staff add. A stolen inbox at that moment is enough. That is the same bar as a store owner today.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>3 · Lost passkey, one click to allow</h3><p>Pia for her team, Frrata for an owner, another master admin for staff.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>4 · Nobody allows it, the person saves it after 24 hours</h3><p>For partner people only. Staff always need another master admin.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>5 · One check covers 12 hours, money asks again after 5 minutes</h3><p>Unchanged.</p><p class="rec">Recommended: keep.</p></div>
+      <div class="call"><h3>6 · Remove the passkeys-off switch</h3><p>Or keep it with a screen, a banner and 24 hours at most.</p><p class="rec">Recommended: remove.</p></div>
+      <div class="call"><h3>7 · Requests waiting today</h3><p>Closed by the build. Each person is emailed to sign in again.</p><p class="rec">Recommended: yes.</p></div>
+    </div>
+    <h3 style="margin:18px 0 8px;font-size:15px">Not built</h3>
+    <ul class="removed">
+      <li>Passkeys for store owners and Managers</li>
+      <li>Signing in with a passkey alone, without the email code</li>
+      <li>Recovery codes</li>
+      <li>One passkey for every role</li>
+    </ul>
+  </section>
+</div>
+<script>
+  document.querySelectorAll('.seg [data-w]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelector('.frames').dataset.w = b.dataset.w
+    document.querySelectorAll('.seg [data-w]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)))
+  }))
+</script>
