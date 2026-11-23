@@ -54,7 +54,8 @@ begin
                     where s.partner_id = o.partner_id and s.ended_at is null
                       and p.paid_at is null and p.failed_at is null and p.closed_at is null and p.refund_due_at is null
                     order by p.created_at desc limit 1),
-    'cancelling', exists (select 1 from public.partner_mandate_cancels m where m.partner_id = o.partner_id and m.cancelled_at is null)));
+    'cancelling', exists (select 1 from public.partner_mandate_cancels m left join public.partner_billing b on b.partner_id = m.partner_id
+                           where m.partner_id = o.partner_id and m.cancelled_at is null and m.token_id is distinct from b.token_id)));
 end $$;
 --> statement-breakpoint
 
@@ -78,7 +79,8 @@ begin
     'mandate', (select jsonb_build_object('method', b.mandate_method, 'max', b.mandate_max, 'live', b.mandate_revoked_at is null)
                 from public.partner_billing b where b.partner_id = o.partner_id and b.token_id is not null),
     -- C1·B: an old mandate still being cancelled ("Old Studio AutoPay · Cancelling", as drawn).
-    'cancelling', exists (select 1 from public.partner_mandate_cancels m where m.partner_id = o.partner_id and m.cancelled_at is null));
+    'cancelling', exists (select 1 from public.partner_mandate_cancels m left join public.partner_billing b on b.partner_id = m.partner_id
+                           where m.partner_id = o.partner_id and m.cancelled_at is null and m.token_id is distinct from b.token_id));
 end $$;
 --> statement-breakpoint
 
@@ -307,6 +309,19 @@ create or replace function app_pc_token_cancel_tried(p_partner uuid, p_token tex
 $$;
 --> statement-breakpoint
 
+-- Attempts that never came back, asked about each hour (security 2nd review, re-check MED): one whose refund is booked
+-- goes last and leaves the list once refunded, or 3 days after its refund was booked, so they never crowd out a lost
+-- webhook or a renewal with no answer. A right payment after a refunded one still reaches the partner through confirm.
+create or replace function app_pc_unsettled(p_older interval, p_limit integer) returns table (id uuid, receipt text, gateway_order_id text, kind text, claimed boolean, created_at timestamptz)
+  language sql stable security definer set search_path = '' as $$
+  select p.id, p.receipt, p.gateway_order_id, p.kind, p.claimed_at is not null, p.created_at from public.partner_credit_purchases p
+   where p.paid_at is null and p.failed_at is null and p.closed_at is null and p.created_at < now() - p_older
+     and (p.kind <> 'seat_renewal' or p.claimed_at is not null)
+     and p.refunded_at is null and (p.refund_due_at is null or p.refund_due_at > now() - interval '3 days')
+   order by (p.refund_due_at is not null), p.created_at limit least(p_limit, 200)
+$$;
+--> statement-breakpoint
+
 -- A token event by its id (tokens are unique: partner_billing_token). A cancelled one also settles its row on the cancel
 -- queue, so "Cancelling" clears even when the gateway answers a second cancel with an error (2nd review L4).
 create or replace function app_pc_token_event(p_token text, p_status text) returns boolean
@@ -333,12 +348,12 @@ revoke all on function app_partner_credits_overview(uuid, uuid, text, boolean), 
   app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text),
   app_pc_claim(uuid), app_pc_apply(text, text, boolean, bigint, text, boolean, text, text), app_pc_close(uuid, text),
   app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
-  app_pc_token_cancel_tried(uuid, text, text), app_pc_cancel_mandate(uuid, text), app_pc_token_event(text, text)
+  app_pc_token_cancel_tried(uuid, text, text), app_pc_cancel_mandate(uuid, text), app_pc_token_event(text, text), app_pc_unsettled(interval, integer)
   from public, anon, authenticated, service_role, frata_builder, frata_app, frata_admin;
 --> statement-breakpoint
 grant execute on function app_partner_credits_overview(uuid, uuid, text, boolean), app_partner_credits_payments(uuid, uuid, text),
   app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text),
   app_pc_claim(uuid), app_pc_apply(text, text, boolean, bigint, text, boolean, text, text), app_pc_close(uuid, text),
   app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
-  app_pc_token_cancel_tried(uuid, text, text), app_pc_token_event(text, text)
+  app_pc_token_cancel_tried(uuid, text, text), app_pc_token_event(text, text), app_pc_unsettled(interval, integer)
   to frata_app;

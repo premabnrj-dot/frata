@@ -4562,6 +4562,25 @@ do $$ declare yp uuid := current_setting('proof.yb89p')::uuid; begin
   if not app_pc_token_event('token_proof89q0005', 'cancelled') then raise exception 'FAIL: B2 · a cancelled token event'; end if;
 end $$;
 reset role;
+-- 60 booked refunds ahead of one real straggler: the straggler is still asked about first (re-check MED)
+insert into partner_credit_purchases (partner_id, kind, credits, taxable, cgst, sgst, igst, total, test, invoice_test, buyer_name, buyer_state,
+  buyer_address, seller_name, seller_address, sac, prefix, fy, receipt, gateway_order_id, refund_due_at, refund_payment_id, refund_amount, created_at)
+select current_setting('proof.yb89p')::uuid, 'pack', 100, 199900, 0, 0, 35982, 235882, true, true, 'Yarn', '29', 'Bengaluru', 'Frrata', 'Jaipur', '998315',
+  'FRR/', '26-27', 'pc_refundpile' || g, 'order_proofpile' || lpad(g::text, 4, '0'), now(), 'pay_proofpile' || lpad(g::text, 4, '0'), 235882, now() - interval '1 day'
+from generate_series(1, 60) g;
+insert into partner_credit_purchases (partner_id, kind, credits, taxable, cgst, sgst, igst, total, test, invoice_test, buyer_name, buyer_state,
+  buyer_address, seller_name, seller_address, sac, prefix, fy, receipt, gateway_order_id, created_at)
+values (current_setting('proof.yb89p')::uuid, 'pack', 100, 199900, 0, 0, 35982, 235882, true, true, 'Yarn', '29', 'Bengaluru', 'Frrata', 'Jaipur', '998315',
+  'FRR/', '26-27', 'pc_straggler1', 'order_proofstraggle1', now() - interval '3 hours');
+set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_pc_unsettled(interval '2 hours', 50) x where x.gateway_order_id = 'order_proofstraggle1') then raise exception 'FAIL: B2 · booked refunds crowd out a straggler'; end if;
+end $$;
+reset role;
+delete from partner_credit_purchases where receipt like 'pc_refundpile%' or receipt = 'pc_straggler1';
+set local role frata_app;
+do $$ begin perform 1; end $$;
+reset role;
 insert into partner_mandate_cancels (partner_id, token_id) values (current_setting('proof.yb89p')::uuid, 'token_proof89q0001');
 do $$ begin
   if (select plan from partner_seats where partner_id = current_setting('proof.yb89p')::uuid and ended_at is null) <> 'studio' then raise exception 'FAIL: B2 · Y moved by a refunded start'; end if;
