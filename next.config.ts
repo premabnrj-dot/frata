@@ -3,6 +3,9 @@ import { ADMIN_PASSKEY_HEADERS, FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, pla
 import { apiRedirects, apiRewrites, shopRewrites } from './src/domains/tenancy/host'
 import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
+/** The client entries that render AppShell (their layouts import it): webpack names an entry by its app path. */
+const APP_SHELL_ENTRY = /^app\/\((?:console|admin|lookeditor)\)\/|^app\/\(partner\)\/partner\/\(workspace\)\//
+
 const config: NextConfig = {
   reactStrictMode: true,
   // Documents (D0): React-PDF runs on the server only, as itself; its fonts are files read at render, so they are
@@ -63,6 +66,16 @@ const config: NextConfig = {
       split.cacheGroups.shopShared = {
         name: 'shop-shared', chunks: 'all', enforce: true, priority: 20,
         test: /[\\/]src[\\/](components[\\/]storefront[\\/](bag-store|bag-words|close-mark|landing|chunk|sections[\\/]rail-counter)\.tsx?|domains[\\/]checkout[\\/]bag-fill\.ts)$/,
+      }
+      // The shell's browser modules (AppShell's navs, Toaster, progress bar and live region, and the Button and cn()
+      // every page beside them uses), in ONE chunk for the pages that draw the shell: Console, Admin, the partner
+      // workspace and the customizer. Each was in the layout's chunk AND again in a page's shared chunk, the same
+      // minSize split as the shop's above (page weight 2026-11-23: 4.6–7.1 kB gzipped twice on most of those pages).
+      // Only those surfaces' chunks take part: a page elsewhere that imports Button keeps its own copy, never the navs.
+      split.cacheGroups.appShell = {
+        name: 'app-shell', enforce: true, priority: 20,
+        chunks: (chunk: { name?: string | null }) => APP_SHELL_ENTRY.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](shell[\\/](nav|nav-progress|rail-toggle|announce)|ui[\\/](toast|toast-context|button|use-shortcuts)|icons[\\/]icon)\.tsx?|lib[\\/]utils\.ts|domains[\\/]ui[\\/]shortcuts\.ts)$/,
       }
     }
     return config
