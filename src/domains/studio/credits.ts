@@ -75,8 +75,6 @@ export const rateUsable = (rateDay: Date | null, now: Date) => !!rateDay && now.
 export const LOT_KINDS = ['grant', 'pack', 'credits', 'seat', 'return'] as const
 export type LotKind = (typeof LOT_KINDS)[number]
 
-export { addMonths }
-
 /** A use-by date: 12 months for anything bought (and a credit returned after its lot ended); 90 days for the free 20. */
 export function expiresAt(kind: LotKind, from: Date): Date {
   return kind === 'grant' ? new Date(from.getTime() + FREE_DAYS * DAY) : addMonths(from, LOT_MONTHS)

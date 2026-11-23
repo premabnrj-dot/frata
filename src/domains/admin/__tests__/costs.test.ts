@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { fiscalYear } from '@/domains/counters/fiscal-year'
+import { istDayKey } from '@/domains/time/day'
 import {
-  anchorMayMove, burnOf, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
+  anchorMayMove, burnOf, byCategory, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
   type CostItem, type CostPayment,
 } from '../costs'
 
@@ -71,6 +73,11 @@ describe('money', () => {
     expect(usdToPaise(20_000_000, 942_000)).toBe(188_400)
     expect(usdToPaise(25_000_000, 942_000)).toBe(235_500)
   })
+  it('rounds a half paise up, and stays exact for a ₹1 crore dollar bill', () => {
+    expect(usdToPaise(10, 5_000_000)).toBe(1)
+    expect(usdToPaise(9, 5_000_000)).toBe(0)
+    expect(usdToPaise(106_000_000_000, 942_000)).toBe(998_520_000)
+  })
   it('monthly equivalent per cadence; null for a dollar cost with no rate', () => {
     expect(monthlyPaise(item({ cadence: 'yearly', currency: 'INR', amount: 129_900 }), null)).toBeCloseTo(10_825)
     expect(monthlyPaise(item({ cadence: 'quarterly', currency: 'INR', amount: 750_000 }), null)).toBe(250_000)
@@ -121,5 +128,43 @@ describe('dueRows for Today', () => {
     const rows = dueRows([c, b, a], new Map(), '2026-11-23')
     expect(rows.map((r) => r.id)).toEqual(['a', 'b'])
     expect(rows[0]?.tone).toBe('overdue')
+  })
+})
+
+describe('more cases', () => {
+  const today = '2026-11-23'
+  it('dueRows skips an ended cost and a one-time one, and caps at 20', () => {
+    const ended = item({ id: 'e', anchorOn: '2026-09-01', endsOn: '2026-09-30' })
+    const once = item({ id: 'o', kind: 'one_time', cadence: null })
+    expect(dueRows([ended, once], new Map(), today)).toEqual([])
+    const many = Array.from({ length: 25 }, (_, i) => item({ id: `m${i}`, name: `Cost ${String(i).padStart(2, '0')}`, anchorOn: '2026-11-20' }))
+    expect(dueRows(many, new Map(), today)).toHaveLength(20)
+  })
+  it('quarterly and yearly look ahead far enough to name the next due', () => {
+    expect(dueState(item({ cadence: 'quarterly', anchorOn: '2026-11-22' }), new Set(['2026-11-22']), today).next).toBe('2027-02-22')
+    expect(dueState(item({ cadence: 'yearly', anchorOn: '2026-11-20' }), new Set(['2026-11-20']), today)).toMatchObject({ next: '2027-11-20', tone: 'later' })
+  })
+  it('an anchor in the future starts there, and from far after the anchor still lands on the grid', () => {
+    expect(dueDates(item({ anchorOn: '2027-03-10' }), '2026-01-01', '2027-05-31')).toEqual(['2027-03-10', '2027-04-10', '2027-05-10'])
+    expect(dueDates(item({ anchorOn: '2024-01-31' }), '2026-02-01', '2026-03-31')).toEqual(['2026-02-28', '2026-03-31'])
+  })
+  it('a yearly dollar cost is a twelfth of its rupee value a month', () => {
+    expect(monthlyPaise(item({ cadence: 'yearly', amount: 120_000_000 }), 942_000)).toBeCloseTo(94_200)
+  })
+  it('byCategory sums a month, biggest first, ties by name', () => {
+    const p = (paidOn: string, inrPaise: number, category: string): CostPayment => ({ id: paidOn + category + inrPaise, itemId: 'i', paidOn, periodFor: paidOn, inrPaise, category })
+    expect(byCategory([p('2026-11-03', 100, 'ai'), p('2026-11-04', 100, 'design'), p('2026-11-05', 50, 'ai'), p('2026-10-31', 999, 'ai')], '2026-11'))
+      .toEqual([{ category: 'ai', paise: 150 }, { category: 'design', paise: 100 }])
+    expect(byCategory([p('2026-11-03', 100, 'software'), p('2026-11-04', 100, 'legal')], '2026-11').map((r) => r.category)).toEqual(['legal', 'software'])
+  })
+  it('the IST month boundary: 11:30 pm UTC on 30 Nov is 1 Dec in India', () => {
+    expect(istDayKey(new Date('2026-11-30T19:00:00Z'))).toBe('2026-12-01')
+    expect(istDayKey(new Date('2026-11-30T18:00:00Z'))).toBe('2026-11-30')
+  })
+  it('the financial year agrees with the invoice series, in every month', () => {
+    for (const day of ['2026-01-15', '2026-03-31', '2026-04-01', '2026-12-31']) {
+      const start = fyStartOf(day)
+      expect(fiscalYear(new Date(`${day}T06:00:00Z`))).toBe(`${String(start % 100).padStart(2, '0')}-${String((start + 1) % 100).padStart(2, '0')}`)
+    }
   })
 })

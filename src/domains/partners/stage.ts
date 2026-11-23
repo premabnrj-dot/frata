@@ -32,8 +32,6 @@ export const STAGE_LABEL: Record<ClientStage, string> = {
 
 export type ShareTerms = { shareMonths: number; noticeDays: number }
 
-export { addMonths }
-
 /**
  * The share's window: from the shop's first opening, for `shareMonths`; a removal ends it `noticeDays` later, never
  * after the months run out. 'not_started' until the shop opens; a store removed before it opened never starts.

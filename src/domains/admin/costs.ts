@@ -41,6 +41,7 @@ export type CostItem = {
   varies: boolean
   anchorOn: string
   endsOn: string | null
+  /** A `CostCategory` as stored (text + CHECK); typed loose so a read never throws on a future value. */
   category: string
 }
 export type CostPayment = { id: string; itemId: string; paidOn: string; periodFor: string; inrPaise: number; category: string }
@@ -119,8 +120,9 @@ export function dueRows(items: readonly CostItem[], paidByItem: ReadonlyMap<stri
 
 // ── Money ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Micro-dollars to paise at a rate in rupees × 10,000 (94.20 → 942,000), nearest paise. */
-export const usdToPaise = (microUsd: number, rateE4: number) => Math.round((microUsd * rateE4) / 1e8)
+/** Micro-dollars to paise at a rate in rupees × 10,000 (94.20 → 942,000), to the NEAREST paise, in bigint (a ₹1 crore bill
+ *  times the rate passes 2^53). A bill that was paid rounds to nearest; Studio's list price (`listPaise`) rounds up on purpose. */
+export const usdToPaise = (microUsd: number, rateE4: number) => Number((BigInt(microUsd) * BigInt(rateE4) + 50_000_000n) / 100_000_000n)
 
 /** What a repeating cost is worth a month, in paise, unrounded; null for a one-time cost or a dollar cost with no rate. */
 export function monthlyPaise(item: CostItem, rateE4: number | null): number | null {

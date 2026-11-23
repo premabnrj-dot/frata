@@ -72,7 +72,7 @@ The database cannot tell a master admin from support staff (one connection), so 
 
 Grants: items select, insert, update (no delete — end it instead); payments select, insert, delete
 (delete is Undo for a mistaken payment). Money is integer minor units end to end (ADR-0004); USD is
-micro-dollars, shown as dollars only where a person reads it; USD converts to paise with `listPaise(micro, rateE4)` (`domains/studio/credits.ts`), and a sum rounds once at full precision (÷3 and ÷12 never round per item). With no rate yet, a USD row shows dollars only, the burn leaves it out and says "rate missing", and Mark paid asks for the rupees. `inr_paise` for a USD cost is prefilled from the
+micro-dollars, shown as dollars only where a person reads it; USD converts to paise with `usdToPaise` (the engine; nearest paise in bigint. Studio's `listPaise` rounds a list price up on purpose and is not used), and a sum rounds once at full precision (÷3 and ÷12 never round per item). With no rate yet, a USD row shows dollars only, the burn leaves it out and says "rate missing", and Mark paid asks for the rupees. `inr_paise` for a USD cost is prefilled from the
 latest `fx_rates` row (a new definer `admin_fx_rate_latest()` in 0170, granted to `frata_admin` only, revoked from everyone else; `app_fx_rate_latest` stays `frata_app`'s) and editable: the card statement wins.
 
 ### What is derived, never stored (SSOT)
@@ -86,7 +86,7 @@ All in one pure engine, `src/domains/admin/costs.ts` (no I/O; `now` is an argume
 | Monthly equivalent | amount ÷ 1, 3 or 12; USD × latest rate |
 | Burn (monthly / yearly) | sum of monthly equivalents of live recurring items |
 | This month spent | payments by `paid_on` in the IST month, summed in `inr_paise` |
-| Financial year | Apr–Mar IST (`src/domains/time`) |
+| Financial year | Apr–Mar IST: `fyStartOf` and `fyRange` in the engine, pinned to the invoice series' `fiscalYear` by a test |
 
 There is no status column. An item is live, ended or one-time from its dates and kind.
 
