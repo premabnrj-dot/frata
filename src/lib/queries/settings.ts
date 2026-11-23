@@ -1,7 +1,7 @@
 import 'server-only'
 import { mainHostFor } from './addresses'
 import { and, eq, getTableColumns, gte } from 'drizzle-orm'
-import { members, planVersions, shopPolicies, shopSettings, tenantPlans, tenants } from '@/lib/db/schema'
+import { members, pincodes, planVersions, shopPolicies, shopSettings, tenantPlans, tenants } from '@/lib/db/schema'
 import { notices } from '@/lib/db/schema-email'
 import { istDayStart } from '@/domains/time/day'
 import type { AskPage } from '@/domains/settings/owner-only'
@@ -27,6 +27,15 @@ export async function shopWithSettings(tenantId: string) {
       .where(eq(tenants.id, tenantId)).limit(1)
     return row ?? null
   })
+}
+
+/** Settings › Store: where the saved pickup PIN code is (India Post's directory), or null when unset or unknown. One
+ *  statement, read beside the page's other reads (O1·5). */
+export async function pickupPlace(tenantId: string): Promise<{ city: string; state: string } | null> {
+  const [row] = await withTenant(tenantId, (tx) => tx.select({ city: pincodes.city, state: pincodes.state })
+    .from(shopSettings).innerJoin(pincodes, eq(pincodes.pincode, shopSettings.pickupPincode))
+    .where(eq(shopSettings.tenantId, tenantId)).limit(1))
+  return row ?? null
 }
 
 /** Policy pages the merchant rewrote by hand, by kind. */

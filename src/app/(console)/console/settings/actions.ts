@@ -13,13 +13,13 @@ import { POLICY_PAGES } from '@/domains/policies/render'
 import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
-import { changeShopAddress } from '@/lib/db/platform'
+import { changeShopAddress, placeForPincode } from '@/lib/db/platform'
 import { addressFacts } from '@/lib/queries/addresses'
 import { oldNames } from '@/domains/addresses/names'
 import { checkAddress } from '@/app/start/actions'
 import type { AddressCheck } from '@/domains/signup/steps'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
-import { slugProblem } from '@/domains/signup/slug'
+import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
 import { dayIN } from '@/lib/format-date'
 import { askedTodayIn, costsVisibleIn, hasOwnerHeldIn } from '@/lib/queries/settings'
@@ -322,4 +322,12 @@ export async function setShopLogo(base: string | null): Promise<{ ok: true; wait
   if (!r.ok) return { ok: false, error: r.fields?.main ? 'That logo could not be used. Choose a PNG, JPEG or WebP image.' : r.error }
   revalidatePath('/console/settings', 'layout')
   return { ok: true, waits: r.outcome === 'waits' }
+}
+
+/** Settings › Store's Pickup PIN code: its city and state from India Post's directory (the same for every store), or
+ *  null when unknown. Moved here from sign-up (O1·5): only a person who may edit the store asks. */
+export async function placeFor(pin: string): Promise<{ city: string; state: string } | null> {
+  const auth = await requireMember(CAN_BUILD)
+  if (!auth.ok || typeof pin !== 'string' || !PINCODE_SHAPE.test(pin)) return null
+  return placeForPincode(pin).catch((err) => { console.error('[placeFor]', errName(err)); return null })
 }

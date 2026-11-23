@@ -4,7 +4,7 @@ import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { formValues, sectionFor } from '@/domains/settings/sections'
 import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { SHOP_DOMAIN } from '@/lib/public-env'
-import { ownerOnlyFacts, policyOverrides, shopWithSettings } from '@/lib/queries/settings'
+import { ownerOnlyFacts, pickupPlace, policyOverrides, shopWithSettings } from '@/lib/queries/settings'
 import { ASK_PAGES, OWNER_ONLY_WORDS, lockOf, lockedFor, mayAskOwner, type AskPage } from '@/domains/settings/owner-only'
 import { Badge } from '@/components/ui/badge'
 import { AskOwner } from '../_components/ask-owner'
@@ -49,7 +49,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   const owned = askPage
     ? ownerOnlyFacts(tenantId, mayAskOwner(role, true, support) ? askPage : null, now).catch((err) => { console.error('[settings owner-only]', errName(err)); return { hasOwner: true, askedToday: false } })
     : Promise.resolve(null)
-  const [shop, overrides, live, src, mods, suggest, ownerOnly] = await Promise.all([
+  const [shop, overrides, live, src, mods, suggest, ownerOnly, place] = await Promise.all([
     shopWithSettings(tenantId),
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
@@ -61,7 +61,9 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     // Best effort: without it the page shows no suggestion, never an error.
     section.key === 'payments' ? pinSuggestionFor(tenantId, new Date()).catch((err) => { console.error('[settings pin]', errName(err)); return null }) : Promise.resolve(null),
     owned,
-  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null, null, null] as const })
+    // Store details only: the saved pickup PIN code's city and state (one statement, beside the rest; best effort).
+    section.key === 'store' ? pickupPlace(tenantId).catch((err) => { console.error('[settings pickup]', errName(err)); return null }) : Promise.resolve(null),
+  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null, null, null, null] as const })
   if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   // Taxes: a shop that charges GST can't sell a live product with no rate (quote); say which, never block (best effort).
@@ -84,7 +86,8 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
       lock={lock}
       ask={ask && inBlock ? ask : null}
       suggest={suggest}
-      initial={formValues(section, storedValues(facts))}
+      initial={formValues(section, { ...storedValues(facts), pickupPincode: shop.settings.pickupPincode })}
+      place={place}
       version={shop.settings.version}
       facts={facts}
       fiscalYear={fiscalYear(new Date())}

@@ -5,11 +5,11 @@ import { SELLS } from '@/lib/db/schema'
 import { startingHsn } from '@/domains/catalogue/sell-keys'
 import { setStartingHsn } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
-import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
+import { slugProblem } from '@/domains/signup/slug'
 import type { AddressCheck } from '@/domains/signup/steps'
 import { requireUser } from '@/lib/auth/require-user'
 import { hostFor, refreshHosts } from '@/lib/queries/storefront'
-import { createShop, placeForPincode, slugAvailable } from '@/lib/db/platform'
+import { createShop, slugAvailable } from '@/lib/db/platform'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
@@ -29,12 +29,6 @@ export async function checkAddress(slug: string): Promise<AddressCheck> {
   // Over the limit the check says nothing (`limited`), never a false "taken"; creation checks the address again.
   if (!(await withinLimit(LIMITS.checkAddressUser, auth.userId))) return { state: 'limited' }
   return (await slugAvailable(s)) ? { state: 'ok' } : { state: 'taken' }
-}
-
-export async function lookupPincode(pincode: string): Promise<{ city: string; state: string } | null> {
-  const auth = await requireUser()
-  if (!auth.ok || !PINCODE_SHAPE.test(String(pincode ?? ''))) return null
-  return placeForPincode(pincode)
 }
 
 const Shop = z.object({

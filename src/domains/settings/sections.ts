@@ -13,7 +13,7 @@ import { seriesFits } from '../orders/work'
 import { CAN_BUILD, type MemberRole } from '../tenancy/roles'
 import { STATE_CODE } from '../checkout/states'
 
-export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes' | 'radio' | 'segmented' | 'state'
+export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes' | 'pincode' | 'radio' | 'segmented' | 'state'
 
 export type Field = {
   key: string
@@ -63,6 +63,8 @@ export const SECTIONS: readonly Section[] = [
       { title: 'Your store', fields: [
         { key: 'name', label: 'Store name', kind: 'text', required: true, max: 60 },
         { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
+        // O1: asked here, not at sign-up; Delivery Zones counts delivery days from it (its header links here).
+        { key: 'pickupPincode', label: 'Pickup PIN code', kind: 'pincode' },
       ] },
       { title: 'Store words', hint: 'Menus, buttons, delivery and returns. What you type stays as you typed it. Checkout stays in English for now.', fields: [
         { key: 'shopLanguage', label: 'Show them in', kind: 'select', options: LANGUAGE_OPTIONS },
@@ -230,6 +232,12 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
       continue
     }
     const s = String(raw ?? '').trim()
+    if (f.kind === 'pincode') {
+      if (!s) patch[f.key] = null
+      else if (!PINCODE_SHAPE.test(s)) errors[f.key] = 'A PIN code is 6 digits and starts with 1 to 9.'
+      else patch[f.key] = s
+      continue
+    }
     if (f.required && !s) { errors[f.key] = 'Needed.'; continue }
     // The invoice series must leave room for a whole year of numbers inside GST's 16 characters (work.ts).
     if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long. Use up to 4 characters, or 5 ending in / or -.'; continue }

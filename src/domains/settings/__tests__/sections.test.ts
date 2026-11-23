@@ -68,7 +68,7 @@ describe('parseSection', () => {
 
 describe('formValues', () => {
   it('is the inverse of parseSection for every section', () => {
-    const stored = { name: 'Kesar', orderPrefix: 'KS', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', supportEmail: 'a@b.in', supportPhone: '9827041000', whatsapp: '', instagram: 'k', grievanceName: 'R', grievanceRole: '', grievanceEmail: 'g@b.in', grievancePhone: '9827041001', accent: 'oxide', displayFont: 'fraunces', tagline: '', shopLanguage: 'hi', returnKind: 'exchange_or_refund', returnDays: 7, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['793001'], shippingFlat: 7900, freeShippingAbove: 199900, dispatchDays: 2, metroDays: 4, restDays: 7, pricesIncludeGst: true, gstin: null, gstScheme: 'regular', homeState: '23', turnoverBand: 'under_5cr', gstFiling: 'monthly', b2bInvoices: true, defaultHsn: '6211', invoiceSeries: 'KS/', docSignatory: 'R. Sharma', docNote: 'Exchanges within 7 days.', slipSize: 'label' }
+    const stored = { name: 'Kesar', orderPrefix: 'KS', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', supportEmail: 'a@b.in', supportPhone: '9827041000', whatsapp: '', instagram: 'k', grievanceName: 'R', grievanceRole: '', grievanceEmail: 'g@b.in', grievancePhone: '9827041001', accent: 'oxide', displayFont: 'fraunces', tagline: '', pickupPincode: '452009', shopLanguage: 'hi', returnKind: 'exchange_or_refund', returnDays: 7, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['793001'], shippingFlat: 7900, freeShippingAbove: 199900, dispatchDays: 2, metroDays: 4, restDays: 7, pricesIncludeGst: true, gstin: null, gstScheme: 'regular', homeState: '23', turnoverBand: 'under_5cr', gstFiling: 'monthly', b2bInvoices: true, defaultHsn: '6211', invoiceSeries: 'KS/', docSignatory: 'R. Sharma', docNote: 'Exchanges within 7 days.', slipSize: 'label' }
     for (const sec of SECTIONS) {
       const r = parseSection(sec, formValues(sec, stored))
       expect(r.ok, sec.key).toBe(true)
@@ -115,5 +115,28 @@ describe('documents (D2)', () => {
     expect(parseSection(sec, { docSignatory: 'Riya', docNote: 'Pay at https://x.test', slipSize: 'a4' }).ok).toBe(false)
     expect(parseSection(sec, { docSignatory: 'www.riya.in', docNote: '', slipSize: 'a4' }).ok).toBe(false)
     expect(parseSection(sec, { docSignatory: 'Riya Mehta', docNote: 'Exchanges within 7 days.', slipSize: 'label' }).ok).toBe(true)
+  })
+})
+
+describe('Pickup PIN code (O1·5)', () => {
+  const store = sectionFor('store')!
+  const base = { name: 'Kesar Studio', tagline: '', shopLanguage: 'en' }
+  it('is a field of Store details, after the line about the brand', () => {
+    const keys = store.blocks.flatMap((b) => b.fields.map((f) => f.key))
+    expect(keys.indexOf('pickupPincode')).toBe(keys.indexOf('tagline') + 1)
+    expect(store.blocks.flatMap((b) => b.fields).find((f) => f.key === 'pickupPincode')).toMatchObject({ label: 'Pickup PIN code', kind: 'pincode' })
+  })
+  it('empty saves as null; six digits are kept', () => {
+    expect(parseSection(store, { ...base, pickupPincode: '' })).toMatchObject({ ok: true, patch: { pickupPincode: null } })
+    expect(parseSection(store, { ...base, pickupPincode: ' 302003 ' })).toMatchObject({ ok: true, patch: { pickupPincode: '302003' } })
+  })
+  it('a wrong shape is refused with the words', () => {
+    for (const bad of ['02003', '30200', '0302003', '30200a']) {
+      expect(parseSection(store, { ...base, pickupPincode: bad })).toEqual({ ok: false, errors: { pickupPincode: 'A PIN code is 6 digits and starts with 1 to 9.' } })
+    }
+  })
+  it('formValues round-trips it (null reads as empty)', () => {
+    expect(formValues(store, { name: 'K', pickupPincode: null }).pickupPincode).toBe('')
+    expect(formValues(store, { name: 'K', pickupPincode: '302003' }).pickupPincode).toBe('302003')
   })
 })

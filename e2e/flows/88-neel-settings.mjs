@@ -21,7 +21,7 @@ export default {
   async run(t) {
     const { db } = t
     const [{ id: T }] = await db`select id from tenants where slug = 'kesar-studio'`
-    const [{ cod_blocked_pincodes: before }] = await db`select cod_blocked_pincodes from shop_settings where tenant_id = ${T}`
+    const [{ cod_blocked_pincodes: before, pickup_pincode: pickupBefore }] = await db`select cod_blocked_pincodes, pickup_pincode from shop_settings where tenant_id = ${T}`
     await db`update shop_settings set cod_blocked_pincodes = '{}' where tenant_id = ${T}`
     const [{ top }] = await db`select coalesce(max(number), 1000)::int top from orders where tenant_id = ${T}`
     const days = (n) => new Date(Date.now() - n * 86_400_000)
@@ -75,6 +75,30 @@ export default {
         assert.equal(ev.detail.suggestedPin, '302012', 'the suggestion taken is recorded')
       })
 
+      await t.step('O1·5: Store details › Pickup PIN code: its city and state, the unknown line, the field error; saved', async () => {
+        await db`insert into pincodes (pincode, city, district, state) values ('302003', 'Jaipur', 'Jaipur', 'Rajasthan') on conflict do nothing`
+        await p.goto(`${CONSOLE}/console/settings/store`)
+        const pin = p.getByRole('textbox', { name: /^Pickup PIN code/ })
+        await pin.fill('302003')
+        await p.getByText('Jaipur, Rajasthan', { exact: true }).waitFor()
+        await p.getByRole('button', { name: /^Save/ }).click()
+        await expectToast(p, 'Saved. Your store shows it now.', 'ok')
+        assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${T}`)[0].pickup_pincode, '302003')
+        await p.reload()
+        assert.equal(await p.getByRole('textbox', { name: /^Pickup PIN code/ }).inputValue(), '302003')
+        await p.getByText('Jaipur, Rajasthan', { exact: true }).waitFor()
+        await p.screenshot({ path: 'e2e/.out/88-pickup-1280.png', fullPage: true })
+        await pin.fill('999999')
+        await p.getByText('We do not know this PIN code. Check the 6 digits.', { exact: true }).waitFor()
+        await p.getByRole('button', { name: /^Save/ }).click()
+        await expectToast(p, 'Saved. Your store shows it now.', 'ok')
+        assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${T}`)[0].pickup_pincode, '999999')
+        await pin.fill('12345')
+        await p.getByRole('button', { name: /^Save/ }).click()
+        await p.getByText('A PIN code is 6 digits and starts with 1 to 9.').waitFor()
+        assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${T}`)[0].pickup_pincode, '999999')
+      })
+
       await t.step('old addresses go to the page that holds their fields now', async () => {
         for (const [old, now] of [['taxes', 'business'], ['brand', 'store'], ['documents', 'invoices'], ['address', 'web-address']]) {
           await p.goto(`${CONSOLE}/console/settings/${old}`)
@@ -101,7 +125,8 @@ export default {
       })
     } finally {
       await owner.close()
-      await db`update shop_settings set cod_blocked_pincodes = ${before} where tenant_id = ${T}`
+      await db`update shop_settings set cod_blocked_pincodes = ${before}, pickup_pincode = ${pickupBefore} where tenant_id = ${T}`
+      await db`delete from pincodes where pincode = '302003' and city = 'Jaipur'`
       await db`delete from orders where tenant_id = ${T} and number = any(${nums})`
     }
   },

@@ -33,6 +33,8 @@ import { OWNER_ONLY_WORDS, type AskPage } from '@/domains/settings/owner-only'
 import { LockedFacts } from './locked-facts'
 import { AskOwner } from './ask-owner'
 // Only the Policies section draws the five pages (their templates are the heaviest part of this page): loaded when shown.
+// Store details only: the Pickup PIN code field and its city lookup (O1·5), kept out of every other page's first load.
+const PincodeField = dynamic(() => import('./pincode-field').then((m) => m.PincodeField))
 const PolicyPages = dynamic(() => import('./policy-pages').then((m) => m.PolicyPages))
 const PolicyPreview = dynamic(() => import('@/components/shop-preview/policy-preview').then((m) => m.PolicyPreview))
 const ContactPreview = dynamic(() => import('@/components/shop-preview/policy-preview').then((m) => m.ContactPreview))
@@ -42,7 +44,7 @@ const ContactPreview = dynamic(() => import('@/components/shop-preview/policy-pr
  * "Unsaved changes" bar on the first edit, a guard on leaving, and the shop
  * beside it as shoppers will see it (frata-design-language § Phase 1).
  */
-export function SettingsForm({ sectionKey, head, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [], suggest = null, lock = null, ask = null }: {
+export function SettingsForm({ sectionKey, head, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [], suggest = null, lock = null, ask = null, place = null }: {
   sectionKey: string
   /** The page's head (Settings › group, title, the group's tabs): drawn by the server page. */
   head: React.ReactNode
@@ -63,6 +65,8 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
   lock?: { whole: true } | { whole: false; fields: readonly string[] } | null
   /** Ask the owner, where a block holds it (Contact's grievance officer); a whole page's sits in the header. */
   ask?: { page: AskPage; asked: boolean } | null
+  /** Store details: the saved pickup PIN code's city and state, read with the page (O1·5). */
+  place?: { city: string; state: string } | null
 }) {
   const section = sectionFor(sectionKey)!
   const router = useRouter()
@@ -163,7 +167,7 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
                   ones, each group under a hairline. */}
               {runs(shown).map((run, i) => (
                 <div key={i} className={`${i ? 'border-t border-line-soft pt-4 ' : ''}${run.kind === 'grid' ? `grid gap-3 sm:grid-cols-2 ${run.fields.length >= 3 ? 'lg:grid-cols-3' : ''}` : 'flex flex-col gap-3'}`}>
-                  {run.fields.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)}
+                  {run.fields.map((f) => f.kind === 'pincode' ? <PincodeField key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)} saved={String(saved[f.key] ?? '')} savedPlace={place} /> : <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)}
                     locked={f.key === 'b2bInvoices' && values.turnoverBand !== undefined && values.turnoverBand !== 'under_5cr' ? 'Off at ₹5 crore and above until e-invoicing is set up.' : undefined}
                     after={f.key === 'codBlockedPincodes' && suggest && !String(values.codBlockedPincodes ?? '').split(/[\s,]+/).includes(suggest.pin) ? (
                       <p className="text-label text-muted-foreground">From your returns: <button type="button" className="text-link underline underline-offset-2"

@@ -36,7 +36,7 @@ function valueOf(f: Field, raw: Values[string] | undefined): ReactNode {
   if (f.kind === 'select' || f.kind === 'segmented') return f.options?.find(([o]) => o === v)?.[1] ?? v
   if (f.kind === 'state') return STATE_NAME[v] ?? v
   if (f.kind === 'phone') return <span className="font-num">{formatPhone(`91${v}`)}</span>
-  if (f.kind === 'gstin') return <span className="font-mono">{v}</span>
+  if (f.kind === 'gstin' || f.kind === 'pincode') return <span className="font-mono">{v}</span>
   if (f.kind === 'hsn' || f.kind === 'rupees' || f.kind === 'days') return <span className="font-num">{v}</span>
   if (f.kind === 'textarea') return <span className="whitespace-pre-line">{v}</span>
   return v
