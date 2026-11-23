@@ -3,24 +3,21 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { InfoTip } from '@/components/ui/info-tip'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
-import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
-import { checkAddress, lookupPincode } from '@/app/start/actions'
+import { slugFor, slugProblem } from '@/domains/signup/slug'
+import { checkAddress } from '@/app/start/actions'
 import { ADDRESS_WORDS, addressUsable, type AddressCheck } from '@/domains/signup/steps'
 import { createClientStoreAction } from './actions'
 import { FIELD } from '@/components/ui/field'
 
-/** One screen, three fields (the same as /start): name, its address (derived, editable), pickup PIN code. */
+/** One screen, two fields: name and its address (derived, editable). The pickup PIN code is asked in Settings › Store. */
 export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [edited, setEdited] = useState(false)
   const [address, setAddress] = useState<AddressCheck | null>(null)
-  const [pickup, setPickup] = useState('')
-  const [place, setPlace] = useState<{ city: string; state: string } | null | 'unknown'>(null)
   // A field's mistake stays at it with one quiet summary; a refusal naming no field is a toast (§ Feedback).
   const [error, setError] = useState<{ field?: string; text: string } | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -37,21 +34,14 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
     const t = setTimeout(() => { checkAddress(slug).then(setAddress) }, 300)
     return () => clearTimeout(t)
   }, [slug])
-  useEffect(() => {
-    if (!PINCODE_SHAPE.test(pickup)) { setPlace(null); return }
-    let live = true
-    lookupPincode(pickup).then((p) => { if (live) setPlace(p ?? 'unknown') })
-    return () => { live = false }
-  }, [pickup])
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return fail({ field: 'name', text: 'The store needs a name.' })
     if (!address || !addressUsable(address.state)) return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
-    if (!PINCODE_SHAPE.test(pickup)) return fail({ field: 'pickup', text: 'A PIN code is 6 digits.' })
     setError(null)
     start(async () => {
-      const r = await createClientStoreAction({ name, slug, pickup })
+      const r = await createClientStoreAction({ name, slug })
       if (!r.ok) return fail({ field: r.field, text: r.error })
       router.replace('/console'); router.refresh()
     })
@@ -75,13 +65,6 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
         </div>
         <p id="slug-state" className={`text-sm ${address?.state === 'ok' ? 'text-ok-text' : 'text-muted-foreground'}`}>{address ? ADDRESS_WORDS[address.state] : ' '}</p>
         {msg('slug')}
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex items-center"><label htmlFor="pickup" className="text-sm font-medium">Pickup PIN code</label><InfoTip about="pickup PIN code">Where the brand’s parcels are collected. Delivery days are counted from here.</InfoTip></div>
-        <input id="pickup" value={pickup} inputMode="numeric" maxLength={6} aria-invalid={error?.field === 'pickup' || undefined} aria-describedby={error?.field === 'pickup' ? errorId('pickup') : undefined}
-          onChange={(e) => { setPickup(e.target.value.replace(/\D/g, '')); setError(null) }} className={`${field} w-40 font-num`} />
-        {place && <p className="text-sm text-muted-foreground">{place === 'unknown' ? 'PIN code not found' : `${place.city}, ${place.state}`}</p>}
-        {msg('pickup')}
       </div>
       <Button type="submit" disabled={pending}>{pending ? 'Creating…' : name.trim() ? `Create ${name.trim()}` : 'Create store'}</Button>
     </form>

@@ -3262,9 +3262,9 @@ begin
   begin perform 1 from partner_assignments; raise exception 'FAIL: app reads partner_assignments'; exception when insufficient_privilege then null; end;
   begin perform admin_end_partner(O, gen_random_uuid(), 'x'); raise exception 'FAIL: app suspends a partner'; exception when insufficient_privilege then null; end;
   perform proof.check(O); perform proof.check(Z); -- each check in its own statement (a STABLE read sees the statement's start)
-  t1 := app_partner_create_shop(O, proof.sess(O), proof.h(O), 'Team A', 'proof-team-a', '411001', 2000, 24, 90, 10);
-  t2 := app_partner_create_shop(O, proof.sess(O), proof.h(O), 'Team B', 'proof-team-b', '411001', 2000, 24, 90, 10);
-  tz := app_partner_create_shop(Z, proof.sess(Z), proof.h(Z), 'Zed shop', 'proof-zed', '395001', 2000, 24, 90, 10);
+  t1 := app_partner_create_shop_v2(O, proof.sess(O), proof.h(O), 'Team A', 'proof-team-a', 2000, 24, 90, 10);
+  t2 := app_partner_create_shop_v2(O, proof.sess(O), proof.h(O), 'Team B', 'proof-team-b', 2000, 24, 90, 10);
+  tz := app_partner_create_shop_v2(Z, proof.sess(Z), proof.h(Z), 'Zed shop', 'proof-zed', 2000, 24, 90, 10);
   select member_id into own from app_my_partner(O);
   if (select member_role from app_my_partner(O)) <> 'owner' or (select count(*) from app_partner_team(O, proof.sess(O), proof.h(O))) <> 1 then raise exception 'FAIL: the founder is the owner member'; end if;
   begin perform app_partner_team(X, proof.sess(X), proof.h(X)); raise exception 'FAIL: a stranger read a team'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
@@ -3304,7 +3304,7 @@ begin
   begin perform app_partner_remove_member(L, proof.sess(L), proof.h(L), own); raise exception 'FAIL: a lead removed someone'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
   begin perform app_partner_assign(L, proof.sess(L), proof.h(L), inv, t2, true); raise exception 'FAIL: a lead assigned'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
   begin perform app_handover_invite(t1, L, 'someone@brand.test', proof.sess(L), proof.h(L)); raise exception 'FAIL: a lead handed over'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
-  tl := app_partner_create_shop(L, proof.sess(L), proof.h(L), 'Lead shop', 'proof-team-l', '411001', 2000, 24, 90, 10);
+  tl := app_partner_create_shop_v2(L, proof.sess(L), proof.h(L), 'Lead shop', 'proof-team-l', 2000, 24, 90, 10);
   if (select count(*) from app_partner_clients(O, proof.sess(O), proof.h(O))) <> 3 or (select count(*) from app_partner_clients(L, proof.sess(L), proof.h(L))) <> 2 then raise exception 'FAIL: a lead''s new store'; end if;
   -- assignment: the owner, the partner's own store, the partner's own person
   begin perform app_partner_assign(O, proof.sess(O), proof.h(O), inv, tz, true); raise exception 'FAIL: assigned another partner''s store'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_store' then raise; end if; end;
@@ -3353,7 +3353,7 @@ begin; set local role frata_app;
 do $$ declare O uuid := 'aaaaaaaa-0000-0000-0000-000000000030'; X uuid := 'aaaaaaaa-0000-0000-0000-000000000034'; begin
   if jsonb_array_length(app_access_for(O, proof.sess(O), null, proof.h(O))->'memberships') <> 0 or jsonb_array_length(app_access_for(X, proof.sess(X), null, proof.h(X))->'memberships') <> 0 then raise exception 'FAIL: a suspended partner keeps access'; end if;
   if (select suspended_at from app_my_partner(O)) is null then raise exception 'FAIL: the workspace can''t tell it is suspended'; end if;
-  begin perform app_partner_create_shop(O, proof.sess(O), proof.h(O), 'Late', 'proof-late', '411001', 2000, 24, 90, 10); raise exception 'FAIL: a suspended partner made a store'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  begin perform app_partner_create_shop_v2(O, proof.sess(O), proof.h(O), 'Late', 'proof-late', 2000, 24, 90, 10); raise exception 'FAIL: a suspended partner made a store'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
   -- the brand still sees the paused partner on People, so it can remove it
   perform set_config('app.tenant_id', current_setting('proof.t2'), true);
   if not exists (select 1 from app_shop_people() where user_id = O and role = 'partner' and partner_paused) then raise exception 'FAIL: a paused partner vanished from People'; end if;

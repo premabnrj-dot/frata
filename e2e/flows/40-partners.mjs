@@ -76,7 +76,7 @@ export default {
       await pia.getByRole('link', { name: 'New client store' }).first().click()
       await pia.getByLabel('Brand’s store name').fill('Mitti Handloom')
       await pia.getByText('Available', { exact: true }).waitFor()
-      await pia.getByLabel('Pickup PIN code', { exact: true }).fill('302001')
+      assert.equal(await pia.getByLabel('Pickup PIN code', { exact: true }).count(), 0, 'O1: no PIN code on New client store')
       await pia.getByRole('button', { name: 'Create Mitti Handloom' }).click()
       await pia.getByText('Building for Mitti Handloom').waitFor()
       ;[{ id: T }] = await db`select id from tenants where slug = 'mitti-handloom'`
@@ -84,6 +84,7 @@ export default {
       assert.deepEqual(m.map((r) => r.role), ['partner'])
       const [l] = await db`select share_bps, share_months, notice_days, share_starts_at from partner_links where tenant_id = ${T}`
       assert.deepEqual([l.share_bps, l.share_months, l.notice_days, l.share_starts_at], [2000, 24, 90, null])
+      assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${T}`)[0].pickup_pincode, null)
       await pia.screenshot({ path: t.out('building') })
     })
 

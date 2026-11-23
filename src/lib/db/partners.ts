@@ -66,15 +66,16 @@ export async function applyAsPartner(uid: string, a: Application): Promise<{ ok:
   }
 }
 
-export async function createClientStore(c: Caller, p: { name: string; slug: string; pickup: string }):
+/** app_partner_create_shop_v2 (0166): no pickup PIN code (it is asked in Settings › Store). */
+export async function createClientStore(c: Caller, p: { name: string; slug: string }):
   Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
   try {
     const t = PARTNER_TERMS
-    const rows = await db().execute<{ id: string }>(sql`select app_partner_create_shop(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${p.name}, ${p.slug}, ${p.pickup},
+    const rows = await db().execute<{ id: string }>(sql`select app_partner_create_shop_v2(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${p.name}, ${p.slug},
       ${t.shareBps}, ${t.shareMonths}, ${t.noticeDays}, ${t.maxUnopened}) as id`)
     return { ok: true, tenantId: rows[0]!.id }
   } catch (err) {
-    return { ok: false, error: dbCode(err, ['not_partner', 'too_many', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan', ...CHECKS], 'createClientStore') }
+    return { ok: false, error: dbCode(err, ['not_partner', 'too_many', 'bad_name', 'bad_slug', 'slug_taken', 'no_launch_plan', ...CHECKS], 'createClientStore') }
   }
 }
 
