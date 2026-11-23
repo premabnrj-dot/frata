@@ -91,7 +91,7 @@ export default {
       await pia.goto(CONSOLE + '/console/settings/online-payments')
       await pia.getByText('Only the store’s owner can connect online payments').waitFor()
       await pia.goto(CONSOLE + '/console/settings/people')
-      await pia.getByText('Only the owner or a manager can see people').waitFor()
+      await pia.getByText('Only the owner or a Manager can see people').waitFor()
       await pia.goto(CONSOLE + '/console/settings/store')
       await pia.getByRole('heading', { name: 'Store details', level: 1 }).waitFor() // the store's name and logo are the partner's to build
     })
@@ -141,7 +141,7 @@ export default {
 
     await t.step('the owner removes the partner; access ends', async () => {
       await neha.goto(CONSOLE + '/console/settings/people')
-      await neha.getByText('Built this store', { exact: false }).waitFor()
+      await neha.getByRole('region', { name: 'Partner' }).getByText('Pia Studio').first().waitFor()
       // The row's button is a bin named for the partner (2026-11-22); the dialog's destructive button carries the same name.
       await neha.getByRole('button', { name: 'Remove Pia Studio', exact: true }).first().click()
       await neha.getByRole('dialog').getByRole('button', { name: 'Remove Pia Studio', exact: true }).click()

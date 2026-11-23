@@ -44,9 +44,9 @@ export function AddPerson({ roles, partnerOpen, gstOn, atLimit, room }: {
       <Dialog open={open} onClose={() => setOpen(false)} title="Add a person" error={error && !error.field ? error.text : null}
         actions={<>
           <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button disabled={pending || !pick || !email.trim()} onClick={send}>{pending ? 'Sending…' : 'Send invitation'}</Button>
+          <Button type="submit" form="add-person-form" disabled={pending || !pick || !email.trim()}>{pending ? 'Sending…' : 'Send invitation'}</Button>
         </>}>
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); send() }}>
+        <form id="add-person-form" className="space-y-3" onSubmit={(e) => { e.preventDefault(); send() }}>
           {atLimit && room && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm">
               <span>{room}</span><Link href="/console/settings/billing" className="text-sm font-medium underline underline-offset-4">Change plan</Link>
@@ -65,8 +65,8 @@ export function AddPerson({ roles, partnerOpen, gstOn, atLimit, room }: {
               const ok = usable(c)
               const line = c === 'accountant' && !gstOn ? 'Turn on the GST app to add an Accountant.' : ROLE_LINE[c]
               return (
-                <label key={c} className={`flex flex-col gap-0.5 rounded-mid border p-3 text-sm ${ok ? 'cursor-pointer' : 'opacity-55'} ${on ? 'border-ring bg-select' : 'border-border hover:bg-accent'}`}>
-                  <span className="flex items-center gap-2"><input type="radio" name="person-role" checked={on} disabled={!ok} onChange={() => setRole(c)} /><b className="font-medium">{c === 'partner' ? 'Partner' : ROLE_LABEL[c]}</b></span>
+                <label key={c} className={`flex min-h-11 flex-col gap-0.5 rounded-mid border p-3 text-sm focus-within:ring-2 focus-within:ring-ring ${ok ? 'cursor-pointer' : 'cursor-not-allowed text-muted-foreground'} ${on ? 'border-ring bg-select' : 'border-border hover:bg-accent'}`}>
+                  <span className="flex items-center gap-2"><input type="radio" name="person-role" className="size-4" checked={on} disabled={!ok} onChange={() => setRole(c)} /><b className="font-medium">{c === 'partner' ? 'Partner' : ROLE_LABEL[c]}</b></span>
                   <span className="text-small text-muted-foreground">{line}</span>
                 </label>
               )

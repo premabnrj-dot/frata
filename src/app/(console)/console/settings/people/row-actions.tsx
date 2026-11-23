@@ -10,13 +10,14 @@ import { addPersonAction, cancelInviteAction, cancelPartnerRequestAction, remove
 /** Remove a person: their access ends, so a dialog naming both outcomes (design language § Words 8). */
 export function RemovePerson({ member, name }: { member: string; name: string }) {
   const router = useRouter()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const remove = () => start(async () => {
     const r = await removePersonAction(member)
     if (!r.ok) return setError(r.error)
-    setOpen(false); router.refresh()
+    setOpen(false); toast.ok(`Removed ${name}.`); router.refresh()
   })
   return (
     <>

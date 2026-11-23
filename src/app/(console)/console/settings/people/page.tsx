@@ -40,7 +40,7 @@ export default async function PeoplePage() {
   const req = view.request
   const reqState = req ? requestState(req, now) : null
   const hasPartner = partnerPeople.length > 0
-  const room = view.limit ? `Your ${view.planName ?? ''} plan has room for ${view.limit} ${view.limit === 1 ? 'person' : 'people'}.`.replace('  ', ' ') : null
+  const room = view.limit ? `${view.planName ? `Your ${view.planName} plan` : 'Your plan'} has room for ${view.limit} ${view.limit === 1 ? 'person' : 'people'}.` : null
   const roles = acts && (me === 'owner' || me === 'admin') ? [...ROLES_GIVEN_BY[me]] : []
   const showPartnerCard = hasPartner || reqState === 'open' || reqState === 'declined' || reqState === 'expired'
   return (
@@ -50,7 +50,7 @@ export default async function PeoplePage() {
       <Section flush ariaLabel="People">
         <div className="flex flex-wrap items-center gap-2 px-4 pt-3 pb-1">
           <h2 className="font-semibold">People</h2>
-          {view.limit > 0 && <span className="rounded-full bg-neutral px-2 font-num text-xs text-neutral-text">{view.used} of {view.limit} people{view.planName ? ` on ${view.planName}` : ''}</span>}
+          {view.limit > 0 && <Badge tone="neutral" className="tabular-nums">{`${view.used} of ${view.limit} people${view.planName ? ` on ${view.planName}` : ''}`}</Badge>}
           <span className="flex-1" />
           {acts && <AddPerson roles={roles} partnerOpen={me === 'owner' && !hasPartner && reqState !== 'open'} gstOn={gstOn} atLimit={view.used >= view.limit} room={room} />}
         </div>
@@ -60,7 +60,7 @@ export default async function PeoplePage() {
             return (
               <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{p.email ?? 'Unknown'}</p>
+                  <p className="truncate font-medium">{p.email ?? 'No email'}</p>
                   <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><Badge tone="neutral">{ROLE_LABEL[p.role as MemberRole] ?? p.role}</Badge><span>{you ? 'You' : `Since ${dayIN(p.since)}`}</span></p>
                 </div>
                 {acts && !you && mayGive(me, p.role) && <RemovePerson member={p.userId} name={p.email ?? 'this person'} />}
@@ -73,7 +73,7 @@ export default async function PeoplePage() {
             return (
               <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-num font-medium">{i.email}</p>
+                  <p className="truncate font-medium">{i.email}</p>
                   <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <Badge tone={expired ? 'neutral' : 'warn'}>{`${label} · ${expired ? 'Expired' : 'Invited'}`}</Badge>
                     {!expired && <span>Expires {dayIN(i.expiresAt)}</span>}
@@ -99,7 +99,7 @@ export default async function PeoplePage() {
               return (
                 <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{person ? p.partnerName ?? 'A partner person' : p.partnerName ?? p.email ?? 'Unknown'}</p>
+                    <p className="truncate font-medium">{person ? p.partnerName ?? 'A partner person' : p.partnerName ?? p.email ?? 'No email'}</p>
                     <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                       <Badge tone={role.tone}>{role.label}</Badge>
                       {p.role === 'builder' && <InfoTip about={`Partner · ${BUILDER_LABEL}`}>Sees products and the store preview. No orders, shoppers or costs.</InfoTip>}
@@ -112,7 +112,7 @@ export default async function PeoplePage() {
             }) : req && (
               <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-num font-medium">{reqState === 'open' ? req.email : 'No partner'}</p>
+                  <p className="truncate font-medium">{reqState === 'open' ? req.email : 'No partner'}</p>
                   <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     {reqState === 'open' && <><Badge tone="warn">Partner · Invited</Badge><span>Expires {dayIN(req.expiresAt)}</span></>}
                     {reqState === 'declined' && <Badge tone="neutral">{`${req.email} declined`}</Badge>}

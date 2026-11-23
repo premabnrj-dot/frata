@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { Section } from '@/components/layout/section'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
@@ -15,7 +16,7 @@ export function Invitations({ rows }: { rows: InvitationRow[] }) {
   if (!rows.length) return null
   return (
     <Section flush ariaLabel="Invitations" className="mb-4">
-      <div className="flex items-center gap-2 px-4 pt-3 pb-1"><h2 className="font-semibold">Invitations</h2><span className="rounded-full bg-neutral px-2 font-num text-xs text-neutral-text">{rows.length}</span></div>
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1"><h2 className="font-semibold">Invitations</h2><Badge tone="neutral" className="tabular-nums">{String(rows.length)}</Badge></div>
       <ul data-list className="divide-y divide-border">{rows.map((r) => <Invitation key={r.id} row={r} />)}</ul>
     </Section>
   )
