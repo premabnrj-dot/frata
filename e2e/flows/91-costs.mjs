@@ -148,7 +148,7 @@ export default {
         assert.match(r.headers()['content-type'], /text\/csv/)
         assert.match(r.headers()['content-disposition'], /^attachment; filename="Frrata costs FY \d{4}-\d{2}\.csv"$/)
         const body = await r.text()
-        assert.match(body, new RegExp(`"${NAME}","","Infrastructure"`))
+        assert.match(body, new RegExp(`"${NAME}","","Software"`))
         assert.match(body, /"USD","20\.00","1884\.00"/)
         assert.equal((await p.request.get(CONSOLE + '/admin/costs/export?fy=abc')).status(), 400)
         await ctx.close()
