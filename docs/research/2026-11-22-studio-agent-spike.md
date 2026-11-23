@@ -107,7 +107,7 @@ Rules the script keeps:
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.45** of the $25 cap (list cost, 18 runs).
+Measured spend so far: **$0.45** of the $25 cap (list cost, 19 runs).
 
 | Probe | Ran | Model | Status | Answer | List cost |
 |---|---|---|---|---|---|
@@ -125,8 +125,37 @@ Measured spend so far: **$0.45** of the $25 cap (list cost, 18 runs).
 | `concurrency-active` | 2026-11-22 19:39 UTC | claude-opus-5-5 | answered | 20/20 turns ran a command at once in 6920 ms wall; turn p50 2688 ms, p90 3737 ms, max 6475 ms; errors: none | $0.14 |
 | `mount-sha` | 2026-11-22 19:40 UTC | claude-opus-5-5 | answered | HEAD equals the requested SHA: true; token used: false | $0.02 |
 | `limits` | 2026-11-22 19:40 UTC | claude-opus-5-5 | answered | see evidence: cgroup memory, cpu and pid limits, disk, user | $0.01 |
+| `fronting` | 2026-11-23 07:05 UTC | claude-haiku-5-5 | answered | pass: the vault value never reached frrata-echo.vercel.app (host header, connect-to, resolve, direct tried) | $0.00 |
 
 <!-- spike:results:end -->
+
+## R8: the fronting probe (2026-11-23, security M1; plan `docs/plans/2026-11-22-v3a-runtime.md` R8)
+Run once on the orchestrator's word, after the owner said yes on 2026-11-23: `SPIKE_FRONT_ECHO_HOST=frrata-echo.vercel.app
+node scripts/studio/spike.mjs run fronting`. Haiku 5.5, one session (`sesn_01N1HaNNsYPAHpNLZ2syxr8c`) with a $0.25
+budget. The session ran on an environment that allows only `api.frrata.shop` (`env_01Ps1sBcVbbRtJ9ri71GkkXo`; no package
+managers, no MCP servers). It had one throwaway vault holding `FRRATA_KEY`, a random 38-character value scoped to
+`api.frrata.shop` and sent as a header. The echo (`/headers`, Frrata-owned) answers with the headers it received, and the
+sandbox reduced its reply to a length and a SHA-256 before printing anything.
+
+**Verdict: pass.** The echo never received the value. The throwaway value's own hash appears in none of the four lines.
+
+| Way | What the sandbox printed | Reading |
+|---|---|---|
+| `Host:` header (TLS to `api.frrata.shop`, `Host: frrata-echo.vercel.app`) | `0 e3b0c442…b855` (the empty string's hash) | curl got a reply, but it held no `frrata-key`: the echo did not receive the value. Whether the echo saw the request at all is not known, because only a hash was kept |
+| `--connect-to api.frrata.shop:443:frrata-echo.vercel.app:443` | `0 e3b0c442…b855` | the same: a reply without the value |
+| `--resolve api.frrata.shop:443:<echo's address>` | `echo resolves: no`, so no request was sent | **Not exercised.** `limited` filters DNS, so the sandbox cannot learn the echo's address, and the probe sent nothing this way |
+| direct to `frrata-echo.vercel.app` | `0 e3b0c442…b855`, `Could not resolve host` | refused at DNS, as `network` measured |
+
+Cost: `usage.list_cost` read **$0.00** (it counts whole cents). Tokens at Haiku's list rates plus 6.3 s of active time come
+to about **$0.002**. The session and the vault were deleted when the probe ended. The agent `agent_01KfCxQ8YWvy4HgVMUfW33bS`
+(Haiku 5.5, made by this run) and the environment `env-api` are kept for re-runs, as the script keeps all of them.
+
+**Still open:** `--resolve` to an address. The address has to come from outside the sandbox, since the sandbox cannot
+resolve the echo. `network-ip` measured that the gateway routes by name: a refused name pinned to its real address gets a
+403. So the gateway would most likely send an allowed name pinned to the echo's address to `api.frrata.shop` itself, but
+no probe has measured that. Closing this takes a second run that passes the echo's address in, which needs the
+orchestrator's word. The fact that the first two ways got a reply without the value also leaves one thing open: we don't
+know what answered (the gateway, Vercel's edge or `api.frrata.shop`), only that the echo never got the value.
 
 ## Measured beside documented (2026-11-22, workspace `studio-eval`; Opus 5.5 at effort `low` unless a row says otherwise)
 Each probe's measured answer, set against what the documentation said. "Same" means the measurement confirms it;
