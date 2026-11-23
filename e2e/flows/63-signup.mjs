@@ -5,7 +5,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { CONSOLE, PORTS, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, PORTS, SHOP_DOMAIN, USERS, signedIn } from '../lib.mjs'
 
 const SLUG = 'noor-threads-e2e'
 
@@ -28,19 +28,48 @@ export default {
     try {
       const ctx = await signedIn(t.browser, 'founder', { viewport: { width: 390, height: 844 } })
       const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
-      await t.step('a person with no shop makes one through /start and lands in the console as its owner', async () => {
+      // Both widths of each step, for the parity check against mockup § 1 (O1·8).
+      const shot = async (name) => {
+        await p.screenshot({ path: t.out(`${name}-390`), fullPage: true })
+        await p.setViewportSize({ width: 1280, height: 800 }); await p.screenshot({ path: t.out(`${name}-1280`), fullPage: true })
+        await p.setViewportSize({ width: 390, height: 844 })
+      }
+      await t.step('the name step: a taken address waits; the address is checked as the name is typed', async () => {
         await p.goto(CONSOLE + '/start')
-        await p.getByLabel('Shop name').fill('Noor Threads')
-        await p.getByLabel('Shop address').fill(SLUG)
+        await p.getByRole('heading', { name: 'What is your brand called?' }).waitFor()
+        await p.getByRole('img', { name: 'Step 1 of 4' }).waitFor() // name, plan, WhatsApp code, what you sell
+        assert.equal(await p.getByRole('button', { name: 'Use this name' }).isDisabled(), true, 'waits for a name')
+        await shot('name-empty')
+        await p.getByLabel('Brand name').fill('Kesar Studio')
+        await p.getByText('Taken', { exact: true }).waitFor()
+        assert.equal(await p.getByRole('button', { name: 'Use this name' }).isDisabled(), true, 'a taken address waits')
+        await shot('name-taken')
+      })
+      await t.step('a person with no shop makes one through /start and lands in the console as its owner', async () => {
+        await p.getByLabel('Brand name').fill('Noor Threads')
+        await p.locator('#su-addr').getByText(`noor-threads.${SHOP_DOMAIN}`, { exact: true }).waitFor()
         await p.getByText('Available', { exact: true }).waitFor() // the address check runs as you type
-        await p.getByRole('button', { name: 'Continue' }).click()
+        await shot('name-available')
+        await p.getByRole('button', { name: 'Change web address' }).click()
+        const dlg = p.getByRole('dialog', { name: 'Your web address' })
+        await dlg.getByRole('button', { name: 'Close' }).waitFor()
+        await dlg.getByLabel('Web address').fill(SLUG)
+        await dlg.getByText('Available', { exact: true }).waitFor()
+        await shot('change-address')
+        await dlg.getByRole('button', { name: 'Use this address' }).click()
+        await p.locator('#su-addr').getByText(`${SLUG}.${SHOP_DOMAIN}`, { exact: true }).waitFor()
+        assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Change web address', 'focus returns to the button')
+        await p.getByRole('button', { name: 'Use this name' }).click()
         // Trials TR1: the plan step — Growth is chosen; the trial length is Admin's setting.
         await p.getByRole('heading', { name: 'Choose your plan' }).waitFor()
+        await p.getByRole('img', { name: 'Step 2 of 4' }).waitFor()
         await p.getByText(/^\d+ days free from going live$/).waitFor()
         assert.equal(await p.getByRole('radio', { name: /Growth/ }).isChecked(), true)
-        await p.screenshot({ path: t.out('plan-step'), fullPage: true })
+        await shot('plan-step')
         await p.getByRole('button', { name: 'Continue' }).click()
         // The WhatsApp code (on: Frrata's own number is configured in the stack). A wrong code is refused first.
+        await p.getByRole('heading', { name: 'Your WhatsApp number' }).waitFor()
+        await shot('phone')
         await p.getByLabel('Mobile number').fill('9829043211')
         await p.getByRole('button', { name: 'Send code' }).click()
         await p.getByLabel('Code from WhatsApp').waitFor()
@@ -51,7 +80,14 @@ export default {
         await p.getByText('That code is not right, or has expired.').waitFor()
         await p.getByLabel('Code from WhatsApp').fill(sent.code)
         await p.getByRole('button', { name: 'Verify' }).click()
-        await p.getByRole('button', { name: /create my shop/i }).click()
+        await p.getByRole('heading', { name: 'What do you sell?' }).waitFor()
+        await p.getByRole('button', { name: 'Women', exact: true }).click()
+        await shot('sells')
+        await p.getByRole('button', { name: 'Create store' }).click()
+        await p.getByRole('heading', { name: 'Creating your store' }).waitFor()
+        await p.getByRole('heading', { name: 'Noor Threads is ready to set up' }).waitFor()
+        await shot('done')
+        await p.getByRole('link', { name: 'Set up store' }).click()
         await p.waitForURL(/\/console$/)
         const [s] = await db`select t.id, m.role from tenants t join members m on m.tenant_id = t.id where t.slug = ${SLUG} and m.user_id = ${F.id}`
         assert.equal(s?.role, 'owner')

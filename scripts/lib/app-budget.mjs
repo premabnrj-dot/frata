@@ -22,13 +22,18 @@ export const APP_PINNED = {
   // The Studio workbench (plan 2026-11-22 WB·3, speed review M: at most 150): what the shell loaded on 2026-11-22
   // (131.4 kB) + 2, so growth is a finding. Code, Checks and Versions load with next/dynamic; no diff or highlight library.
   '/(partner)/partner/fixtures/studio/page': 133.4,
+  // Sign-up (O1·8, plan 2026-11-23-o1-signup): never more than it loaded on main before O1 (128.5 kB, 2026-11-23); the
+  // popup, the WhatsApp step and the email step load with next/dynamic.
+  '/start/page': 128.5,
 }
+/** Pages outside Console, Admin and the partner workspace held to their pin (their own surface, the same count). */
+const ALSO = ['/start/page']
 // build: app-build-manifest's pages; gz: (file) => gzipped bytes. Pure, so a test can hand it a manifest.
 /** @param {Record<string, number>} [pinned] */
 export function appBudgetProblems(build, gz, show = () => {}, budget = APP_BUDGET_KB, pinned = /** @type {Record<string, number>} */ (APP_PINNED)) {
   const out = []
   for (const [k, files] of Object.entries(build)) {
-    if (!/^\/\((console|admin|partner)\)\//.test(k) || !k.endsWith('/page')) continue
+    if ((!/^\/\((console|admin|partner)\)\//.test(k) || !k.endsWith('/page')) && !ALSO.includes(k)) continue
     const parts = k.split('/').slice(0, -1)
     const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
     const kb = [...new Set([...above.flatMap((l) => build[l] ?? []), ...files])].filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024

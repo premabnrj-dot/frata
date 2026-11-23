@@ -71,6 +71,8 @@ export default {
         ['site-partners', 'anon', '/partners'],
         ['site-login', 'anon', '/login'],
         ['site-start', 'anon', '/start'],
+        // O1·8: the sign-up signed in (a person with no store yet): the plan step's path, the same net.
+        ['site-start-signed-in', 'founder', '/start'],
         // The shop (search and sharing S2·7): the same net in the shop's own look — skip link, 24 px targets, contrast.
         ['shop-home', 'anon', SHOP + '/'],
         ['shop-product', 'anon', SHOP + '/products/chanderi-kurta-set'],
@@ -101,7 +103,7 @@ export default {
 
       await t.step('every page × width measured (failures collected)', async () => {
         for (const [w, h, label] of WIDTHS) {
-          const ctxs = { owner: await signedIn(t.browser, 'owner', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }), frata: await signedIn(t.browser, 'frata', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }), anon: await t.browser.newContext({ viewport: { width: w, height: h }, reducedMotion: 'reduce' }) }
+          const ctxs = { owner: await signedIn(t.browser, 'owner', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }), frata: await signedIn(t.browser, 'frata', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }), founder: await signedIn(t.browser, 'founder', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }), anon: await t.browser.newContext({ viewport: { width: w, height: h }, reducedMotion: 'reduce' }) }
           for (const [page, who, path] of PAGES) await (await measure(ctxs[who], page, path, w, label, h)).close()
           for (const c of Object.values(ctxs)) await c.close()
         }

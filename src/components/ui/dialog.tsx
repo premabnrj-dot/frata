@@ -20,10 +20,15 @@ import { cn } from '@/lib/utils'
 // activation since the last one) still reaches onClose through `close`.
 // =============================================================================
 
-export function Dialog({ open, onClose, title, description, children, actions, error, className }: {
+export function Dialog({ open, onClose, onDismiss, title, description, children, actions, error, className }: {
   open: boolean
   /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
+  /**
+   * Draws the ✕ (`aria-label="Close"`) at the header's end, which calls this (O1·8; a setup popup or a choice, never a
+   * confirm of what loses something). It must set `open` to false, as onClose; it may be the same function.
+   */
+  onDismiss?: () => void
   title: string
   description?: React.ReactNode
   children?: React.ReactNode
@@ -45,6 +50,7 @@ export function Dialog({ open, onClose, title, description, children, actions, e
     if (open && !d.open) { d.showModal(); d.querySelector<HTMLElement>('[data-autofocus]')?.focus() }
     if (!open && d.open) d.close()
   }, [open])
+  const head = <h2 id={titleId} className="flex-1 text-section font-semibold">{title}</h2>
   return (
     <dialog ref={ref} data-dialog aria-labelledby={titleId} aria-describedby={description ? descId : undefined}
       onCancel={(e) => { e.preventDefault(); onClose() }}
@@ -52,7 +58,7 @@ export function Dialog({ open, onClose, title, description, children, actions, e
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] text-left rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
       <div data-dialog-body="" className="grid gap-4 p-5">
-        <h2 id={titleId} className="text-section font-semibold">{title}</h2>
+        {onDismiss ? <div className="flex items-center gap-3">{head}<button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button></div> : head}
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}
         <DialogError error={error} />
