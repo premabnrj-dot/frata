@@ -4453,6 +4453,129 @@ do $$ declare r text; f text; begin
 end $$;
 rollback;
 
+-- § 102 · Sign-up without a PIN code (O1, drizzle/0166; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
+-- refusal of v1 (§ 17, § 30's retired name) and v2 (§ 49): confirmed email, one shop a person, taken, bad and retired
+-- addresses, another person's code, a code twice, a claimed email gets no trial, frozen terms; the new store has no
+-- pickup PIN code, its audit no 'pickup', and 'signup_ms' only inside 0..86,400,000. The partner's v2 keeps § 28's
+-- applicant, declined and cap refusals, § 77's check and § 82's Builder. Only frata_app runs either.
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000201', 'v3a@signup-proof.test', now()), ('aaaaaaaa-0000-0000-0000-000000000202', 'v3b@signup-proof.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000203', 'v3c@signup-proof.test', now()), ('aaaaaaaa-0000-0000-0000-000000000204', 'v3d@signup-proof.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000205', 'p102@kiln.test', now()), ('aaaaaaaa-0000-0000-0000-000000000206', 'q102@kiln.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000207', 'r102@kiln.test', now()), ('aaaaaaaa-0000-0000-0000-000000000208', 'b102@kiln.test', now());
+begin;
+-- B opened once, so its rename below retires its old name (as § 30).
+update shop_settings set published_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222';
+update shop_settings set published_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
+set local role frata_app;
+do $$ declare t uuid; r record; c uuid; d jsonb; A uuid := 'aaaaaaaa-0000-0000-0000-000000000201'; B uuid := 'aaaaaaaa-0000-0000-0000-000000000202'; begin
+  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000003', 'Squat', 'squat-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 102 unconfirmed email made a shop';
+  exception when raise_exception then if sqlerrm <> 'email_unconfirmed' then raise; end if; end;
+  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000002', 'Second', 'second-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 102 an owner made a second shop';
+  exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
+  begin perform app_create_shop_v3(A, 'Taken', 'proof-a', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 a taken address was accepted';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin perform app_create_shop_v3(A, 'Bad', '-bad-', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 a bad address was accepted';
+  exception when raise_exception then if sqlerrm <> 'bad_slug' then raise; end if; end;
+  perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b102-new');
+  if app_name_check('proof-b') <> 'taken' then raise exception 'FAIL: 102 the retired name looked free'; end if;
+  begin perform app_create_shop_v3(A, 'Squatter', 'proof-b', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 sign-up took a retired name';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin perform app_create_shop_v3(A, 'Plan', 'proof-102-plan', '{}', 'gold', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 an unknown plan';
+  exception when raise_exception then if sqlerrm <> 'bad_plan' then raise; end if; end;
+  begin perform app_create_shop_v3(A, '   ', 'proof-102-blank', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 a blank name';
+  exception when raise_exception then if sqlerrm <> 'bad_name' then raise; end if; end;
+  -- a code: another person cannot spend it; it is spent once
+  c := app_signup_code_issue(A, 'phone-hmac-102', 'code-hmac-102', 1::smallint);
+  if not app_signup_code_verify(A, c, 'code-hmac-102') then raise exception 'FAIL: 102 the right code did not verify'; end if;
+  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 102 a code spent by another person';
+  exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
+  select * into r from app_create_shop_v3(A, '  Proof A102  ', 'proof-a102', array['women','ethnic'], 'growth', 'h-102-a', 1::smallint, c, 41500);
+  if not r.trial then raise exception 'FAIL: 102 a first sign-up got no trial'; end if;
+  begin perform app_create_shop_v3(A, 'Again', 'proof-a102-again', '{}', 'growth', 'h-102-x', 1::smallint, null, null); raise exception 'FAIL: 102 one person made two shops';
+  exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
+  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 102 a code used twice';
+  exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
+  perform set_config('app.tenant_id', r.tenant_id::text, true);
+  if (select name from tenants) <> 'Proof A102' then raise exception 'FAIL: 102 new shop name'; end if;
+  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 102 the new store has a pickup PIN code'; end if;
+  if (select sells from shop_settings) <> array['women','ethnic'] then raise exception 'FAIL: 102 what the store sells'; end if;
+  if (select count(*) from tenant_plans) <> 1 then raise exception 'FAIL: 102 new shop plan'; end if;
+  select detail into d from audit_events where action = 'shop.created';
+  if d ? 'pickup' or (d->>'signup_ms')::int is distinct from 41500 or d->>'plan' <> 'growth' or (d->>'trial')::boolean is not true then raise exception 'FAIL: 102 the audit detail (%)', d; end if;
+end $$;
+rollback;
+begin;
+do $$ declare r record; d jsonb; begin
+  -- As the definer runs it (superuser here, to check the rows): a claimed email, frozen terms, the clamp.
+  insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'h-102-taken', 1, '11111111-1111-1111-1111-111111111111');
+  select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000203', 'Proof C102', 'proof-c102', '{}', 'launch', 'h-102-taken', 1::smallint, null, -1);
+  if r.trial or exists (select 1 from shop_trials where tenant_id = r.tenant_id) then raise exception 'FAIL: 102 a claimed email got a trial'; end if;
+  select detail into d from audit_events where tenant_id = r.tenant_id and action = 'shop.created';
+  if d ? 'signup_ms' then raise exception 'FAIL: 102 a negative time was kept'; end if;
+  select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000204', 'Proof D102', 'proof-d102', '{}', 'growth', 'h-102-new', 1::smallint, null, null);
+  if not r.trial or (select days from shop_trials where tenant_id = r.tenant_id) <> (select days from trial_settings) then raise exception 'FAIL: 102 the trial terms were not frozen'; end if;
+  if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: 102 the new shop''s plan row has no trial end'; end if;
+  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 102 a null time was kept'; end if;
+  if (select pickup_pincode from shop_settings where tenant_id = r.tenant_id) is not null then raise exception 'FAIL: 102 pickup'; end if;
+  -- the clamp's top edge
+  delete from members where user_id = 'aaaaaaaa-0000-0000-0000-000000000204';
+  select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000204', 'Proof E102', 'proof-e102', '{}', 'growth', 'h-102-e', 1::smallint, null, 86400001);
+  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 102 a time over a day was kept'; end if;
+  -- privileges: frata_app only
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) ro,
+             unnest(array['app_create_shop_v3(uuid,text,text,text[],text,text,smallint,uuid,integer)', 'app_partner_create_shop_v2(uuid,uuid,text,text,text,integer,integer,integer,integer)']) f
+             where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: 102 another role may create a store'; end if;
+  if not has_function_privilege('frata_app', 'app_create_shop_v3(uuid,text,text,text[],text,text,smallint,uuid,integer)', 'execute')
+     or not has_function_privilege('frata_app', 'app_partner_create_shop_v2(uuid,uuid,text,text,text,integer,integer,integer,integer)', 'execute') then
+    raise exception 'FAIL: 102 the app cannot create a store'; end if;
+end $$;
+rollback;
+-- the partner's v2: P approved (owner), Q an applicant, R declined, D a Builder on P's first store
+begin; set local role frata_app;
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000205', 'Pari', 'Kiln 102', '919845012302', 'Pune', '{}', '', '1-4', 1);
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000206', 'Qadir', '', '919845012303', 'Pune', '{}', '', '0', 1);
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000207', 'Rhea', '', '919845012304', 'Pune', '{}', '', '0', 1);
+commit;
+update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000205';
+update partners set declined_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000207';
+begin; set local role frata_app;
+select proof.check('aaaaaaaa-0000-0000-0000-000000000205');
+do $$ declare P uuid := 'aaaaaaaa-0000-0000-0000-000000000205'; Q uuid := 'aaaaaaaa-0000-0000-0000-000000000206'; R uuid := 'aaaaaaaa-0000-0000-0000-000000000207';
+  D uuid := 'aaaaaaaa-0000-0000-0000-000000000208'; t uuid; inv uuid;
+begin
+  begin perform app_partner_create_shop_v2(Q, proof.sess(Q), proof.h(Q), 'Q102', 'proof-q102', 2000, 24, 90, 10); raise exception 'FAIL: 102 an applicant made a store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  begin perform app_partner_create_shop_v2(R, proof.sess(R), proof.h(R), 'R102', 'proof-r102', 2000, 24, 90, 10); raise exception 'FAIL: 102 a declined partner made a store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), 'not-a-check', 'P102 X', 'proof-p102-x', 2000, 24, 90, 10); raise exception 'FAIL: 102 a partner store without a check';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  t := app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102', 'proof-p102', 2000, 24, 90, 1);
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102 two', 'proof-p102-two', 2000, 24, 90, 1); raise exception 'FAIL: 102 past the cap of unopened stores';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'too_many' then raise; end if; end;
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Taken', 'proof-a', 2000, 24, 90, 10); raise exception 'FAIL: 102 a partner took a taken address';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  inv := app_partner_invite(P, proof.sess(P), proof.h(P), 'b102@kiln.test', 'builder', array[t]);
+  perform app_partner_accept(D, inv);
+  perform proof.check(D);
+  begin perform app_partner_create_shop_v2(D, proof.sess(D), proof.h(D), 'D102', 'proof-d102-x', 2000, 24, 90, 10); raise exception 'FAIL: 102 a Builder made a store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  perform set_config('app.tenant_id', t::text, true);
+  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 102 the partner''s store has a pickup PIN code'; end if;
+  if (select count(*) from partner_links) <> 1 then raise exception 'FAIL: 102 the partner''s link'; end if;
+  perform set_config('app.tenant_id', '', true);
+end $$;
+rollback;
+-- the store and its audit row, read as the definer wrote them (the app reads audit rows only through its own tenant)
+begin; set local role frata_app;
+select proof.check('aaaaaaaa-0000-0000-0000-000000000205');
+select app_partner_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000205', proof.sess('aaaaaaaa-0000-0000-0000-000000000205'), proof.h('aaaaaaaa-0000-0000-0000-000000000205'), 'Proof P102', 'proof-p102', 2000, 24, 90, 10);
+reset role;
+do $$ declare d jsonb := (select detail from audit_events a join tenants t on t.id = a.tenant_id where t.slug = 'proof-p102' and a.action = 'shop.created'); begin
+  if d is null or d ? 'pickup' or d->>'by' <> 'partner' then raise exception 'FAIL: 102 the partner''s audit detail (%)', d; end if;
+end $$;
+rollback;
+
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
@@ -5979,4 +6102,4 @@ do $$ declare who uuid := '99999999-9999-9999-9999-999999999999'; begin
   exception when check_violation then null; end;
 end $$;
 rollback;
-\echo 'tenancy proof — all checks passed (through § 101)'
+\echo 'tenancy proof — all checks passed (through § 102)'
