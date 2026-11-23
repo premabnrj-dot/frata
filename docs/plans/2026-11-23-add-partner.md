@@ -44,9 +44,9 @@ updated, no pin test yet); `ROLES_GIVEN_BY` sits beside `CAPABILITIES` rather th
 ## Deviations
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
-| People rows show a person's name ("Prem Banerjee") | The person's email | The store holds no names for its people; an email is what the owner typed | no — to show at release |
-| Manager's line "Everything you can do, costs and profit included." | "Everything you can do, payments and costs included." | security-reviewer L4: a Manager holds where online payments go; the owner should know | no — to show at release |
-| Partner invitation row "From Prem Banerjee" | Store name and expiry only | The partner never receives the owner's email before accept (tenancy review); no names held | no — to show at release |
-| Staff seeing People read only (state 3) | Staff can't open People; a support visit reads it | security-reviewer M4: People stays owner and Manager | no — to show at release |
+| People rows show a person's name ("Prem Banerjee") | The person's email | The store holds no names for its people; an email is what the owner typed | yes, owner 2026-11-23 ("approved.") |
+| Manager's line "Everything you can do, costs and profit included." | "Everything you can do, payments and costs included." | security-reviewer L4: a Manager holds where online payments go; the owner should know | yes, owner 2026-11-23 ("approved.") |
+| Partner invitation row "From Prem Banerjee" | Store name and expiry only | The partner never receives the owner's email before accept (tenancy review); no names held | yes, owner 2026-11-23 ("approved.") |
+| Staff seeing People read only (state 3) | Staff can't open People; a support visit reads it | security-reviewer M4: People stays owner and Manager | yes, owner 2026-11-23 ("approved.") |
 | Decline shown as "<email> declined" | As drawn | A decline is the partner's own act; it tells the owner the address was a partner's, which only that partner chose | yes (drawn) |
 | Email to the invited person, button "Sign in to House Of Ayuda" | As drawn, through the staff security pipe's template | The address pipe is the only one that reaches a non-member | yes (drawn) |
