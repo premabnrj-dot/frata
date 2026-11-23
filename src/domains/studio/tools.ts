@@ -12,7 +12,7 @@
 // =============================================================================
 
 import { z } from 'zod'
-import { COLOUR_ROLES, DENSITIES, FONTS, RADII, type Radius } from '@/domains/brand/record'
+import { TokensPatch } from '@/domains/brand/patch'
 
 export const TOOL_NAMES = ['store_facts', 'tokens_propose', 'logo_propose', 'preview_build'] as const
 export type ToolName = (typeof TOOL_NAMES)[number]
@@ -29,16 +29,10 @@ export const mayStartSession = (storeRole: string) => storeRole === 'partner'
 /** The most an SVG logo proposal may hold (the cleaner allows 200 kB; a logo needs far less). */
 export const LOGO_PROPOSAL_MAX = 64 * 1024
 
-const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
 export const TOOL_INPUTS = {
   store_facts: z.strictObject({}),
-  tokens_propose: z.strictObject({
-    palette: z.strictObject(Object.fromEntries(COLOUR_ROLES.map((r) => [r, hex.optional()])) as Record<(typeof COLOUR_ROLES)[number], z.ZodOptional<typeof hex>>).optional(),
-    display: z.enum(FONTS).optional(),
-    body: z.enum(FONTS).optional(),
-    radius: z.union(RADII.map((r) => z.literal(r)) as unknown as [z.ZodLiteral<Radius>, z.ZodLiteral<Radius>]).optional(),
-    density: z.enum(DENSITIES).optional(),
-  }),
+  // saveBrand's own patch shape without the logo slots (src/domains/brand/patch.ts): a proposal parses as what Apply saves.
+  tokens_propose: TokensPatch,
   logo_propose: z.strictObject({ svg: z.string().min(1).max(LOGO_PROPOSAL_MAX) }),
   preview_build: z.strictObject({}),
 } as const satisfies Record<ToolName, z.ZodType>

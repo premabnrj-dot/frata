@@ -19,6 +19,7 @@ export function outlineLogo(input: string): { ok: true; svg: string } | { ok: fa
   const c = cleanSvg(input)
   if (!c.ok) return c
   if (/<(text|tspan)[\s>/]/i.test(c.svg) || /\sfont-family="/i.test(c.svg)) return { ok: false, reason: 'text' }
-  if (!/<(path|rect|circle|ellipse|polygon|polyline|line|use)[\s>/]/i.test(c.svg)) return { ok: false, reason: 'empty' }
+  // A real shape: <use> alone may point at nothing and render blank (impact review).
+  if (!/<(path|rect|circle|ellipse|polygon|polyline|line)[\s>/]/i.test(c.svg)) return { ok: false, reason: 'empty' }
   return { ok: true, svg: c.svg }
 }

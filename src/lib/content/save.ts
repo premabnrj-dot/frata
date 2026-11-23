@@ -19,8 +19,9 @@ import { storeHost } from '@/domains/media/sizes'
 import { brandProblems, type BrandField } from '@/domains/brand/check'
 import { changesOf, changeSummary } from '@/domains/brand/diff'
 import { acceptedBrandFile, rasterBase } from '@/domains/brand/files'
-import { COLOUR_ROLES, DENSITIES, FONTS, LOGO_SLOTS, normalHex, RADII, type BrandRecord, type LogoSlot } from '@/domains/brand/record'
+import { LOGO_SLOTS, type BrandRecord, type LogoSlot } from '@/domains/brand/record'
 import { readRecord } from '@/domains/brand/schema'
+import { applyPatch, BrandPatchSchema, type BrandPatch } from '@/domains/brand/patch'
 import { BRAND_REFUSAL, brandSaver, decidesBrand } from '@/domains/brand/who'
 import { cleanLine, DEFAULT_DESIGN, designChanges, checkoutProblems, designSummary, HEADERS, MAX_TRUST, readDesign, TRUST_KEYS, type CheckoutDesign } from '@/domains/brand/checkout'
 
@@ -49,27 +50,11 @@ const STALE = 'The brand changed since you opened it. Reload to see it.'
 const THEME_ONLY = NOTHING
 const UNDO_MS = 60_000
 
-const hex = z.string().max(9)
-const Patch = z.strictObject({
-  logos: z.strictObject(Object.fromEntries(LOGO_SLOTS.map((s) => [s, z.string().max(300).nullable().optional()])) as Record<LogoSlot, z.ZodOptional<z.ZodNullable<z.ZodString>>>).optional(),
-  palette: z.strictObject(Object.fromEntries(COLOUR_ROLES.map((r) => [r, hex.optional()])) as Record<(typeof COLOUR_ROLES)[number], z.ZodOptional<typeof hex>>).optional(),
-  display: z.enum(FONTS).optional(),
-  body: z.enum(FONTS).optional(),
-  radius: z.union(RADII.map((r) => z.literal(r)) as unknown as [z.ZodLiteral<0>, z.ZodLiteral<4>]).optional(),
-  density: z.enum(DENSITIES).optional(),
-})
 /** `version` is the record the editor holds (null: none saved yet); left out only by a one-field caller (the Settings logo). */
-const SaveInput = z.strictObject({ version: z.number().int().positive().nullable().optional(), patch: Patch })
-export type BrandPatch = z.infer<typeof Patch>
+const SaveInput = z.strictObject({ version: z.number().int().positive().nullable().optional(), patch: BrandPatchSchema })
+export type { BrandPatch }
 
-/** The record a patch makes: colours normalised ("#fbf7f1" → "#FBF7F1"); a colour that isn't one stays as typed so the check names it. */
-function apply(live: BrandRecord, p: BrandPatch): BrandRecord {
-  const palette = { ...live.palette }
-  for (const r of COLOUR_ROLES) { const v = p.palette?.[r]; if (v !== undefined) palette[r] = normalHex(v) ?? (v as `#${string}`) }
-  const logos = { ...live.logos }
-  for (const s of LOGO_SLOTS) { const v = p.logos?.[s]; if (v !== undefined) logos[s] = v }
-  return { logos, palette, display: p.display ?? live.display, body: p.body ?? live.body, radius: p.radius ?? live.radius, density: p.density ?? live.density }
-}
+const apply = applyPatch
 
 /** Each logo the patch sets: this store's own file, in its shape, and really in the media store. */
 async function logoProblems(p: BrandPatch, tenantId: string): Promise<Partial<Record<LogoSlot, string>>> {

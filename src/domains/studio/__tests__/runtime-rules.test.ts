@@ -8,7 +8,9 @@ import { budgetFor, capsFor, ceilingOf, deltaOf, fromCents, mayReserve, studioCa
 import { callAccepted, turnOpen, turnState } from '../turn'
 import { dueForDelete, endReason, IDLE_END_MS, MAX_AGE_MS } from '../session'
 import { isToolName, mayStartSession, parseToolInput, TOOL_NAMES } from '../tools'
-import { changesSomething, checkLogo, checkTokens } from '../proposals'
+import { changesSomething, checkLogo, checkTokens, LOGO_SLOT, PROPOSAL_VALUE_MAX_BYTES } from '../proposals'
+import { BrandPatchSchema } from '@/domains/brand/patch'
+import { TOOL_ERRORS, TOOL_KIND } from '../tools'
 
 const u = (d: number) => microUsd(d)
 const zero = { reserved: 0 as MicroUsd, measured: 0 as MicroUsd }
@@ -128,7 +130,9 @@ describe('tools', () => {
     expect(parseToolInput('store_facts', {})).toEqual({})
     expect(parseToolInput('store_facts', { tenant_id: 'x' })).toBeNull()
     expect(parseToolInput('tokens_propose', { palette: { accent: '#B5542B' } })).toEqual({ palette: { accent: '#B5542B' } })
-    expect(parseToolInput('tokens_propose', { palette: { accent: 'red' } })).toBeNull()
+    // saveBrand's own shape: a colour that isn't one parses, and the check names it (below).
+    expect(parseToolInput('tokens_propose', { palette: { accent: 'red' } })).toEqual({ palette: { accent: 'red' } })
+    expect(parseToolInput('tokens_propose', { logos: { main: 'x' } })).toBeNull()
     expect(parseToolInput('tokens_propose', { radius: 5 })).toBeNull()
     expect(parseToolInput('logo_propose', { svg: 'x'.repeat(64 * 1024 + 1) })).toBeNull()
   })
@@ -158,5 +162,49 @@ describe('proposals', () => {
     expect(t).toMatchObject({ ok: false, reason: 'text' })
     expect(checkLogo('<svg xmlns="http://www.w3.org/2000/svg"><script>x</script><path d="M0 0"/></svg>')).toMatchObject({ ok: false, reason: 'script' })
     expect(outlineLogo('<svg xmlns="http://www.w3.org/2000/svg"></svg>')).toEqual({ ok: false, reason: 'empty' })
+  })
+})
+
+describe('the gaps impact review named', () => {
+  const live = emptyRecord(DEFAULT_PALETTE)
+  it('every tokens proposal that parses also parses as saveBrand\'s patch (Apply depends on it)', () => {
+    const samples = [{}, { radius: 16 }, { palette: { accent: '#7a2a1e', bg: '#FFFFFF' } }, { display: 'inter', body: 'inter', density: 'roomy' }]
+    for (const x of samples) {
+      const p = parseToolInput('tokens_propose', x)
+      expect(p).not.toBeNull()
+      expect(BrandPatchSchema.safeParse(p).success).toBe(true)
+    }
+  })
+  it('a colour that is not one, alone, is refused by the check', () => {
+    const r = checkTokens(live, { palette: { accent: 'red' } })
+    expect(r.ok).toBe(false)
+  })
+  it('tool kinds and errors cover every tool, in our words', () => {
+    expect(Object.keys(TOOL_KIND).sort()).toEqual([...TOOL_NAMES].sort())
+    for (const w of Object.values(TOOL_ERRORS)) expect(w.length).toBeLessThan(120)
+    expect(LOGO_SLOT).toBe('main')
+  })
+  it('budget with a spent amount that is not whole cents', () => {
+    const c = studioCaps()!
+    expect(budgetFor({ spent: u(0.123456), largest: u(0.13), ceiling: c.turnCeiling, floor: c.floor })).toEqual({ ok: true, cents: 49 })
+  })
+  it('an unchecked actor (null) never ends a session on its own', () => {
+    const now = new Date('2026-11-22T12:00:00Z')
+    expect(endReason({ now, createdAt: now, lastActivityAt: now, turnOpen: true, studioOpen: true, actorLive: null })).toBeNull()
+  })
+  it('fromCents refuses junk and negatives', () => {
+    expect(fromCents('-5')).toBe(0)
+    expect(fromCents('1e3')).toBe(u(10))
+    expect(fromCents(Number.NaN)).toBe(0)
+  })
+  it('outline-only: a tspan, a font-family with no text, and a lone <use> are refused', () => {
+    const ns = 'xmlns="http://www.w3.org/2000/svg"'
+    expect(outlineLogo(`<svg ${ns}><g><tspan>K</tspan></g><path d="M0 0"/></svg>`)).toMatchObject({ ok: false })
+    expect(outlineLogo(`<svg ${ns}><g font-family="Georgia"><path d="M0 0"/></g></svg>`)).toEqual({ ok: false, reason: 'text' })
+    expect(outlineLogo(`<svg ${ns}><use href="#a"/></svg>`)).toEqual({ ok: false, reason: 'empty' })
+  })
+  it('a logo whose stored value would pass the column cap is refused', () => {
+    const big = `<svg xmlns="http://www.w3.org/2000/svg">${'<path d="M0 0h1v1z" fill="#000000"/>'.repeat(Math.ceil(PROPOSAL_VALUE_MAX_BYTES / 36))}</svg>`
+    expect(checkLogo(big)).toMatchObject({ ok: false, reason: 'too_big' })
   })
 })

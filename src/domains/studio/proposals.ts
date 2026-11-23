@@ -9,7 +9,8 @@
 // =============================================================================
 
 import { brandProblems, type BrandProblem } from '@/domains/brand/check'
-import { COLOUR_ROLES, LOGO_SLOTS, normalHex, type BrandRecord, type Hex } from '@/domains/brand/record'
+import { COLOUR_ROLES, normalHex, type BrandRecord, type LogoSlot } from '@/domains/brand/record'
+import { applyPatch } from '@/domains/brand/patch'
 import { outlineLogo, OUTLINE_REFUSAL_WORDS, type OutlineRefusal } from '@/domains/brand/outline'
 import { SVG_REFUSAL_WORDS } from '@/domains/brand/svg'
 import type { ToolInput } from './tools'
@@ -20,12 +21,8 @@ export type ProposalKind = (typeof PROPOSAL_KINDS)[number]
 export type TokensValue = ToolInput<'tokens_propose'>
 export type LogoValue = { svg: string }
 
-/** The record a tokens proposal would make, colours normalised. */
-export function withTokens(live: BrandRecord, p: TokensValue): BrandRecord {
-  const palette = { ...live.palette }
-  for (const r of COLOUR_ROLES) { const v = p.palette?.[r]; if (v !== undefined) palette[r] = (normalHex(v) ?? v) as Hex }
-  return { logos: { ...live.logos }, palette, display: p.display ?? live.display, body: p.body ?? live.body, radius: p.radius ?? live.radius, density: p.density ?? live.density }
-}
+/** The record a tokens proposal would make: saveBrand's own merge (src/domains/brand/patch.ts). */
+export const withTokens = (live: BrandRecord, p: TokensValue): BrandRecord => applyPatch(live, p)
 
 /** Whether a tokens proposal changes anything. */
 export function changesSomething(live: BrandRecord, p: TokensValue): boolean {
@@ -46,15 +43,19 @@ export function checkTokens(live: BrandRecord, p: TokensValue): TokensCheck {
   return { ok: true, value: { ...p, ...(palette ? { palette } : {}) } as TokensValue }
 }
 
-export type LogoCheck = { ok: true; value: LogoValue } | { ok: false; reason: OutlineRefusal; words: string }
+export type LogoCheck = { ok: true; value: LogoValue } | { ok: false; reason: OutlineRefusal | 'too_big'; words: string }
+
+/** What `studio_proposals.value` holds at most, as stored (jsonb text; drizzle/0163's check). */
+export const PROPOSAL_VALUE_MAX_BYTES = 72 * 1024
 
 /** A logo proposal: the cleaned, outline-only SVG, or why not (in the person's words). */
 export function checkLogo(svg: string): LogoCheck {
   const r = outlineLogo(svg)
+  if (r.ok && new TextEncoder().encode(JSON.stringify({ svg: r.svg })).length > PROPOSAL_VALUE_MAX_BYTES) return { ok: false, reason: 'too_big', words: SVG_REFUSAL_WORDS.too_big }
   if (r.ok) return { ok: true, value: { svg: r.svg } }
   const words = r.reason === 'text' || r.reason === 'empty' ? OUTLINE_REFUSAL_WORDS[r.reason] : SVG_REFUSAL_WORDS[r.reason]
   return { ok: false, reason: r.reason, words }
 }
 
 /** The slot an agent logo fills: the main logo only, in V3a. */
-export const LOGO_SLOT: (typeof LOGO_SLOTS)[number] = 'main'
+export const LOGO_SLOT = 'main' as const satisfies LogoSlot

@@ -21,7 +21,11 @@
 import { microUsd, type MicroUsd } from '@/domains/money/usd'
 import { STUDIO_MODEL } from './model'
 
+/** List rates per million tokens, at the model's HIGHER tier (prompts over 100K): a request is never under-priced. */
+export type Rates = { in: number; out: number; read: number; write: number }
+
 export type Caps = {
+  rates: Rates
   /** A turn's default ceiling and the most a turn may ask for. */
   turnCeiling: MicroUsd; turnMax: MicroUsd
   /** The least the "largest request so far" counts as (one cold request at the model's higher rate). */
@@ -34,7 +38,9 @@ export type Caps = {
 
 /** One row per model Studio may run. A model without a row has no caps: every turn refuses (check:studio). */
 export const CAPS: Readonly<Record<string, Caps>> = {
-  'claude-haiku-5-5': {
+  [STUDIO_MODEL]: {
+    // Haiku 5.5 above 100K: $0.50 in, $2.50 out; cache read 0.1×; a cache write priced as a 1-hour write (2×).
+    rates: { in: 0.5, out: 2.5, read: 0.05, write: 1.0 },
     turnCeiling: microUsd(0.5), turnMax: microUsd(1), floor: microUsd(0.12),
     personDay: microUsd(3), platformDay: microUsd(10), openSessions: 3,
   },
@@ -87,3 +93,12 @@ export function mayReserve(a: { caps: Caps; ceiling: MicroUsd; person: DayTotals
 
 /** The delta a turn cost, from the session's cumulative list cost before and after (whole cents; never negative). */
 export const deltaOf = (before: MicroUsd, after: MicroUsd): MicroUsd => Math.max(0, after - before) as MicroUsd
+
+export type RequestTokens = { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
+
+/** One model request's list cost from its tokens (the budget formula's "largest request"), at the higher tier. */
+export function requestCost(t: RequestTokens, r: Rates): MicroUsd {
+  const n = (x: number) => (Number.isFinite(x) && x > 0 ? x : 0)
+  // tokens × $ per million = micro-dollars
+  return Math.ceil(n(t.input_tokens) * r.in + n(t.output_tokens) * r.out + n(t.cache_read_input_tokens) * r.read + n(t.cache_creation_input_tokens) * r.write) as MicroUsd
+}
