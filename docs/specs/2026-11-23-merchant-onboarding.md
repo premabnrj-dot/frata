@@ -1,6 +1,8 @@
 # Merchant onboarding: sign-up, setup, the website, the end of themes, more categories
-Status: draft (awaiting the owner's eleven calls; four reviews folded in, § Reviews; nothing built) · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/PzNfST7bdFvLiQsxy11mQT
-(`docs/mockups/2026-11-23-merchant-onboarding.html`) · Approved: pending
+Status: active (owner, 2026-11-23: "approve all 11 calls, go with your recommendations. for now defer starter and look/theme retirement work. Keep categories work modular and scalable clients should be able to update categories later on as well"; four reviews folded in, § Reviews; nothing built) · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/PzNfST7bdFvLiQsxy11mQT
+(`docs/mockups/2026-11-23-merchant-onboarding.html`) · Approved: owner, 2026-11-23 (all eleven calls as recommended)
+Plans: `docs/plans/2026-11-23-o1-signup.md`, `docs/plans/2026-11-23-o2-setup.md`, `docs/plans/2026-11-23-c1-category-packs.md`.
+**Deferred by the owner, 2026-11-23:** W1 (website from a starter), W2 (Ask for a change) and T (themes end). Look stays as it is. Building now: O1, O2, C1.
 Builds on: ADR-0014 (themes retire; partners get the builder first), ADR-0017 (hosting), ADR-0019 (one address),
 ADR-0020 (Studio's agent), `docs/plans/2026-11-12-studio-build.md`, `docs/plans/2026-11-16-execution.md`,
 `docs/specs/2026-11-08-trials.md` (rule 3 is replaced by call 2, if approved),
