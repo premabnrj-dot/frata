@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.8.0
+  version: 3.9.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -140,6 +140,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
   layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
   its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
+  A door that asks several checks in one call wraps them in `oncePerCall` (`session.ts`, an AsyncLocalStorage memo of
+  `signedInUser`, `sessionIdOf` and `accessOf` for that call only): `requireStudio` does, so a poll asks once, not three
+  times (2026-11-23).
 - **Staff passkeys** (ADR-0007 amended 2026-11-12; `docs/specs/2026-11-12-staff-passkeys.md`): staff access and every
   support visit need a live passkey step-up on this browser session. `app_access_for(user, session, stepup hash)`
   answers `staffConfirmedAt` and drops support visits without one, in the query every signed-in request already runs.
@@ -471,7 +474,9 @@ period (frata-integrations § Domains). Build for daily; a beta schedule is an o
 - **Send and the cron**: `src/lib/studio/sessions.ts` (send, start, Stop, the poll's advance; imported by the Studio
   actions and rows route only) and `src/lib/studio/cron.ts` (end, clean, delete from `app_studio_due`'s ids, no bind;
   imported by the cron route only). With Studio unconfigured the cron still ends open sessions as `switch` and revokes
-  their keys. Migrations 0166–0167.
+  their keys. A run does the ends first, the advances four at once, then clean-ups and deletes, each kind starting only
+  with room for its longest step; its ends settle the runtime's measured cost capped at the reserve (`measure.ts`, the
+  one settle delta). A fresh start checks `agentMatches()` first. Migrations 0166–0167.
 - **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors
   (who may import the advance, asTurn, sessions.ts and cron.ts), no runtime call or cached loader inside a transaction,
   no id-shaped tool input.
