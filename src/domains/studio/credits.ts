@@ -59,12 +59,15 @@ export function microUsdFor(credits: number, rateE4: number, loadingBp = LOADING
 /** List cost in paise (no loading), rounded up: what the platform's daily ceiling counts. */
 export const listPaise = (listMicroUsd: bigint, rateE4: number): bigint => (listMicroUsd * BigInt(rateE4) + PAISE_DEN - 1n) / PAISE_DEN
 
+/** The USD/INR rates a typed rate or a rupee bill may sit in (rupees × 10,000: ₹50 to ₹200); fx_rates' CHECK says the same. */
+export const FX_RATE_BAND_E4 = [50_0000, 200_0000] as const
+
 /** A rate as written ("94.1997") → rupees × 10,000, exactly (never through a float); null when it isn't one. */
 export function parseRate(text: string): number | null {
   const m = /^(\d{2,3})(?:\.(\d{1,4}))?$/.exec(text.trim())
   if (!m) return null
   const v = Number(m[1]) * 10_000 + Number((m[2] ?? '').padEnd(4, '0'))
-  return v >= 50_0000 && v <= 200_0000 ? v : null
+  return v >= FX_RATE_BAND_E4[0] && v <= FX_RATE_BAND_E4[1] ? v : null
 }
 
 /** Whether a stored rate may price a use now. */

@@ -68,7 +68,7 @@ The database cannot tell a master admin from support staff (one connection), so 
 - unique `(item_id, period_for)` so Mark paid twice is a no-op, never a double (`on conflict do nothing`); index `(paid_on, id)`
 - CHECKs: kind and cadence paired (`(kind = 'recurring') = (cadence is not null)`); currency in INR, USD; amounts between 1 and
   1e10; `inr_paise = amount` when INR; `gst_paise` between 0 and `inr_paise`; dates between 2020-01-01 and 2100-12-31;
-  a one-time item is never `varies` and has no `ends_on`; text caps (note ≤ 300); FK `item_id` on delete restrict
+  a one-time item is never `varies` (undoing its payment ends it on its paid day, so the entry stays as removed, never an orphan); text caps (note ≤ 300); FK `item_id` on delete restrict
 
 Grants: items select, insert, update (no delete — end it instead); payments select, insert, delete
 (delete is Undo for a mistaken payment). Money is integer minor units end to end (ADR-0004); USD is
@@ -133,7 +133,7 @@ that list (it hard-codes `billing` today, `activity/page.tsx`); `credits.rate.se
 ### Input rules (Zod on the server, CHECKs in 0170)
 
 Names trimmed with control and bidi characters stripped; `name` 1–80, `vendor` ≤ 80, `note` ≤ 300; amounts integer 1 to
-₹1 crore (1e9 paise; USD in cents with the same ceiling in rupees); USD `inr_paise` within the `fx_rates` 50–200 band;
+₹1 crore (1e9 paise) in rupees, or $50,000 in dollars (₹1 crore at the band's top, so a dollar bill can always be recorded in rupees); USD `inr_paise` within the `fx_rates` 50–200 band;
 `gst_paise` 0 to `inr_paise`; an anchor no more than 45 days before today when a cost is added (dues start at the anchor, so a long-past one would count missed bills), dates 2020-01-01 to today + 2 years, `paid_on` not after today in IST. `period_for` is
 accepted only if it is a real due date of the item (engine) and not after `ends_on`; a one-time item takes one payment
 (partial unique index on `item_id` where `kind = 'one_time'`, kept by a column or trigger-free check in the writer); Undo is
@@ -209,8 +209,8 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
 - **Performance** (speed review 2026-11-23) — Due dates are derived, so SQL never counts them; one shared **due-set read**
   feeds Overview, All costs and the Today source: recurring items live in the window (`ends_on` null or after the
   lookback) with their `period_for` values since the lookback (correlated `array_agg` over the unique `(item_id,
-  period_for)` index). The lookback is the later of 13 months ago and the item's `created_at`, so a backdated anchor
-  never counts dozens of missed dues. The engine counts in TypeScript. Overview is three plain statements in
+  period_for)` index). The lookback is 13 months, and a dues walk starts at the item's anchor and Add refuses an anchor over 45 days back, so a backdated
+  anchor never counts dozens of missed dues. The engine counts in TypeScript. Overview is three plain statements in
   `Promise.all`: the due set, payments with `paid_on` in [last month's start, next month's start) joined to items, and the
   latest rate (`admin_fx_rate_latest()`). **Reads are plain statements, never a transaction; a write is one
   transaction that calls only `tx.*` and `auditStaff(tx)`, and the rate is read before it opens** (no `cache()`d

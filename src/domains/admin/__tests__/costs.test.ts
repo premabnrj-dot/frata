@@ -180,8 +180,8 @@ describe('what a person types', () => {
   it('refuses zero, too many decimals, words, negatives and anything over the ceiling', () => {
     for (const bad of ['0', '0.00', '', 'abc', '-5', '1.234', '10000000.01', '1e5']) expect(parseAmount(bad, 'INR'), bad).toBeNull()
     expect(parseAmount('10000000', 'INR')).toBe(1_000_000_000)
-    expect(parseAmount('200000', 'USD')).toBe(200_000_000_000)
-    expect(parseAmount('200000.01', 'USD')).toBeNull()
+    expect(parseAmount('50000', 'USD')).toBe(50_000_000_000)
+    expect(parseAmount('50000.01', 'USD')).toBeNull()
   })
   it('rupees for GST may be zero', () => {
     expect(parseRupees('0')).toBe(0)

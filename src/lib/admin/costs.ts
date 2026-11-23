@@ -4,6 +4,7 @@ import {
   anchorMayMove, daysBetween, fyRange, isDueDate, LOOKBACK_MONTHS, MAX_LIVE_COSTS, type Cadence, type CostCategory, type CostCurrency,
   type CostItem, type CostItemInput, type PaidInput, type PaymentRow,
 } from '@/domains/admin/costs'
+import { FX_RATE_BAND_E4 } from '@/domains/studio/credits'
 import { addMonths } from '@/domains/time/month'
 import { ADMIN_ONLY, confirmedRecently, type StaffOk } from '@/lib/auth/require-staff'
 import { adminDb } from '@/lib/db/admin'
@@ -23,13 +24,11 @@ import { auditStaff } from './audit'
 
 const adminOnly = (staff: StaffOk) => { if (!(ADMIN_ONLY as readonly string[]).includes(staff.role)) throw new Error('costs is ADMIN_ONLY') }
 
-export type CostError = 'not_found' | 'already_paid' | 'not_due' | 'locked' | 'confirm_first' | 'bad_input' | 'too_many' | 'ended' | 'unknown'
+export type CostError = 'not_found' | 'already_paid' | 'not_due' | 'locked' | 'confirm_first' | 'bad_input' | 'too_many' | 'unknown'
 export type CostResult<T = object> = ({ ok: true } & T) | { ok: false; error: CostError }
 
 /** A payment this old needs a fresh passkey check to undo (a mistake just made stays one tap). */
 export const UNDO_FREE_MS = 10 * 60_000
-/** The dollar bands a typed rupee amount must sit in (rupees × 10,000 per dollar: ₹50 to ₹200). */
-const RATE_BAND = [500_000, 2_000_000] as const
 const MAX_BACKDATE_DAYS = 45
 
 const toItem = (r: typeof costItems.$inferSelect): CostItem => ({
@@ -46,19 +45,21 @@ export type CostsData = {
   rate: { day: string; rateE4: number } | null
 }
 
-/** The shared due set: every item, the payments that matter for what is due (periods since the lookback, and a one-time
- *  cost's own payment), and the rate. Three plain statements, in parallel. */
+/** The shared due set: every item, the payments that matter (periods since the lookback for what is due, paid in this or last
+ *  month for what was spent, and a one-time cost's own payment), and the rate. Three plain statements, in parallel. A dues
+ *  walk starts at the item's anchor, never before, and Add refuses an anchor over 45 days back, so no created-at bound is needed. */
 export async function costsData(staff: StaffOk, today: string): Promise<CostsData> {
   adminOnly(staff)
   const db = adminDb()
   const back = addMonths(new Date(`${today}T00:00:00Z`), -LOOKBACK_MONTHS).toISOString().slice(0, 10)
+  const monthsBack = `${addMonths(new Date(`${today.slice(0, 7)}-01T00:00:00Z`), -1).toISOString().slice(0, 10)}` // the 1st of last month
   const [items, pays, rate] = await Promise.all([
     db.select().from(costItems).orderBy(asc(costItems.name)),
     db.select({
       id: costPayments.id, itemId: costPayments.itemId, periodFor: costPayments.periodFor, paidOn: costPayments.paidOn, amount: costPayments.amount,
       currency: costPayments.currency, inrPaise: costPayments.inrPaise, gstPaise: costPayments.gstPaise, createdAt: costPayments.createdAt, category: costItems.category,
     }).from(costPayments).innerJoin(costItems, eq(costItems.id, costPayments.itemId))
-      .where(or(gte(costPayments.periodFor, back), eq(costItems.kind, 'one_time'))).orderBy(desc(costPayments.paidOn), desc(costPayments.id)),
+      .where(or(gte(costPayments.periodFor, back), gte(costPayments.paidOn, monthsBack), eq(costItems.kind, 'one_time'))).orderBy(desc(costPayments.paidOn), desc(costPayments.id)),
     db.execute<{ day: string; rate_e4: number }>(sql`select day::text as day, rate_e4 from admin_fx_rate_latest()`),
   ])
   const r = rate[0]
@@ -120,7 +121,7 @@ export async function paymentsForYear(staff: StaffOk, startYear: number): Promis
 /** The rupees typed for a dollar bill must sit in the rate band: a slip of a decimal point never gets in. */
 const rateOk = (amount: number, inrPaise: number) => {
   const e4 = (inrPaise * 1e8) / amount
-  return e4 >= RATE_BAND[0] && e4 <= RATE_BAND[1]
+  return e4 >= FX_RATE_BAND_E4[0] && e4 <= FX_RATE_BAND_E4[1]
 }
 
 const failed = (e: unknown): { ok: false; error: CostError } => {
@@ -139,6 +140,7 @@ export async function addCost(staff: StaffOk, input: CostItemInput, today: strin
   if (input.kind === 'one_time' && !payOk(input.currency, input.amount, input.inrPaise)) return refuse('bad_input')
   try {
     return await adminDb().transaction(async (tx): Promise<CostResult<{ id: string }>> => {
+      // The cap is counted without a lock: two adds at the same instant could both pass. At a handful of staff, accepted.
       const [{ n } = { n: 0 }] = await tx.select({ n: sql<number>`count(*)::int` }).from(costItems).where(sql`${costItems.kind} = 'recurring' and (${costItems.endsOn} is null or ${costItems.endsOn} >= ${today}::date)`)
       if (input.kind === 'recurring' && n >= MAX_LIVE_COSTS) return refuse('too_many')
       const once = input.kind === 'one_time'
@@ -195,6 +197,8 @@ export async function undoPayment(staff: StaffOk, itemId: string, paymentId: str
       if (now.getTime() - p.createdAt.getTime() > UNDO_FREE_MS && !confirmedRecently(staff, now.getTime())) return refuse('confirm_first')
       const gone = await tx.delete(costPayments).where(and(eq(costPayments.id, paymentId), eq(costPayments.itemId, itemId))).returning({ id: costPayments.id })
       if (!gone.length) return refuse('not_found')
+      // A one-time cost is its payment: with that gone the entry is kept as removed (ended on its paid day), never an orphan.
+      await tx.update(costItems).set({ endsOn: sql`${costItems}.anchor_on` }).where(and(eq(costItems.id, itemId), eq(costItems.kind, 'one_time')))
       await auditStaff(tx, staff, { action: 'costs.unpay', target: itemId, detail: { itemId, periodFor: p.periodFor, inrPaise: p.inrPaise, gstPaise: p.gstPaise } })
       return { ok: true }
     })
@@ -210,6 +214,8 @@ export async function endCost(staff: StaffOk, itemId: string, endsOn: string): P
       if (!row) return refuse('not_found')
       if (row.kind !== 'recurring') return refuse('locked')
       if (endsOn < row.anchorOn) return refuse('bad_input')
+      const [last] = await tx.select({ p: sql<string | null>`max(${costPayments.periodFor})::text` }).from(costPayments).where(eq(costPayments.itemId, itemId))
+      if (last?.p && endsOn < last.p) return refuse('bad_input')
       await tx.update(costItems).set({ endsOn }).where(eq(costItems.id, itemId))
       await auditStaff(tx, staff, { action: 'costs.item.end', target: itemId, detail: { fields: ['endsOn'] } })
       return { ok: true }
@@ -229,6 +235,9 @@ export async function editCost(staff: StaffOk, itemId: string, patch: CostPatch,
   adminOnly(staff)
   const fields = Object.keys(patch).filter((k) => (patch as Record<string, unknown>)[k] !== undefined)
   if (!fields.length) return refuse('bad_input')
+  // An amount and its currency change together: one without the other would read paise as micro-dollars.
+  if ((patch.amount !== undefined) !== (patch.currency !== undefined)) return refuse('bad_input')
+  // Money and schedule: the figures that reach the CA and the burn. Needs a passkey check in the last 5 minutes.
   const money = fields.some((f) => f === 'amount' || f === 'currency' || f === 'anchorOn' || f === 'cadence')
   if (money && !confirmedRecently(staff, now.getTime())) return refuse('confirm_first')
   try {

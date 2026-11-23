@@ -183,8 +183,9 @@ export const fyRange = (startYear: number) => ({ from: `${startYear}-04-01`, to:
 
 // ── What a person types ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/** The most one cost may be: ₹1 crore in paise, or $200,000 in micro-dollars (the ₹50 to ₹200 band's top). */
-export const AMOUNT_MAX = { INR: 1_000_000_000, USD: 200_000_000_000 } as const
+/** The most one cost may be: ₹1 crore in paise, or $50,000 in micro-dollars (₹1 crore at the band's top, ₹200 a dollar, so a
+ *  dollar bill can always be recorded in rupees). */
+export const AMOUNT_MAX = { INR: 1_000_000_000, USD: 50_000_000_000 } as const
 
 /** "1,380" or "57.50" or "0.000125" → paise (INR, up to 2 decimals) or micro-dollars (USD, up to 6), exactly, never
  *  through a float; null when it is not an amount above zero, has too many decimals, or is over the ceiling. */

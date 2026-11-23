@@ -1,10 +1,9 @@
 import { z } from 'zod'
 import {
   COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, cleanText, parseAmount, parseDay, parseRupees,
-  type CostCurrency, type CostItemInput,
+  type CostCurrency, type CostItemInput, type PaidInput,
 } from '@/domains/admin/costs'
 import type { CostPatch } from '@/lib/admin/costs'
-import type { PaidInput } from '@/domains/admin/costs'
 
 // =============================================================================
 // FILE: src/app/(admin)/admin/costs/input.ts — what a person types in Admin › Costs' forms, parsed (plan

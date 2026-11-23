@@ -17,12 +17,12 @@ CREATE TABLE "cost_items" (
 	CONSTRAINT "cost_items_kind_cadence" CHECK (("cost_items"."kind" = 'recurring') = ("cost_items"."cadence" is not null)),
 	CONSTRAINT "cost_items_currency" CHECK ("cost_items"."currency" in ('INR','USD')),
 	CONSTRAINT "cost_items_category" CHECK ("cost_items"."category" in ('infrastructure','ai','messaging','software','marketing','legal','people','design','other')),
-	CONSTRAINT "cost_items_amount" CHECK (("cost_items"."currency" = 'INR' and "cost_items"."amount" between 1 and 1000000000) or ("cost_items"."currency" = 'USD' and "cost_items"."amount" between 1 and 200000000000)),
+	CONSTRAINT "cost_items_amount" CHECK (("cost_items"."currency" = 'INR' and "cost_items"."amount" between 1 and 1000000000) or ("cost_items"."currency" = 'USD' and "cost_items"."amount" between 1 and 50000000000)),
 	CONSTRAINT "cost_items_name" CHECK (length(btrim("cost_items"."name")) between 1 and 80),
 	CONSTRAINT "cost_items_vendor" CHECK ("cost_items"."vendor" is null or length("cost_items"."vendor") <= 80),
 	CONSTRAINT "cost_items_note" CHECK ("cost_items"."note" is null or length("cost_items"."note") <= 300),
 	CONSTRAINT "cost_items_days" CHECK ("cost_items"."anchor_on" between '2020-01-01' and '2100-12-31' and ("cost_items"."ends_on" is null or "cost_items"."ends_on" between '2020-01-01' and '2100-12-31')),
-	CONSTRAINT "cost_items_once" CHECK ("cost_items"."kind" <> 'one_time' or (not "cost_items"."varies" and "cost_items"."ends_on" is null))
+	CONSTRAINT "cost_items_once" CHECK ("cost_items"."kind" <> 'one_time' or not "cost_items"."varies")
 );
 --> statement-breakpoint
 CREATE TABLE "cost_payments" (
@@ -37,7 +37,7 @@ CREATE TABLE "cost_payments" (
 	"note" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "cost_payments_currency" CHECK ("cost_payments"."currency" in ('INR','USD')),
-	CONSTRAINT "cost_payments_amount" CHECK ((("cost_payments"."currency" = 'INR' and "cost_payments"."amount" between 1 and 1000000000) or ("cost_payments"."currency" = 'USD' and "cost_payments"."amount" between 1 and 200000000000)) and "cost_payments"."inr_paise" between 1 and 1000000000),
+	CONSTRAINT "cost_payments_amount" CHECK ((("cost_payments"."currency" = 'INR' and "cost_payments"."amount" between 1 and 1000000000) or ("cost_payments"."currency" = 'USD' and "cost_payments"."amount" between 1 and 50000000000)) and "cost_payments"."inr_paise" between 1 and 1000000000),
 	CONSTRAINT "cost_payments_inr" CHECK ("cost_payments"."currency" <> 'INR' or "cost_payments"."inr_paise" = "cost_payments"."amount"),
 	CONSTRAINT "cost_payments_gst" CHECK ("cost_payments"."gst_paise" is null or "cost_payments"."gst_paise" between 0 and "cost_payments"."inr_paise"),
 	CONSTRAINT "cost_payments_days" CHECK ("cost_payments"."paid_on" between '2020-01-01' and '2100-12-31' and "cost_payments"."period_for" between '2020-01-01' and '2100-12-31'),

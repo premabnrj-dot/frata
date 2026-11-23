@@ -4,7 +4,8 @@
 // pays. Only frata_admin reads and writes them (src/lib/admin/costs.ts, fenced by check:tenant § 10); frata_app, the API
 // roles and frata_builder hold nothing. Amounts are paise (INR) or micro-dollars (USD); due dates, next due, overdue and
 // burn are derived (src/domains/admin/costs.ts), never stored. A one-time cost has its anchor on the paid date and its one
-// payment settles that date.
+// payment settles that date (the writer keeps it to one: markPaid refuses non-repeating costs). Undoing that payment ends the
+// cost on its paid date, so the entry is kept as removed, never an orphan.
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
@@ -16,7 +17,7 @@ import { at, id, money } from './schema'
 const list = (xs: readonly string[]) => sql.raw(sqlList(xs))
 const DAY_MIN = sql.raw(`'2020-01-01'`)
 const DAY_MAX = sql.raw(`'2100-12-31'`)
-/** The spec's ceilings: ₹1 crore in paise, $200,000 in micro-dollars (src/domains/admin/costs.ts AMOUNT_MAX). */
+/** The spec's ceilings: ₹1 crore in paise, $50,000 in micro-dollars (src/domains/admin/costs.ts AMOUNT_MAX). */
 const INR_MAX = AMOUNT_MAX.INR, USD_MAX = AMOUNT_MAX.USD
 
 /** What Frrata pays for: a repeating cost (with its cadence and next due anchor) or a one-time one. */
@@ -46,7 +47,7 @@ export const costItems = pgTable('cost_items', {
   check('cost_items_vendor', sql`${t.vendor} is null or length(${t.vendor}) <= 80`),
   check('cost_items_note', sql`${t.note} is null or length(${t.note}) <= 300`),
   check('cost_items_days', sql`${t.anchorOn} between ${DAY_MIN} and ${DAY_MAX} and (${t.endsOn} is null or ${t.endsOn} between ${DAY_MIN} and ${DAY_MAX})`),
-  check('cost_items_once', sql`${t.kind} <> 'one_time' or (not ${t.varies} and ${t.endsOn} is null)`),
+  check('cost_items_once', sql`${t.kind} <> 'one_time' or not ${t.varies}`),
 ])
 
 /** Each time a cost was paid. `period_for` is the due date it settles; unique per item, so paying twice is one row. */
