@@ -7,7 +7,12 @@ module.exports = (req, res) => {
   res.setHeader('content-type', 'application/json; charset=utf-8')
   if (req.method !== 'GET') { res.statusCode = 405; res.end('{"error":"method"}'); return }
   const headers = {}
-  for (const [k, v] of Object.entries(req.headers)) headers[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v)
+  // Never Vercel's own headers (x-vercel-oidc-token is the project's short-lived identity token), nor a cookie.
+  for (const [k, v] of Object.entries(req.headers)) {
+    const name = k.toLowerCase()
+    if (name.startsWith('x-vercel-') || name === 'cookie' || name === 'forwarded') continue
+    headers[name] = Array.isArray(v) ? v.join(', ') : String(v)
+  }
   res.statusCode = 200
   res.end(JSON.stringify({ headers }))
 }
