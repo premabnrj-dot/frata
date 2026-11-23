@@ -283,6 +283,14 @@ triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
 - **A partner's change on an open store waits for the owner:** chip "Waiting for the owner", toast "Sent to the owner.";
   the owner's Notices row ("Your partner changed your brand · 4 logo files and 2 fonts.") and a card on Brand carry
   Approve change · Decline. A Builder and a support visit see "Preview only"; Staff and Accountants don't open Brand.
+- **The review card** (four-screens mockup `docs/mockups/2026-11-22-four-screens.html` § 4, owner-approved 2026-11-22):
+  one card on Brand and on Brand › Checkout, "Your partner's change" with chip **Needs you** (warn), Sent, one row per
+  changed part ("Left → Centred"), and Approve change · Decline (sm) for the owner and Managers; anyone else who sees
+  it (a support visit; staff, on Checkout only while a change waits) reads it with chip "Waiting for the owner" and no
+  buttons. The preview carries **Live | Waiting** while a change waits, for everyone incl. the partner (hidden while
+  the form has unsaved edits). Phone: the card, then the switch and preview, then the editor. A stale answer comes back
+  with Reload: "Your partner sent a newer change." or "Already approved by the owner, today, 10:44 am." (by a Manager,
+  by you). Toasts as Brand's: "Approved. It's live." with Undo, "Declined. Nothing changed.".
 - **Publishing per partner** (Settings › People, the partner's row, after handover only): Segmented "Publishes freely ·
   Ask me first", saved on the tap with an ok toast and Undo; a support visit sees it as a fact.
 - **Notices type "Website"** for a publish the owner is told about after: one line per publish ("Neel Studio published

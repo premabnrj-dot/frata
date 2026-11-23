@@ -4,15 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { Facts } from '@/components/data/facts'
 import { Badge, Tag } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Segmented } from '@/components/ui/segmented'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { useToast } from '@/components/ui/toast'
 import { useErrorSummary } from '@/components/ui/field-error'
 import { announce } from '@/components/shell/announce'
-import { useNow } from '@/components/time/now'
 import { STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import { BRAND_FONT_VARS } from '@/components/shop-preview/brand-fonts'
 import { PREVIEWS, PreviewSurface, type PreviewName, type Sample } from '@/components/shop-preview/brand-surfaces'
@@ -21,17 +18,18 @@ import { changesOf } from '@/domains/brand/diff'
 import { normalHex, type BrandRecord, type LogoSlot } from '@/domains/brand/record'
 import { urlFor } from '@/domains/media/sizes'
 import { formatInr } from '@/lib/format'
-import { momentIN } from '@/lib/format-date'
 import type { Paise } from '@/domains/money/paise'
-import { decideBrandAction, saveBrandAction, undoBrandAction, uploadSvgLogoAction } from '../actions'
+import { saveBrandAction, undoBrandAction, uploadSvgLogoAction } from '../actions'
 import { ColoursCard, LogoCard, ShapeCard, TypeCard, type SlotState } from './brand-cards'
+import { previewed, ReviewCard, VersionSwitch, type Version } from './review-card'
 
 // =============================================================================
 // Console › Brand (one-address plan P1·8; owner-approved mockup docs/mockups/2026-11-16-p1-brand.html, screens 1–6).
 // One draft of the record; the preview redraws from it at once and the save bar counts its changes. Save: the record
 // live (toast "Saved." with Undo), or, for the store's partner once it is open, sent to the owner (chip "Waiting for the
 // owner", toast "Sent to the owner."). The owner and a Manager see a waiting change at the top with Approve change and
-// Decline. A Builder and a support visit read the page as facts ("Preview only"). Who may do what is the server's
+// Decline (a support visit reads it without them), and anyone who sees it compares Live and Waiting on the preview
+// (four-screens mockup § 4, call 8). A Builder and a support visit read the page as facts ("Preview only"). Who may do what is the server's
 // (src/domains/brand/who.ts); `mode` only draws it.
 // =============================================================================
 
@@ -48,7 +46,6 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
 }) {
   const router = useRouter()
   const toast = useToast()
-  const now = useNow()
   const edit = mode !== 'preview'
   const start = mode === 'waits' && waiting ? waiting.record : live
   const [saved, setSaved] = useState(start)
@@ -138,28 +135,16 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
     router.refresh()
   }
 
-  const [deciding, setDeciding] = useState<'approve' | 'decline' | null>(null)
-  async function decide(decision: 'approve' | 'decline') {
-    if (!waiting) return
-    setDeciding(decision)
-    const r = await decideBrandAction({ id: waiting.id, decision })
-    setDeciding(null)
-    if (!r.ok) { toast.error(r.error, { action: { label: 'Reload', run: () => window.location.reload() } }); return }
-    focusTop()
-    if (decision === 'approve' && r.version) {
-      const v = r.version
-      toast.ok('Approved. It’s live.', { undo: async () => { const u = await undoBrandAction({ version: v }); if (u.ok) router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
-    } else toast.ok('Declined. Nothing changed.')
-    router.refresh()
-  }
-
   const chip = mode === 'preview' ? <Badge tone="neutral">Preview only</Badge> : sent && mode === 'waits' ? <Badge tone="warn">Waiting for the owner</Badge> : null
   const line = [tagline, sample.product ? formatInr(sample.product.price as Paise) : ''].filter(Boolean).join(' ')
   const typeSample = { title: sample.product?.title ?? sample.shopName, line: line || sample.shopName }
-  const review = decides && waiting ? <ReviewCard live={live} waiting={waiting} now={now} deciding={deciding} onDecide={decide} /> : null
+  const review = waiting && mode !== 'waits' ? <ReviewCard proposer={waiting.proposer} proposedAt={waiting.proposedAt} rows={brandChangeRows(live, waiting.record)} answer={decides ? { id: waiting.id, kind: 'brand' } : null} onDone={focusTop} /> : null
+  // Live | Waiting (four-screens § 4), for anyone who sees a waiting change; the form's own edits win while unsaved.
+  const [compare, setCompare] = useState<Version>('waiting')
+  const shownRecord = previewed({ live, draft, waiting: waiting?.record ?? null, dirty, compare })
+  const switcher = waiting && !dirty ? <VersionSwitch value={compare} onPick={setCompare} /> : null
   const cards = (
     <>
-      {review}
       <LogoCard b={draft} edit={edit} errors={shown} shopName={sample.shopName} slots={slots} onPick={pick} onRemove={(slot) => { set((b) => ({ ...b, logos: { ...b.logos, [slot]: null } }), 'main'); window.setTimeout(() => document.querySelector<HTMLElement>(`[data-logo="${slot}"] input[type=file]`)?.focus(), 0) }} />
       <ColoursCard b={draft} edit={edit} errors={shown} onColour={colour} />
       <TypeCard b={draft} edit={edit} errors={shown} sample={typeSample} onFont={(k, f) => set((b) => ({ ...b, [k]: f }), k)} />
@@ -171,21 +156,24 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
       <PageHeader title="Brand" badges={chip} />
       {tabs}
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_340px]">
-        <div className="lg:hidden"><PreviewCard b={draft} s={sample} phone /></div>
-        <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}
-          {edit && dirty && <SaveBar placement="bottom" count={changes.length} pending={pending} keys="Ctrl+S" onSave={() => void save()} onDiscard={() => { setDraft(saved); setServerErrors({}); setSlots({}); setAttempt(0) }} />}
-        </form>
-        <aside className="sticky top-4 hidden min-w-0 lg:block"><PreviewCard b={draft} s={sample} /></aside>
+        {/* Phone: the card first, then the switch and preview, then the editor (four-screens § 4). */}
+        <div className="flex min-w-0 flex-col gap-4">{review}
+          <div className="lg:hidden"><PreviewCard b={shownRecord} s={sample} switcher={switcher} phone /></div>
+          <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}
+            {edit && dirty && <SaveBar placement="bottom" count={changes.length} pending={pending} keys="Ctrl+S" onSave={() => void save()} onDiscard={() => { setDraft(saved); setServerErrors({}); setSlots({}); setAttempt(0) }} />}
+          </form>
+        </div>
+        <aside className="sticky top-4 hidden min-w-0 lg:block"><PreviewCard b={shownRecord} s={sample} switcher={switcher} /></aside>
       </div>
       <LeaveDialog open={!!guard.leaveTo} what="Brand" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(draft))} />
     </div>
   )
 }
 
-function PreviewCard({ b, s, phone = false }: { b: BrandRecord; s: Sample; phone?: boolean }) {
+function PreviewCard({ b, s, switcher, phone = false }: { b: BrandRecord; s: Sample; switcher: React.ReactNode; phone?: boolean }) {
   const [which, setWhich] = useState<PreviewName>('Checkout')
   return (
-    <Section title="Preview" action={<Tag>Sample data</Tag>}>
+    <Section title="Preview" action={<span className="flex flex-wrap items-center justify-end gap-2">{switcher}<Tag>Sample data</Tag></span>}>
       {phone ? <>
         <Segmented label="Preview" value={which} options={PREVIEWS.map((p) => [p, p] as const)} onPick={setWhich} className="self-start" />
         <div data-store-theme=""><PreviewSurface which={which} b={b} s={s} /></div>
@@ -196,22 +184,14 @@ function PreviewCard({ b, s, phone = false }: { b: BrandRecord; s: Sample; phone
   )
 }
 
-function ReviewCard({ live, waiting, now, deciding, onDecide }: { live: BrandRecord; waiting: Waiting; now: Date; deciding: 'approve' | 'decline' | null; onDecide: (d: 'approve' | 'decline') => void }) {
-  const cs = changesOf(live, waiting.record)
+/** Brand's review rows (P1 mockup screen 4): the logo files added or removed in one row, then each other part from → to. */
+function brandChangeRows(live: BrandRecord, next: BrandRecord): [string, string][] {
+  const cs = changesOf(live, next)
   const logos = cs.filter((c) => c.kind === 'logo')
   const added = logos.filter((c) => c.to).map((c) => c.label), gone = logos.filter((c) => !c.to).map((c) => c.label)
   const list = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`)
-  const rows: [string, React.ReactNode][] = [['Sent', `${waiting.proposer ?? 'Your partner'} · ${momentIN(waiting.proposedAt, now).replace(/^(Today|Yesterday)/, (m) => m.toLowerCase())}`]]
+  const rows: [string, string][] = []
   if (added.length || gone.length) rows.push(['Logo', [added.length ? `${list(added)} added` : '', gone.length ? `${list(gone)} removed` : ''].filter(Boolean).join(' · ')])
   for (const c of cs.filter((x) => x.kind !== 'logo')) rows.push([c.label, `${c.from} → ${c.to}`])
-  return (
-    <Section className="border-warn-mark" title={<span className="flex items-center gap-2">Your partner’s change<Badge tone="neutral">Needs you</Badge></span>}>
-      <Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={rows} />
-      <div className="flex flex-wrap gap-2">
-        <Button busy={deciding === 'approve'} disabled={deciding === 'decline'} onClick={() => onDecide('approve')}>Approve change</Button>
-        <Button variant="secondary" busy={deciding === 'decline'} disabled={deciding === 'approve'} onClick={() => onDecide('decline')}>Decline</Button>
-      </div>
-    </Section>
-  )
+  return rows
 }
-

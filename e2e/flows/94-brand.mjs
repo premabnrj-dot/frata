@@ -4,7 +4,7 @@
 // empty (the store's name, Frrata's colours); a light accent is named at the field and Save counts it; the owner sets
 // fonts, corners and an SVG logo (one with a script refused at its slot) and saves live, then undoes; the partner on the
 // open store saves and it waits for the owner (chip, toast, the live record unchanged); the owner approves in Notices;
-// staff can't open Brand; phone and desktop. Puts the store back.
+// the owner's review card on Brand › Checkout (four-screens mockup § 4); staff can't open Brand; phone and desktop. Puts the store back.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { CONSOLE, USERS, expectToast, partnerOn, signedIn, until } from '../lib.mjs'
@@ -118,6 +118,7 @@ export default {
         await p.goto(CONSOLE + '/console/brand')
         await p.getByRole('heading', { name: /Your partner’s change/ }).waitFor()
         await p.getByText('Inter → Fraunces').waitFor()
+        await p.getByRole('radiogroup', { name: 'Live or waiting' }).first().waitFor()
         await p.screenshot({ path: t.out('brand-review'), fullPage: true })
         await p.goto(CONSOLE + '/console/notices')
         const row = p.locator('li').filter({ hasText: 'Your partner changed your brand' })
@@ -195,6 +196,107 @@ export default {
         await row.getByRole('button', { name: 'Approve change' }).click()
         await expectToast(p, 'Approved. It’s live.', 'ok')
         assert.equal((await db`select heading from checkout_design where tenant_id = ${KESAR}`)[0].heading, 'Nearly yours')
+      })
+
+      await t.step('the owner’s review card on Brand › Checkout (four-screens § 4): a newer change, decided elsewhere, decline, approve, Undo, staff, phone', async () => {
+        const live = async () => (await db`select header, thanks from checkout_design where tenant_id = ${KESAR}`)[0]
+        const openOne = async () => (await db`select id from brand_proposals where tenant_id = ${KESAR} and kind = 'checkout' and decided_at is null`)[0]?.id ?? null
+        // The partner sends a change: the logo centred and a thank-you line.
+        const send = async (thanks) => {
+          const pia = await open('partner')
+          await pia.ctx.addCookies([{ name: 'frata_tenant', value: KESAR, domain: 'localhost', path: '/' }])
+          try {
+            const q = pia.p
+            await q.goto(CONSOLE + '/console/brand/checkout')
+            await q.locator('form').getByRole('radio', { name: 'Centred' }).click()
+            await q.getByLabel('Thank-you line').fill(thanks)
+            await q.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: /^Save/ }).click()
+            await expectToast(q, 'Sent to the owner.', 'ok')
+            // The partner compares too (the switch for anyone who sees the page), with no card of its own.
+            await q.getByRole('radiogroup', { name: 'Live or waiting' }).first().waitFor()
+            assert.equal(await q.getByRole('heading', { name: /Your partner’s change/ }).count(), 0)
+          } finally { await pia.ctx.close() }
+          return openOne()
+        }
+        const before = await live()
+        assert.equal(before.header, 'left')
+        const card = () => p.locator('section').filter({ has: p.getByRole('heading', { name: /Your partner’s change/ }) })
+        // Nothing waiting: no card and no switch.
+        await p.goto(CONSOLE + '/console/brand/checkout')
+        await p.getByRole('heading', { name: 'Preview' }).first().waitFor()
+        assert.equal(await card().count(), 0); assert.equal(await p.getByRole('radiogroup', { name: 'Live or waiting' }).count(), 0)
+
+        // A newer save replaces the card's change: Approve on the older card answers so, with Reload; nothing goes live.
+        const a = await send('Thank you. Packed with care in Jaipur.')
+        await p.goto(CONSOLE + '/console/brand/checkout')
+        await card().getByText('Needs you', { exact: true }).waitFor()
+        await card().getByText('Left → Centred').waitFor()
+        await card().getByText('“Thank you. Packed with care in Jaipur.”', { exact: false }).waitFor()
+        const sw = p.getByRole('radiogroup', { name: 'Live or waiting' }).locator('visible=true').first()
+        assert.equal(await sw.getByRole('radio', { name: 'Waiting' }).getAttribute('aria-checked'), 'true')
+        await sw.getByRole('radio', { name: 'Live' }).click()
+        assert.equal(await sw.getByRole('radio', { name: 'Live' }).getAttribute('aria-checked'), 'true')
+        await p.screenshot({ path: t.out('checkout-review'), fullPage: true })
+        const b = await send('Thank you, truly.')
+        assert.notEqual(a, b)
+        await card().getByRole('button', { name: 'Approve change' }).click()
+        const stale = await expectToast(p, 'Your partner sent a newer change.')
+        await stale.getByRole('button', { name: 'Reload' }).waitFor()
+        assert.equal((await live()).thanks, before.thanks, 'nothing went live')
+        assert.equal((await db`select decision from brand_proposals where id = ${a}`)[0].decision, 'replaced')
+        await p.reload()
+        await card().getByText('“Thank you, truly.”', { exact: false }).waitFor()
+
+        // Decided in Notices meanwhile: the card's answer says by whom and when, with Reload.
+        const notices = await owner.ctx.newPage()
+        await notices.goto(CONSOLE + '/console/notices')
+        const row = notices.locator('li').filter({ hasText: 'Your partner changed your checkout' }).filter({ has: notices.getByRole('button', { name: 'Decline' }) })
+        await row.getByRole('button', { name: 'Decline' }).click()
+        await expectToast(notices, 'Declined. Nothing changed.', 'ok')
+        await notices.close()
+        await card().getByRole('button', { name: 'Decline' }).click()
+        await expectToast(p, /^Already declined by you, today, \d/)
+
+        // Decline on the card.
+        await send('Thank you, again.')
+        await p.reload()
+        await card().getByRole('button', { name: 'Decline' }).click()
+        await expectToast(p, 'Declined. Nothing changed.', 'ok')
+        await until(async () => (await card().count()) === 0)
+
+        // Staff read the card without buttons while a change waits.
+        const c = await send('Thank you. Packed with care in Jaipur.')
+        const staff = await open('staff')
+        try {
+          await staff.p.goto(CONSOLE + '/console/brand/checkout')
+          const sc = staff.p.locator('section').filter({ has: staff.p.getByRole('heading', { name: /Your partner’s change/ }) })
+          await sc.getByText('Waiting for the owner', { exact: true }).waitFor()
+          assert.equal(await sc.getByRole('button').count(), 0, 'no buttons for staff')
+        } finally { await staff.ctx.close() }
+
+        // Phone: the card first, then the switch and preview, then the editor.
+        const phone = await open('owner', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+        try {
+          const q = phone.p
+          await q.goto(CONSOLE + '/console/brand/checkout')
+          const top = async (l) => (await l.boundingBox()).y
+          const cardY = await top(q.getByRole('heading', { name: /Your partner’s change/ }))
+          const swY = await top(q.getByRole('radiogroup', { name: 'Live or waiting' }).locator('visible=true').first())
+          const formY = await top(q.getByRole('heading', { name: 'Header' }))
+          assert.ok(cardY < swY && swY < formY, `card ${cardY} < switch ${swY} < editor ${formY}`)
+          assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scroll')
+          await q.screenshot({ path: t.out('checkout-review-phone'), fullPage: true })
+        } finally { await phone.ctx.close() }
+
+        // Approve on the card: live, then Undo is its own audited write.
+        await p.reload()
+        await card().getByRole('button', { name: 'Approve change' }).click()
+        const done = await expectToast(p, 'Approved. It’s live.', 'ok')
+        assert.equal((await live()).header, 'centre')
+        assert.equal((await db`select decision from brand_proposals where id = ${c}`)[0].decision, 'approved')
+        await done.getByRole('button', { name: 'Undo' }).click()
+        await until(async () => (await live()).header === 'left')
+        assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action = 'brand.checkout.undo'`)[0].n >= 1, true)
       })
 
       await t.step('staff don’t open Brand', async () => {

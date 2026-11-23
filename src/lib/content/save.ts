@@ -6,11 +6,12 @@ import type { Tx } from '@/lib/db'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
-import { shopSettings } from '@/lib/db/schema'
+import { members, shopSettings } from '@/lib/db/schema'
 import { brandProposals, brandTokens, checkoutDesign } from '@/lib/db/schema-brand'
 import { LIMITS, uncount, withinLimit, type Limit } from '@/lib/db/rate-limit'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
+import { momentInLine } from '@/lib/format-date'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { svgIsStored, afterMainLogo } from '@/lib/media/brand-files'
 import { checkoutDesignWith, shopBrand, shopBrandWith } from '@/lib/queries/brand'
@@ -212,13 +213,29 @@ export async function saveBrand(input: unknown, action: 'brand.save' | 'settings
   })
 }
 
-const DecideInput = z.strictObject({ id: z.uuid(), decision: z.enum(['approve', 'decline']) })
+// The card or the Notices row names the exact proposal it showed, and its kind (four-screens § 4, security review): a
+// newer save is a new row, so an answer to the older one never reaches it.
+const DecideInput = z.strictObject({ id: z.uuid(), decision: z.enum(['approve', 'decline']), kind: z.enum(['brand', 'checkout']).optional() })
+
+/** Who answered, as the card says it (Frrata holds no person's name; only the owner and a Manager answer). */
+const DECIDER_WORDS: Record<string, string> = { owner: 'the owner', admin: 'a Manager' }
+
+/** Why a change can't be answered now, in the review card's words: replaced, or already answered (by whom, when). */
+async function settledWords(tx: Tx, t: string, id: string, me: string, now: Date): Promise<string> {
+  const [p] = await tx.select({ decision: brandProposals.decision, by: brandProposals.decidedBy, at: brandProposals.decidedAt }).from(brandProposals)
+    .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id)))
+  if (!p?.at) return NOTHING
+  if (p.decision === 'replaced') return 'Your partner sent a newer change.'
+  const [m] = p.by && p.by !== me ? await tx.select({ role: members.role }).from(members).where(and(eq(members.tenantId, t), eq(members.userId, p.by))) : []
+  const who = p.by === me ? 'you' : (m && DECIDER_WORDS[m.role]) || 'someone else'
+  return `Already ${p.decision === 'approved' ? 'approved' : 'declined'} by ${who}, ${momentInLine(p.at, now)}.`
+}
 
 /** The owner or a Manager says yes or no to the store's waiting change (Notices, or the card on Brand). */
 export async function decideBrand(input: unknown): Promise<BrandResult> {
   const parsed = DecideInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: NOTHING }
-  const { id, decision } = parsed.data
+  const { id, decision, kind } = parsed.data
   return write({ action: `brand.${decision}`, roles: CAN_MANAGE, limit: LIMITS.brandSave }, async (tx, auth) => {
     if (!decidesBrand(auth.membership.role, auth.membership.supportSessionId)) return { error: auth.membership.supportSessionId ? BRAND_REFUSAL.support : 'Only the owner or a Manager can answer this change. Nothing was changed.' }
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
@@ -226,7 +243,8 @@ export async function decideBrand(input: unknown): Promise<BrandResult> {
     // its own version, never as a brand record (one-address P2·6).
     const [p] = await tx.select({ id: brandProposals.id, kind: brandProposals.kind, record: brandProposals.record, base: brandProposals.baseVersion }).from(brandProposals)
       .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id), isNull(brandProposals.decidedAt))).for('update')
-    if (!p) return { error: 'This change was already answered. Reload to see it.' }
+    if (!p) return { error: await settledWords(tx, t, id, me, now) }
+    if (kind && p.kind !== kind) return { error: NOTHING }
     const settle = () => tx.update(brandProposals).set({ decidedAt: now, decision: decision === 'approve' ? 'approved' : 'declined', decidedBy: me })
       .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id)))
     const area = p.kind === 'checkout' ? 'brand.checkout' : 'brand'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_DESIGN, designChanges, checkoutProblems, designSummary, headingOf, readDesign, renderDesign, trustBlocks, trustOrder, trustWords, type CheckoutDesign, type TrustFacts } from '../checkout'
+import { DEFAULT_DESIGN, designChangeRows, designChanges, checkoutProblems, designSummary, headingOf, readDesign, renderDesign, trustBlocks, trustOrder, trustWords, type CheckoutDesign, type TrustFacts } from '../checkout'
 import { LINE_WORDS } from '../lines'
 
 // House of Ayuda's test store (P2 mockup, 2026-11-16): dispatch 1, metro 3, elsewhere 6; 7-day exchange or returns;
@@ -76,5 +76,26 @@ describe('the owner’s line', () => {
   it('reads a stored design back, or null', () => {
     expect(readDesign(drawn)).toEqual(drawn); expect(readDesign({})).toBeNull(); expect(readDesign(null)).toBeNull()
     expect(readDesign({ ...drawn, trust: ['cod', 'x'] })?.trust).toEqual(['cod'])
+  })
+})
+
+describe('the owner’s review card rows (four-screens § 4)', () => {
+  it('names each changed part as drawn', () => {
+    const was: CheckoutDesign = { ...drawn, header: 'left', trust: ['delivery', 'returns'], thanks: 'Thank you.' }
+    const next: CheckoutDesign = { ...was, header: 'centre', trust: ['delivery', 'returns', 'cod'], thanks: 'Thank you. Packed with care in Jaipur.' }
+    expect(designChangeRows(was, next, 'House of Ayuda')).toEqual([
+      ['Logo', 'Left → Centred'],
+      ['Trust blocks', '“Pay on delivery” added'],
+      ['Thank-you line', '“Thank you.” → “Thank you. Packed with care in Jaipur.”'],
+    ])
+  })
+  it('says the rest plainly, and nothing when nothing changed', () => {
+    const next: CheckoutDesign = { ...DEFAULT_DESIGN, back: false, rows: 2, trust: ['returns', 'delivery'], heading: 'Almost yours', thanks: 'Hi' }
+    expect(designChangeRows(DEFAULT_DESIGN, next, 'Kesar')).toEqual([
+      ['“Back to Kesar” link', 'On → Off'], ['Policy links', 'One row → Two rows'], ['Trust blocks', '“Pay on delivery”, “Secure payment by Razorpay” removed'],
+      ['Checkout heading', '“Checkout” → “Almost yours”'], ['Thank-you line', 'None → “Hi”'],
+    ])
+    expect(designChangeRows(drawn, { ...drawn, trust: [...drawn.trust].reverse() }, 'K')).toEqual([['Trust blocks', 'Order changed']])
+    expect(designChangeRows(drawn, drawn, 'K')).toEqual([])
   })
 })

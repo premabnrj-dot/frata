@@ -172,6 +172,27 @@ export function designSummary(fields: readonly DesignField[]): string {
 }
 export const DESIGN_FIELD_LABEL = PART_NAMES
 
+/** The owner's review card (four-screens mockup § 4): one row per changed part, each labelled as the editor labels it,
+ *  ["Logo", "Left → Centred"] · ["Trust blocks", "“Pay on delivery” added"] · ["Thank-you line", "“Thank you.” → “…”"]. */
+export function designChangeRows(a: CheckoutDesign, b: CheckoutDesign, shopName: string): [string, string][] {
+  const side = (h: HeaderAlign) => (h === 'centre' ? 'Centred' : 'Left')
+  const q = (s: string, empty: string) => (s.trim() ? `“${s.trim()}”` : empty)
+  const names = (ks: TrustKey[]) => ks.map((k) => `“${TRUST_NAMES[k]}”`).join(', ')
+  const rows: [string, string][] = []
+  for (const f of designChanges(a, b)) {
+    if (f === 'header') rows.push(['Logo', `${side(a.header)} → ${side(b.header)}`])
+    else if (f === 'back') rows.push([`“Back to ${shopName}” link`, `${a.back ? 'On' : 'Off'} → ${b.back ? 'On' : 'Off'}`])
+    else if (f === 'rows') rows.push(['Policy links', `${a.rows === 2 ? 'Two rows' : 'One row'} → ${b.rows === 2 ? 'Two rows' : 'One row'}`])
+    else if (f === 'trust') {
+      const added = b.trust.filter((k) => !a.trust.includes(k)), gone = a.trust.filter((k) => !b.trust.includes(k))
+      const said = [added.length ? `${names(added)} added` : '', gone.length ? `${names(gone)} removed` : ''].filter(Boolean)
+      rows.push(['Trust blocks', said.length ? said.join(' · ') : 'Order changed'])
+    } else if (f === 'heading') rows.push(['Checkout heading', `${q(a.heading, '“Checkout”')} → ${q(b.heading, '“Checkout”')}`])
+    else rows.push(['Thank-you line', `${q(a.thanks, 'None')} → ${q(b.thanks, 'None')}`])
+  }
+  return rows
+}
+
 /** A stored row or a proposal's record read back as a design, or null when it isn't one. */
 export function readDesign(v: unknown): CheckoutDesign | null {
   if (!v || typeof v !== 'object') return null
