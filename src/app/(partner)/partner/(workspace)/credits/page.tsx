@@ -20,7 +20,20 @@ import { realMoney } from '@/lib/studio/purchase'
 import { dayIN, dayMonthIN, monthLongIN, monthShortIN } from '@/lib/format-date'
 import { istDayKey } from '@/domains/time/day'
 import { formatInr } from '@/lib/format'
-import { Alerts, BuyCredits, CancelSeat, ChangePlan, EditDetails, KeepSeat, RaiseBudget, SetBudget, SiteBudget, StartSeat } from './credits-parts'
+import lazy from 'next/dynamic'
+
+// The dialogs and switches load after the first paint (speed review L2; the partner pages' 150 kB script budget).
+const parts = () => import('./credits-parts')
+const Alerts = lazy(() => parts().then((m) => m.Alerts))
+const BuyCredits = lazy(() => parts().then((m) => m.BuyCredits))
+const CancelSeat = lazy(() => parts().then((m) => m.CancelSeat))
+const ChangePlan = lazy(() => parts().then((m) => m.ChangePlan))
+const EditDetails = lazy(() => parts().then((m) => m.EditDetails))
+const KeepSeat = lazy(() => parts().then((m) => m.KeepSeat))
+const RaiseBudget = lazy(() => parts().then((m) => m.RaiseBudget))
+const SetBudget = lazy(() => parts().then((m) => m.SetBudget))
+const SiteBudget = lazy(() => parts().then((m) => m.SiteBudget))
+const StartSeat = lazy(() => parts().then((m) => m.StartSeat))
 import { USE_WORDS } from './words'
 
 // =============================================================================
@@ -63,7 +76,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
   const href = (t: Tab) => `/partner/credits${t === 'overview' ? '' : `?tab=${t}`}`
   const tabs = <ViewTabs label="Credits and billing" scroll tabs={(owner ? TABS : TABS.filter(([k]) => k === 'budgets')).map(([k, l]) => ({ href: href(k), label: l, current: k === tab }))} />
   const now = new Date()
-  const header = <PageHeader title="Credits and billing" actions={owner ? <BuyCredits size="default" startOpen={q.buy === '1'} /> : undefined} />
+  const header = <PageHeader title="Credits and billing" />
 
   // ── A Lead: client budgets for its own clients (owner call 3) ──
   if (!owner) {
@@ -98,7 +111,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
       const total = v.balance + v.held + v.used
       return <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="grid gap-4">
-          <Section title="Balance" action={<BuyCredits />}>
+          <Section title="Balance" action={<BuyCredits startOpen={q.buy === '1'} />}>
             <div className="grid gap-2">
               <b className="text-display font-semibold"><Numeric>{onlyFree(v) ? `${v.balance} free credits` : `${v.balance.toLocaleString('en-IN')} credits`}</Numeric></b>
               <div className="h-2 overflow-hidden rounded-full bg-sunk" aria-hidden="true"><i className="block h-full bg-primary" style={{ width: `${total ? Math.round((v.balance / total) * 100) : 0}%` }} /></div>
