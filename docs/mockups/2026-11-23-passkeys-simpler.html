@@ -186,10 +186,10 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
   <section class="part" id="short">
     <h2>In short</h2>
     <div class="cards" style="margin-top:12px">
-      <div class="card"><h3>What changes</h3><p>No phone calls. Your first passkey saves at your first sign-in. A staff passkey works in the partner workspace too.</p></div>
+      <div class="card"><h3>What changes</h3><p>No phone calls. A partner's first passkey saves at the first sign-in. A staff passkey works in the partner workspace too.</p></div>
       <div class="card"><h3>Why now</h3><p>Nobody is set up to call. Partners couldn't get in on their first day. You couldn't open Studio.</p></div>
-      <div class="card"><h3>What it costs</h3><p>No new service. Today's screens get fewer. The second person is gone from a first passkey.</p></div>
-      <div class="card"><h3>What I need</h3><p>A yes or no on the seven calls at the end.</p></div>
+      <div class="card"><h3>What it costs</h3><p>No new service. Fewer screens. No second person for a partner's first passkey.</p></div>
+      <div class="card"><h3>What I need</h3><p>A yes or no on the nine calls at the end.</p></div>
     </div>
   </section>
 
@@ -213,14 +213,14 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
     <div class="tw" style="margin-top:16px"><table>
       <thead><tr><th>What a person meets</th><th>Why it gets in the way</th><th>What it protected</th><th>Proposed</th></tr></thead>
       <tbody>
-        <tr><td>A phone call for a first passkey (A, B)</td><td>Nobody is set up to call. A person can wait a day.</td><td>A stolen inbox making the first passkey</td><td>Saved at the first sign-in, everyone told (screen 4)</td></tr>
-        <tr><td>Approving your own request (A)</td><td>The database refuses it. With no other admin, nobody could approve you.</td><td>One person approving themself</td><td>Your staff passkey counts here (screen 1)</td></tr>
-        <tr><td>Two passkey kinds for one person</td><td>At /partner the browser offered only the partner one. It was in another Google account.</td><td>A partner-approved passkey opening Frrata Admin</td><td>One way only. A staff passkey counts as partner (screen 1).</td></tr>
+        <tr><td>A phone call for a first passkey (A, B)</td><td>Nobody is set up to call. A person can wait a day.</td><td>A stolen inbox making the first passkey</td><td>Partners save it at the first sign-in (screen 4). Staff ask another master admin.</td></tr>
+        <tr><td>Approving your own request (A)</td><td>The database refuses it. With no other master admin, nobody could approve you.</td><td>One person approving themself</td><td>Your staff passkey counts here (screen 1)</td></tr>
+        <tr><td>Two passkey kinds for one person</td><td>At /partner the browser showed only the partner passkey. That one was in another Google account.</td><td>A partner-approved passkey opening Frrata Admin</td><td>One way only. A staff passkey counts as partner (screen 1).</td></tr>
         <tr><td>Two prompts to open Studio</td><td>One sign-in, two fingerprints, two places</td><td>Proving both roles</td><td>One prompt (screen 14)</td></tr>
         <tr><td>“Not confirmed. Try again” on a browser with no passkey</td><td>It never says where your passkeys are saved</td><td>Nothing</td><td>Where they are, and another device (screen 2)</td></tr>
-        <tr><td>A lost owner passkey waits 24 hours, then a call</td><td>The call never comes</td><td>The wait is the protection</td><td>Allow now, or save it yourself after 24 hours (screens 7–9)</td></tr>
+        <tr><td>A lost owner passkey waits 24 hours, then a call</td><td>The call never comes</td><td>The wait is the protection</td><td>Frrata allows it and sends a code (screens 7–12)</td></tr>
         <tr><td>“First passkey” shown to an owner who has one</td><td>Wrong words until the button is pressed</td><td>Nothing</td><td>One gate, one set of words</td></tr>
-        <tr><td>Passkeys off, set in SQL</td><td>Hid every prompt for weeks. No screen showed it.</td><td>Nothing while on</td><td>Removed (call 6)</td></tr>
+        <tr><td>Passkeys switched off in the database</td><td>Hid every prompt for weeks. No screen showed it.</td><td>Nothing while on</td><td>Removed, last (call 8)</td></tr>
       </tbody></table></div>
   </section>
 
@@ -229,10 +229,10 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
     <h2>What to take</h2>
     <p class="cap">Help pages read 23 Nov. Only the Google Workspace page shows a date (10 Nov 2026).</p>
     <div class="cards">
-      <div class="card"><h3>GitHub</h3><p>Add a passkey after a fresh sign-in. Nobody approves it. Sudo mode lasts two hours.</p><p><span class="take">Take:</span> no human for a first passkey. <span class="skip">Skip:</span> recovery by support review.</p><p class="src">docs.github.com · no page date</p></div>
-      <div class="card"><h3>Shopify</h3><p>A verified email is enough to make a passkey. A lost one is removed after an email-code sign-in.</p><p><span class="take">Take:</span> the email proves the person, the device lock does the rest.</p><p class="src">help.shopify.com · no page date</p></div>
+      <div class="card"><h3>GitHub</h3><p>Add a passkey after a fresh sign-in. Nobody approves it. It asks again after two hours.</p><p><span class="take">Take:</span> no human for a first passkey. <span class="skip">Skip:</span> recovery by support review.</p><p class="src">docs.github.com · no page date</p></div>
+      <div class="card"><h3>Shopify</h3><p>A verified email is enough to make a passkey. A lost one is removed after an email-code sign-in.</p><p><span class="take">Take:</span> the email proves the person. The device lock does the rest.</p><p class="src">help.shopify.com · no page date</p></div>
       <div class="card"><h3>Stripe</h3><p>One passkey for each Stripe account. A verification step comes first.</p><p><span class="skip">Skip:</span> a passkey per account. Here it means two for one person.</p><p class="src">support.stripe.com · no page date</p></div>
-      <div class="card"><h3>Google Workspace</h3><p>An admin removes a user's passkey. No waiting period, no call.</p><p><span class="take">Take:</span> the approver acts in one click.</p><p class="src">knowledge.workspace.google.com · 10 Nov 2026</p></div>
+      <div class="card"><h3>Google Workspace</h3><p>A Google admin removes a passkey. No waiting period, no call.</p><p><span class="take">Take:</span> the approver acts in one click.</p><p class="src">knowledge.workspace.google.com · 10 Nov 2026</p></div>
     </div>
   </section>
 
@@ -252,7 +252,7 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
         <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
           <div class="body">
             <h3>Confirm it's you</h3>
-            <div class="sys" role="img" aria-label="The browser's passkey prompt"><div class="t">Use a passkey for frata.vercel.app?</div><div class="s">pia@pixelthread.in · Staff and partner passkeys</div><div class="fp"><svg width="24" height="24"><use href="#fp"/></svg></div><div class="alt">Use a phone or tablet</div></div>
+            <div class="sys" role="img" aria-label="The browser's passkey prompt"><div class="t">Use a passkey for frata.vercel.app?</div><div class="s">pia@pixelthread.in</div><div class="fp"><svg width="24" height="24"><use href="#fp"/></svg></div><div class="alt">Use a phone or tablet</div></div>
             <button class="btn primary">Use passkey</button>
             <button class="lnk">No passkey here?</button>
           </div></div></div>
@@ -266,7 +266,7 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
               <div class="pk"><span>iCloud Keychain<small>Saved 12 Nov · Used 21 Nov</small></span><span class="tag">Staff</span></div>
             </div>
             <button class="btn primary">Use another device</button>
-            <button class="lnk">I've lost my passkeys</button>
+            <button class="lnk">Ask for a new passkey</button>
           </div></div></div>
 
       <div><p class="lab"><b>3</b>After another device worked</p>
@@ -279,13 +279,13 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
             <button class="lnk">Not now</button>
           </div></div></div>
     </div>
-    <p class="cap" style="margin-top:14px">States of 1: busy (the button's spinner) · cancelled (stays, “No passkey here?” in focus) · signed out (“Sign in again”). Frrata Admin shows the same card in its own frame.</p>
+    <p class="cap" style="margin-top:14px">States of 1: busy, cancelled, signed out. A staff person's prompt lists their staff passkeys. Frrata Admin shows the same card in its own frame.</p>
   </section>
 
   <!-- ═══ FIRST TIME ═══ -->
   <section class="part" id="first">
     <h2>First time</h2>
-    <p class="cap">The invite, the partner approval or being added to staff is the approval. Nobody calls.</p>
+    <p class="cap">For partner people, the invite or Frrata's approval is the approval. Staff ask another master admin.</p>
     <div class="grid">
       <div><p class="lab"><b>4</b>A Lead, after Join</p>
         <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
@@ -305,44 +305,68 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
           <div class="toast" style="margin-top:auto">Passkey saved to Google Password Manager</div>
         </div></div>
 
-      <div><p class="lab"><b>6</b>More than 7 days after the invite</p>
+      <div><p class="lab"><b>6</b>Joined more than 7 days ago</p>
         <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
           <div class="body">
-            <h3>Ask Pia for your passkey</h3>
-            <p class="sub">Your invite is more than 7 days old.</p>
-            <button class="btn primary">Ask Pia</button>
+            <h3>Ask Pia for your first passkey</h3>
+            <p class="sub">You joined more than 7 days ago.</p>
+            <button class="btn primary">Send request</button>
           </div></div></div>
+
+      <div><p class="lab"><b>6a</b>Two browsers raced, this one lost</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>A passkey was saved for you</h3>
+            <div class="kv"><span>Device</span>Chrome on Windows<span>Where</span>Pune<span>Saved</span>Today, 10:41 am</div>
+            <button class="btn primary">That wasn't me</button>
+            <button class="lnk">It was me</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>6b</b>Staff, first passkey</p>
+        <div class="ws">
+          <div class="wsbar"><b>Frrata Admin</b></div>
+          <h4>Ask another master admin for a passkey</h4>
+          <button class="btn neel" style="justify-self:start">Send request</button>
+        </div></div>
     </div>
-    <p class="cap" style="margin-top:14px">A partner owner sees 4 without the steps, after Frrata approves the partner. Staff see it in Frrata Admin after being added. Everyone concerned gets an email (screen 13).</p>
+    <p class="cap" style="margin-top:14px">A partner owner sees 4 without the steps. Everyone concerned gets an email (screen 13). Staff continue at screen 8.</p>
   </section>
 
   <!-- ═══ LOST ═══ -->
   <section class="part" id="lost">
     <h2>Lost passkey</h2>
-    <p class="cap">From screen 2. Who allows it: Pia for a Lead or Builder, Frrata for a partner owner, another master admin for staff.</p>
+    <p class="cap">From screen 2. Pia allows a Lead or Builder. Frrata allows a partner owner. Another master admin allows staff.</p>
     <div class="grid">
       <div><p class="lab"><b>7</b>Ask</p>
         <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
           <div class="body">
             <h3>Ask Pia for a new passkey</h3>
-            <button class="btn primary">Ask Pia</button>
+            <button class="btn primary">Send request</button>
             <button class="lnk">Use my passkey</button>
           </div></div></div>
 
-      <div><p class="lab"><b>8</b>Waiting</p>
+      <div><p class="lab"><b>8</b>Waiting for the code</p>
         <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
           <div class="body">
             <h3>Waiting for Pia</h3>
-            <div class="kv"><span>Asked</span>Today, 10:42 am<span>Or save it</span>24 Nov, 10:42 am</div>
-            <button class="lnk">Use my passkey</button>
+            <div class="field"><label for="c8">Code from Pia</label><div class="input code" id="c8">— — — — — —</div></div>
+            <button class="btn primary">Save passkey</button>
+            <div class="kv"><span>Asked</span>Today, 10:42 am<span>Or save one</span>24 Nov, 10:42 am</div>
           </div></div></div>
 
-      <div><p class="lab"><b>9</b>Allowed, or 24 hours passed</p>
+      <div><p class="lab"><b>8a</b>Someone else also asked</p>
+        <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h3>Someone else also asked</h3>
+            <p class="sub">Both requests ended. Tell Pia, then ask again.</p>
+            <button class="btn primary">Send request</button>
+          </div></div></div>
+
+      <div><p class="lab"><b>9</b>Code typed, or 24 hours passed</p>
         <div class="bs"><div class="stage"><span class="mark"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
           <div class="body">
             <span class="chip ok" style="justify-self:start">Allowed by Pia</span>
             <h3>Save a passkey</h3>
-            <p class="sub">Anyone who can unlock this device can sign in.</p>
             <button class="btn primary">Save passkey</button>
           </div></div></div>
 
@@ -353,20 +377,27 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
             <button class="btn primary">Ask Pia again</button>
           </div></div></div>
     </div>
-    <p class="cap" style="margin-top:14px">A partner owner reads “Frrata”. Staff read “another master admin” and have no date in 8: only a person allows it. Signing in with a passkey you still have ends the request.</p>
+    <p class="cap" style="margin-top:14px">“Or save one” shows to a Lead or Builder only. A partner owner and staff wait for a person. Signing in with a passkey you still have ends the request.</p>
   </section>
 
   <!-- ═══ APPROVERS ═══ -->
   <section class="part" id="approve">
     <h2>Approvers</h2>
-    <p class="cap">One row and two buttons. No call, no code.</p>
+    <p class="cap">One card in Team, Frrata Admin › Partners and Frrata Admin › Staff. No call.</p>
     <div class="grid">
       <div><p class="lab"><b>11</b>Partner › Team, Pia's view</p>
         <div class="ws">
           <div class="wsbar"><b>Team</b><span>3 people</span></div>
-          <div class="person"><span class="av">AR</span><span><b>Arjun Rao · Lead</b><span class="muted">Chrome on Android · Pune · Today, 10:42 am</span></span><span class="chip warn">Asked for a passkey</span></div>
-          <div class="row"><button class="btn sm neel">Allow now</button><button class="btn sm">Stop it</button></div>
+          <div class="person"><span class="av">AR</span><span><b>Arjun Rao · Lead</b><span class="muted">Chrome on Android · Pune · Today, 10:42 am</span></span><span class="chip warn">Asked for a new passkey</span></div>
+          <div class="row"><button class="btn sm neel">Allow passkey</button><button class="btn sm">Stop request</button></div>
           <div class="person"><span class="av">MS</span><span><b>Meera Shah · Builder</b><span class="muted">New passkey · Safari on iPhone · Mumbai · Yesterday, 6:10 pm</span></span><button class="btn sm">Delete passkey</button></div>
+        </div></div>
+
+      <div><p class="lab"><b>11a</b>After Allow passkey</p>
+        <div class="ws">
+          <div class="wsbar"><b>Team</b><span>3 people</span></div>
+          <div class="person"><span class="av">AR</span><span><b>Arjun Rao · Lead</b><span class="muted">Chrome on Android · Pune · Today, 10:42 am</span></span><span class="chip info">Allowed</span></div>
+          <div class="q"><b style="font-weight:500">Send Arjun this code</b><div class="bigcode" style="font-size:26px;padding:10px 0">482 913</div><span class="muted">Ends 10:57 am</span></div>
         </div></div>
 
       <div><p class="lab"><b>12</b>Frrata Admin › Partners › Passkeys</p>
@@ -374,51 +405,67 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
           <h4>Partner owner’s passkeys</h4>
           <p class="muted">pia@pixelthread.in · 1 passkey</p>
           <div class="q"><div class="row"><b style="font-weight:500">Asked for a new passkey</b><span class="chip warn">Waiting</span></div>
-            <div class="kv"><span>Device</span>Chrome on Mac<span>Where</span>Bengaluru<span>Asked</span>Today, 10:42 am<span>Or saves it</span>24 Nov, 10:42 am</div>
-            <div class="row"><button class="btn sm neel">Allow now</button><button class="btn sm">Stop it</button></div></div>
+            <div class="kv"><span>Device</span>Chrome on Mac<span>Where</span>Bengaluru<span>Asked</span>Today, 10:42 am</div>
+            <div class="row"><button class="btn sm neel">Allow passkey</button><button class="btn sm">Stop request</button></div></div>
         </div>
-        <p class="lab" style="margin-top:14px">Frrata Admin › Staff shows the same row for a staff member, with no date.</p></div>
+        <p class="lab" style="margin-top:14px">Frrata Admin › Staff shows the same card for a staff member.</p></div>
 
-      <div><p class="lab"><b>13</b>The email to everyone concerned</p>
+      <div><p class="lab"><b>13</b>The emails</p>
         <div class="email"><div class="hd"><b>Arjun Rao asked for a new passkey</b><span class="muted">Frrata · to pia@pixelthread.in</span></div>
-          <div class="bd"><span>Chrome on Android, Pune, today at 10:42 am.</span><span>Arjun can save one from 24 Nov, 10:42 am.</span><button class="btn primary">Allow or stop it</button></div></div>
+          <div class="bd"><span>Chrome on Android, Pune · Today, 10:42 am</span><span>Arjun can save one from 24 Nov, 10:42 am.</span><div class="row"><button class="btn primary">Allow passkey</button><button class="btn">Stop request</button></div></div></div>
         <div class="email" style="margin-top:12px"><div class="hd"><b>Arjun Rao saved a passkey</b><span class="muted">Frrata · to pia@pixelthread.in</span></div>
-          <div class="bd"><span>Google Password Manager, Chrome on Android, Pune.</span><button class="btn">Open Team</button></div></div></div>
+          <div class="bd"><span>Google Password Manager · Chrome on Android, Pune</span><button class="btn">Open Team</button></div></div></div>
     </div>
+    <p class="cap" style="margin-top:14px">Both email buttons open the page after sign-in. Nothing happens on a click alone.</p>
   </section>
 
-  <!-- ═══ STUDIO ═══ -->
+  <!-- ═══ STUDIO AND PASSKEYS ═══ -->
   <section class="part" id="studio">
-    <h2>Studio</h2>
-    <p class="cap">Lane D's card 1b, with a staff passkey proving both roles.</p>
-    <div class="vs">
-      <div><p class="lab"><b>14</b>Studio, a check is missing</p>
-        <div class="panel"><h4>Confirm it's you</h4><button class="btn sm neel">Use passkey</button></div></div>
-      <div><p class="lab"><b>14a</b>Lane D's 1b, today's rule</p>
-        <div class="panel today"><h4>Confirm your passkeys</h4><ol><li>Staff passkey: Done</li><li>Partner passkey</li></ol><button class="btn sm neel">Confirm partner passkey</button></div></div>
+    <h2>Studio and passkeys</h2>
+    <p class="cap">Lane D's card 1b keeps its two lines. One staff passkey fills both.</p>
+    <div class="grid">
+      <div><p class="lab"><b>14</b>Studio, before the check</p>
+        <div class="panel"><h4>Confirm your passkeys</h4><ol><li>Staff passkey</li><li>Partner passkey</li></ol><button class="btn sm neel">Use passkey</button></div>
+        <p class="lab" style="margin-top:8px">One prompt. Both lines then read Done.</p></div>
+
       <div><p class="lab"><b>15</b>Partner › Passkeys, for a staff person</p>
         <div class="ws">
           <div class="wsbar"><b>Passkeys</b></div>
           <div class="pk"><span>iCloud Keychain<small class="muted" style="display:block">Saved 12 Nov · Used today</small></span><span class="tag">Staff</span></div>
-          <div class="pk"><span>Google Password Manager<small class="muted" style="display:block">Saved 12 Nov · Used 20 Nov</small></span><span class="tag">Staff</span></div>
           <div class="pk"><span>Google Password Manager<small class="muted" style="display:block">Saved 16 Nov · Used 18 Nov</small></span><button class="btn sm">Delete</button></div>
         </div>
         <p class="lab" style="margin-top:8px">Staff passkeys are deleted in Frrata Admin › Staff.</p></div>
+
+      <div><p class="lab"><b>16</b>A partner owner, the first 72 hours after a new passkey</p>
+        <div class="ws">
+          <div class="wsbar"><b>Passkeys</b></div>
+          <div class="pk"><span>iCloud Keychain<small class="muted" style="display:block">Saved today · Used today</small></span><span class="tag">New</span></div>
+          <div class="pk"><span>Google Password Manager<small class="muted" style="display:block">Saved 16 Nov · Used 18 Nov</small></span><span class="tag">Delete from 26 Nov, 10:42 am</span></div>
+        </div>
+        <p class="lab" style="margin-top:8px">Hand over, invite and Give key show the same date.</p></div>
+
+      <div><p class="lab"><b>17</b>Give key, a staff person with no partner passkey</p>
+        <div class="ws">
+          <div class="wsbar"><b>Developer</b></div>
+          <h4>Give key needs a partner passkey</h4>
+          <button class="btn neel" style="justify-self:start">Save passkey</button>
+        </div></div>
     </div>
   </section>
   </div>
 
-  <!-- ═══ COUNT ═══ -->
+<!-- ═══ COUNT ═══ -->
   <section class="part" id="count">
     <h2>Before and after</h2>
+    <p class="cap">Counted on the screens above.</p>
     <div class="tw" style="margin-top:12px"><table>
       <thead><tr><th>Journey</th><th>Today</th><th>Proposed</th></tr></thead>
       <tbody>
         <tr><td>A Lead, invite to clients</td><td class="n">8 screens · 6 decisions · a call from Pia</td><td class="n">6 screens · 5 decisions · nobody else</td></tr>
-        <tr><td>Pia, for that Lead</td><td class="n">A call · 4 steps in Team</td><td class="n">Nothing. One email.</td></tr>
+        <tr><td>Pia, for that Lead</td><td class="n">A call · 4 steps in Team</td><td class="n">One email</td></tr>
         <tr><td>A partner owner, approved to clients</td><td class="n">7 screens · a call from Frrata</td><td class="n">5 screens · 4 decisions</td></tr>
         <tr><td>A new laptop, passkey on the phone</td><td class="n">4 screens</td><td class="n">4 screens, and where it is saved</td></tr>
-        <tr><td>Every passkey lost</td><td class="n">Lead: a call · Owner: 24 hours, then a call</td><td class="n">One click by Pia or Frrata, else 24 hours</td></tr>
+        <tr><td>Every passkey lost</td><td class="n">Lead: a call · Owner: 24 hours, then a call</td><td class="n">3 screens and a code the approver sends · A Lead alone: 24 hours</td></tr>
         <tr><td>Staff and partner, opening Studio</td><td class="n">2 prompts</td><td class="n">1 prompt</td></tr>
       </tbody></table></div>
     <h3 style="margin:18px 0 8px;font-size:15px">Screens that go</h3>
@@ -437,14 +484,17 @@ td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
   <section class="part" id="calls">
     <h2>Your calls</h2>
     <div class="calls" style="margin-top:12px">
-      <div class="call"><h3>1 · A staff passkey counts in the partner workspace</h3><p>One way. A partner passkey never opens Frrata Admin.</p><p class="rec">Recommended: yes.</p></div>
-      <div class="call"><h3>2 · First passkey at the first sign-in, nobody approves</h3><p>Within 7 days of the invite, partner approval or staff add. A stolen inbox at that moment is enough. That is the same bar as a store owner today.</p><p class="rec">Recommended: yes.</p></div>
-      <div class="call"><h3>3 · Lost passkey, one click to allow</h3><p>Pia for her team, Frrata for an owner, another master admin for staff.</p><p class="rec">Recommended: yes.</p></div>
-      <div class="call"><h3>4 · Nobody allows it, the person saves it after 24 hours</h3><p>For partner people only. Staff always need another master admin.</p><p class="rec">Recommended: yes.</p></div>
-      <div class="call"><h3>5 · One check covers 12 hours, money asks again after 5 minutes</h3><p>Unchanged.</p><p class="rec">Recommended: keep.</p></div>
-      <div class="call"><h3>6 · Remove the passkeys-off switch</h3><p>Or keep it with a screen, a banner and 24 hours at most.</p><p class="rec">Recommended: remove.</p></div>
-      <div class="call"><h3>7 · Requests waiting today</h3><p>Closed by the build. Each person is emailed to sign in again.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>1 · A staff passkey counts in the partner workspace</h3><p>One way. A partner passkey never opens Frrata Admin. Studio asks once.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>2 · A partner's first passkey at the first sign-in</h3><p>Nobody approves it. It must happen within 7 days of joining. Someone with a stolen inbox at that moment could make it. They would reach the stores in the invite.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>3 · Staff always need another master admin</h3><p>For a first passkey and a lost one. The very first admin stays in the database.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>4 · Lost passkey, the approver allows and sends a code</h3><p>Pia for her team, Frrata for a partner owner, another master admin for staff. The code goes by WhatsApp or in person.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>5 · If nobody allows it, a Lead saves one after 24 hours</h3><p>Leads and Builders only, counted from the emails. Partner owners and staff always wait for a person.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>6 · A partner owner's new passkey waits 72 hours for risky steps</h3><p>Hand over, invite, Give key and deleting passkeys.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>7 · Give key still needs a partner passkey</h3><p>A staff person saves one in one tap, then gives keys.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>8 · Remove the passkeys-off switch, last</h3><p>After the rest ships and you pass a check on each browser.</p><p class="rec">Recommended: yes.</p></div>
+      <div class="call"><h3>9 · Requests waiting today</h3><p>Closed when this ships. Each person is emailed to ask again.</p><p class="rec">Recommended: yes.</p></div>
     </div>
+    <p class="cap" style="margin-top:12px">Unchanged: a check lasts 12 hours. Money and team steps ask again after 5 minutes.</p>
     <h3 style="margin:18px 0 8px;font-size:15px">Not built</h3>
     <ul class="removed">
       <li>Passkeys for store owners and Managers</li>

@@ -1,5 +1,5 @@
 # Passkeys, simpler: one check for a person, no phone calls, a clear way in on a new device
-Status: draft · Date: 2026-11-23 · Mockup: pending (`docs/mockups/2026-11-23-passkeys-simpler.html`) · Approved: — ·
+Status: draft · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`) · Approved: — ·
 Owner (2026-11-23): "Please simplify the process, see the complexities issues with passcodes and make it simpler,
 easier. remove redundancies." · Owner (2026-11-23): "there is no calling feature setup, neither we want one." ·
 Fits with lane D's Studio entry card (https://claude.ai/artifact/8gL1SMBEUifHiqV6PRPTak, approved).
@@ -56,7 +56,7 @@ Admin › Partners". In Admin › Partners › <partner> › Passkeys an admin s
 their own passkey). Nothing phones anybody: the call was always a person dialling by hand. A first-passkey request ends
 by itself after 15 minutes, so only recoveries (up to 48 hours) can still be waiting. Whoever releases this can count
 them read-only: `select count(*) from partner_passkey_requests where used_at is null and approved_at is null and
-declined_at is null and expires_at > now()`. The build closes them (§ Design 7).
+declined_at is null and expires_at > now()`. P2 closes them and emails each person (§ Phases).
 
 ## B. What a person meets, and what each thing protects
 
@@ -64,7 +64,7 @@ declined_at is null and expires_at > now()`. The build closes them (§ Design 7)
 |---|---|---|---|
 | B1 | **Two passkeys for one person on one site.** The owner holds two staff passkeys and one partner passkey for `frata.vercel.app`. At /partner Chrome offered nothing: only the partner passkey is allowed there, and it was saved in another Google account. The staff passkeys in this browser did not count. | A passkey approved by a weaker path (a partner owner, an outside company) must never open Admin. A device must not overwrite a staff passkey with a partner one (plan T1b). | The first half is real, **one way only**: a staff passkey is approved by a stricter path than a partner one, so letting it count in the partner workspace weakens nothing. |
 | B2 | **Two prompts to open Studio**, on the same sign-in. | Studio must prove a person who is both staff and a partner (ADR-0020). | Proving both roles is real. Two prompts are not: one staff passkey proves the same person; the roles are checked separately anyway. |
-| B3 | **"Request a call" / "Read us this code"** for a partner owner's first passkey. Nobody is set up to call, and the person who would take the call and approve it in Admin was the owner themself, which the database refuses (`own_request`), so in this case **no one in the app could approve it**. | A stolen inbox alone must not create the first passkey (partner sign-in spec § Goal). The call reached a second channel (the phone on record), and the approver started the call (Lesson 12). | Partly real, but it never ran: the calling set-up does not exist and will not (owner, 2026-11-23). |
+| B3 | **"Request a call" / "Read us this code"** for a partner owner's first passkey. Nobody is set up to call, and the person who would take the call and approve it in Frrata Admin was the owner themself, which the database refuses (`own_request`); with no other master admin **no one in the app could approve it**. | A stolen inbox alone must not create the first passkey (partner sign-in spec § Goal). The call reached a second channel (the phone on record), and the approver started the call (Lesson 12). | Partly real, but it never ran: the calling set-up does not exist and will not (owner, 2026-11-23). |
 | B4 | **"Ask Pia to call you"** for a Lead's or Builder's first passkey. Pia must phone, ask "Did you start this call yourself?", type a code. | The same, with the partner owner as the second person. | The owner invited this exact email minutes earlier; the invite already proves the inbox. The call adds little and blocks the first hour. |
 | B5 | **A lost partner owner's passkey waits 24 hours**, then still needs the call. | A stolen inbox must not quietly replace the owner's passkeys; the wait gives the real owner and Frrata time to see the emails and stop it (plan T1b "can't be talked out of Frrata"). | **Real.** The wait and the emails are the protection; the call after it is what goes. |
 | B6 | **The heading says "Frrata approves your first passkey"** to an owner who already has one, until they press the button (`partner-gate.tsx`: the heading reads `opensAt`, which only exists after the request). | — | A wording bug. |
@@ -74,96 +74,174 @@ declined_at is null and expires_at > now()`. The build closes them (§ Design 7)
 | B10 | **Checks last 12 hours, money and team actions ask again after 5 minutes.** | Cookie-stealing malware is limited to 12 hours and to no sensitive action without a fresh touch (staff spec § Security). | **Real**, and cheap (a fingerprint). Kept. |
 | B11 | **Email code first, then a passkey**, every sign-in. | A passkey cannot start a Supabase session without the service-role key, which is deliberately absent (partner sign-in spec). | Real constraint. Kept. |
 
-## C. The simpler design — options and recommendation
+## C. The design, after the reviews
 
-Seven rules replace today's ten screens of exceptions. Each says what it gives up.
+Five rules replace today's exceptions. Each says what it gives up. The options the reviews turned down are kept at
+the end of each rule, with the reason.
 
-### C1. One person, several roles (question i)
-- **Option 1 · Keep two separate passkey sets** (today), and only fix the words. Gives up nothing; fixes nothing in B1/B2.
-- **Option 2 · A staff passkey counts as the partner check too — one way (recommended).** The partner prompt offers the
-  person's partner passkeys AND their staff passkeys. Confirming with a staff passkey makes both checks on this
-  session; confirming with a partner passkey makes the partner check only. Studio needs one prompt. A person who is
-  staff never needs a partner passkey. *Security cost:* none for the separation ADR-0007 wants: a staff passkey is only
-  ever approved by a master admin or added with another staff passkey, so nothing weaker enters Admin, and a partner
-  passkey still never opens Admin. What changes: the partner workspace now trusts a staff passkey for the same Supabase
-  user; the person must still be a live partner member (`app_pm_live`), so leaving a team, a suspended partner or a
-  removal still ends access at once. T1b's proof "a staff hash as partner hash counts for nothing" becomes "a staff
-  check counts as a partner check for the same person on the same session; a partner check never counts as staff".
-  ADR-0007 and ADR-0020 get an amendment. A partner owner's "Delete passkeys" for a Lead cannot reach that Lead's staff
-  passkeys (rare: staff working as someone else's Lead); removing the Lead from the team still ends their access.
-- **Option 3 · One passkey per person for every role.** One table, one list. The strictest role a person holds decides
-  how a new passkey is approved. Cleanest for the person; the biggest build (every definer, two tables migrated); and
-  any slip in "strictest role decides" lets a partner-approved passkey into Admin. Not now.
+### C1. One person, several roles (question i) — a staff check also makes the partner check, one way
+- A staff passkey check, while the person is a live partner member (`app_pm_live`; one live membership a person,
+  `partner_members_one_partner`, drizzle/0123), also **writes a `partner_stepups` row** for that membership and sets the
+  partner cookie. A partner check never writes a staff row.
+- **How:** `partner_stepups.passkey_id` becomes nullable; a new `staff_stepup_id` references `staff_stepups(id)` on
+  delete cascade; a CHECK that exactly one is set (`num_nonnulls(...) = 1`); an index on it; its expiry is never later
+  than the staff row's. Staff sign-out, expiry, a removed staff passkey or removal from staff ends the partner check and
+  any Studio turn (`studio_turn_keys`, drizzle/0166). Same RLS, deny-all policy and no grant; revokes re-run.
+- **Where the staff check runs:** only through Frrata Admin's passkey route as `frata_admin` (one definer writes both
+  rows; no grant to `frata_app`; security M2). On /partner a staff person is sent to that staff check; everyone else
+  gets the partner ceremony. A pure `checkFor(person)` chooses (architecture finding 3: no ceremony across two
+  challenge tables).
+- **Credential ids are unique across both tables** and the kind of check comes from the table whose public key verified
+  the signature, never from the id (security M2).
+- **Every reader stays as it is:** `app_partner_live_stepup`, `app_access_for`'s `pconf`, `app_studio_partner`, the
+  ~30 workspace definers and `src/lib/studio` read a real partner row. Studio keeps two rows (ADR-0020's rule); only the
+  prompt count changes, to one.
+- **Give key** (device sign-in, G·3) stays partner-passkey only (it never reads `staff_passkeys` as `frata_app`). A staff
+  person with a live partner check made by their staff passkey saves a partner passkey in one tap (the add rule:
+  a live check in the last 5 minutes), then gives keys. Call 6.
+- A partner owner's "Delete passkeys" for a Lead who is also staff ends the partner rows made from staff; the Lead's
+  next staff check makes one again. Team names such a person's passkeys "Frrata staff passkey" (security L1).
+- **Its safety depends on C2:** a staff passkey is only ever approved by another master admin or added with an existing
+  staff passkey. If staff could save their own first passkey, a partner check made with it would prove only an inbox.
+- *Turned down:* keep two separate sets (fixes nothing in B1, B2); one passkey per person for every role (the biggest
+  build; a slip in "the strictest role decides" lets a partner-approved passkey into Frrata Admin).
 
 ### C2. First passkey, with no call (question ii)
-The call protected against a stolen inbox making the first passkey. What replaces it:
-- **Option 1 · Saved at the first sign-in, nobody approves (recommended).** Being invited (Lead, Builder), approved as a
-  partner (owner, by Frrata in Admin › Partners) or added to staff (by a master admin) IS the human approval; the email
-  code proves the inbox; the browser asks for the screen lock. The first passkey must be saved within **7 days** of that
-  approval, after which it is a lost-passkey request (C3), so an account nobody used cannot be taken later by its inbox
-  alone. Every new passkey emails the person, the partner owner and (for an owner or staff) every master admin, with
-  the device and the city, and appears in Team or Admin with a Delete button. *Security cost:* during the first sign-in
-  a stolen inbox is enough to make the first passkey — the same bar every store owner and Manager has today with no
-  passkey at all. After the first passkey a stolen inbox is no longer enough. It gives up the partner sign-in spec's
-  "a second person for the first one".
-- **Option 2 · One click "Allow", no code.** The approver sees the request (device, city, time) and presses Allow: the
-  partner owner for a Lead or Builder (in Team), any master admin for a partner owner or staff (in Admin). *Cost:*
-  without a code an attacker who asks at the same moment could be the one allowed (the code tied the approval to one
-  browser); the person still waits for someone.
-- **Option 3 · Keep the code, send it any way.** "Send Pia this code" (WhatsApp, in person); Pia types it. Keeps the tie to
-  one browser; still waits for a second person; the code can be phished by message.
-- **When the approver would be the same person** (the owner): C1 Option 2 answers it — a staff check lets the owner
-  save a partner passkey at once, or need none. The database's `own_request` refusal stays.
+- **Partner owner, Lead, Builder: saved at the first sign-in, nobody approves.** The invite (Lead, Builder) or Frrata's
+  approval of the partner (owner) is the approval; the email code proves the inbox; the browser asks for the screen
+  lock. Conditions (security M4, tenancy HIGH 4, architecture 9):
+  - only while this person has no passkey now AND no `partner.passkey.add` audit row for this user, ever (any role), taken
+    under a lock on the person, so a deleted passkey never reopens it;
+  - only one passkey is saved this way;
+  - only within 7 days of `partner_members.accepted_at` (Lead, Builder) or `partners.approved_at` (owner), or of the
+    release day for people already waiting; unpausing never restarts it; after that it is a lost-passkey request (C3);
+  - everyone concerned is emailed with the device, the city and the time (the person, the partner owner, every master
+    admin for an owner);
+  - if two sessions race, the one that lost sees "A passkey was saved for you" with **That wasn't me**: it deletes that
+    passkey, ends its checks, emails everyone and moves the person to the approver path.
+- **Staff: another master admin allows it** (security H1, architecture 10). The person asks on Frrata Admin's gate; a
+  master admin presses **Allow passkey**, which shows a 6-digit code; the approver sends it by a channel they already use
+  (WhatsApp, in person); the person types it on the waiting screen; it counts only for that request's browser session.
+  The very first admin: `app_staff_bootstrap` in the SQL editor (unchanged).
+- *Security cost, stated plainly:* for a partner person, whoever holds the inbox during that first sign-in can make the
+  first passkey. A new partner owner has no client stores yet; a new Lead or Builder reaches the stores they were
+  assigned in the invite (orders and shoppers for a Lead; the catalogue for a Builder). The partner owner is told at once
+  and can delete it. After the first passkey, an inbox alone is no longer enough. It gives up the partner sign-in spec's
+  "a second person for the first one" (that spec § Goal is amended).
+- *Turned down:* the approver's one click with no code for every first passkey (the session race the code prevented;
+  the person still waits); the code read aloud on a call (owner's ruling).
 
 ### C3. Lost passkey (question iii)
-1. **First, another device.** The gate's "Use a passkey on another device" opens the browser's own sheet (phone QR,
-   security key). After it works: "Save a passkey on this device" in one tap. Most "lost" passkeys are on a phone or in
-   another Google account (the owner's case).
-2. **Then "I've lost my passkeys".** Recommended: the approver presses **Allow now** (one click, sees device, city and
-   time): partner owner for a Lead or Builder; any other master admin for a partner owner or staff. **If nobody allows,
-   a partner person saves a new passkey themself after 24 hours.** The request emails the person, the partner owner and
-   every master admin at once, each with **Stop it** (any signed-in approver, or the person with any existing passkey,
-   cancels it). Staff keep no self-serve path: another master admin, or the SQL break-glass (`app_staff_bootstrap`).
-3. **Is 24 hours right for everyone?** A Lead with an owner around: no wait (Allow now). An owner with a Frrata admin
-   around: no wait. Anyone alone: 24 hours, which is the protection (B5). Staff: never self-serve (Admin reads across
-   every merchant).
-*Security cost:* the call after the wait is gone; a stolen inbox left unnoticed for 24 hours by the person, the partner
-owner and every master admin can replace a partner person's passkeys. Option kept for the owner: "no self-serve for a
-partner owner either — a Frrata admin must Allow" (today's protection, minus the call).
+1. **Another device first.** "Use another device" opens the browser's own sheet (a phone's QR code, a security key).
+   After it works: **Save a passkey on this device**, one tap. The owner's case was this.
+2. **Ask for a new passkey.** One open request a person; a second request ends both and both screens say "Someone else
+   also asked"; Allow is off while more than one exists (security M1, architecture 7). Allow names the request's id.
+3. **Who allows it, and how:** the approver presses **Allow passkey**, which shows a 6-digit code; they send it by their
+   own channel; the person types it on the waiting screen (it counts for that request's session only). The approver:
+   - a Lead or Builder → their partner owner (in Team);
+   - a partner owner → any master admin (Frrata Admin › Partners › Passkeys);
+   - staff → another master admin (Frrata Admin › Staff).
+   Approvers act only on their own partner's people, never their own request (`own_request` stays).
+4. **If nobody allows it** (a Lead or Builder only): they save a new passkey themself **24 hours after the warning
+   emails were sent** to them and to their partner owner (`staff_notices.sent_at`). No sent email, no self-serve
+   (fail closed; architecture 6). A partner owner and staff never self-serve (security H2): an owner's real approver is
+   Frrata, who can judge; a Lead's is their owner, who can.
+5. **Stop request:** the email opens a page; stopping is a button after sign-in and a check (the approver, or the person
+   with a passkey they still have), never a link click (scanners follow links). A stopped request closes self-serve for 7
+   days. Any successful check by the person with a passkey they still have ends their open request.
+6. **A partner owner's recovered passkey is limited for 72 hours:** it cannot delete other passkeys, hand over a store,
+   invite people or give keys. The real owner can delete it; it cannot delete theirs (security H2).
+- *Is 24 hours right for everyone?* A Lead with an owner around: no wait. An owner: no wait once a Frrata admin allows,
+  and never alone. Staff: another master admin, always. A Lead alone: 24 hours from the emails, which is the protection.
+- *Security cost:* the call is gone; the code now travels from the approver by a channel the approver chose, which keeps
+  "never act on a call you didn't start" (Lesson 12). A Lead's stolen inbox left unseen by the Lead and their owner for 24
+  hours replaces the Lead's passkey.
 
 ### C4. How often (question iv)
-One check a sign-in for the whole person: a staff passkey covers Admin, the partner workspace and Studio (C1). 12 hours,
-and 5 minutes for money and team actions, unchanged. Studio: one prompt, not two. Lane D's card 1b ("Confirm your
-passkeys", two lines) becomes one line and one button for a staff person; it keeps its two lines only for someone whose
-staff check is missing and partner check made with a partner passkey.
+One check a sign-in for the whole person: a staff passkey makes the staff and the partner check together (C1). A check
+lasts 12 hours; money and team actions ask again after 5 minutes (unchanged). Studio: one prompt. `CHECK_MS` and
+`FRESH_MS` move into one pure module (`src/domains/auth/passkey-door.ts`), with the SQL's "12 hours" and "5 minutes"
+pinned to them by a drift test. Lane D's card 1b keeps its two lines; for a staff person the partner line is Done as soon
+as the staff one is, and the button reads "Use passkey" (their files do not change).
 
 ### C5. No matching passkey here (question v)
-After "Use passkey" is cancelled or finds nothing, the gate shows **"No passkey on this browser?"** with where the
-person's passkeys are saved ("Google Password Manager · saved 16 Nov · used 18 Nov") and two buttons: **Use another
-device** (the browser's sheet, which offers a phone's QR code) and **I've lost my passkeys** (C3). After another device
-works, **Save a passkey here** (one tap). Staff passkeys also record their password manager's name (`nameFor`).
+After "Use passkey" is cancelled or finds nothing: **"No passkey on this browser"**, with where the person's passkeys are
+saved (password manager, saved, last used) and **Use another device** and **Ask for a new passkey**. After another
+device works: **Save a passkey on this device**. Staff passkeys record their password manager's name too (`nameFor`).
+WebAuthn cannot tell "none here" from "cancelled", so the help follows either.
 
-### C6. The `passkeys_off` switch (question vi)
-- **Recommended · Remove it.** It hid the prompts for weeks, nobody could see it, and with C1–C5 there is nothing left to
-  turn off: one fingerprint a day. Testing uses the e2e stack's seeded checks. Drop `platform_switches`, restore
-  `app_access_for` and `app_partner_need` to the real check only, keep the audit rows.
-- **Option · Keep it, visible.** Admin › Staff shows "Passkeys off until 24 Nov, 18:00 · Turn on", every Admin page a
-  banner, at most 24 hours, set and ended from that screen by a master admin after a fresh check.
+### C6. The `passkeys_off` switch (question vi) — removed, last
+It hid the prompts for weeks, nobody could see it, and a stolen admin cookie could turn it on for everyone (security L2).
+Removed in the last phase, after the no-call path is live and the owner has passed a check on each browser
+(architecture 2): delete the live row (the trigger audits it), replace `app_access_for` and `app_partner_need` with the
+real check, drop `app_passkeys_off`, the trigger and `platform_switches`, remove `requirePartner`'s empty-step-up path,
+turn proof § 88 and § 81's switch block into "no way in without a step-up". E2e seeding stays unreachable in production.
+*Turned down:* keep it visible (a screen, a banner, 24 hours).
 
-### C7. What a non-technical partner sees (question vii)
+### C7. What a non-technical partner sees (question vii) — counted on the mockup
 | Journey | Today | Proposed |
 |---|---|---|
-| A Lead, from the invite to their clients | 8 screens · 6 decisions · a phone call from the owner, who also does 4 steps in Team | 6 screens · 5 decisions · nobody else |
-| A partner owner, from "approved" to their clients | 7 screens · a call from Frrata of unknown wait, and an admin's 4 steps | 5 screens · 4 decisions · nobody else |
-| A partner on a new laptop, passkey on the phone | 4 screens (works today) | 4 screens, and the help names where the passkey is |
-| A partner who lost every passkey | Lead: a call · owner: 24 hours, then a call | Allow now by the owner or a Frrata admin, else 24 hours alone |
-| The owner (staff + partner) opening Studio | 2 prompts; failed: no partner passkey offered, then "Request a call" nobody can answer | 1 prompt |
+| A Lead, invite to clients | 8 screens · 6 decisions · a call from the owner, who does 4 steps in Team | 6 screens · 5 decisions · nobody else |
+| A partner owner, approved to clients | 7 screens · a call from Frrata of unknown wait | 5 screens · 4 decisions |
+| A new laptop, passkey on the phone | 4 screens | 4 screens, and the help names where it is |
+| Every passkey lost | Lead: a call · Owner: 24 hours, then a call | The approver allows and sends a code (3 screens); a Lead alone, 24 hours |
+| Staff and partner, opening Studio | 2 prompts | 1 prompt |
+
+## D. Reviews (2026-11-23, on the proposal; each finding is fixed above or listed here)
+| Agent | Verdict | Folded in |
+|---|---|---|
+| security-reviewer | 2 HIGH, 5 MEDIUM, 2 LOW — all fixed | H1 staff never self-serve (C2) · H2 no owner self-serve, 72-hour limits (C3.4, C3.6) · M1 one open request, code from the approver (C3.2–3) · M2 staff check only as frata_admin, unique credential ids (C1) · M3 the derived row (C1) · M4 "first" decided by user, lock, one passkey, That wasn't me (C2) · M5 Stop is a POST after sign-in (C3.5) · L1 Team label (C1) · L2 remove the switch (C6) |
+| tenancy-auditor | No CRITICAL; 4 HIGH, 2 MEDIUM, 1 LOW — all fixed | A row, not a read (C1) · nullable `passkey_id` + `staff_stepup_id` (C1) · Give key's counter in the right table: moot, Give key stays partner-only (C1) · "ever had a passkey" for every role (C2) · Allow and Stop scoped to the partner (C3.3) · recreate readers before dropping the switch (C6) · proofs below · corrected the "same bar as a store owner" claim (C2 cost) |
+| architecture-reviewer | 2 BLOCKER, 8 MAJOR — all fixed | the mechanism (C1) · phase order (Phases) · one ceremony per person (C1) · Give key decided (C1, call 6) · one engine `passkey-door.ts` with a drift test (C4) · 24 hours from sent emails (C3.4) · the race (C3.2) · Stop not a link (C3.5) · the window from release day (C2) · staff one rule (C2) |
+| words-reviewer | 30 lines on the mockup | rewritten in the mockup; "Master admin" kept (the house term, admin-and-partner.md § 28) |
+
+**Proofs to add to `scripts/verify/tenancy.sql`:** § 79 — a staff check makes a partner row for the live membership
+only; after leaving and rejoining the old row counts for nothing; removing staff or staff sign-out removes it; partner
+sign-out leaves the staff check; a staff hash passed as the partner hash counts for nothing; a partner check never sets
+`staffConfirmedAt`. § 82 — a Builder with a derived check still reaches only builds. § 91 — one staff check binds Studio;
+a new staff check or staff sign-out ends `app_turn_actor`. § 81 and § 88 — the switch table and function are gone, no
+`prosrc` mentions them. New — deleting a Lead's passkeys never reopens the first-passkey path; another partner's owner
+can neither Allow nor Stop.
+
+## Phases (each usable alone; migrations numbered at merge, after lanes C, D and F)
+- **P0 · no migration:** the "first passkey" heading bug (B6, `partner-gate.tsx`); C5's "No passkey on this browser";
+  staff "Save a passkey on this device"; `nameFor` for staff; one gate body for both surfaces (the frames stay apart);
+  the pure `passkey-door.ts`.
+- **P1 · migration A:** C1 (the derived partner row, the staff check through Frrata Admin's route, unique credential
+  ids); Studio with one prompt; the new proofs. Ends the owner's dead end.
+- **P2 · migration B:** C2 and C3 (first passkey at first sign-in; Allow passkey with the approver's code; Lead
+  self-serve 24 hours from sent emails; Stop request; the owner's 72-hour limits); one `PasskeyRequestCard` in Frrata
+  Admin › Staff, Frrata Admin › Partners and Team; `ReadCode`, the Approval step and "Did you start this call yourself?"
+  retired; open requests closed and each person emailed; new email words (`staff-security.ts`, `staff-notices.ts`).
+- **P3 · migration C:** C6, after P2 is in production and the owner has passed a check on each browser.
+- **Regression net first** (rule 5): e2e 75 (code → Allow with a code), 80 (call, decline and code go), 40 (Frrata Admin
+  › Partners › Passkeys), 86 (a Builder's first passkey), 97 (Give key after a staff check); unit tests for
+  `passkey-door.ts`; the proofs above.
+- **Docs amended with each phase:** ADR-0007 (the one-way rule; the 2026-11-16 switch amendment struck in P3), ADR-0020
+  (one prompt, two rows), frata-architecture § Auth (the partner passkeys bullet), the partner sign-in spec § Goal, the
+  staff passkeys spec, frata-design-language `reference/admin-and-partner.md` (the request card), the comments in
+  drizzle/0167 and `device.ts` that name the switch.
 
 ## Design
-Mockup to follow, after the reviews of this proposal (§ D) and the orchestrator's answers.
+Mockup: https://claude.ai/artifact/85e3WTLUVDFYjMnJYC2JG4 (`docs/mockups/2026-11-23-passkeys-simpler.html`). Screens 1–3 every day ·
+4–6 first time · 7–10 lost · 11–13 approvers · 14–16 Studio and passkeys · the before and after count · the calls.
 
 ## Design review
-Pending (§ D: security-reviewer, tenancy-auditor, architecture-reviewer; words-reviewer on the mockup).
+- **UI/UX** — one job a screen, one primary action; states drawn: busy, cancelled, none here, waiting, allowed, stopped,
+  someone else also asked, expired invite, signed out; phone and desktop. Focus moves to each new heading (as today).
+- **Tenancy** — no new tenant table; the partner check stays bound to one membership; § D's proofs.
+- **Modularity** — rules in `src/domains/auth/passkey-door.ts` (pure); the two stores stay apart (frata_admin and
+  frata_app, ADR-0007); one gate body; one request card.
+- **SSOT/DRY** — 12 hours and 5 minutes in one module, pinned to SQL; "first" from the audit rows, once.
+- **YAGNI / KISS** — see Out of scope; no new table but one column and one CHECK.
+- **Performance** — the staff confirm writes one more row; no new read on any page (the partner check is still one row).
+- **Reliability** — the security emails gate self-serve (sent, or no self-serve).
+- **Security** — § D.
+- **Motion and visuals** — today's patterns; no new motion.
+- **Unit economics** — n/a, no money moves.
+- **Storefront API** — n/a; Give key unchanged.
+- **Blast radius** — `requireStaff`, `requirePartner`, `accessOf`, `app_access_for`, Studio's door (unchanged), device
+  codes (unchanged), e2e 40, 75, 80, 86, 97.
 
 ## Out of scope
 - Passkeys for store members (owners, Managers): signal — an owner asks, or a merchant account is phished.
