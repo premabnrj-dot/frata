@@ -153,3 +153,59 @@ describe('Pickup PIN code (O1·5)', () => {
     expect(formValues(store, { name: 'K', pickupPincode: '302003' }).pickupPincode).toBe('302003')
   })
 })
+
+describe('parseFields (O2a·2: a setup popup saves only the fields it sent)', async () => {
+  const { parseFields, SETUP_FIELDS } = await import('../sections')
+  const stored = {
+    name: 'Kesar Studio', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', gstin: '29AAGCB7383J1Z4', gstScheme: 'regular', homeState: '29',
+    turnoverBand: 'under_5cr', gstFiling: 'monthly', pricesIncludeGst: false, b2bInvoices: true, defaultHsn: '6204',
+    supportEmail: 'care@kesar.in', supportPhone: '9827041000', whatsapp: '', instagram: 'kesar', grievanceName: 'Riya', grievanceRole: 'Founder', grievanceEmail: 'g@kesar.in', grievancePhone: '9827041001',
+    codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: [], pickupPincode: '452009', tagline: '', shopLanguage: 'en',
+  }
+  const biz = sectionFor('business')!, contact = sectionFor('contact')!, pay = sectionFor('payments')!, store = sectionFor('store')!
+  it('names the popups’ subsets on the server', () => {
+    expect(SETUP_FIELDS).toEqual({
+      details: { business: ['legalName', 'gstRegistration', 'homeState', 'gstin'], contact: ['grievanceName', 'grievancePhone', 'grievanceEmail'] },
+      payments: { payments: ['codOn', 'codMax'] },
+      pickup: { store: ['pickupPincode'] },
+    })
+  })
+  it('business, Not registered: writes the name, the state and no GSTIN; address, origin, turnover and HSN are left alone', () => {
+    const r = parseFields(biz, SETUP_FIELDS.details.business, { legalName: 'Kesar Studio LLP', gstRegistration: 'none', homeState: '08', gstin: '' }, stored)
+    expect(r).toEqual({ ok: true, patch: { legalName: 'Kesar Studio LLP', homeState: '08', gstin: null, gstScheme: 'regular' } })
+  })
+  it('business, Regular with a GSTIN: the state comes from the GSTIN', () => {
+    const r = parseFields(biz, SETUP_FIELDS.details.business, { legalName: 'Kesar LLP', gstRegistration: 'regular', gstin: '29aagcb7383j1z4' }, { ...stored, gstin: null, homeState: '23' })
+    if (!r.ok) expect.fail(JSON.stringify(r))
+    expect(r.patch).toEqual({ legalName: 'Kesar LLP', gstin: '29AAGCB7383J1Z4', gstScheme: 'regular', homeState: '29' })
+    expect(Object.keys(r.patch)).not.toContain('address')
+  })
+  it('a GSTIN left out of the values keeps the stored GSTIN: not in the patch, no error', () => {
+    const r = parseFields(biz, SETUP_FIELDS.details.business, { legalName: 'Kesar LLP', gstRegistration: 'regular' }, stored)
+    expect(r.ok).toBe(true)
+    if (r.ok) { expect(r.patch).not.toHaveProperty('gstin'); expect(r.patch.homeState).toBe('29') }
+  })
+  it('Composition sets the two columns it implies', () => {
+    const r = parseFields(biz, SETUP_FIELDS.details.business, { legalName: 'Kesar LLP', gstRegistration: 'composition', gstin: '29AAGCB7383J1Z4' }, stored)
+    if (!r.ok) expect.fail(JSON.stringify(r))
+    expect(r.patch).toEqual({ legalName: 'Kesar LLP', gstin: '29AAGCB7383J1Z4', gstScheme: 'composition', homeState: '29', pricesIncludeGst: true, b2bInvoices: false })
+  })
+  it('a typed field’s error comes back by field', () => {
+    expect(parseFields(biz, SETUP_FIELDS.details.business, { legalName: 'K', gstRegistration: 'regular', gstin: '29AAGCB7383J1Z5' }, stored)).toMatchObject({ ok: false, errors: { gstin: expect.any(String) } })
+  })
+  it('contact: a grievance email left out keeps the stored one; customer care is never written', () => {
+    const r = parseFields(contact, SETUP_FIELDS.details.contact, { grievanceName: 'Meera', grievancePhone: '98270 41002', supportEmail: 'x@evil.in' }, stored)
+    expect(r).toEqual({ ok: true, patch: { grievanceName: 'Meera', grievancePhone: '9827041002' } })
+  })
+  it('payments: a highest order under the stored lowest is a stale lowest, not the typed field', () => {
+    expect(parseFields(pay, SETUP_FIELDS.payments.payments, { codOn: true, codMax: '1,000' }, { ...stored, codMin: 200000 })).toEqual({ ok: false, stale: ['codMin'] })
+    expect(parseFields(pay, SETUP_FIELDS.payments.payments, { codOn: false, codMax: '3,000', codCharge: '0' }, stored)).toEqual({ ok: true, patch: { codOn: false, codMax: 300000 } })
+  })
+  it('a key outside the subset is ignored, never written', () => {
+    const r = parseFields(store, SETUP_FIELDS.pickup.store, { pickupPincode: '302003', name: 'Someone else' }, stored)
+    expect(r).toEqual({ ok: true, patch: { pickupPincode: '302003' } })
+  })
+  it('pickup: empty is null', () => {
+    expect(parseFields(store, SETUP_FIELDS.pickup.store, { pickupPincode: '' }, stored)).toEqual({ ok: true, patch: { pickupPincode: null } })
+  })
+})
