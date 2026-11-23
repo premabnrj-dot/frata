@@ -59,7 +59,7 @@ export default {
         await dlg.getByText('Add a name.').waitFor()
         await dlg.getByLabel('Name', { exact: true }).fill(NAME)
         await dlg.getByLabel('Currency').selectOption('USD')
-        await dlg.getByLabel('Amount', { exact: true }).fill('20')
+        await dlg.locator('input[name="amount"]').fill('20')
         await dlg.getByRole('button', { name: 'Add cost' }).click()
         await expectToast(p, `${NAME} added.`, 'ok')
         const [row] = await db`select kind, cadence, amount::bigint::int a, currency from cost_items where name = ${NAME}`
@@ -75,7 +75,7 @@ export default {
         await rowOf.getByText('Today').waitFor()
         await rowOf.getByRole('button', { name: 'Mark paid' }).click()
         const dlg = p.getByRole('dialog', { name: `Mark ${NAME} paid` })
-        await dlg.getByLabel('Left your account').fill('1,884')
+        await dlg.locator('input[name="inr"]').fill('1,884')
         await dlg.getByRole('button', { name: 'Mark paid' }).click()
         const toast = await expectToast(p, `${NAME} paid.`, 'ok')
         const [pay] = await db`select inr_paise::int p, amount::bigint::int a from cost_payments`
@@ -87,7 +87,7 @@ export default {
         await p.reload()
         await rowOf.getByRole('button', { name: 'Mark paid' }).click()
         const again = p.getByRole('dialog', { name: `Mark ${NAME} paid` })
-        await again.getByLabel('Left your account').fill('1884')
+        await again.locator('input[name="inr"]').fill('1884')
         await again.getByRole('button', { name: 'Mark paid' }).click()
         await expectToast(p, `${NAME} paid.`, 'ok')
         assert.equal((await db`select count(*)::int n from cost_payments`)[0].n, 1)
@@ -101,7 +101,7 @@ export default {
         const dlg = p.getByRole('dialog', { name: 'Add a cost' })
         await dlg.getByRole('radio', { name: 'Once' }).click()
         await dlg.getByLabel('Name', { exact: true }).fill(LOGO)
-        await dlg.getByLabel('Amount', { exact: true }).fill('25,000')
+        await dlg.locator('input[name="amount"]').fill('25,000')
         await dlg.getByRole('button', { name: 'Add cost' }).click()
         await expectToast(p, `${LOGO} added.`, 'ok')
         const [r] = await db`select i.kind, p.inr_paise::int paise from cost_items i join cost_payments p on p.item_id = i.id where i.name = ${LOGO}`
