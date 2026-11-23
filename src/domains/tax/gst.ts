@@ -80,17 +80,8 @@ export function taxOrder(lines: TaxLine[], charges: number, o: { registered: boo
   return { lines: out, chargesGst: out.reduce((a, l) => a + l.chargeGst, 0), chargesTaxable: out.reduce((a, l) => a + l.chargeTaxable, 0) }
 }
 
-/** The state code a GSTIN belongs to (its first two digits), e.g. "08" Rajasthan. */
-export const gstinState = (gstin: string | null) => (gstin && /^[0-9]{2}/.test(gstin) ? gstin.slice(0, 2) : null)
-
-/**
- * CGST + SGST when the place of supply is the seller's own state, IGST otherwise (IGST Act s.10(1)(a): goods
- * moved to the buyer — the delivery state). Compared by STATE CODE: an order stores the delivery state by name.
- */
-export function supplyKind(sellerGstin: string | null, supplyStateCode: string | null): 'intra' | 'inter' {
-  const seller = gstinState(sellerGstin)
-  return seller && supplyStateCode && seller === supplyStateCode ? 'intra' : 'inter'
-}
+// gstinState and supplyKind live in ./supply (no rate table), re-exported here for every caller.
+export { gstinState, supplyKind } from './supply'
 
 /** GST shown on an invoice: half CGST and half SGST (the odd paisa to SGST), or all IGST. */
 export const gstHeads = (gst: number, kind: 'intra' | 'inter') =>

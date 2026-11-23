@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { applyBps, type Paise } from '@/domains/money/paise'
-import { supplyKind } from '@/domains/tax/gst'
+import { supplyKind } from '@/domains/tax/supply'
 import { GST_BPS } from './gst-rate'
 
 /**
