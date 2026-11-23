@@ -10,7 +10,7 @@ import { paymentsPage } from '@/lib/admin/costs'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { formatInr } from '@/lib/format'
 import { amountText, dayText, monthShortName } from '../format'
-import { ChipLink } from './chip-link'
+import { ChipLink } from '../../_components/chip-link'
 
 /** The Payments tab (mockup § Payments): a month or the financial year, newest first, 50 a page by keyset. */
 export async function Payments({ staff, today, sp }: { staff: StaffOk; today: string; sp: { ym?: string; after?: string } }) {

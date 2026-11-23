@@ -78,7 +78,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const plans = item('/admin/plans', 'Plans', 'plans')
   const billingItem = item('/admin/billing', 'Billing', 'payments', 'billing')
   // Costs is a master admin's page; support staff are not shown it (the page and every action refuse them too).
-  const costsItems = (ADMIN_ONLY as readonly string[]).includes(staff.role) ? [item('/admin/costs', 'Costs', 'costs', 'costs')] : []
+  const costsItems = (ADMIN_ONLY as readonly string[]).includes(staff.role) ? [item('/admin/costs', 'Costs', 'costs', 'costs'), item('/admin/cashflow', 'Cashflow', 'cashflow')] : []
   const appsItem = item('/admin/apps', 'Apps', 'apps')
   const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people')
   const themesItem = item('/admin/themes', 'Themes', 'themes', 'themes')

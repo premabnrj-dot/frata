@@ -31,7 +31,16 @@ const failed = (tag: string) => (e: unknown) => { console.error(`[cash.${tag}]`,
 export async function setBalanceAction(form: FormData): Promise<ActionResult & { balanceId?: string; accountId?: string }> {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
-  const p = parseBalanceForm(raw(form), today())
+  const fields = raw(form)
+  // First use: no account yet, so the dialog asks for its name and the account is made with the balance (it becomes the main one).
+  if (!fields.accountId && fields.newAccount !== undefined) {
+    const n = parseAccountName({ name: fields.newAccount })
+    if (!n.ok) return { error: CHECK, fields: { newAccount: n.fields.name ?? 'Add a name.' } }
+    const made = await addAccount(staff, n.data.name).catch(failed('account'))
+    if (!made.ok) return { error: ERROR_WORDS[made.error] }
+    fields.accountId = made.id
+  }
+  const p = parseBalanceForm(fields, today())
   if (!p.ok) return { error: CHECK, fields: p.fields }
   const r = await setBalance(staff, p.data, today()).catch(failed('balance'))
   if (!r.ok) return { error: ERROR_WORDS[r.error] }
