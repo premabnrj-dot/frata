@@ -16,6 +16,12 @@ import { gateState } from '@/lib/admin/passkeys'
 import { StaffGate } from '@/components/passkeys/passkey-gate'
 import { signOutAction } from './sign-out/actions'
 import { Toaster } from '@/components/ui/toast'
+import { Banner } from '@/components/ui/banner'
+import { Icon } from '@/components/icons/icon'
+import { isMasterAdmin } from '@/domains/tenancy/staff-words'
+import { Submit } from '@/components/ui/submit'
+import { passkeys } from '@/lib/auth/session'
+import { turnPasskeysOnAction } from './staff/actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +61,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     )
   }
   // Both at once (speed review on the plan): neither waits on the other.
-  const [own, n] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null)])
+  const [own, n, pk] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null), passkeys()])
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). Neel N4 (owner-approved
   // mockup): Today first, then four groups, each item with the count of what waits in it (todayCounts, the same list
@@ -90,6 +96,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Frrata Admin" groups={groups}
       tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, apiItem, staffItem, plans, billingItem, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
+      {/* Passkeys off from Admin › Staff (owner 2026-11-23, docs/mockups/2026-11-23-admin-passkeys-switch.html § Off):
+          on every Admin page until an Admin turns them on; Support staff see it without the button. */}
+      {pk.off && <Banner tone="warn" title={<span className="inline-flex items-center gap-2.5"><Icon name="key" className="size-4" />Passkeys are off</span>} action={isMasterAdmin(staff.role)
+        ? <form action={turnPasskeysOnAction}><Submit size="sm">Turn passkeys on</Submit></form> : undefined} />}
       {children}
     </AppShell>
   )

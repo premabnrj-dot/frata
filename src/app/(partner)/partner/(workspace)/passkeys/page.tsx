@@ -4,6 +4,7 @@ import { Panel } from '@/components/ui/panel'
 import { Badge } from '@/components/ui/badge'
 import { Banner } from '@/components/ui/banner'
 import { requirePartner } from '@/lib/auth/require-partner'
+import { passkeys } from '@/lib/auth/session'
 import { myPasskeys } from '@/lib/db/partner-passkeys'
 import { dayIN } from '@/lib/format-date'
 import { AddPasskey, DeleteOne } from './passkey-parts'
@@ -14,6 +15,8 @@ export const metadata = { title: 'Passkeys' }
 export default async function PasskeysPage() {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />
+  // Passkeys off from Admin (drizzle/0171): the list keeps its real check, so there is nothing to show or add until they are on.
+  if ((await passkeys()).off) return <><PageHeader title="Passkeys" /><Panel title="Passkeys are off" /></>
   const keys = await myPasskeys(auth).catch((err) => { console.error('[passkeys]', err instanceof Error ? err.name : err); return null })
   if (!keys) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const now = new Date()

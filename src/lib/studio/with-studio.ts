@@ -7,7 +7,7 @@ import { requireMember } from '@/lib/auth/require-member'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { accessOf, oncePerCall, partnerProof, staffProof } from '@/lib/auth/session'
+import { accessOf, oncePerCall, partnerProof, passkeys, staffProof } from '@/lib/auth/session'
 import { gateState } from '@/lib/admin/passkeys'
 
 // =============================================================================
@@ -43,10 +43,13 @@ async function studioDoor(): Promise<StudioOk | StudioClosed> {
   if (!partner.ok || partner.userId !== staff.userId) return { ok: false, reason: 'not_partner', message: STUDIO_CLOSED }
   const member = await requireMember(STUDIO_ROLES)
   if (!member.ok || member.userId !== staff.userId || member.membership.supportSessionId) return { ok: false, reason: 'no_store', message: STUDIO_CLOSED }
-  const [sp, pp] = await Promise.all([staffProof(staff.userId), partnerProof(staff.userId)])
+  const [sp, pp, pk] = await Promise.all([staffProof(staff.userId), partnerProof(staff.userId), passkeys()])
+  const base = { ok: true as const, userId: staff.userId, email: staff.email, tenantId: member.membership.tenantId, tenantName: member.membership.tenantName }
+  // Passkeys off for everyone (Admin › Staff, drizzle/0171): this sign-in alone; the database binds the person with no
+  // step-up and re-checks them on every turn (the step-ups, if any, still go with it).
+  if (pk.off) return { ...base, authSession: staff.sessionId, staffHash: sp?.sessionId === staff.sessionId ? sp.hash : '', partnerHash: pp?.sessionId === staff.sessionId ? pp.hash : '' }
   if (!sp || !pp || sp.sessionId !== pp.sessionId || sp.sessionId !== staff.sessionId) return { ok: false, reason: 'not_staff', message: STUDIO_CLOSED }
-  return { ok: true, userId: staff.userId, email: staff.email, tenantId: member.membership.tenantId, tenantName: member.membership.tenantName,
-    authSession: sp.sessionId, staffHash: sp.hash, partnerHash: pp.hash }
+  return { ...base, authSession: sp.sessionId, staffHash: sp.hash, partnerHash: pp.hash }
 }
 
 /** What a person who is Frrata staff and a live partner person, as one user, still needs to open Studio (the entry
@@ -72,9 +75,10 @@ async function entry(): Promise<StudioEntry> {
   const s = staff.ok ? staff : staff.reason === 'needs_passkey' ? staff.identity : null
   const p = partner.ok ? partner : partner.reason === 'needs_passkey' ? partner.identity : null
   if (!s || !p || s.userId !== p.userId || !s.sessionId || s.sessionId !== p.sessionId) return door
-  const [sp, pp] = await Promise.all([staffProof(s.userId), partnerProof(s.userId)])
-  const staffDone = staff.ok && sp?.sessionId === s.sessionId
-  const partnerDone = partner.ok && pp?.sessionId === s.sessionId
+  // Passkeys off (Admin › Staff, drizzle/0171): no step-up cookie is asked for, so both checks count as made.
+  const [sp, pp, pk] = await Promise.all([staffProof(s.userId), partnerProof(s.userId), passkeys()])
+  const staffDone = staff.ok && (pk.off || sp?.sessionId === s.sessionId)
+  const partnerDone = partner.ok && (pk.off || pp?.sessionId === s.sessionId)
   if (!staffDone || !partnerDone) {
     if (!staffDone) {
       // The person's own staff passkeys only (app_staff_state on their own user and session).

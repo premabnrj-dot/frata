@@ -13,13 +13,14 @@ const s = {
   staffPasskeys: 2,
   memberships: [{ tenantId: 't1', tenantName: 'Kesar', role: 'partner', supportSessionId: null }] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[],
   reads: 0,
+  off: false,
 }
 vi.mock('@/lib/env', () => ({ get STUDIO_OPEN() { return s.open }, isStudioConfigured: () => s.configured }))
 vi.mock('@/lib/auth/require-staff', () => ({ ANY_STAFF: ['admin', 'support'], requireStaff: vi.fn(async () => s.staff) }))
 vi.mock('@/lib/auth/require-partner', () => ({ requirePartner: vi.fn(async () => s.partner) }))
 vi.mock('@/lib/auth/require-member', () => ({ requireMember: vi.fn(async (roles: string[]) => (s.member.ok && !roles.includes((s.member.membership as { role: string }).role) ? { ok: false } : s.member)) }))
 vi.mock('@/lib/auth/session', () => ({ staffProof: vi.fn(async () => s.staffProof), partnerProof: vi.fn(async () => s.partnerProof), oncePerCall: <T>(w: () => Promise<T>) => w(),
-  accessOf: vi.fn(async () => { s.reads++; return { memberships: s.memberships } }) }))
+  accessOf: vi.fn(async () => { s.reads++; return { memberships: s.memberships } }), passkeys: vi.fn(async () => ({ off: s.off, since: null, by: null })) }))
 vi.mock('@/lib/admin/passkeys', () => ({ gateState: vi.fn(async () => { s.reads++; return { passkeys: s.staffPasskeys, request: null } }) }))
 vi.mock('@/lib/db/tenant', () => ({ withTenant: vi.fn() }))
 const { requireStudio, studioEntry } = await import('../with-studio')
@@ -48,6 +49,12 @@ describe('requireStudio', () => {
     Object.assign(s, structuredClone(base)); (s.member.membership as { role: string }).role = 'owner'
     expect((await requireStudio()).ok).toBe(false)
     Object.assign(s, structuredClone(base)); (s.member.membership as { supportSessionId: string | null }).supportSessionId = 'sv1'
+    expect((await requireStudio()).ok).toBe(false)
+  })
+  it('passkeys off for everyone (Admin › Staff): opens with no step-up cookie; the database binds the person alone', async () => {
+    s.off = true; s.staffProof = null; s.partnerProof = null
+    expect(await requireStudio()).toMatchObject({ ok: true, authSession: 'b1', staffHash: '', partnerHash: '' })
+    s.staff = { ok: false }
     expect((await requireStudio()).ok).toBe(false)
   })
   // Both proofs read the session from sign-in today, so the last two cases guard the code's own comparison; the database's
@@ -108,5 +115,10 @@ describe('studioEntry', () => {
     expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'store', stores: [{ tenantId: 't1', name: 'Kesar' }] } })
     s.memberships = [{ tenantId: 't9', tenantName: 'Own shop', role: 'owner', supportSessionId: null }]
     expect(await studioEntry()).toMatchObject({ ok: false, reason: 'no_store' })
+  })
+  it('passkeys off: no check is asked for; on another store, straight to 1a', async () => {
+    s.off = true; s.staffProof = null; s.partnerProof = null
+    s.member = { ok: true, userId: 'u1', membership: { tenantId: 't9', tenantName: 'Own shop', role: 'owner', supportSessionId: null } }
+    expect(await studioEntry()).toEqual({ ok: false, reason: 'step', step: { kind: 'store', stores: [{ tenantId: 't1', name: 'Kesar' }] } })
   })
 })

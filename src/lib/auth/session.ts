@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { accessFor } from '@/lib/db/platform'
+import { accessFor, passkeysState } from '@/lib/db/platform'
 import { staffCookieName, tokenHash } from './staff-cookie'
 import { partnerCookieName } from './partner-cookie'
 
@@ -68,3 +68,6 @@ export const accessOf = cache(once('access', async (userId: string) => {
   const [staff, partner] = await Promise.all([staffProof(userId), partnerProof(userId)])
   return accessFor(userId, staff?.sessionId ?? partner?.sessionId ?? null, staff?.hash ?? null, partner?.hash ?? null)
 }))
+
+/** Passkeys on or off for everyone (Admin › Staff, drizzle/0171), once per request. */
+export const passkeys = cache(once('passkeys', () => passkeysState()))

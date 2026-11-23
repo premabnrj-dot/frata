@@ -6,6 +6,8 @@ import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { z } from 'zod'
 import { STAFF_ROLES } from '@/lib/db/schema'
 import { addStaff, removeStaff } from '@/lib/admin/staff'
+import { setPasskeysOff } from '@/lib/admin/passkeys'
+import { staffProof } from '@/lib/auth/session'
 import { ADMIN_ONLY, confirmedRecently, requireStaff } from '@/lib/auth/require-staff'
 import type { ActionResult } from '@/components/ui/action-form'
 
@@ -33,4 +35,20 @@ export async function removeStaffAction(form: FormData): Promise<ActionResult> {
   after(() => sendStaffNotices().then(() => undefined, () => undefined))
   revalidatePath('/admin/staff')
   return 'error' in r ? { error: r.error } : { ok: 'Removed. Their passkeys, and any support visit they had open, have ended.' }
+}
+
+/** Admin › Staff's switch (owner 2026-11-23, docs/mockups/2026-11-23-admin-passkeys-switch.html): an Admin turns passkeys
+ *  off for everyone, after their own passkey confirms (the database asks for it in the last 5 minutes), or back on. */
+export async function setPasskeysAction(off: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) return { ok: false, error: staff.message }
+  if (typeof off !== 'boolean') return { ok: false, error: 'We couldn’t save that. Nothing changed. Try again.' }
+  const r = await setPasskeysOff(staff, await staffProof(staff.userId), off)
+  revalidatePath('/admin', 'layout')
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+/** The banner's and the row's "Turn passkeys on" (a plain form: no passkey needed to turn them on). */
+export async function turnPasskeysOnAction(): Promise<void> {
+  await setPasskeysAction(false)
 }
