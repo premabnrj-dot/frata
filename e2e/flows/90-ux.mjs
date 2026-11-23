@@ -11,7 +11,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { CONSOLE, SHOP, USERS, expectToast, signedIn, until } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, expectToast, openStore, signedIn, until } from '../lib.mjs'
 import { FOCUS, LONGEST_MOTION, MEASURE, OVERLAP, TEXT_SPACING } from '../ux-measure.mjs'
 import { KNOWN } from '../ux-known.mjs'
 
@@ -364,24 +364,26 @@ export default {
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
         await h.getByRole('link', { name: 'Store open. Go to setup to close it.' }).click(); await h.waitForURL(/\/console\/setup$/)
         const closeShop = async () => { await h.getByRole('button', { name: 'Close the store for now' }).click(); await h.getByRole('button', { name: 'Close store' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
-        const openShop = async () => { await h.getByRole('button', { name: 'Open my store' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
+        // Opened from the setup card's "Open your store?" (O2a·7), on /console/setup as on Home.
+        const openShop = () => openStore(h)
+        const check = '[role="status"] svg .animate-draw-circle'
         await closeShop(); await openShop()
-        await h.locator('svg .animate-draw-circle').waitFor()
-        assert.equal(await h.locator('svg .animate-draw-circle').count(), 1)
+        await h.locator(check).waitFor()
+        assert.equal(await h.locator(check).count(), 1)
         await h.getByText('Your store is open', { exact: true }).waitFor()
         // Closing straight after: the check gives way to what just happened, it does not linger.
         await closeShop()
         // The first close's toast may still be up (8 s), so wait for the check itself to go.
-        await h.locator('svg .animate-draw-circle').waitFor({ state: 'detached' })
-        assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'the check goes when the shop closes')
+        await h.locator(check).waitFor({ state: 'detached' })
+        assert.equal(await h.locator(check).count(), 0, 'the check goes when the shop closes')
         // From Home: the checklist (the shop is closed), then Today with the check above it.
-        await h.goto(CONSOLE + '/console'); await h.getByRole('heading', { level: 2, name: 'Get your store ready to sell' }).waitFor()
+        await h.goto(CONSOLE + '/console'); await h.getByRole('region', { name: 'Setup' }).getByRole('heading', { level: 2, name: 'Open your store' }).waitFor()
         await openShop()
         await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
-        await h.locator('svg .animate-draw-circle').waitFor()
-        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 1, 'the check outlives the checklist it was opened from')
+        await h.locator(check).waitFor()
+        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 1, 'the check outlives the card it was opened from')
         await h.reload(); await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
-        assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
+        assert.equal(await h.locator(check).count(), 0, 'once: not on the next visit')
         assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 0)
         await hc.close()
       })

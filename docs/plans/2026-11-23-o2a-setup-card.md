@@ -357,6 +357,7 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
 | 4 The next step slides 16 px over 200 ms; the tick 320 ms; the moment's children rise over 320 ms | `animate-step-forward` (16 px, 320 ms, `base.css:331`); `animate-draw-tick` (200 ms after 320 ms, `:352`); `animate-rise` (200 ms, `:335`) with the drawn 80 ms stagger | no new duration (rule 22): the approved utilities | no |
 | 5 Toast leaves after 3.2 s | 8 s, paused on hover | Feedback rule 2 | no |
 | 6 Payments pictogram drawn as a card with a haldi chip | the existing `payments` pictogram | one pictogram per meaning (`pictogram.tsx:91`) | no |
+| 7 A done row's value in `--text-3`, 13 px | the value in text 2 (`muted-foreground`), 13 px | a law: axe finds text 3 at 13 px below 4.5:1 on white (WCAG 1.4.3; e2e `99-setup`) | no |
 
 ## Out of scope (and the signal that brings each back)
 - The plan at opening, billing from the first opening, the plan step leaving sign-up: O2b.

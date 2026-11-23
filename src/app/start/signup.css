@@ -1,30 +1,15 @@
 /* =============================================================================
    FILE: src/app/start/signup.css — the sign-up surface (/start only; O1·8, approved mockup
    docs/mockups/2026-11-23-merchant-onboarding.html § 1, its `.su` rules). Scoped under [data-signup]; the page's
-   colours are base.css tokens. Two sets of colours live HERE, never in base.css (the shop sheet imports base.css and
-   has no room): the store card's own colours (a store, not Frrata, so never themed by the page) and the stops each
-   category paints the preview with (`data-sell`). Reduced motion: steps fade, the line shows full, nothing scales.
+   colours are base.css tokens. The store card it draws beside the questions, with its own colours, is
+   src/components/brand/store-card.css (Home's setup card draws the same card, O2a·7). Reduced motion: steps fade,
+   the line shows full, nothing scales.
    ============================================================================= */
 
 [data-signup] {
   --su-display: var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
-  /* A store inside the preview: its own colours in both modes. */
-  --su-shop-bg: #FAF6EF; --su-shop-ink: #2B1B14; --su-shop-soft: #EADFCF; --su-shop-url: #FFFFFF; --su-shop-url-ink: #57534E;
-  --su-live: #2F9E62;
-  --su-e3: 0 24px 48px -12px color-mix(in srgb, var(--foreground) 28%, transparent);
-  --a1: #D9A441; --a2: #B5542B; --a3: #7A2A1E; --ar: 4 / 5;
   background: var(--background); color: var(--foreground);
 }
-/* What the store sells paints its preview: three stops and the photo's shape (mockup LOOK). Ethnic and Accessories
-   take Women's and Jewellery's until C1 ships its packs (plan Deviations). */
-[data-signup] [data-sell="women"], [data-signup] [data-sell="ethnic"] { --a1: #D9A441; --a2: #B5542B; --a3: #7A2A1E; --ar: 4 / 5; }
-[data-signup] [data-sell="men"] { --a1: #5B6B7A; --a2: #34424F; --a3: #1F2A33; --ar: 4 / 5; }
-[data-signup] [data-sell="kids"] { --a1: #F2B233; --a2: #EF7F45; --a3: #D94F4F; --ar: 4 / 5; }
-[data-signup] [data-sell="footwear"] { --a1: #C9B79C; --a2: #8A6F4D; --a3: #4A3A28; --ar: 1; }
-[data-signup] [data-sell="jewellery"], [data-signup] [data-sell="accessories"] { --a1: #E9D9A8; --a2: #C2A04E; --a3: #7A6021; --ar: 1; }
-[data-signup] [data-sell="beauty"] { --a1: #F3C6CF; --a2: #D9879A; --a3: #9C4A5E; --ar: 3 / 4; }
-[data-signup] [data-sell="wellness"] { --a1: #BFE0D2; --a2: #5FA98C; --a3: #2E6B55; --ar: 3 / 4; }
-
 .su { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: max(560px, 100vh); }
 .su-q { padding: 20px 28px 28px; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 20px; min-width: 0; }
 .su-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -66,15 +51,6 @@
 
 /* The preview: the store drawing itself (aria-hidden). */
 .su-pv { background: var(--illo-haldi-soft); display: grid; place-items: center; padding: 24px; min-width: 0; position: relative; overflow: hidden; }
-.su-store { width: min(280px, 100%); background: var(--su-shop-bg); color: var(--su-shop-ink); border-radius: 14px; border: 1px solid var(--su-shop-soft); box-shadow: var(--su-e3); overflow: hidden; transition: transform var(--duration-slow) var(--ease-standard); }
-.su-store-url { background: var(--su-shop-url); color: var(--su-shop-url-ink); font: 500 11px var(--font-mono, monospace); padding: 6px 10px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid var(--su-shop-soft); white-space: nowrap; overflow: hidden; }
-.su-store-url::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--su-live); flex: none; }
-.su-store-nm { font-family: var(--su-display); font-weight: 600; font-size: 19px; line-height: 24px; padding: 14px 14px 10px; min-height: 48px; overflow-wrap: anywhere; }
-.su-store-nm:empty::before { content: ""; display: block; width: 60%; height: 18px; border-radius: 4px; background: var(--su-shop-soft); }
-.su-store-hero { margin: 0 14px; height: 92px; border-radius: 8px; background: linear-gradient(150deg, var(--a1), var(--a2) 70%, var(--a3)); }
-.su-store-g { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px 14px; }
-.su-store-g i { aspect-ratio: var(--ar); border-radius: 6px; background: var(--su-shop-soft); transition: aspect-ratio var(--duration-slow) var(--ease-standard); }
-.su-store-soon { text-align: center; font-size: 11px; padding: 7px; background: var(--su-shop-ink); color: var(--su-shop-bg); }
 .su[data-step="done"] .su-store { transform: scale(1.06); }
 .su-sweep { position: absolute; inset: auto 0 0; height: 3px; background: var(--thread); transform-origin: left; transform: scaleX(0); }
 
@@ -89,8 +65,8 @@
 @media (max-width: 767.98px) {
   .su { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; min-height: 100dvh; }
   .su-pv { order: -1; padding: 14px; }
-  .su-store { width: 210px; }
-  .su-store-hero, .su-store-g { display: none; }
+  [data-signup] .su-store { width: 210px; }
+  [data-signup] .su-store-hero, [data-signup] .su-store-g { display: none; }
   .su-q { padding: 16px 16px 20px; }
   .su-st h1 { font-size: 22px; line-height: 28px; }
 }

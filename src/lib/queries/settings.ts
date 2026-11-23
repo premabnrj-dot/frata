@@ -5,7 +5,8 @@ import { members, pincodes, planVersions, shopPolicies, shopSettings, tenantPlan
 import { notices } from '@/lib/db/schema-email'
 import { istDayStart } from '@/domains/time/day'
 import { lockedFor, lockOf, type AskPage } from '@/domains/settings/owner-only'
-import { formValues, sectionFor, SETUP_FIELDS, type SectionKey, type SetupPopup, type Values } from '@/domains/settings/sections'
+import { formValues, sectionFor, type SectionKey, type Values } from '@/domains/settings/sections'
+import { SETUP_FIELDS, type SetupPopup } from '@/domains/settings/fields'
 import { moduleAccessIn } from './modules'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -47,7 +48,8 @@ export async function policyOverrides(tenantId: string): Promise<Record<string, 
 }
 
 
-export type Setup = { name: string; address: string; open: boolean; steps: SetupStep[]; done: number; ready: boolean; left: SetupStep[] }
+/** `sell`: the first thing the store sells, which paints the setup card's store sketch (store-card.tsx). */
+export type Setup = { name: string; address: string; sell: string | null; open: boolean; steps: SetupStep[]; done: number; ready: boolean; left: SetupStep[] }
 
 /**
  * The setup checklist as Home (before the shop opens) and /console/setup read it, once (U·4 review: one read, not
@@ -63,7 +65,7 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
     codOn: shop.settings.codOn, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
   })
   return {
-    name: shop.name, address, open: !!shop.settings.publishedAt, steps, done: steps.filter((s) => s.done).length, ready: readyToOpen(steps),
+    name: shop.name, address, sell: shop.settings.sells[0] ?? null, open: !!shop.settings.publishedAt, steps, done: steps.filter((s) => s.done).length, ready: readyToOpen(steps),
     left: steps.filter((s) => !s.done && s.key !== 'publish'),
   }
 }

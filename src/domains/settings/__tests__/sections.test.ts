@@ -155,7 +155,7 @@ describe('Pickup PIN code (O1·5)', () => {
 })
 
 describe('parseFields (O2a·2: a setup popup saves only the fields it sent)', async () => {
-  const { parseFields, SETUP_FIELDS } = await import('../sections')
+  const { parseFields, SETUP_FIELDS } = await import('../fields')
   const stored = {
     name: 'Kesar Studio', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', gstin: '29AAGCB7383J1Z4', gstScheme: 'regular', homeState: '29',
     turnoverBand: 'under_5cr', gstFiling: 'monthly', pricesIncludeGst: false, b2bInvoices: true, defaultHsn: '6204',

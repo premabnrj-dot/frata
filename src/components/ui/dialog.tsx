@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 // activation since the last one) still reaches onClose through `close`.
 // =============================================================================
 
-export function Dialog({ open, onClose, onDismiss, picto, title, description, children, actions, error, className }: {
+export function Dialog({ open, onClose, onDismiss, picto, title, titleAfter, description, children, actions, error, className }: {
   open: boolean
   /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
@@ -37,6 +37,8 @@ export function Dialog({ open, onClose, onDismiss, picto, title, description, ch
    */
   picto?: React.ReactNode
   title: string
+  /** Beside the title, outside the heading (so not in the dialog's name): a setup popup's (i) tip (O2a·7). */
+  titleAfter?: React.ReactNode
   description?: React.ReactNode
   children?: React.ReactNode
   /**
@@ -44,8 +46,9 @@ export function Dialog({ open, onClose, onDismiss, picto, title, description, ch
    * something. (React's autoFocus does nothing here: the dialog's content mounts while it is closed.)
    */
   actions: React.ReactNode
-  /** What went wrong when its action failed: shown here, above the buttons, never a second popup (§ Feedback 4). */
-  error?: string | null
+  /** What went wrong when its action failed: shown here, above the buttons, never a second popup (§ Feedback 4). A
+   *  node when the words need a list or a link (a setup popup's draft needs, O2a·7). */
+  error?: React.ReactNode
   className?: string
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -64,7 +67,7 @@ export function Dialog({ open, onClose, onDismiss, picto, title, description, ch
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] text-left rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
       <div data-dialog-body="" className="grid gap-4 p-5">
-        <div className="flex items-center gap-3">{picto}<h2 id={titleId} className="flex-1 text-section font-semibold">{title}</h2>{onDismiss && <button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button>}</div>
+        <div className="flex items-center gap-3">{picto}<h2 id={titleId} className="text-section font-semibold">{title}</h2>{titleAfter}<span className="flex-1" />{onDismiss && <button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button>}</div>
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}
         <DialogError error={error} />
@@ -76,7 +79,7 @@ export function Dialog({ open, onClose, onDismiss, picto, title, description, ch
 
 /** A dialog's refusal, above its buttons (§ Feedback 4). A dialog whose buttons sit inside its own form (Frrata Admin's
  *  form dialogs) draws this itself, just before them; any other passes `error` to Dialog. */
-export function DialogError({ error }: { error?: string | null }) {
+export function DialogError({ error }: { error?: React.ReactNode }) {
   if (!error) return null
   return (
     <p role="alert" className="flex animate-err-in items-start gap-2 rounded-md bg-danger px-3 py-2.5 text-sm text-danger-text">

@@ -14,7 +14,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { CONSOLE, PORTS, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, USERS, fakeBlob, makePhotos, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const FIXTURES = new URL('../../src/domains/catalogue/import/__tests__/fixtures/', import.meta.url)
@@ -22,37 +22,6 @@ const XLSX = readFileSync(new URL('stress.xlsx', FIXTURES))
 const CSV = readFileSync(new URL('stress.csv', FIXTURES))
 const INPUT = 'input[type=file][aria-label="Choose a spreadsheet"]'
 const STORE = 'https://e2e.public.blob.vercel-storage.com' // BLOB_STORE_ID store_e2e (stack.mjs)
-/** Photos the browser makes (a JPEG, or PNG/WebP), each `w` px wide so the database tells which file is which. */
-async function makePhotos(page, specs) {
-  const made = await page.evaluate(async (list) => Promise.all(list.map(async ({ name, w, type }) => {
-    const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * 1.25)
-    const g = c.getContext('2d'); g.fillStyle = `hsl(${w % 360} 50% 60%)`; g.fillRect(0, 0, c.width, c.height)
-    const blob = await new Promise((r) => c.toBlob(r, type, 0.8))
-    const bytes = new Uint8Array(await blob.arrayBuffer()); let bin = ''; for (const b of bytes) bin += String.fromCharCode(b)
-    return { name, mimeType: type, b64: btoa(bin) }
-  })), specs)
-  return made.map((f) => ({ name: f.name, mimeType: f.mimeType, buffer: Buffer.from(f.b64, 'base64') }))
-}
-/**
- * Vercel Blob's upload API as the client calls it (PUT https://vercel.com/api/blob/?pathname=…); `refuse` the first n.
- * What it takes goes to the stand-in store (e2e/fakes/blob.mjs), where the app reads each file's first bytes.
- */
-async function fakeBlob(ctx, refuse = 0) {
-  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT, OPTIONS', 'access-control-allow-headers': '*', 'access-control-expose-headers': '*' }
-  const seen = []
-  await ctx.route(/^https:\/\/vercel\.com\/api\/blob\//, async (route) => {
-    const req = route.request()
-    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
-    const pathname = new URL(req.url()).searchParams.get('pathname')
-    seen.push(pathname)
-    if (refuse > 0) { refuse--; return route.fulfill({ status: 403, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ error: { code: 'forbidden', message: 'Access denied' } }) }) }
-    const kept = await fetch(`http://127.0.0.1:${PORTS.blob}/_test/put?pathname=${encodeURIComponent(pathname)}`, { method: 'PUT', body: req.postDataBuffer() ?? Buffer.alloc(0) })
-    assert.equal(kept.status, 200)
-    const url = `${STORE}/${pathname}`
-    return route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ url, downloadUrl: `${url}?download=1`, pathname, contentType: req.headers()['x-content-type'] ?? 'image/webp', contentDisposition: 'inline' }) })
-  })
-  return seen
-}
 const HANDLES = ['anarkali-kurta-set', 'chanderi-dupatta', 'linen-co-ord', 'block-print-kurta', 'banarasi-sari', 'mul-cotton-nightsuit', 'bandhani-dupatta', 'phulkari-jacket', 'ikat-palazzo']
 
 export default {

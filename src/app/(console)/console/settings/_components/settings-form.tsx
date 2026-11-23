@@ -30,11 +30,12 @@ import { Switch } from '@/components/ui/switch'
 import { STATES, STATE_CODE } from '@/domains/checkout/states'
 import { Badge } from '@/components/ui/badge'
 import { OWNER_ONLY_WORDS, type AskPage } from '@/domains/settings/owner-only'
-import { LockedFacts } from './locked-facts'
 import { AskOwner } from './ask-owner'
 // Only the Policies section draws the five pages (their templates are the heaviest part of this page): loaded when shown.
 // Store details only: the Pickup PIN code field and its city lookup (O1·5), kept out of every other page's first load.
 const PincodeField = dynamic(() => import('./pincode-field').then((m) => m.PincodeField))
+// Only a partner of a store with an owner sees locked fields (PP1): drawn on the server, its script loads when shown.
+const LockedFacts = dynamic(() => import('./locked-facts').then((m) => m.LockedFacts))
 const PolicyPages = dynamic(() => import('./policy-pages').then((m) => m.PolicyPages))
 const PolicyPreview = dynamic(() => import('@/components/shop-preview/policy-preview').then((m) => m.PolicyPreview))
 const ContactPreview = dynamic(() => import('@/components/shop-preview/policy-preview').then((m) => m.ContactPreview))

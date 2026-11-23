@@ -9,6 +9,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import postgres from 'postgres'
+import assert from 'node:assert/strict'
 
 /** Playwright as installed on the machine (cloud sessions pre-install it; CI installs it): not a dependency of the app. */
 export const playwright = createRequire(import.meta.url)('playwright')
@@ -156,4 +157,49 @@ export async function partnerOn(db, tenantId, user) {
   await db`insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values (${tenantId}, ${p.id}, 2000, 24, 90) on conflict do nothing`
   await db`insert into members (tenant_id, user_id, role, partner_member_id) values (${tenantId}, ${user.id}, 'partner', ${pm.id})
     on conflict (tenant_id, user_id) do update set role = 'partner', partner_member_id = excluded.partner_member_id`
+}
+
+/** Blob's public store in the local run (BLOB_STORE_ID store_e2e, stack.mjs). */
+const BLOB_STORE = 'https://e2e.public.blob.vercel-storage.com'
+/** Photos the browser makes (a JPEG, or PNG/WebP), each `w` px wide so the database tells which file is which. */
+export async function makePhotos(page, specs) {
+  const made = await page.evaluate(async (list) => Promise.all(list.map(async ({ name, w, type }) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * 1.25)
+    const g = c.getContext('2d'); g.fillStyle = `hsl(${w % 360} 50% 60%)`; g.fillRect(0, 0, c.width, c.height)
+    const blob = await new Promise((r) => c.toBlob(r, type, 0.8))
+    const bytes = new Uint8Array(await blob.arrayBuffer()); let bin = ''; for (const b of bytes) bin += String.fromCharCode(b)
+    return { name, mimeType: type, b64: btoa(bin) }
+  })), specs)
+  return made.map((f) => ({ name: f.name, mimeType: f.mimeType, buffer: Buffer.from(f.b64, 'base64') }))
+}
+/**
+ * Vercel Blob's upload API as the client calls it (PUT https://vercel.com/api/blob/?pathname=…); `refuse` the first n.
+ * What it takes goes to the stand-in store (e2e/fakes/blob.mjs), where the app reads each file's first bytes.
+ */
+export async function fakeBlob(ctx, refuse = 0) {
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT, OPTIONS', 'access-control-allow-headers': '*', 'access-control-expose-headers': '*' }
+  const seen = []
+  await ctx.route(/^https:\/\/vercel\.com\/api\/blob\//, async (route) => {
+    const req = route.request()
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const pathname = new URL(req.url()).searchParams.get('pathname')
+    seen.push(pathname)
+    if (refuse > 0) { refuse--; return route.fulfill({ status: 403, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ error: { code: 'forbidden', message: 'Access denied' } }) }) }
+    const kept = await fetch(`http://127.0.0.1:${PORTS.blob}/_test/put?pathname=${encodeURIComponent(pathname)}`, { method: 'PUT', body: req.postDataBuffer() ?? Buffer.alloc(0) })
+    assert.equal(kept.status, 200)
+    const url = `${BLOB_STORE}/${pathname}`
+    return route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ url, downloadUrl: `${url}?download=1`, pathname, contentType: req.headers()['x-content-type'] ?? 'image/webp', contentDisposition: 'inline' }) })
+  })
+  return seen
+}
+
+/**
+ * Opens the store from the setup card (Home or /console/setup; plan 2026-11-23-o2a-setup-card O2a·7–8): its "Open
+ * store", then "Open store" in "Open your store?". Returns once the popup has closed.
+ */
+export async function openStore(page) {
+  await page.getByRole('region', { name: 'Setup' }).getByRole('button', { name: 'Open store', exact: true }).click()
+  const d = page.getByRole('dialog', { name: 'Open your store?' }); await d.waitFor()
+  await d.getByRole('button', { name: 'Open store', exact: true }).click()
+  await d.waitFor({ state: 'hidden' })
 }

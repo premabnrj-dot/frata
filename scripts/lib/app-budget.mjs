@@ -25,6 +25,9 @@ export const APP_PINNED = {
   // Sign-up (O1·8, plan 2026-11-23-o1-signup): never more than it loaded on main before O1 (128.5 kB, 2026-11-23); the
   // popup, the WhatsApp step and the email step load with next/dynamic.
   '/start/page': 128.5,
+  // Home (O2a·7, plan 2026-11-23-o2a-setup-card § Performance): before the setup card 140.7 kB, after 142.0 kB (the
+  // card's island; its popups, the uploader and the moment load with next/dynamic) + 2, so growth is a finding.
+  '/(console)/console/page': 144.0,
 }
 /** Pages outside Console, Admin and the partner workspace held to their pin (their own surface, the same count). */
 const ALSO = ['/start/page']
