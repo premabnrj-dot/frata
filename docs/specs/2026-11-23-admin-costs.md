@@ -126,8 +126,10 @@ changed fields only), and `costs` joins `MASTER_ONLY_WORDS` so support staff nev
 
 ### Reminders (phase 2)
 
-A new `TODAY_SOURCES` entry `cost_due` (area `costs`, roles admin): one count read, overdue plus due
-within 7 days, shown as the nav badge and a Today row "3 costs due this week". A source that fails is
+A new `TODAY_SOURCES` entry `cost_due` (area `costs`, roles admin; `TodayArea` and `TodayKind` gain `costs` and
+`cost_due`): one `TodayItem` per overdue cost or cost due within 7 days (`countsOf` counts items, so a combined row would
+read 1), from the shared due set, shown as the nav badge and Today rows. It ships only after 0170 is live in production (a
+throwing source blanks every count), with a today test where the costs source throws. A source that fails is
 "uncounted", never 0 (existing rule). No email, no WhatsApp.
 
 ## Code map
@@ -186,9 +188,18 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
 - **KISS** — two tables, one engine, one page. No cron, no outbox, no new dependency; due dates are
   computed on read.
 - **Scalability** — tens of items, hundreds of payments a year; no growth concern. No background work.
-- **Performance** — Overview runs two reads (live items, payments of the month and last month) in
-  parallel on one `adminDb` connection; no transaction held open across them (Admin has two connections).
-  Payments view is keyset-paged by `(paid_on, id)`; index `cost_payments(paid_on, id)`.
+- **Performance** (speed review 2026-11-23) — Due dates are derived, so SQL never counts them; one shared **due-set read**
+  feeds Overview, All costs and the Today source: recurring items live in the window (`ends_on` null or after the
+  lookback) with their `period_for` values since the lookback (correlated `array_agg` over the unique `(item_id,
+  period_for)` index). The lookback is the later of 13 months ago and the item's `created_at`, so a backdated anchor
+  never counts dozens of missed dues. The engine counts in TypeScript. Overview is three plain statements in
+  `Promise.all`: the due set, payments with `paid_on` in [last month's start, next month's start) joined to items, and the
+  latest rate (`admin_fx_rate_latest()`). **Reads are plain statements, never a transaction; a write is one
+  transaction that calls only `tx.*` and `auditStaff(tx)`, and the rate is read before it opens** (no `cache()`d
+  reader or second `adminDb()` inside one). The due set is cached per request by the IST day string, never an object (P7),
+  so the layout and the page share it. Payments view: keyset `(paid_on, id) < ($d, $id) order by paid_on desc, id desc
+  limit 51` (fetch one past the page; no OFFSET, no `count(*)`); the month filter and the FY export are `paid_on` ranges
+  on the same index. Zod runs on the server only, so no dialog ships it (P14). Admin pages render fresh; a write purges no tag.
 - **Reliability** — no outbound calls. A failed read shows "We could not read costs", never a zero.
 - **Security** — every action: `requireStaff(ADMIN_ONLY)`, Zod with length caps and amount ceiling,
   item id matched together with the row id, named fields in the reply; CSV is admin-only, `Origin`
