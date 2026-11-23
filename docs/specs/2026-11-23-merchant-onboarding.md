@@ -32,8 +32,8 @@ once their calls are answered; every later phase gets its own spec and mockup be
 
 ## Goal
 Ranked problems 5 (a premium storefront, built as code), 3 (catalogue operations) and 4 (mobile conversion, through a
-faster first store). Measures: median time from `/start` to Home under 60 s (O1 adds the record of arrival at `/start`;
-nothing records it today); share of new stores open within a day of sign-up; first Active product within 15 minutes;
+faster first store). Measures: median "/start → created" under 60 s (finishers only; O1 adds the record of arrival at `/start`, nothing
+records it today; a completion rate needs an arrivals count that O1 does not record); share of new stores open within a day of sign-up; first Active product within 15 minutes;
 zero stores on a look (T); first open store outside fashion (C2).
 
 ## Job
@@ -246,8 +246,9 @@ account, which adds a team seat of about ₹2,068 a month); it removes code, flo
   shipping reads it; server-side saving of sign-up answers before the account exists.
 - **KISS** — O1 is the existing form with one step removed, one moved in front of sign-in and a preview beside it. O2
   is the existing checklist with a focus panel, three `Dialog`s, one parser, two actions and one definer.
-- **Scalability** — Nothing grows with tenants. `checkAddressOpen` is one indexed lookup plus a rate-limit write (the
-  first anonymous database write on `/start`); its limits are numbers in the O1 plan.
+- **Scalability** — Nothing grows with tenants. `checkAddressOpen` is one indexed lookup plus rate-limit writes (the
+  first anonymous database writes on `/start`; `withinLimit` also runs a cleanup delete of old windows on about 1% of
+  calls, `rate-limit.ts:223`); its limits are numbers in the O1 plan.
 - **Performance** — Home runs today's statements; a popup loads its values and version when it opens (one `withTenant`
   each) and its code with `next/dynamic`, so Home's first-load JS does not grow. `/start`: the preview is CSS and about
   1 kB of markup; its first-load JS stays at or under today's. No new query on orders, lines or variants; no cache entry
@@ -282,8 +283,10 @@ account, which adds a team seat of about ₹2,068 a month); it removes code, flo
 | Low | "Home runs the same statements" | — | True for Home; each popup adds one read when opened |
 
 ## Out of scope (and the signal that brings each back)
-- Google or phone sign-in: three owners ask, or sign-up completion under 60%.
-- A store drawn before any sign-up, from the home page: after O1's completion is measured.
+- Google or phone sign-in: three owners ask, or sign-up completion under 60% (completion needs an arrivals count that
+  O1 does not record; O1 measures "/start → created" for finishers only).
+- A store drawn before any sign-up, from the home page: after sign-up completion is measured (it needs an arrivals
+  count that O1 does not record).
 - Products imported from Instagram: Meta ships an import endpoint.
 - A pickup address block: shipping (Ship S·1) reads it.
 - The agent for owners before the five bars: the bars are the signal.
