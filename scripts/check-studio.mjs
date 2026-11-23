@@ -62,6 +62,7 @@ const DEFINERS = {
   app_studio_end_session: ['src/lib/studio/sessions.ts'],
   app_studio_session_facts: ['src/lib/studio/sessions.ts'],
   app_studio_cleanup_of: ['src/lib/studio/sessions.ts'],
+  app_studio_delete_of: ['src/lib/studio/sessions.ts'],
   app_studio_mark: ['src/lib/studio/sessions.ts'],
 }
 /** Who may import the turn's doors (tenancy audit of R5, M): a turn id reaches them only from the cron's ids-only work

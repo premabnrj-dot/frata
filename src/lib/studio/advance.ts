@@ -262,7 +262,8 @@ async function advanceIn(ref: AdvanceRef, opts: AdvanceOptions): Promise<Advance
         // Closed by someone else first (a Stop, the cron): nothing of ours to report.
         if (how) return (await closeTurn(ref, lease, rt, how, largest)) ? how : 'waiting'
         if (idle.stop === 'requires_action' && idle.pending.length) {
-          if (!room(CALL_MS.control * 2)) return outcome
+          // A round needs its tools (reads, a few seconds) and ONE answer send (CALL_MS.control).
+          if (!room(CALL_MS.control + 5_000)) return outcome
           const r = await answerRound(ref, lease, rt, idle.pending)
           if (r === 'answered') outcome = 'answered'
           else if (r !== 'waiting') return r

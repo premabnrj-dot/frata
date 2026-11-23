@@ -70,7 +70,10 @@ describe.skipIf(!host)('advance: a turn through asTurn and the tools', () => {
     ids.session = s.id
     await su`insert into studio_spend_sessions (session_id) values (${ids.session})`
   })
-  afterAll(async () => { await su?.end(); await fake?.close() })
+  afterAll(async () => {
+    if (ids.tenant) await su`update studio_sessions set ended_at = now(), end_reason = 'stopped' where tenant_id = ${ids.tenant} and ended_at is null`
+    await su?.end(); await fake?.close()
+  })
 
   it('one round of two calls: run as the turn, answered in one send, then the turn ends and settles', async () => {
     const turn = await openTurn()

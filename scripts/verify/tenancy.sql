@@ -5497,7 +5497,7 @@ begin
   if app_studio_bind_turn(t) is not null then raise exception 'FAIL: 91 B bound A''s turn'; end if;
   if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is not null then raise exception 'FAIL: 91 a Lead bound the partner on a store they own'; end if;
   if app_studio_end_session(s, 'switch', null) then raise exception 'FAIL: 91 B ended A''s session'; end if;
-  if exists (select 1 from app_studio_session_facts(s)) or exists (select 1 from app_studio_cleanup_of(s)) then raise exception 'FAIL: 91 B read A''s session facts'; end if;
+  if exists (select 1 from app_studio_session_facts(s)) or exists (select 1 from app_studio_cleanup_of(s)) or app_studio_delete_of(s) is not null then raise exception 'FAIL: 91 B read A''s session facts'; end if;
 end $$;
 rollback;
 -- The person goes: each removal ends the open turn's actor; the switch opens nothing; sign-out ends it.
@@ -5535,6 +5535,7 @@ do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; s uuid;
   if not found then raise exception 'FAIL: 91 no clean-up ids for an ended session'; end if;
   if not app_studio_mark(s, 'cleaned') or app_studio_mark(s, 'cleaned') then raise exception 'FAIL: 91 cleaned not once'; end if;
   if exists (select 1 from app_studio_cleanup_of(s)) then raise exception 'FAIL: 91 clean-up ids after cleaning'; end if;
+  if app_studio_delete_of(s) is not null then raise exception 'FAIL: 91 a session ended today is due for deletion'; end if;
   if app_studio_mark(s, 'deleted') is not true then raise exception 'FAIL: 91 a cleaned session could not be marked deleted'; end if;
 end $$;
 commit;
@@ -5593,7 +5594,7 @@ do $$ declare r text; tb text; fn text; begin
   foreach fn in array array['app_current_partner()', 'app_studio_sweep_binds()', 'app_studio_partner(uuid, uuid, text, text)', 'app_studio_bind_turn(uuid)', 'app_turn_actor(uuid)',
     'app_studio_new_session()', 'app_studio_set_vendor(uuid, text, text)', 'app_studio_set_key(uuid, uuid)', 'app_studio_open_turn(uuid, bigint, bigint, bigint, integer)',
     'app_studio_spend_of(uuid)', 'app_studio_close_turn(uuid, text, text, bigint, bigint)', 'app_studio_end_session(uuid, text, bigint)',
-    'app_studio_session_facts(uuid)', 'app_studio_cleanup_of(uuid)', 'app_studio_mark(uuid, text)', 'app_studio_due(integer)',
+    'app_studio_session_facts(uuid)', 'app_studio_cleanup_of(uuid)', 'app_studio_delete_of(uuid)', 'app_studio_mark(uuid, text)', 'app_studio_due(integer)',
     'app_studio_bound()', 'app_studio_write_bind(uuid, uuid, uuid, uuid, uuid, uuid)', 'app_studio_person(uuid, uuid)', 'app_studio_proved(uuid, uuid, uuid, uuid)',
     'app_studio_own_session(uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint, boolean)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop

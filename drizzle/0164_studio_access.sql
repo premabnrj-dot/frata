@@ -376,6 +376,15 @@ begin
   return n = 1;
 end $$;--> statement-breakpoint
 
+-- ── A session's runtime id once it is due for deletion at Anthropic (ended over 30 days, cleaned, not yet deleted):
+--    the delete step's only input (cleanup_of answers nothing once a session is cleaned). ──
+create or replace function app_studio_delete_of(p_session uuid) returns text
+  language sql stable security definer set search_path = '' as $$
+  select s.runtime_id from public.studio_sessions s
+   where s.id = p_session and s.tenant_id = public.app_current_tenant() and s.ended_at < now() - interval '30 days'
+     and s.cleaned_at is not null and s.deleted_at is null
+$$;--> statement-breakpoint
+
 -- ── The cron's work list across stores: ids and a kind only (the S4 rule). `advance`: an open turn, oldest read first
 --    (with its turn id); `end`: an open session with no open turn; `clean`: ended, not yet cleaned; `delete`: ended over
 --    30 days, not yet deleted at Anthropic. Each kind capped. ──
@@ -403,10 +412,10 @@ revoke all on function app_studio_bound(), app_current_partner(), app_studio_wri
   app_studio_bind_turn(uuid), app_studio_new_session(), app_studio_own_session(uuid), app_studio_set_vendor(uuid, text, text), app_studio_set_key(uuid, uuid),
   app_studio_open_turn(uuid, bigint, bigint, bigint, integer), app_studio_spend_of(uuid), app_studio_settle(uuid, uuid, bigint, bigint, boolean),
   app_studio_close_turn(uuid, text, text, bigint, bigint), app_studio_end_session(uuid, text, bigint), app_studio_session_facts(uuid),
-  app_studio_cleanup_of(uuid), app_studio_mark(uuid, text), app_studio_due(integer)
+  app_studio_cleanup_of(uuid), app_studio_delete_of(uuid), app_studio_mark(uuid, text), app_studio_due(integer)
   from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder;--> statement-breakpoint
 grant execute on function app_current_partner(), app_studio_sweep_binds(), app_studio_partner(uuid, uuid, text, text), app_turn_actor(uuid),
   app_studio_bind_turn(uuid), app_studio_new_session(), app_studio_set_vendor(uuid, text, text), app_studio_set_key(uuid, uuid),
   app_studio_open_turn(uuid, bigint, bigint, bigint, integer), app_studio_spend_of(uuid), app_studio_close_turn(uuid, text, text, bigint, bigint),
-  app_studio_end_session(uuid, text, bigint), app_studio_session_facts(uuid), app_studio_cleanup_of(uuid), app_studio_mark(uuid, text),
-  app_studio_due(integer) to frata_app;
+  app_studio_end_session(uuid, text, bigint), app_studio_session_facts(uuid), app_studio_cleanup_of(uuid), app_studio_delete_of(uuid),
+  app_studio_mark(uuid, text), app_studio_due(integer) to frata_app;

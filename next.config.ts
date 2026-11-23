@@ -12,7 +12,11 @@ const config: NextConfig = {
   // ('#standard-fonts/…'), which the file tracer cannot follow — without them every PDF fails in production with
   // MODULE_NOT_FOUND Helvetica.cjs (2026-11-08). scripts/check-pdf-trace.mjs (postbuild) renders a PDF from the traced
   // files alone and fails the build if anything is missing.
-  outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
+  outputFileTracingIncludes: {
+    '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'],
+    // Studio's Starter 0 (src/lib/studio/starter.ts): read only by the Send action, on the Studio page's function.
+    '/partner/studio': ['./kit/starter/**/*', '!./kit/starter/node_modules/**'],
+  },
   // The Storefront API's host first (ADR-0018), then every other host is a shop, served from /s/<host>/…
   // (src/domains/tenancy/host.ts).
   // The API host's root goes to its docs (SA1b D·9).

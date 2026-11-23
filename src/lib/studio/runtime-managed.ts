@@ -114,7 +114,7 @@ export const managedRuntime: StudioRuntime = {
 
   async uploadStarter(bytes, sha256) {
     const c = client()
-    const f = await call('file', async () => c.beta.files.upload({ file: await toFile(bytes, `starter-0-${sha256.slice(0, 12)}.tgz`, { type: 'application/gzip' }), betas: ['files-api-2025-04-14'] }, { timeout: CALL_MS.control }))
+    const f = await call('file', async () => c.beta.files.upload({ file: await toFile(bytes, `starter-0-${sha256.slice(0, 12)}.tar`, { type: 'application/x-tar' }), betas: ['files-api-2025-04-14'] }, { timeout: CALL_MS.control }))
     return f.id
   },
 
@@ -133,7 +133,7 @@ export const managedRuntime: StudioRuntime = {
       title: input.title.slice(0, 120),
       budget: { type: 'limit', max_list_cost: { amount: String(input.budgetCents), currency: 'USD' } },
       vault_ids: [input.vaultId],
-      ...(input.fileId ? { resources: [{ type: 'file', file_id: input.fileId, mount_path: '/workspace/starter-0.tgz' }] } : {}),
+      ...(input.fileId ? { resources: [{ type: 'file', file_id: input.fileId, mount_path: '/workspace/starter-0.tar' }] } : {}),
       ...BETA,
     } as never, { timeout: CALL_MS.control }))
     return s.id
