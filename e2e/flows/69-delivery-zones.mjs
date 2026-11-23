@@ -2,7 +2,7 @@
 // plan: the product page's PIN code check from the shop's own Settings. PD·1 with the app usable: a Special zone with
 // pay online only, a PIN code the shop doesn't deliver to, and checkout refusing that PIN code.
 import assert from 'node:assert/strict'
-import { CONSOLE, SHOP, signedIn, until } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const U = '00000000-0000-0000-0000-000000000000'
@@ -150,6 +150,33 @@ export default {
           await db`update shop_settings set ship_days = ${before.ship_days}, dispatch_days = ${before.dispatch_days} where tenant_id = ${KESAR}`
           await db`delete from shop_holidays where tenant_id = ${KESAR}`
           await oc.close()
+        }
+      })
+      await t.step('O1·6: the header names the pickup PIN code and opens its field in Settings; staff see it plain', async () => {
+        const [{ pickup_pincode: pickup }] = await db`select pickup_pincode from shop_settings where tenant_id = ${KESAR}`
+        await db`insert into auth.users (id, email, email_confirmed_at) values (${USERS.staff.id}, ${USERS.staff.email}, now()) on conflict (id) do nothing`
+        await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${USERS.staff.id}, 'staff') on conflict do nothing`
+        const oc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
+        const sc = await signedIn(t.browser, 'staff', { viewport: { width: 1280, height: 900 } })
+        try {
+          const o = await oc.newPage(); o.setDefaultTimeout(15_000); o.on('pageerror', (e) => t.errors.push(e.message))
+          await o.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })
+          await o.getByRole('link', { name: `From ${pickup}` }).click()
+          await o.waitForURL(/\/console\/settings\/store#f-pickupPincode$/)
+          await until(async () => (await o.evaluate(() => document.activeElement?.id)) === 'f-pickupPincode', 10_000)
+          await db`update shop_settings set pickup_pincode = null where tenant_id = ${KESAR}`
+          await o.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })
+          await o.getByRole('link', { name: 'Add pickup PIN code' }).waitFor()
+          await o.screenshot({ path: t.out('header-no-pickup') })
+          await db`update shop_settings set pickup_pincode = ${pickup} where tenant_id = ${KESAR}`
+          const s = await sc.newPage(); s.setDefaultTimeout(15_000); s.on('pageerror', (e) => t.errors.push(e.message))
+          await s.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })
+          await s.getByText(`From ${pickup}`).waitFor()
+          assert.equal(await s.getByRole('link', { name: `From ${pickup}` }).count(), 0, 'staff see no link')
+        } finally {
+          await db`update shop_settings set pickup_pincode = ${pickup} where tenant_id = ${KESAR}`
+          await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}`
+          await oc.close(); await sc.close()
         }
       })
       await t.step('A3 on Launch: start the 14-day trial yourself, the reminder 3 days out, End trial charges nothing', async () => {

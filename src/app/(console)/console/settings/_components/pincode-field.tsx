@@ -13,6 +13,12 @@ export function PincodeField({ f, value, error, onChange, saved, savedPlace }: {
   const id = `f-${f.key}`
   const v = typeof value === 'string' ? value : ''
   const [looked, setLooked] = useState<{ pin: string; place: { city: string; state: string } | null } | null>(null)
+  // Opened from Delivery Zones' header (O1·6): the field takes focus.
+  useEffect(() => {
+    if (window.location.hash !== `#${id}`) return
+    const el = document.getElementById(id)
+    el?.scrollIntoView({ block: 'center' }); el?.focus({ preventScroll: true })
+  }, [id])
   useEffect(() => {
     if (!PINCODE_SHAPE.test(v) || v === saved) return
     let live = true
