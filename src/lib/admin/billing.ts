@@ -236,3 +236,30 @@ export async function runCollectionNow(staff: StaffOk) {
   await adminDb().transaction((tx) => auditStaff(tx, staff, { action: 'billing.collect.run', detail: { ...r, sent: sent.sent } }))
   return { ...r, sent: sent.sent }
 }
+
+// ── Admin › Cashflow: money in, as sums only (plan docs/plans/2026-11-23-admin-cashflow.md task 4; tenancy and speed reviews) ──────────
+// Captured payments of non-test invoices, less over-payments sent back (by the month or day the refund was made). Only two sums leave here:
+// never a UTR, a gateway id, a failure reason or who recorded it. Bounds are VALUES (half-open IST days), never an expression on the column, so
+// the partial indexes on `captured_at` and `refunded_at` are used; the test-invoice exclusion is an anti-join on the tiny test-invoice index.
+
+export type MoneyBy = 'month' | 'day' | 'total'
+const istStart = (day: string) => `${day}T00:00:00+05:30`
+
+/** Net money in between two IST days (`from` inclusive, `to` exclusive), by month, by day, or as one total (key ''). */
+export async function billingIn(staff: StaffOk, from: string, to: string, by: MoneyBy): Promise<Record<string, number>> {
+  adminOnly(staff)
+  const key = (col: string) => by === 'total' ? sql.raw(`'total'::text`) : by === 'day' ? sql.raw(`((${col} at time zone 'Asia/Kolkata')::date)::text`) : sql.raw(`(date_trunc('month', ${col} at time zone 'Asia/Kolkata')::date)::text`)
+  const noTest = sql`not exists (select 1 from frrata_invoices i where i.tenant_id = p.tenant_id and i.id = p.invoice_id and i.test_mode)`
+  const db = adminDb()
+  const [got, back] = await Promise.all([
+    db.execute<{ k: string; n: string }>(sql`select ${key('p.captured_at')} as k, coalesce(sum(p.amount), 0)::text as n from frrata_payments p
+      where p.captured_at >= ${istStart(from)}::timestamptz and p.captured_at < ${istStart(to)}::timestamptz and ${noTest} group by 1`),
+    db.execute<{ k: string; n: string }>(sql`select ${key('p.refunded_at')} as k, coalesce(sum(p.refund_amount), 0)::text as n from frrata_payments p
+      where p.refunded_at >= ${istStart(from)}::timestamptz and p.refunded_at < ${istStart(to)}::timestamptz and ${noTest} group by 1`),
+  ])
+  const out: Record<string, number> = {}
+  const slice = (k: string) => (by === 'month' ? k.slice(0, 7) : by === 'total' ? '' : k)
+  for (const r of got) out[slice(r.k)] = (out[slice(r.k)] ?? 0) + Number(r.n)
+  for (const r of back) out[slice(r.k)] = (out[slice(r.k)] ?? 0) - Number(r.n)
+  return out
+}
