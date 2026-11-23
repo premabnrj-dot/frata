@@ -14,7 +14,7 @@ import { BUILDER_LABEL, ROLE_LABEL, type MemberRole } from '@/domains/tenancy/ro
 import { Toaster } from '@/components/ui/toast'
 import { Submit } from '@/components/ui/submit'
 import { PartnerFrame } from '@/components/passkeys/partner-frame'
-import { PartnerGate } from '@/components/passkeys/partner-gate'
+import { PartnerGate } from '@/components/passkeys/lazy-gates'
 import { CheckTimer } from '@/components/passkeys/check-timer'
 import { gateState } from '@/lib/db/partner-passkeys'
 import { partnerReturnPath, returnLabel } from '@/domains/partners/passkeys'
