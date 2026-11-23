@@ -34,10 +34,11 @@ These sections are the owner-approved rules of one surface; they are moved here 
   every problem as row · column · reason in plain words, rows-to-fix as a
   file; a product with one bad row is left out whole. Imported products
   arrive hidden. An empty cell never clears a value unless asked.
-- **Sign-up asks only what it uses now**: email (link and 6-digit code in one
-  email), shop name (address derived live), pickup pincode, one optional
-  question that changes what the merchant sees. A side panel on each step
-  says what is not asked yet and where it will be.
+- **Sign-up asks only what it uses now** (O1, owner 2026-11-23): the brand name first (its address derived and checked
+  before sign-in; "Change web address" for the rare change), then email and the 6-digit code on one screen (skipped
+  when signed in), the plan until O2, the WhatsApp code while it is on, what the store sells (one tap or none). No PIN
+  code: it is a Store details field, asked where Delivery Zones counts from it. The store draws itself beside the
+  questions; nothing explains what is not asked.
 - **The Frata website** marks every feature "Now" or "Next"; prices in rupees
   with "+ 18% GST"; the order fee "only on delivered orders". One primary
   action ("Start free"), no video hero, no chat widget at first paint; a

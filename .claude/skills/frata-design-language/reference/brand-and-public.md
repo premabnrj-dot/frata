@@ -67,7 +67,13 @@ These sections are the owner-approved rules of one surface; they are moved here 
     `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`
     button), the `Selvedge` (the block print as a woven edge under the stage, the
     only place it appears), a Neel `NumberBand` of terms (paper on Neel, gated),
-    and `SiteFooter` with WhatsApp written out. /partners, /login, /start and /build-that-converts (`/` is Rani Mela, rules 45–51).
+    and `SiteFooter` with WhatsApp written out. /partners, /login and /build-that-converts (`/` is Rani Mela, rules 45–51;
+    /start is the sign-up surface, rule 42a).
+42a. **Sign-up (/start) is its own surface** (O1, mockup `docs/mockups/2026-11-23-merchant-onboarding.html` § 1): the
+    wordmark with its 2 px thread and one 22×4 dot per step, the question column (max 400 wide, Bricolage headings,
+    48 px fields and the ink button with the thread under it), the store drawing itself on the haldi illustration tint
+    beside it; on a phone the store is a strip above the question. Keeps "Sign in" (signed out) and "Stuck? WhatsApp
+    us". Its colours are tokens; a store's own colours and the per-category stops live in `src/app/start/signup.css`.
 43. **The product is shown as it is**, drawn (`ExampleOrderCard` on `/`,
     `EarningsPreview`): `inert`, marked "Example", every figure from the engines
     (`exampleOrder()` through `orderProfit()`, `shareExample()`), never typed.
@@ -81,7 +87,7 @@ These sections are the owner-approved rules of one surface; they are moved here 
 
 ## Rani Mela — the website's look (owner-approved 2026-11-22; mockup `docs/mockups/2026-11-17-homepage-rani-mela.html`, spec `docs/specs/2026-11-22-homepage-rani-mela.md`)
 
-Live on `/` (the pilot); /partners, /build-that-converts, /start and /login keep rules 42 and the W·1 frame until each
+Live on `/` (the pilot); /partners, /build-that-converts and /login keep rules 42 and the W·1 frame until each
 moves. Where this section and rules 36–42 disagree on a Rani Mela page, this section wins. Rules 41, 43 and 44 still hold.
 
 45. **Colour has one job each**, from the `--site-*` tokens at the top of `src/app/site.css` (never `base.css`: the

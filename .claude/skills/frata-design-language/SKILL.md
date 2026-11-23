@@ -2,9 +2,9 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 10.5.0
+  version: 10.6.0
   owner: owner
-  verified: 2026-11-22
+  verified: 2026-11-23
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/app/site.css", "src/components/brand/site-home.tsx"]
 ---
 
@@ -214,7 +214,10 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
    a Dialog there is no toast (the page behind is inert): the marks and the focus say it.
 4. **Popups confirm what loses work, money or stock** (`Dialog`, the phone sheet), with a pictogram from § Graphic
    language. A failure inside a popup is shown in that popup (`Dialog`'s error slot), never a second popup or a toast
-   behind it. No other kind of popup for errors.
+   behind it. No other kind of popup for errors. **A setup popup** is the second kind beside the confirm (owner call 4,
+   2026-11-23): one short job of up to five fields that saves at once, or one short choice before a store exists
+   (sign-up's "Change web address", which saves nothing). A job with a test step, a long form or many items stays a
+   page. Never stacked; Back closes it; a sheet on a phone; its ✕ is `Dialog`'s `onDismiss` (`aria-label="Close"`).
 5. **Stays where it is** (pinned by its own rule): "Pick a size.", a code that doesn't apply, a failed payment's filled
    form and its line above Pay, "Price updated to ₹…", a domain's row problem, "Couldn't count" / "Risk unavailable",
    autosave's "Not saved", Publish's blocking list, `Panel` states, the support-mode and billing banners.

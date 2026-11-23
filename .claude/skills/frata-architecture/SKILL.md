@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.10.0
+  version: 3.13.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -105,6 +105,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   that holds shopper data. A platform sweep uses a definer that returns ids only (S4).
 - Admin takes tenant ids from forms (it is cross-tenant by role); every Admin
   write still matches `tenant_id` **and** the row id together.
+- **A definer's new version is expand-then-contract** (O1, 2026-11-23): add vN+1 in a migration applied before the push
+  and move the app to it; drop the old in a migration whose first line is `-- apply: after-live`, applied only once the
+  new build serves and the old functions have run out. A rollback past the drop re-creates the old functions WITH their
+  revoke/grant (`docs/setup.md` § Sign-up definers); previews share the database, so open branches move first.
 
 ### The analytics database (A·2, ADR-0013, 2026-11-11; plan docs/plans/2026-11-11-guardrails-infra-a2.md § A2·1 as built)
 
@@ -341,6 +345,11 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   }
 }
 ```
+
+**An anonymous action that reads the database** (O1·7, `src/app/start/check-address-open.ts`) is its own `'use server'`
+file in `check:actions`' ENTRY_POINTS with exactly its named exports (EXACT_EXPORTS: a second export fails the gate),
+limited per network (IPv6 /64), per site (IPv6 /48, `netBucket`) and by one global bucket, all failing closed, and
+answers a silent `limited` rather than a false answer; whatever it guards is checked again where it is written.
 
 **A result goes back to the form, never into a URL or a cookie** (feedback plan 2026-11-12, frata-design-language
 § Feedback). A form that posts to a server action is an `<ActionForm action={…}>` (`src/components/ui/action-form.tsx`);

@@ -7,7 +7,7 @@ last build (only when nothing under `src/` changed since).
 **The stack** (`e2e/stack.mjs`): a throwaway Postgres in `/var/tmp/frata-e2e`
 on port 54340 (or `E2E_ADMIN_URL`, as in CI), a fresh database every run, every
 migration (`scripts/verify/apply-migrations.sh`), then `e2e/seed.sql`; the fake
-Supabase auth (`e2e/fakes/auth.mjs`) and fake Razorpay API
+Supabase auth (`e2e/fakes/auth.mjs`: a session per `USERS` person; the emailed code `246810` signs that person in) and fake Razorpay API
 (`e2e/fakes/razorpay.mjs`); a stand-in Blob store (`e2e/fakes/blob.mjs`: a flow puts what the browser
 uploaded there, and the app reads it through the test-only preload `e2e/fakes/blob-read.mjs`); a production build started on port 3077, the shop
 reached as `kesar-studio.frata.test` through Chromium's host resolver. It never

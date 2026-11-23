@@ -33,8 +33,10 @@ export default {
       // Both widths of each step, for the parity check against mockup § 1 (O1·8).
       const shot = async (name) => {
         await p.screenshot({ path: t.out(`${name}-390`), fullPage: true })
-        await p.setViewportSize({ width: 1280, height: 800 }); await p.screenshot({ path: t.out(`${name}-1280`), fullPage: true })
-        await p.setViewportSize({ width: 390, height: 844 })
+        // After a resize, wait for the new width's layout (two frames) before the picture.
+        const settled = () => p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+        await p.setViewportSize({ width: 1280, height: 800 }); await settled(); await p.screenshot({ path: t.out(`${name}-1280`), fullPage: true })
+        await p.setViewportSize({ width: 390, height: 844 }); await settled()
       }
       await t.step('the name step: a taken address waits; the address is checked as the name is typed', async () => {
         await p.goto(CONSOLE + '/start')

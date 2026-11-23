@@ -25,7 +25,7 @@
 [data-signup] [data-sell="beauty"] { --a1: #F3C6CF; --a2: #D9879A; --a3: #9C4A5E; --ar: 3 / 4; }
 [data-signup] [data-sell="wellness"] { --a1: #BFE0D2; --a2: #5FA98C; --a3: #2E6B55; --ar: 3 / 4; }
 
-.su { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: max(560px, 100dvh); }
+.su { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: max(560px, 100vh); }
 .su-q { padding: 20px 28px 28px; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 20px; min-width: 0; }
 .su-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .su-wm { display: inline-flex; border-bottom: 2px solid var(--thread); padding-bottom: 1px; }
@@ -60,7 +60,7 @@
 .su-radio { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
 .su-radio:has(input:checked) { border-color: var(--foreground); box-shadow: inset 0 0 0 1px var(--foreground); }
 .su-radio input { accent-color: var(--foreground); margin-top: 3px; }
-.su-radio span { display: grid; } .su-radio small { color: var(--muted-foreground); font-size: 13px; }
+.su-radio > span { display: grid; } .su-radio small { color: var(--muted-foreground); font-size: 13px; }
 .su-sub { color: var(--muted-foreground); font-size: 14px; }
 .su-help { font-size: 14px; color: var(--muted-foreground); }
 
