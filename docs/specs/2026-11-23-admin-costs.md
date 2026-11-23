@@ -16,7 +16,7 @@ This moves none of the seven ranked problems directly (`frata-planning` § North
 **operational exception the owner asked for**. It earns its place in one way: the monthly burn it gives
 is the cost side of `frata-unit-economics` (break-even tenants, funding need), which today are
 estimates typed into docs. Measure: every recurring cost Frrata pays is listed with its next due date,
-and the burn figure matches the bank statement for a month within ₹1.
+and "spent this month" matches the bank statement for that month within ₹1 (burn is a monthly equivalent and is not compared).
 
 ## Job
 
@@ -57,22 +57,22 @@ The database cannot tell a master admin from support staff (one connection), so 
 `cost_items` — the thing we pay for
 - `id`, `name` (1–80), `vendor` (≤ 80, optional), `category` (text + CHECK + exported tuple `COST_CATEGORIES`: infrastructure, ai, messaging, software, marketing, legal, people, design, other)
 - `kind` `recurring | one_time`, `cadence` `monthly | quarterly | yearly` (null for one-time; CHECK pairs them)
-- `amount_minor bigint` (paise or cents), `currency` `INR | USD`, `varies boolean`
+- `amount bigint` (paise for INR, micro-dollars for USD: `MicroUsd`, `src/domains/money/usd.ts`), `currency` `INR | USD`, `varies boolean`
 - `anchor_on date` — a date it falls due; later dues are derived from it, month-end clamped
-- `ends_on date null`, `note` (≤ 300), `created_at`, `created_by` (staff email as at sign-in)
+- `ends_on date null`, `note` (≤ 300), `created_at` (the actor is the audit row's)
 
 `cost_payments` — each time we actually paid
 - `id`, `item_id` (FK), `period_for date` (which due date this settles; for one-time, the paid date)
-- `paid_on date`, `amount_minor bigint`, `currency`, `inr_paise bigint` (what left the account, in rupees)
-- `gst_paise bigint null` (the GST part, for the CA's input credit), `note`
+- `paid_on date`, `amount bigint`, `currency`, `inr_paise bigint` (what left the account, in rupees)
+- `gst_paise bigint null` (the GST part, for your CA), `note`
 - unique `(item_id, period_for)` so Mark paid twice is a no-op, never a double (`on conflict do nothing`); index `(paid_on, id)`
 - CHECKs: kind and cadence paired (`(kind = 'recurring') = (cadence is not null)`); currency in INR, USD; amounts between 1 and
-  1e10; `inr_paise = amount_minor` when INR; `gst_paise` between 0 and `inr_paise`; dates between 2020-01-01 and 2100-12-31;
-  a one-time item is never `varies` and has no `ends_on`; text caps (note ≤ 300, `created_by` ≤ 320); FK `item_id` on delete restrict
+  1e10; `inr_paise = amount` when INR; `gst_paise` between 0 and `inr_paise`; dates between 2020-01-01 and 2100-12-31;
+  a one-time item is never `varies` and has no `ends_on`; text caps (note ≤ 300); FK `item_id` on delete restrict
 
 Grants: items select, insert, update (no delete — end it instead); payments select, insert, delete
 (delete is Undo for a mistaken payment). Money is integer minor units end to end (ADR-0004); USD is
-cents, shown as dollars only where a person reads it. `inr_paise` for a USD cost is prefilled from the
+micro-dollars, shown as dollars only where a person reads it; USD converts to paise with `listPaise(micro, rateE4)` (`domains/studio/credits.ts`), and a sum rounds once at full precision (÷3 and ÷12 never round per item). With no rate yet, a USD row shows dollars only, the burn leaves it out and says "rate missing", and Mark paid asks for the rupees. `inr_paise` for a USD cost is prefilled from the
 latest `fx_rates` row (a new definer `admin_fx_rate_latest()` in 0170, granted to `frata_admin` only, revoked from everyone else; `app_fx_rate_latest` stays `frata_app`'s) and editable: the card statement wins.
 
 ### What is derived, never stored (SSOT)
@@ -124,7 +124,7 @@ The role is checked on the page, in every action, **and inside every `src/lib/ad
 `billing.ts`), with a unit test that a support `StaffOk` is refused: support staff share the `frata_admin` connection, so
 the database cannot hold this line. Add, Mark paid and End need no fresh passkey. **Editing an amount, currency or
 anchor date, and Undo of a payment older than 10 minutes, need `confirmedRecently`** (security review 2026-11-23: a
-falsified record reaches the CA's input credit and the burn; the toast's Undo stays one tap). Every write is audited in
+falsified record reaches the CA and the burn; the toast's Undo stays one tap). Every write is audited in
 the same transaction as the write (`tenantId` null): `costs.item.add`, `.edit`, `.end`, `.pay`, `.unpay`; `target` is the
 item id, never a name or note; `detail` carries names of changed fields, and for `.unpay` also `{itemId, periodFor,
 inrPaise, gstPaise}` so the figures survive the delete. `costs` joins `MASTER_ONLY_WORDS`, and Activity's filter reads
@@ -167,8 +167,8 @@ throwing source blanks every count), with a today test where the costs source th
 | Phase | Ships | Usable alone because |
 |---|---|---|
 | **C0** | Mockup artifact, approved by the owner | the gate before any code |
-| **C1** | Tables, engine, tests, page: Overview, All costs, Add, Mark paid, End, Undo | the owner can record and see everything |
-| **C2** | Payments view with CSV export, Today and nav reminders | year-end and renewals are covered |
+| **C1** | Tables, engine, tests, page: Overview, All costs, Payments with CSV export, Add, Mark paid, End, Undo | the owner can record and see everything |
+| **C2** | Today reminders and the nav badge | renewals are not missed |
 
 ## Tasks (after C0 is approved)
 
@@ -182,7 +182,7 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
    admin db fake, `npm run gates`.
 4. **Page and dialogs** built as drawn. Verify: `e2e` flow `costs` at phone and desktop width;
    `mockup-parity-reviewer`, `design-system-reviewer`, `words-reviewer`.
-5. **C2**: CSV export (a GET route copied from `billing/export/route.ts`: `requireStaff(ADMIN_ONLY)` and the lib re-check, `fy` by regex, `text/csv; charset=utf-8`, fixed ASCII attachment filename, `no-store`, `nosniff`, row cap, `csvCell` from `domains/billing/document.ts`), `cost_due` Today source.
+5. **C1**: Payments view and CSV export (a GET route copied from `billing/export/route.ts`: `requireStaff(ADMIN_ONLY)` and the lib re-check, `fy` by regex, `text/csv; charset=utf-8`, fixed ASCII attachment filename, `no-store`, `nosniff`, row cap, `csvCell` from `domains/billing/document.ts`), `cost_due` Today source.
    Verify: e2e, `npm test`, `npm run typecheck`.
 6. **Production**: migration SQL printed with `scripts/prod-migrate.mjs`, applied, row inserted; push to
    `main`; production errors checked within the hour and next day.
@@ -198,7 +198,7 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
   actions beside the page, rendering in `_components`. Extends Admin; touches no merchant module.
 - **SSOT / DRY** — table above. The FX rate is `fx_rates`; categories are one exported tuple read by the
   CHECK, the form and the report. Vercel/Mux *usage* stays in Infrastructure; Costs holds the *bill paid*
-  (a link on the Vercel and Mux items, no copying of numbers).
+  (no copying of numbers).
 - **YAGNI (left out, with the signal that brings it back)** — receipts upload (the CA asks for one);
   auto-import from Infrastructure (three items drift from their bills twice); budgets and alerts per
   category (a month overshoots unnoticed); approvals or multiple payers (a second person pays); more
@@ -222,11 +222,28 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
 - **Security** — every action: `requireStaff(ADMIN_ONLY)`, Zod with length caps and amount ceiling,
   item id matched together with the row id, named fields in the reply; the CSV is a GET route copied from billing's export, admin-only, with `csvCell` (also covers tab and CR). Notes render as text, never HTML.
 - **Unit economics** — changes no merchant price or fee. It supplies the burn the model's break-even
-  uses; `unit-economics-reviewer` checks the burn feeds `frata-unit-economics` without a second copy.
+  uses; `unit-economics-reviewer` was not run: nothing a merchant pays or Frrata charges changes.
 - **Blast radius** — new files plus one nav group, one `TODAY_SOURCES` row, one activity word. Shared:
   Admin nav and Today; both covered by the existing today tests.
 
-**Stress test** — written after the mockup, against the real code (severity · what · file · fix).
+**Motion and visuals** — dialogs, side panel and toast reuse the Neel patterns (§ Motion); no new duration or easing. A pictogram tile on the empty state only. **Storefront API** — n/a, no merchant data and no API answer changes.
+
+**Stress test** (against the real code, from the architecture review 2026-11-23)
+
+| Severity | What | Fix |
+|---|---|---|
+| Blocker | Restrictive `definer_only` locks Admin out | Infrastructure's pattern (0093), see § The data |
+| Blocker | `app_fx_latest` does not exist; `app_fx_rate_latest` is closed to Admin | New `admin_fx_rate_latest()` definer |
+| Major | A `--custom` migration alone leaves the tables out of drizzle's snapshot | `npm run db:generate` writes 0170 (tables, CHECKs, indexes); the access SQL is appended to that file, as 0163 does |
+| Major | Dollars as cents is a second USD unit | Micro-dollars (`MicroUsd`), `listPaise` |
+| Major | The engine would rewrite `addMonths` and the financial-year start | Move `addMonths` (now in `studio/credits.ts`) to `domains/time/month.ts`, add `fyOf` there, both callers import them; each due date is `addMonths(anchor, k·step)`, never stepped (31 Jan → 28 Feb → 31 Mar), with a test |
+| Major | Next due and overdue need each live item's paid `period_for` values | The due-set read (§ Performance); `cost_due` calls the engine on it |
+| Major | Editing the cadence or anchor strands paid periods as overdue | The anchor may move only past the last paid period; the cadence is locked once there is a payment (End the cost, add a new one); Mark paid checks the engine that `period_for` is an unpaid due |
+| Major | `countsOf` counts items, so one row badges 1 | One `TodayItem` per due cost, at most 20, action Mark paid, link `?id=` |
+| Major | The mockup's counts disagree with its own rows | Mockup fixed: 7 repeating, 1 one-time, nav badge 2 (Google overdue, Vercel in 3 days) |
+| Minor | The drawn nav badge is C2 work | A Deviations row in the plan, shown to the owner; the Payments tab and CSV move into C1 |
+| Minor | Smaller gaps | Cost icon joins the shared `ICONS` set and its code map; the empty-search state is drawn (`NoMatch`) in the build and parity check; the panel opens by `?id=`; `NeedsBand` and `form-dialog` are used; the design rules land with this spec |
+
 
 ## Your calls (each with a recommendation)
 

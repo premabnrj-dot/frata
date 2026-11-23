@@ -108,3 +108,10 @@ The nine rules (board Rules), binding on every Admin screen and mockup:
 Two surfaces, two looks. **The console is neutral, dense and numeric. The
 fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 (its `ekatan3d-design-language`) and Shopify's admin, which merchants already know.
+
+## Admin › Costs (owner-approved 2026-11-23; mockup https://claude.ai/artifact/MEoxVFhu7EUHpfzbA8obvA, `docs/mockups/2026-11-23-admin-costs.html`)
+
+- Master admin only; support staff see a panel, never a hidden button. Three tabs (Overview, All costs, Payments), one primary (Add cost) and Export CSV.
+- A due or overdue cost leads the page in a `NeedsBand`; every due row has one action, **Mark paid**, opening a prefilled dialog. A cost opens in a side panel by `?id=`, the list stays put.
+- A cost that varies shows "about" and a `varies` tag; its Mark paid opens on the amount. A dollar cost shows dollars, and rupees where a person reads a total.
+- Add is one dialog with a Repeats or Once switch. A payment's Undo is a toast action.
