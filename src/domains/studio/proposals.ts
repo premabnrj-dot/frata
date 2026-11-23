@@ -45,7 +45,7 @@ export function checkTokens(live: BrandRecord, p: TokensValue): TokensCheck {
 
 export type LogoCheck = { ok: true; value: LogoValue } | { ok: false; reason: OutlineRefusal | 'too_big'; words: string }
 
-/** What `studio_proposals.value` holds at most, as stored (jsonb text; drizzle/0163's check). */
+/** What `studio_proposals.value` holds at most, as stored (jsonb text; drizzle/0166's check). */
 export const PROPOSAL_VALUE_MAX_BYTES = 72 * 1024
 
 /** A logo proposal: the cleaned, outline-only SVG, or why not (in the person's words). */

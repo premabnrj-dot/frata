@@ -59,7 +59,7 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
    reserve *(amended 2026-11-23: while no credits exist, settle counts the measured cost uncapped, so an overshoot of
    one request is counted; only the cron's unbound end caps it at the reserve)*; EXECUTE is revoked from public, anon, authenticated, service_role, frata_builder and frata_admin.
    **Amended 2026-11-22/23 (V3a plan check, ruling c; orchestrator agreed; the R2 tenancy audits and security review
-   folded in; built in drizzle/0164):** `requireMember` and `requireCapability` stay unchanged (a `Membership` carries no
+   folded in; built in drizzle/0167):** `requireMember` and `requireCapability` stay unchanged (a `Membership` carries no
    partner, and setting it there would touch every console request). The lock is held **by the database**, not by a
    setting code could write: `app_current_partner()` answers only for a row in the definer-only `studio_binds` whose
    random token is in the `app.studio_bind` setting AND whose transaction id is the current transaction's, for the

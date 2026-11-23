@@ -49,7 +49,7 @@ export type AdvanceOptions = {
 const LEASE_S = 90
 const PAGE = 100
 const NAME_MAX = 64
-/** A tool input as stored: jsonb's text form can be ~1.43× JSON.stringify's (`[0,0]` → `[0, 0]`), and drizzle/0163
+/** A tool input as stored: jsonb's text form can be ~1.43× JSON.stringify's (`[0,0]` → `[0, 0]`), and drizzle/0166
  *  checks 72 kB of that, so 48 kB measured here always fits (security review of R5, MED-1). */
 const INPUT_MAX = 48 * 1024
 /** Ruling e: at most this many lines a session; the agent's further text is not stored. */

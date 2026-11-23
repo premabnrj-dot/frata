@@ -7,7 +7,7 @@
 // foreign keys tie every row to its session's store and partner, so the brand's own staff or a later partner never read
 // a session. No frata_builder or frata_admin grant in V3a. A turn's state is its timestamps (src/domains/studio/turn.ts);
 // a session's end is `ended_at`. No cost or credit lives here: spend and each turn's person and step-up are
-// platform-scope, definer-only tables (`studio_turn_keys`, `studio_spend_*`). Access: drizzle/0164_studio_access.sql.
+// platform-scope, definer-only tables (`studio_turn_keys`, `studio_spend_*`). Access: drizzle/0167_studio_access.sql.
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
@@ -157,7 +157,7 @@ export const studioMessages = pgTable('studio_messages', {
   check('studio_messages_text', sql`${t.text} is null or length(${t.text}) <= ${sql.raw(String(LINE_MAX))}`),
 ])
 
-// ── Platform scope, definer-only: no role holds any privilege; a restrictive deny-all policy (drizzle/0164). ──────
+// ── Platform scope, definer-only: no role holds any privilege; a restrictive deny-all policy (drizzle/0167). ──────
 
 /** The person behind an open turn and the step-up ROWS they sent it with (never a hash: security review L3). Signing out
  *  or an expired check deletes those rows, which deletes this one and ends the turn. Read only by app_turn_actor. */

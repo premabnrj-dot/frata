@@ -10,7 +10,7 @@
 //            to ALLOWED_HOSTS, package managers and MCP servers off. The caps table has no row for the model. The vault
 //            credential is not header-only.
 //   bind     the setting that binds Studio's partner, or the old partner setting, written anywhere in src (only the
-//            database's definers write the bind; drizzle/0164).
+//            database's definers write the bind; drizzle/0167).
 //   definers a Studio definer called outside the files allowed to call it (each one's callers are named below).
 //   tools    a tool executor (src/lib/studio/tools/) importing beyond its allow-list, or calling the raw db, a tenant
 //            transaction or withActor itself: executors run only through asTurn, which hands them their reads and
@@ -107,7 +107,7 @@ function spans(text, opener) {
 }
 
 function sourceRules(file, text) {
-  if (SETTING.test(text)) fail(file, 'bind: writes the partner bind setting — only the database\'s definers bind (drizzle/0164)')
+  if (SETTING.test(text)) fail(file, 'bind: writes the partner bind setting — only the database\'s definers bind (drizzle/0167)')
   for (const [fn, allowed] of Object.entries(DEFINERS)) {
     if (new RegExp(`\\b${fn}\\s*\\(`).test(text) && !allowed.includes(file)) fail(file, `definers: calls ${fn}( — only ${allowed.join(', ')}`)
   }

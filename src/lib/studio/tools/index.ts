@@ -21,7 +21,7 @@ import { refused, type ToolOutcome } from './types'
 export type StoredCall = { id: string; name: string; input: unknown }
 export type CallResult = { answer: unknown; isError: boolean }
 
-/** The most a stored result holds (drizzle/0163's check is 16 kB). */
+/** The most a stored result holds (drizzle/0166's check is 16 kB). */
 const RESULT_MAX = 15 * 1024
 
 const BAD = refused(TOOL_ERRORS.input)

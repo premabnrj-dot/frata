@@ -444,7 +444,7 @@ period (frata-integrations § Domains). Build for daily; a beta schedule is an o
   of THIS transaction whose token is in `app.studio_bind`, written only by `app_studio_partner` (withStudio) or
   `app_studio_bind_turn` (asTurn, the advance). The bind proves a person (user, membership, the two step-up rows).
   Every `studio_*` shop table has a restrictive `partner_only` policy on tenant and bound partner and composite foreign
-  keys to its session; spend, turn keys and binds are platform-scope, definer-only tables (drizzle/0164, proof § 91).
+  keys to its session; spend, turn keys and binds are platform-scope, definer-only tables (drizzle/0167, proof § 91).
 - **Every custom tool runs through `asTurn(turn, work)`** (`as-turn.ts`), the second Actor maker beside
   `require-capability.ts` (`check:capabilities`). The turn is Frrata's own open-turn row, from the cron's ids-only work
   list or the person's own session, never an id from a request, an event or a tool's input (`check:studio` pins who

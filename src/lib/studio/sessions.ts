@@ -37,7 +37,7 @@ export type SendResult = { ok: true; sessionId: string; turnId: string } | { ok:
 export type Deps = { runtime: StudioRuntime; starter: () => { bytes: Uint8Array; sha256: string }; follow: boolean }
 const DEFAULT: Deps = { runtime: managedRuntime, starter: starterArchive, follow: true }
 
-/** A text the person sends, as stored and sent: no NUL, trimmed, at most a line (drizzle/0163 checks LINE_MAX). */
+/** A text the person sends, as stored and sent: no NUL, trimmed, at most a line (drizzle/0166 checks LINE_MAX). */
 export const sendText = (t: string) => t.replace(/\u0000/g, '').trim().slice(0, LINE_MAX)
 
 const REFUSALS = new Set<SendWhy>(['person_day', 'platform_day', 'sessions', 'turn_open'])
