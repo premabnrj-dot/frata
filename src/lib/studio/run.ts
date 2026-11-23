@@ -90,8 +90,10 @@ const seatOf = (r: RenewalRow): Seat => ({ plan: r.plan, periodEnd: r.periodEnd,
 async function renewals(now: Date, gatewayIsTest: boolean, live: () => boolean) {
   const out = { notices: 0, debits: 0, ended: 0 }
   const seller = frrataSeller(now)
-  for (const r of await system.renewals(100)) {
-    if (!live()) break
+  // Page through every seat near its end until the deadline: failed seats never crowd out the ones due (speed review).
+  for (let page = await system.renewals(100); page.length; page = page.length < 100 ? [] : await system.renewals(100, page[page.length - 1]!)) {
+  for (const r of page) {
+    if (!live()) return out
     try {
       // Real money against a test invoice is never taken (security M2): a broken seller config waits.
       if (seller.test && !gatewayIsTest) continue
@@ -113,6 +115,7 @@ async function renewals(now: Date, gatewayIsTest: boolean, live: () => boolean) 
         if (await system.seatEnd(r.seatId, s.kind === 'lapse')) out.ended++
       }
     } catch (e) { console.error('[credits] renewal', r.seatId, errName(e)) }
+  }
   }
   return out
 }
@@ -220,8 +223,14 @@ function facts(n: NoticeRow, forLead: boolean): MailFacts | null {
 export async function sendCreditEmails(now: Date, live: () => boolean): Promise<number> {
   if (!EMAIL_NOTICES_FROM || !isEmailConfigured()) return 0
   let sent = 0
-  for (const n of await system.noticesClaim(30)) {
-    if (!live()) break
+  // Claim again while there is time (speed review: a fixed 30 a run is 720 a day), never the same notice twice a run.
+  const seen = new Set<string>()
+  for (;;) {
+  const batch = (await system.noticesClaim(30)).filter((n) => !seen.has(n.id))
+  if (!batch.length) break
+  for (const n of batch) {
+    seen.add(n.id)
+    if (!live()) return sent
     const to = [...n.owners.map((e) => ({ e, lead: false })), ...n.leads.filter((e) => !n.owners.includes(e)).map((e) => ({ e, lead: true }))]
     let ok = to.length > 0, code: string | null = to.length ? null : 'no_recipient'
     for (const r of to) {
@@ -238,6 +247,8 @@ export async function sendCreditEmails(now: Date, live: () => boolean): Promise<
     }
     await system.noticeDone(n.id, ok, code)
     if (ok) sent++
+  }
+  if (batch.length < 30) break
   }
   return sent
 }

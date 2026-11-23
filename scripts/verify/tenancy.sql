@@ -4187,7 +4187,7 @@ end $$;
 set local role frata_app;
 do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; gp uuid := current_setting('proof.g89p')::uuid; r record; v uuid; n record; pe timestamptz; seat jsonb;
 begin
-  select * into r from app_pc_renewals(100) x where x.partner_id = gp;
+  select * into r from app_pc_renewals(100, null, null) x where x.partner_id = gp;
   if r.seat_id is null or not r.mandate or r.attempts <> 0 or not r.partner_live then raise exception 'FAIL: a due seat (%)', r; end if;
   v := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
   if v is null then raise exception 'FAIL: a renewal attempt'; end if;
@@ -4416,7 +4416,7 @@ do $$ declare r text; f text; begin
     'app_partner_credit_buy(uuid, uuid, text, text, integer, text, text, bigint, bigint, bigint, bigint, bigint, boolean, boolean, text, text, text, text, text, text)',
     'app_partner_seat_change(uuid, uuid, text, text, text)', 'app_pc_purchase_ctx(uuid)', 'app_pc_set_customer(uuid, text)',
     'app_pc_purchase_order(uuid, text, boolean)', 'app_pc_claim(uuid)', 'app_pc_apply(text, text, boolean, bigint, text, boolean, text, text)',
-    'app_pc_unsettled(interval, integer)', 'app_pc_close(uuid, text)', 'app_pc_renewals(integer)',
+    'app_pc_unsettled(interval, integer)', 'app_pc_close(uuid, text)', 'app_pc_renewals(integer, timestamptz, uuid)',
     'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
     'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
     'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',

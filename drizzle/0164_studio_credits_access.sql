@@ -92,7 +92,9 @@ begin
 end $$;
 --> statement-breakpoint
 
--- What a use was charged: its reserve less what came back (releases and return lots). An open use counts whole.
+-- What a use was charged: its reserve less what came back (releases and return lots). An open use counts whole. Sums over
+-- many uses inline the same expression (a definer call per use is never inlined; speed review 2026-11-23: budgets 945 ms →
+-- index-only through partner_credit_entries_use_back).
 create or replace function app_pc_charged(p_use uuid) returns integer
   language sql stable security definer set search_path = '' as $$
   select (u.reserved - coalesce((select sum(e.credits) from public.partner_credit_entries e
@@ -115,7 +117,7 @@ $$;
 
 create or replace function app_pc_link_used(p_partner uuid, p_link uuid) returns integer
   language sql stable security definer set search_path = '' as $$
-  select coalesce(sum(public.app_pc_charged(u.id)), 0)::integer
+  select coalesce(sum(u.reserved - coalesce((select sum(e.credits) from public.partner_credit_entries e where e.use_id = u.id and e.kind in ('release', 'return')), 0)), 0)::integer
   from public.partner_credit_uses u, public.app_pc_window(p_link) w
   where u.partner_id = p_partner and u.link_id = p_link and u.created_at >= w.starts_at
 $$;
@@ -185,11 +187,11 @@ begin
   select * into o from public.app_pc_owner(p_uid, p_session, p_stepup, false, false);
   return (select jsonb_build_object(
     'balance', public.app_pc_balance(o.partner_id, p_real),
-    'held', coalesce((select sum(public.app_pc_charged(u.id)) from public.partner_credit_uses u
+    'held', coalesce((select sum(u.reserved - coalesce((select sum(e.credits) from public.partner_credit_entries e where e.use_id = u.id and e.kind in ('release', 'return')), 0)) from public.partner_credit_uses u
                        where u.partner_id = o.partner_id and u.closed_at is null), 0),
     'heldBy', (select count(*) from public.partner_credit_uses u where u.partner_id = o.partner_id and u.closed_at is null),
     'usedSince', v_month,
-    'used', coalesce((select sum(public.app_pc_charged(u.id)) from public.partner_credit_uses u
+    'used', coalesce((select sum(u.reserved - coalesce((select sum(e.credits) from public.partner_credit_entries e where e.use_id = u.id and e.kind in ('release', 'return')), 0)) from public.partner_credit_uses u
                        where u.partner_id = o.partner_id and u.closed_at is not null and u.created_at >= v_month), 0),
     'lots', coalesce((select jsonb_agg(jsonb_build_object('kind', x.kind, 'left', x.left_credits, 'credits', x.credits,
                         'expiresAt', x.expires_at, 'createdAt', x.created_at, 'test', x.test) order by x.expires_at, x.created_at)
@@ -662,7 +664,7 @@ end $$;
 
 -- ── Renewals: every live seat within 3 days of its period's end, with the facts renewalStep needs (attempts for this
 --    period, the latest attempt's notice, the last failure, the mandate, the partner live). Oldest due first. ──
-create or replace function app_pc_renewals(p_limit integer) returns table (
+create or replace function app_pc_renewals(p_limit integer, p_after_end timestamptz, p_after_id uuid) returns table (
   seat_id uuid, partner_id uuid, plan text, next_plan text, method text, test boolean, period_end timestamptz, cancel_at timestamptz,
   failed_at timestamptz, attempts integer, pending integer, purchase_id uuid, purchase_open boolean, has_order boolean, notice_queued_at timestamptz,
   notice_sent_at timestamptz, last_failed_at timestamptz, mandate boolean, mandate_max bigint, partner_live boolean, buyer_state text)
@@ -682,7 +684,8 @@ create or replace function app_pc_renewals(p_limit integer) returns table (
   left join lateral (select p.* from public.partner_credit_purchases p where p.seat_id = s.id and p.for_period_end = s.period_end
                       order by p.created_at desc limit 1) l on true
   where s.ended_at is null and (s.period_end < now() + interval '3 days' or s.failed_at is not null)
-  order by s.period_end limit least(p_limit, 500)
+    and (p_after_end is null or (s.period_end, s.id) > (p_after_end, p_after_id))
+  order by s.period_end, s.id limit least(p_limit, 500)
 $$;
 --> statement-breakpoint
 
@@ -932,7 +935,7 @@ begin
     raise exception 'platform_day' using errcode = 'P0001'; end if;
   set local lock_timeout = '2s';
   perform pg_advisory_xact_lock(hashtextextended(me.partner_id::text || ':credits', 0));
-  if (select coalesce(sum(public.app_pc_charged(u.id)), 0) from public.partner_credit_uses u
+  if (select coalesce(sum(u.reserved - coalesce((select sum(e.credits) from public.partner_credit_entries e where e.use_id = u.id and e.kind in ('release', 'return')), 0)), 0) from public.partner_credit_uses u
        where u.member_id = me.member_id and u.created_at >= v_day) + v_n > 300 then raise exception 'person_day' using errcode = 'P0001'; end if;
   select bb.credits into v_budget from public.partner_client_budgets bb where bb.partner_id = me.partner_id and bb.link_id = p_link;
   v_used := public.app_pc_link_used(me.partner_id, p_link);
@@ -1057,7 +1060,7 @@ revoke all on function app_pc_owner(uuid, uuid, text, boolean, boolean), app_pc_
   app_partner_seat_change(uuid, uuid, text, text, text),
   app_pc_issue(uuid), app_pc_purchase_ctx(uuid), app_pc_set_customer(uuid, text), app_pc_purchase_order(uuid, text, boolean), app_pc_claim(uuid),
   app_pc_apply(text, text, boolean, bigint, text, boolean, text, text), app_pc_unsettled(interval, integer), app_pc_close(uuid, text),
-  app_pc_renewals(integer), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
+  app_pc_renewals(integer, timestamptz, uuid), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
   app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer), app_fx_rate_latest(),
@@ -1075,7 +1078,7 @@ grant execute on function app_partner_credit_try(uuid, uuid, text, text),
   app_partner_seat_change(uuid, uuid, text, text, text),
   app_pc_purchase_ctx(uuid), app_pc_set_customer(uuid, text), app_pc_purchase_order(uuid, text, boolean), app_pc_claim(uuid),
   app_pc_apply(text, text, boolean, bigint, text, boolean, text, text), app_pc_unsettled(interval, integer), app_pc_close(uuid, text),
-  app_pc_renewals(integer), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
+  app_pc_renewals(integer, timestamptz, uuid), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
   app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_latest(),

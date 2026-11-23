@@ -245,8 +245,9 @@ export const system = {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_close(${purchaseId}::uuid, ${reason}) as ok`)
     return r?.ok === true
   },
-  async renewals(limit: number): Promise<RenewalRow[]> {
-    const rows = await db().execute<Record<string, unknown>>(sql`select * from app_pc_renewals(${limit})`)
+  /** One page of seats near their end or failed, in (period end, id) order; pass the last row to read the next. */
+  async renewals(limit: number, after: { periodEnd: Date; seatId: string } | null = null): Promise<RenewalRow[]> {
+    const rows = await db().execute<Record<string, unknown>>(sql`select * from app_pc_renewals(${limit}, ${after ? after.periodEnd.toISOString() : null}::timestamptz, ${after?.seatId ?? null}::uuid)`)
     return rows.map((r) => ({ seatId: r.seat_id as string, partnerId: r.partner_id as string, plan: r.plan as SeatPlan, nextPlan: (r.next_plan as SeatPlan | null) ?? null,
       method: r.method as 'upi' | 'card', test: r.test === true, periodEnd: new Date(r.period_end as string), cancelAt: date(r.cancel_at), failedAt: date(r.failed_at),
       attempts: num(r.attempts), pending: num(r.pending), purchaseId: (r.purchase_id as string | null) ?? null, purchaseOpen: r.purchase_open === true,

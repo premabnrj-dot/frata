@@ -88,6 +88,15 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
     </div></>
   }
 
+  // The tab's own read starts with the overview, never after it (speed review 2026-11-23: they don't depend on each other).
+  const usageMonth = /^20\d{2}-(0[1-9]|1[0-2])$/.test(q.month ?? '') ? `${q.month}-01` : `${istDayKey(now).slice(0, 7)}-01`
+  const tabRead = {
+    usage: tab === 'usage' ? usage(me, usageMonth, null, 200) : null,
+    budgets: tab === 'budgets' ? budgets(me) : null,
+    payments: tab === 'payments' ? payments(me) : null,
+  }
+  // A read left unawaited (the overview failed) is never an unhandled rejection.
+  for (const r of Object.values(tabRead)) r?.catch(() => undefined)
   const o = await overview(auth, realMoney())
   if (!o.ok) return <>{header}{tabs}{failedPanel(href(tab))}</>
   const v = o.value
@@ -144,8 +153,8 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
     }
 
     if (tab === 'usage') {
-      const month = /^20\d{2}-(0[1-9]|1[0-2])$/.test(q.month ?? '') ? `${q.month}-01` : `${istDayKey(now).slice(0, 7)}-01`
-      const r = await usage(me, month, null, 200)
+      const month = usageMonth
+      const r = (await tabRead.usage)!
       if (!r.ok) return failedPanel(href('usage'))
       const u = r.value
       const prev = new Date(`${month}T12:00:00+05:30`); prev.setMonth(prev.getMonth() - 1)
@@ -169,7 +178,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
     }
 
     if (tab === 'budgets') {
-      const b = await budgets(me)
+      const b = (await tabRead.budgets)!
       if (!b.ok) return failedPanel(href('budgets'))
       return <div className="grid gap-4">
         {b.value.length === 0 ? <Empty picto="clients" title="No clients yet" /> : b.value.map((r) => <BudgetCard key={r.linkId} r={r} owner ownerFirst="" />)}
@@ -180,7 +189,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
     }
 
     if (tab === 'payments') {
-      const r = await payments(me)
+      const r = (await tabRead.payments)!
       if (!r.ok) return failedPanel(href('payments'))
       const p = r.value
       const d = p.details

@@ -304,6 +304,11 @@ create policy definer_only on fx_rates as restrictive for all to public using (f
 -- Speed review (2026-11-22, measured at 10×): a lot's draws summed from the index alone (H-M1), and the platform's day
 -- of list cost from the index alone (H1: 557 ms seq scan → 6–13 ms).
 create index partner_credit_entries_draws on partner_credit_entries (lot_id) include (credits) where lot_id is not null;--> statement-breakpoint
-create index partner_credit_uses_day on partner_credit_uses (created_at) include (list_micro, rate_e4);--> statement-breakpoint
+create index partner_credit_uses_day on partner_credit_uses (created_at) include (list_micro, rate_e4, closed_at, reserved, loading_bp);--> statement-breakpoint
+-- Speed review (2026-11-23, 10×): a disputed purchase's clawbacks (823 ms seq scan of the ledger in every balance read);
+-- a seat's attempts in the renewals read (3.8 s for 100 seats); a use's give-backs for the charged sums (index-only).
+create index partner_credit_entries_clawbacks on partner_credit_entries (purchase_id) include (credits, lot_id) where kind = 'clawback';--> statement-breakpoint
+create index partner_credit_entries_use_back on partner_credit_entries (use_id) include (kind, credits) where use_id is not null;--> statement-breakpoint
+create index partner_credit_purchases_seat on partner_credit_purchases (seat_id, for_period_end) where seat_id is not null;--> statement-breakpoint
 -- A notice names a link of its own partner only (impact review: every cross-reference carries the partner).
 alter table partner_credit_notices add constraint partner_credit_notices_link_fk foreign key (partner_id, link_id) references partner_links (partner_id, id) on delete restrict;
