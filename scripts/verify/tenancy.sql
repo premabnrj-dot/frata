@@ -5500,6 +5500,7 @@ begin
   if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is not null then raise exception 'FAIL: 91 a Lead bound the partner on a store they own'; end if;
   if app_studio_end_session(s, 'switch', null) then raise exception 'FAIL: 91 B ended A''s session'; end if;
   if exists (select 1 from app_studio_session_facts(s)) or exists (select 1 from app_studio_cleanup_of(s)) or exists (select 1 from app_studio_delete_of(s)) then raise exception 'FAIL: 91 B read A''s session facts'; end if;
+  if app_studio_settle_ended(s, 1) then raise exception 'FAIL: 91 B settled A''s session'; end if;
 end $$;
 rollback;
 -- The person goes: each removal ends the open turn's actor; the switch opens nothing; sign-out ends it.
@@ -5532,8 +5533,11 @@ do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; s uuid;
   select * into r from app_studio_session_facts(s);
   if r.person_live is not true then raise exception 'FAIL: 91 a person with no step-up is not live (facts ignore the step-up)'; end if;
   if r.turn_open is not true or r.turn_sent_at is null or r.spent_micro is null then raise exception 'FAIL: 91 the facts miss the open turn'; end if;
-  if not app_studio_end_session(s, 'actor', 999999999) then raise exception 'FAIL: 91 the cron could not end the session'; end if;
+  if app_studio_settle_ended(s, 1) then raise exception 'FAIL: 91 an open session settled as ended'; end if;
+  if not app_studio_end_session(s, 'actor', null) then raise exception 'FAIL: 91 the cron could not end the session'; end if;
   if app_studio_end_session(s, 'actor', 1) then raise exception 'FAIL: 91 a session ended twice'; end if;
+  if not app_studio_settle_ended(s, 999999999) then raise exception 'FAIL: 91 the cron could not settle the ended turn'; end if;
+  if app_studio_settle_ended(s, 1) then raise exception 'FAIL: 91 an ended turn settled twice'; end if;
   perform 1 from app_studio_cleanup_of(s);
   if not found then raise exception 'FAIL: 91 no clean-up ids for an ended session'; end if;
   if not app_studio_mark(s, 'cleaned') or app_studio_mark(s, 'cleaned') then raise exception 'FAIL: 91 cleaned not once'; end if;
@@ -5597,7 +5601,7 @@ do $$ declare r text; tb text; fn text; begin
   foreach fn in array array['app_current_partner()', 'app_studio_sweep_binds()', 'app_studio_partner(uuid, uuid, text, text)', 'app_studio_bind_turn(uuid)', 'app_turn_actor(uuid)',
     'app_studio_new_session()', 'app_studio_set_vendor(uuid, text, text)', 'app_studio_set_key(uuid, uuid)', 'app_studio_open_turn(uuid, bigint, bigint, bigint, integer)',
     'app_studio_spend_of(uuid)', 'app_studio_close_turn(uuid, text, text, bigint, bigint)', 'app_studio_end_session(uuid, text, bigint)',
-    'app_studio_session_facts(uuid)', 'app_studio_cleanup_of(uuid)', 'app_studio_delete_of(uuid)', 'app_studio_mark(uuid, text)', 'app_studio_due(integer)',
+    'app_studio_settle_ended(uuid, bigint)', 'app_studio_session_facts(uuid)', 'app_studio_cleanup_of(uuid)', 'app_studio_delete_of(uuid)', 'app_studio_mark(uuid, text)', 'app_studio_due(integer)',
     'app_studio_bound()', 'app_studio_write_bind(uuid, uuid, uuid, uuid, uuid, uuid)', 'app_studio_person(uuid, uuid)', 'app_studio_proved(uuid, uuid, uuid, uuid)',
     'app_studio_own_session(uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint, boolean)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop

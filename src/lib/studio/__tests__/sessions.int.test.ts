@@ -10,7 +10,7 @@ const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 
-type FakeState = { requests: { route: string; body: Record<string, unknown> }[]; vaults: Map<string, unknown>; files: Map<string, unknown>; sessions: Map<string, { budget: number; listCost: number; archived: boolean }>; failNext: Record<string, number> }
+type FakeState = { requests: { route: string; body: Record<string, unknown> }[]; vaults: Map<string, unknown>; files: Map<string, unknown>; sessions: Map<string, { budget: number; listCost: number; archived: boolean }>; agent: { model: unknown }; failNext: Record<string, number> }
 type Fake = { url: string; key: string; state: FakeState; close: () => Promise<void> }
 
 describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
@@ -271,5 +271,36 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     await cron()
     expect((await su`select deleted_at from studio_sessions where id = ${s!.id}`)[0]!.deleted_at).not.toBeNull()
     expect(fake.state.sessions.has(s!.runtime_id)).toBe(false)
+  })
+
+  it('a drifted agent at Anthropic refuses a fresh start before any key is minted; a matching one starts', async () => {
+    if (await openSession()) await S.stop(f.auth, rt)
+    const keys = async () => Number((await su`select count(*)::int as n from storefront_keys where tenant_id = ${f.tenant} and kind = 'build'`)[0]!.n)
+    const made = await keys(), vaults = fake.state.vaults.size
+    const model = fake.state.agent.model
+    fake.state.agent.model = { ...(model as object), id: 'claude-opus-5-5' }
+    try {
+      // A runtime object of its own: the 5-minute yes is kept per runtime, so an earlier start's yes does not apply.
+      const r = await S.send(f.auth, 'hello', { ...deps(), runtime: new Proxy(rt, {}) })
+      expect(r).toEqual({ ok: false, why: 'start' })
+      expect({ keys: await keys(), vaults: fake.state.vaults.size }).toEqual({ keys: made, vaults })
+      expect((await su`select end_reason from studio_sessions where user_id = ${f.user} order by created_at desc limit 1`)[0]!.end_reason).toBe('start_failed')
+    } finally { fake.state.agent.model = model }
+    expect((await S.send(f.auth, 'hello', { ...deps(), runtime: new Proxy(rt, {}) })).ok).toBe(true)
+    await S.stop(f.auth, rt)
+  })
+
+  it('a start that died (no message taken 3 minutes after its Send): the cron ends it as start_failed and settles it', async () => {
+    const held = await reserved()
+    expect((await S.send(f.auth, 'hello', deps())).ok).toBe(true) // follow off: no advance has taken the message
+    const s = (await openSession())!
+    await su`update studio_turns set sent_at = now() - interval '4 minutes' where session_id = ${s.id} and started_at is null`
+    await cron()
+    expect((await su`select end_reason from studio_sessions where id = ${s.id}`)[0]!.end_reason).toBe('start_failed')
+    expect(await reserved()).toBe(held + 500_000) // held until the runtime session is archived
+    await cron() // the clean-up: archived, then settled
+    const [t] = await su`select x.settled_at is not null as settled, t.failed_reason from studio_spend_turns x join studio_turns t on t.id = x.turn_id where t.session_id = ${s.id}`
+    expect(t).toEqual({ settled: true, failed_reason: 'start' })
+    expect(await reserved()).toBe(held)
   })
 }, 120_000)

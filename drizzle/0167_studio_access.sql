@@ -349,6 +349,24 @@ begin
   return true;
 end $$;--> statement-breakpoint
 
+-- ── Settle an ENDED session's last unsettled turn once its runtime has stopped (security review of the phase, LOW): an
+--    end holds the reserve (null), the runtime is interrupted or archived, then the final measured cost settles here,
+--    once. Bound to the session's person: uncapped (Stop); otherwise capped at the reserve (the cron's clean-up). ──
+create or replace function app_studio_settle_ended(p_session uuid, p_measured bigint) returns boolean
+  language plpgsql volatile security definer set search_path = '' as $$
+declare s record; t record; b record;
+begin
+  if p_measured is null or p_measured < 0 then return false; end if;
+  select x.* into s from public.studio_sessions x where x.id = p_session and x.tenant_id = public.app_current_tenant() and x.ended_at is not null;
+  if s.id is null then return false; end if;
+  select st.turn_id into t from public.studio_spend_turns st join public.studio_turns tn on tn.id = st.turn_id
+   where tn.session_id = s.id and st.settled_at is null order by tn.sent_at desc limit 1;
+  if t.turn_id is null then return false; end if;
+  select x.* into b from public.app_studio_bound() x;
+  perform public.app_studio_settle(t.turn_id, s.id, p_measured, null, b.token is null or b.user_id <> s.user_id or b.partner_id <> s.partner_id);
+  return true;
+end $$;--> statement-breakpoint
+
 -- ── The cron's facts about one session of the current store: times and whether its person is still there (without the
 --    step-up). No partner's content. ──
 --    The open turn too, if any (architecture review of the phase): whether one is open, when it was sent, whether the
@@ -364,8 +382,8 @@ create or replace function app_studio_session_facts(p_session uuid)
          t.id is not null, t.sent_at, t.started_at is not null, s.runtime_id, coalesce(x.spent_micro, 0)
     from public.studio_sessions s
     left join public.studio_spend_sessions x on x.session_id = s.id
-    left join lateral (select x.id, x.sent_at, x.started_at from public.studio_turns x
-                        where x.session_id = s.id and x.ended_at is null and x.paused_at is null and x.failed_at is null limit 1) t on true
+    left join lateral (select tn.id, tn.sent_at, tn.started_at from public.studio_turns tn
+                        where tn.session_id = s.id and tn.ended_at is null and tn.paused_at is null and tn.failed_at is null limit 1) t on true
    where s.id = p_session and s.tenant_id = public.app_current_tenant()
 $$;--> statement-breakpoint
 
@@ -426,11 +444,11 @@ revoke all on function app_studio_bound(), app_current_partner(), app_studio_wri
   app_studio_person(uuid, uuid), app_studio_proved(uuid, uuid, uuid, uuid), app_studio_partner(uuid, uuid, text, text), app_turn_actor(uuid),
   app_studio_bind_turn(uuid), app_studio_new_session(), app_studio_own_session(uuid), app_studio_set_vendor(uuid, text, text), app_studio_set_key(uuid, uuid),
   app_studio_open_turn(uuid, bigint, bigint, bigint, integer), app_studio_spend_of(uuid), app_studio_settle(uuid, uuid, bigint, bigint, boolean),
-  app_studio_close_turn(uuid, text, text, bigint, bigint), app_studio_end_session(uuid, text, bigint), app_studio_session_facts(uuid),
-  app_studio_cleanup_of(uuid), app_studio_delete_of(uuid), app_studio_mark(uuid, text), app_studio_due(integer)
+  app_studio_close_turn(uuid, text, text, bigint, bigint), app_studio_end_session(uuid, text, bigint), app_studio_settle_ended(uuid, bigint),
+  app_studio_session_facts(uuid), app_studio_cleanup_of(uuid), app_studio_delete_of(uuid), app_studio_mark(uuid, text), app_studio_due(integer)
   from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder;--> statement-breakpoint
 grant execute on function app_current_partner(), app_studio_sweep_binds(), app_studio_partner(uuid, uuid, text, text), app_turn_actor(uuid),
   app_studio_bind_turn(uuid), app_studio_new_session(), app_studio_set_vendor(uuid, text, text), app_studio_set_key(uuid, uuid),
   app_studio_open_turn(uuid, bigint, bigint, bigint, integer), app_studio_spend_of(uuid), app_studio_close_turn(uuid, text, text, bigint, bigint),
-  app_studio_end_session(uuid, text, bigint), app_studio_session_facts(uuid), app_studio_cleanup_of(uuid), app_studio_delete_of(uuid),
-  app_studio_mark(uuid, text), app_studio_due(integer) to frata_app;
+  app_studio_end_session(uuid, text, bigint), app_studio_settle_ended(uuid, bigint), app_studio_session_facts(uuid), app_studio_cleanup_of(uuid),
+  app_studio_delete_of(uuid), app_studio_mark(uuid, text), app_studio_due(integer) to frata_app;

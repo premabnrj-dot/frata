@@ -24,20 +24,18 @@ import { RuntimeError, type StudioRuntime } from './runtime'
 
 const one = <T>(rows: unknown) => (rows as T[])[0]
 
-
 type Facts = { created_at: string; last_activity_at: string; ended_at: string | null; person_live: boolean; turn_open: boolean; turn_sent_at: string | null; turn_started: boolean; runtime_id: string | null; spent_micro: string | number }
 const factsOf = (tenantId: string, sessionId: string) => withTenant(tenantId, async (tx) =>
   one<Facts>(await tx.execute(sql`select created_at, last_activity_at, ended_at, person_live, turn_open, turn_sent_at, turn_started, runtime_id, spent_micro from app_studio_session_facts(${sessionId}::uuid)`)))
 
-/** Ends a session for a reason the cron decides (no bind). Its open turn settles what the runtime measured, capped at
- *  its reserve in the database: 0 when no runtime session was recorded, the reserve kept counted only when the list cost
- *  cannot be read (unit economics F2, F3). `vendor` false: Anthropic is not reached. */
-async function endUnbound(tenantId: string, sessionId: string, reason: EndReason, rt: StudioRuntime, vendor: boolean, f?: Facts | null): Promise<boolean> {
+/** Ends a session for a reason the cron decides (no bind). Its open turn holds its reserve until the clean-up has
+ *  archived the runtime session and settles what it measured, capped at the reserve (security review of the phase, LOW:
+ *  a cost read before the runtime stops misses its tail); 0 at once when no runtime session was recorded (unit
+ *  economics F2, F3). */
+async function endUnbound(tenantId: string, sessionId: string, reason: EndReason, f?: Facts | null): Promise<boolean> {
   const facts = f ?? (await factsOf(tenantId, sessionId))
   if (!facts) return false
-  const runtimeId = facts.runtime_id
-  const listCost = vendor ? await listCostOf(rt, runtimeId) : runtimeId ? null : (0 as MicroUsd)
-  const measured = facts.turn_open ? measuredOf(Number(facts.spent_micro) as MicroUsd, listCost) : null
+  const measured = facts.turn_open && !facts.runtime_id ? 0 : null
   return withTenant(tenantId, async (tx) =>
     one<{ ok: boolean }>(await tx.execute(sql`select app_studio_end_session(${sessionId}::uuid, ${reason}, ${measured}::bigint) as ok`))?.ok === true)
 }
@@ -76,6 +74,16 @@ export async function cleanSession(tenantId: string, sessionId: string, rt: Stud
   } catch (err) {
     console.error('[studio] clean', err instanceof RuntimeError ? err.code : errName(err))
     return false
+  }
+  // The runtime session archived (stopped), its final cost read and its last turn settled, capped at the reserve; an
+  // unread cost leaves the clean-up for the next run, the reserve still counted.
+  if (ids.runtime_id) {
+    if (!room(CALL_MS.control)) return false
+    const listCost = await listCostOf(rt, ids.runtime_id)
+    const f = await factsOf(tenantId, sessionId)
+    const measured = f ? measuredOf(Number(f.spent_micro) as MicroUsd, listCost) : null
+    if (measured === null) return false
+    await withTenant(tenantId, async (tx) => tx.execute(sql`select app_studio_settle_ended(${sessionId}::uuid, ${measured}::bigint)`))
   }
   return withTenant(tenantId, async (tx) => one<{ ok: boolean }>(await tx.execute(sql`select app_studio_mark(${sessionId}::uuid, 'cleaned') as ok`))?.ok === true)
 }
@@ -121,18 +129,18 @@ export async function runStudioCron(deadline: number, rt: StudioRuntime = manage
   const work = async (d: DueRow) => {
     // Studio unconfigured (the key removed is half the switch: security review of R6, MED-2): the database half still
     // runs. Every open session ends as `switch` and its key is revoked; Anthropic's side waits for a key.
-    if (!vendor && (d.kind === 'advance' || d.kind === 'end')) { if (await endUnbound(d.tenantId, d.sessionId, 'switch', rt, false)) out.ended++; return }
+    if (!vendor && (d.kind === 'advance' || d.kind === 'end')) { if (await endUnbound(d.tenantId, d.sessionId, 'switch')) out.ended++; return }
     if (d.kind === 'advance' || d.kind === 'end') {
       const f = await factsOf(d.tenantId, d.sessionId)
       const why = dueEnd(f)
-      if (why) { if (await endUnbound(d.tenantId, d.sessionId, why, rt, true, f)) out.ended++; return }
+      if (why) { if (await endUnbound(d.tenantId, d.sessionId, why, f)) out.ended++; return }
       if (d.kind !== 'advance' || !d.turnId) return
       const r = await advance({ tenantId: d.tenantId, turnId: d.turnId }, { runtime: rt, deadline: Math.min(deadline, Date.now() + STEP_MS.advance) })
       // `actor`: the turn's person no longer binds. A turn the poll closed meanwhile binds nobody either: only a turn
       // still open is ended for it (architecture review of the phase); with no room left, the next minute ends it.
       if (r === 'actor') {
         const now = room(STEP_MS.end) ? await factsOf(d.tenantId, d.sessionId) : null
-        if (now?.turn_open && (await endUnbound(d.tenantId, d.sessionId, 'actor', rt, true, now))) out.ended++
+        if (now?.turn_open && (await endUnbound(d.tenantId, d.sessionId, 'actor', now))) out.ended++
       } else if (r === 'error') out.errors++
       else out.advanced++
     } else if (d.kind === 'clean') {
@@ -143,7 +151,8 @@ export async function runStudioCron(deadline: number, rt: StudioRuntime = manage
   }
   const of = (k: DueRow['kind']) => due.filter((d) => d.kind === k)
   for (const d of of('end')) { if (!room(STEP_MS.end)) break; await step(d) }
-  await pool(of('advance'), ADVANCE_AT_ONCE, async (d) => { if (room(STEP_MS.advance)) await step(d) })
+  // Studio unconfigured: an advance row is only the database's end, an end's room.
+  await pool(of('advance'), ADVANCE_AT_ONCE, async (d) => { if (room(vendor ? STEP_MS.advance : STEP_MS.end)) await step(d) })
   for (const d of of('clean')) { if (!room(STEP_MS.clean)) break; await step(d) }
   for (const d of of('delete')) { if (!room(STEP_MS.delete)) break; await step(d) }
   return out

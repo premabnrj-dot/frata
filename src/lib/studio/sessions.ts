@@ -115,7 +115,7 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
   if (opened.fresh || !runtimeId) {
     const started = await start(auth, opened, deps, t0 + START_MS)
     if (!started.ok) {
-      await failSession(auth, opened, 'start', started.runtimeId, rt)
+      await failSession(auth, opened, 'start', started.runtimeId)
       return { ok: false, why: 'start' }
     }
     runtimeId = started.runtimeId
@@ -126,7 +126,7 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
       if (opened.pausedBefore) await rt.interrupt(runtimeId)
     } catch (err) {
       console.error('[studio] budget', err instanceof RuntimeError ? err.code : errName(err))
-      await failSession(auth, opened, 'budget', runtimeId, rt)
+      await failSession(auth, opened, 'budget', runtimeId)
       return { ok: false, why: 'budget' }
     }
   }
@@ -135,7 +135,7 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
   } catch (err) {
     // The message may have been delivered all the same: the session ends, so no later turn adopts it (security R5 MED-2).
     console.error('[studio] send', err instanceof RuntimeError ? err.code : errName(err))
-    await failSession(auth, opened, 'send', runtimeId, rt)
+    await failSession(auth, opened, 'send', runtimeId)
     return { ok: false, why: 'send' }
   }
   if (deps.follow) {
@@ -187,10 +187,11 @@ async function start(auth: StudioOk, o: Opened, deps: Deps, deadline: number): P
 
 /** A Send that failed after its turn opened: the turn fails with its measured cost and the session ends (the cron then
  *  cleans up what was recorded). */
-async function failSession(auth: StudioOk, o: Opened, reason: 'start' | 'send' | 'budget', runtimeId: string | null, rt: StudioRuntime) {
-  const listCost = await listCostOf(rt, runtimeId)
+async function failSession(auth: StudioOk, o: Opened, reason: 'start' | 'send' | 'budget', runtimeId: string | null) {
+  // The runtime session may still run (a message delivered all the same): the turn holds its reserve until the cron's
+  // clean-up archives it and settles what it measured; with no runtime session nothing ran (security review of the phase).
+  const measured = runtimeId ? null : 0
   await withStudio(auth, async (tx) => {
-    const measured = measuredOf((await spendOf(tx, o.sessionId)).spent, listCost)
     await tx.execute(sql`select app_studio_close_turn(${o.turnId}::uuid, 'failed', ${reason}, ${measured}::bigint, null::bigint)`)
     await tx.execute(sql`select app_studio_end_session(${o.sessionId}::uuid, ${reason === 'start' ? 'start_failed' : 'restart'}, 0::bigint)`)
   }).catch((e) => console.error('[studio] fail', reason, errName(e)))
@@ -203,14 +204,19 @@ export async function stop(auth: StudioOk, rt: StudioRuntime = managedRuntime): 
     .where(and(eq(studioSessions.tenantId, auth.tenantId), eq(studioSessions.userId, auth.userId), isNull(studioSessions.endedAt)))).catch(() => [])
   const s = open[0]
   if (!s) return { ok: true }
-  // The cost read, the session's end recorded (no later turn adopts anything of it), then the interrupt (architecture
-  // review of the phase): whatever runs past the read is held by the session's budget, and the cron archives it.
-  const listCost = await listCostOf(rt, s.runtimeId)
-  const ended = await withStudio(auth, async (tx) => {
-    const measured = measuredOf((await spendOf(tx, s.id)).spent, listCost)
-    return one<{ ok: boolean }>(await tx.execute(sql`select app_studio_end_session(${s.id}::uuid, 'stopped', ${measured}::bigint) as ok`))?.ok === true
-  }).catch(() => false)
-  if (s.runtimeId) await rt.interrupt(s.runtimeId).catch(() => {})
+  // The end recorded first, its turn holding the reserve (no later turn adopts anything of it: architecture review of
+  // the phase); then the interrupt; then the cost read and settled once, uncapped, for the bound person (security review
+  // of the phase, LOW: a cost read before the interrupt misses the tail). An unread cost is settled by the clean-up.
+  const ended = await withStudio(auth, async (tx) =>
+    one<{ ok: boolean }>(await tx.execute(sql`select app_studio_end_session(${s.id}::uuid, 'stopped', ${s.runtimeId ? null : 0}::bigint) as ok`))?.ok === true).catch(() => false)
+  if (ended && s.runtimeId) {
+    await rt.interrupt(s.runtimeId).catch(() => {})
+    const listCost = await listCostOf(rt, s.runtimeId)
+    await withStudio(auth, async (tx) => {
+      const measured = measuredOf((await spendOf(tx, s.id)).spent, listCost)
+      if (measured !== null) await tx.execute(sql`select app_studio_settle_ended(${s.id}::uuid, ${measured}::bigint)`)
+    }).catch((e) => console.error('[studio] stop settle', errName(e)))
+  }
   // Its key, vault and file are cleaned by the next cron minute (src/lib/studio/cron.ts), never from a person's request.
   return { ok: ended }
 }
