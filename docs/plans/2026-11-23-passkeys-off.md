@@ -69,6 +69,8 @@ An open Studio session made while off holds no step-up. When passkeys come back 
 | 4 | Off state: the banner and the row both offer "Turn passkeys on" on the Staff page | Built as drawn (both) | Open wording question; the owner did not rule (orchestrator 2026-11-23) |
 | 5 | Give key's dialog while off is not drawn | The same dialog; Give key needs no passkey and "Add passkey" is gone | "Off" means off everywhere (call 1) |
 
+Owner seen (orchestrator, at merge): rows 1–3 approved by the owner on 2026-11-23 ("approved."); rows 4 and 5 told to the owner the same day with the release (4 built as drawn, both buttons; 5 follows call 1, "off" means off everywhere).
+
 ## Applying
 
 Apply 0170, then 0171, each in its own transaction. They need not share one, but the code needs both, so release only
