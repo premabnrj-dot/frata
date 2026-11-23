@@ -7,7 +7,9 @@ Status: active · Date: 2026-11-23 · Spec: `docs/specs/2026-11-23-passkeys-simp
 **Review:** architecture-reviewer CHANGES NEEDED (2 blockers, 8 major; all folded in), 2026-11-23
 **Review:** words-reviewer 30 lines rewritten in the mockup, 2026-11-23
 **Review:** speed-reviewer not run, parked before it was due, 2026-11-23
-**Review:** impact-reviewer not run, runs on each task's diff once picked up, 2026-11-23
+**Review:** impact-reviewer P0 FIX BEFORE COMMIT (1 medium, test gaps; fixed in 38cb932), 2026-11-23
+**Review:** design-system-reviewer P0 FAIL minor (6; fixed or in Deviations), 2026-11-23
+**Review:** mockup-parity-reviewer P0 FAIL on one unlisted row (the browser's own sheet; now in Deviations), 2026-11-23
 
 History: parked by the owner earlier on 2026-11-23 ("on passkey, could you please park the plan and just add option in admin to disable passkeys … it's too early for passkeys in the system, let it be just email and password login. I don't understand the need of passkey system … just wish to get started for now"), then approved the same day (below). The mockup and the reviews stay as they are for when this is picked up again.
 
@@ -43,5 +45,6 @@ definers, `mockup-parity-reviewer` against the mockup, and the docs in spec § P
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
 | Screen 2's list of saved passkeys (password manager, saved, used, Partner/Staff tag) | P0: the heading and both actions, no list | The list needs a definer that answers before a check: a migration, which waits for lane D's (P1 adds it) | yes — told the orchestrator 2026-11-23 for the owner; closes in P1 |
-| Screen 3's fingerprint tile in Frrata Admin | Admin keeps its key icon, no second tile | Admin's frame already draws an icon ("the same card in its own frame") | no — to show with P0's report |
+| Screen 3's fingerprint tile in Frrata Admin; screens 1–3 in Admin | Admin keeps its key icon above screens 1–3 (its frame since 2026-11-12), no second tile on screen 3 | Admin's frame already draws an icon ("the same card in its own frame") | yes — in P0's report to the orchestrator, 2026-11-23 |
+| Screen 1's dark card ("Use a passkey for frata.vercel.app?", the email, the fingerprint, "Use a phone or tablet") | not drawn by the page | It is the browser's own passkey sheet, which appears on "Use passkey"; the mockup shows it for context, as the partner sign-in mockup did (built the same way, 2026-11-15) | yes — in P0's report to the orchestrator, 2026-11-23 |
 | A toast "Passkey saved to …" after screen 3 | none | The reload replaces the gate and its toaster; the page that opens is the confirmation (none is drawn after screen 3) | not a deviation (not drawn) |
