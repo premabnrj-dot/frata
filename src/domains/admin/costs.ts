@@ -43,8 +43,22 @@ export type CostItem = {
   endsOn: string | null
   /** A `CostCategory` as stored (text + CHECK); typed loose so a read never throws on a future value. */
   category: string
+  vendor?: string | null
+  note?: string | null
 }
 export type CostPayment = { id: string; itemId: string; paidOn: string; periodFor: string; inrPaise: number; category: string }
+/** A payment as the Admin library reads it (a CostPayment and what the panel and the CSV show). */
+export type PaymentRow = CostPayment & { amount: number; currency: string; gstPaise: number | null; createdAt: Date }
+
+/** The most live repeating costs there can be: Overview reads them all. */
+export const MAX_LIVE_COSTS = 500
+
+/** What Add sends (already parsed by the action's Zod). A one-time cost carries its payment. */
+export type CostItemInput =
+  | { kind: 'recurring'; name: string; vendor?: string | null; category: CostCategory; cadence: Cadence; amount: number; currency: CostCurrency; varies: boolean; anchorOn: string; note?: string | null }
+  | { kind: 'one_time'; name: string; vendor?: string | null; category: CostCategory; amount: number; currency: CostCurrency; paidOn: string; inrPaise?: number; gstPaise?: number | null; note?: string | null }
+/** What Mark paid sends. For a dollar cost `amount` is micro-dollars and `inrPaise` what left the account. */
+export type PaidInput = { periodFor: string; paidOn: string; amount: number; inrPaise?: number; gstPaise?: number | null; note?: string | null }
 
 // ── Days ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 

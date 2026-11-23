@@ -10,9 +10,10 @@
 import { sql } from 'drizzle-orm'
 import { boolean, check, date, foreignKey, index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, COST_KINDS } from '@/domains/admin/costs'
+import { sqlList } from '@/domains/tenancy/roles'
 import { at, id, money } from './schema'
 
-const list = (xs: readonly string[]) => sql.raw(xs.map((x) => `'${x}'`).join(', '))
+const list = (xs: readonly string[]) => sql.raw(sqlList(xs))
 const DAY_MIN = sql.raw(`'2020-01-01'`)
 const DAY_MAX = sql.raw(`'2100-12-31'`)
 const CEILING = 1_000_000_000_000

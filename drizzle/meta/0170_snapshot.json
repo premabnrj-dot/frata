@@ -1,5 +1,5 @@
 {
-  "id": "2135f654-0640-4e10-be44-0c44a922255b",
+  "id": "5a2d7ab3-8b78-47e6-94cf-b36d0bf023fd",
   "prevId": "ad67fa06-5c6e-4f3c-9ca8-6762e49a0d8e",
   "version": "7",
   "dialect": "postgresql",
@@ -23598,11 +23598,11 @@
       "checkConstraints": {
         "cost_items_kind": {
           "name": "cost_items_kind",
-          "value": "\"cost_items\".\"kind\" in ('recurring', 'one_time')"
+          "value": "\"cost_items\".\"kind\" in ('recurring','one_time')"
         },
         "cost_items_cadence": {
           "name": "cost_items_cadence",
-          "value": "\"cost_items\".\"cadence\" is null or \"cost_items\".\"cadence\" in ('monthly', 'quarterly', 'yearly')"
+          "value": "\"cost_items\".\"cadence\" is null or \"cost_items\".\"cadence\" in ('monthly','quarterly','yearly')"
         },
         "cost_items_kind_cadence": {
           "name": "cost_items_kind_cadence",
@@ -23610,11 +23610,11 @@
         },
         "cost_items_currency": {
           "name": "cost_items_currency",
-          "value": "\"cost_items\".\"currency\" in ('INR', 'USD')"
+          "value": "\"cost_items\".\"currency\" in ('INR','USD')"
         },
         "cost_items_category": {
           "name": "cost_items_category",
-          "value": "\"cost_items\".\"category\" in ('infrastructure', 'ai', 'messaging', 'software', 'marketing', 'legal', 'people', 'design', 'other')"
+          "value": "\"cost_items\".\"category\" in ('infrastructure','ai','messaging','software','marketing','legal','people','design','other')"
         },
         "cost_items_amount": {
           "name": "cost_items_amount",
@@ -23775,7 +23775,7 @@
       "checkConstraints": {
         "cost_payments_currency": {
           "name": "cost_payments_currency",
-          "value": "\"cost_payments\".\"currency\" in ('INR', 'USD')"
+          "value": "\"cost_payments\".\"currency\" in ('INR','USD')"
         },
         "cost_payments_amount": {
           "name": "cost_payments_amount",

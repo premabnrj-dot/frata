@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.12.0
+  version: 3.13.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -62,6 +62,11 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
   holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
   waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
+- **Admin › Costs** (2026-11-23; spec `docs/specs/2026-11-23-admin-costs.md`, drizzle/0170, proof § 102, `check:tenant` § 10): `cost_items` and
+  `cost_payments` are platform-scope tables in 0093's shape (direct `frata_admin` grants, one permissive policy each, nothing for any other
+  role), imported only by `src/lib/admin/costs.ts` (and `today.ts`). Support staff share the `frata_admin` connection, so every export
+  there re-checks `ADMIN_ONLY` itself. Due dates, next due, overdue and burn are derived in `src/domains/admin/costs.ts`, never stored;
+  USD is micro-dollars. Editing an amount, currency or anchor, and undoing a payment older than 10 minutes, need `confirmedRecently`.
 - **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
   `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
 - **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
@@ -238,7 +243,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0165 and 0168–0169, proof
   § 89): eleven platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
   `partner_credit_uses`, `partner_credit_entries`, `partner_client_budgets`, `partner_credit_notices`, `partner_credit_tries`,
-  `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them). The ledger is `partner_credit_entries`,
+  `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them; the one carve-out is
+  `admin_fx_rate_latest()`, a definer that gives `frata_admin` the latest rate row for Admin › Costs, drizzle/0170). The ledger is `partner_credit_entries`,
   append-only lots and draws; a balance is a sum, never stored. Rows that point at each other carry the partner in a
   composite foreign key on `(partner_id, id)` (`partner_links` and `partner_members` gained that key), and those keys are
   RESTRICT: a tenant or partner person with Studio uses can't be deleted until an erase flow decides what happens to them.
