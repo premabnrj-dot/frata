@@ -1,0 +1,42 @@
+# Admin › Costs — build plan
+
+**Mockup:** https://claude.ai/artifact/MEoxVFhu7EUHpfzbA8obvA
+**Approved:** owner, 2026-11-23
+**Review:** architecture-reviewer pending, 2026-11-23
+**Review:** tenancy-auditor pending, 2026-11-23
+**Review:** security-reviewer pending, 2026-11-23
+**Review:** speed-reviewer pending, 2026-11-23
+
+Unit economics: not run, nothing a merchant pays or Frrata charges changes.
+
+Status: draft · Spec: `docs/specs/2026-11-23-admin-costs.md` · Phases C1, C2
+
+Goal and design are in the spec; this file is the order of work. The spec's tasks 1–6 are cut finer here, each with its verify command.
+
+## Tasks
+
+| # | Task | Verify |
+|---|---|---|
+| 1 | Engine tests, then `src/domains/admin/costs.ts`: due dates (month-end clamp, 29 Feb, quarterly, yearly), next due, overdue count, monthly equivalent, burn, IST month and FY | `npx vitest run src/domains/admin` |
+| 2 | Schema `src/lib/db/schema-costs.ts`; `drizzle/0170_admin_costs.sql` (`--custom`): grants to `frata_admin` only, RLS, `definer_only` policy, CHECKs | `npm run db:generate` shows no drift; `npm run check:migrations` |
+| 3 | `check:tenant` names both tables; `scripts/verify/tenancy.sql` block: no role but `frata_admin` reads or writes | `npm run check:tenant`; `npm run verify:tenancy` on a throwaway Postgres |
+| 4 | `src/lib/admin/costs.ts`: reads (one `adminDb` call, two parallel statements) and writes, each with its `auditStaff` row; `costs` joins `MASTER_ONLY_WORDS`; activity words | unit tests with the admin db fake; `npm run gates` |
+| 5 | Actions `costs/actions.ts` (`requireStaff(ADMIN_ONLY)` first, Zod caps, `ActionResult`) | `npm run check:actions`; tests per action |
+| 6 | Page and dialogs as drawn: Overview, All costs panel, Add, Mark paid, states, phone; nav item in the Money group | `npm run e2e` flow `costs` at phone and desktop; `mockup-parity-reviewer`, `design-system-reviewer`, `words-reviewer` |
+| 7 | **C2** Payments view, CSV export route (admin, Origin check, formula-safe cells), `cost_due` Today source and nav badge | e2e; `npm test`; `npm run typecheck` |
+| 8 | Skills updated with version bumps; production migration printed by `scripts/prod-migrate.mjs`, applied, row inserted; push to `main`; runtime errors checked after an hour and next day | `npm run check:skills`; `get_runtime_errors` |
+
+Each task ends with `impact-reviewer` on its diff. Task 6 closes only after parity passes.
+
+## Practices recorded in skills
+- `frata-architecture`: Costs bullet under Admin. `frata-design-language`: Costs rules in `reference/admin-and-partner.md`. `frata-unit-economics`: burn read from Costs.
+
+## Repetitive work → agents and scripts
+| Chore | Becomes |
+|---|---|
+| Production SQL for 0170 | existing `scripts/prod-migrate.mjs` |
+
+## Deviations
+| Mockup element | Built | Reason | Owner seen |
+|---|---|---|---|
+| — | — | — | — |

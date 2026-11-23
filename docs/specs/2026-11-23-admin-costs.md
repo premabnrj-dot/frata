@@ -1,6 +1,6 @@
 # Admin › Costs — what Frrata pays, recurring and one-time
 
-Status: draft · Date: 2026-11-23 · Mockup: pending (C0 draws it; nothing is built before the owner approves it) · Approved: pending, owner
+Status: active · Date: 2026-11-23 · Mockup: https://claude.ai/artifact/MEoxVFhu7EUHpfzbA8obvA (`docs/mockups/2026-11-23-admin-costs.html`) · Approved: owner, 2026-11-23 (screens and the five calls as recommended)
 
 
 ## In short
@@ -105,8 +105,8 @@ one, many, overdue, ended, USD row, no permission (support staff), phone.
 
 ### Who may
 
-Admin role only (`ADMIN_ONLY`), the same door as the fx rate. Support staff get the standard Admin
-refusal panel. No fresh-passkey step: nothing here moves money, it records it. Every write is audited
+Master admin only (the stored role `admin`, `ADMIN_ONLY`), the same door as the fx rate. Support staff get a
+panel: "Only a master admin can open Costs". No fresh-passkey step: nothing here moves money, it records it. Every write is audited
 in its own transaction (`costs.item.add`, `.edit`, `.end`, `.pay`, `.unpay`; `auditStaff`, names of
 changed fields only), and `costs` joins `MASTER_ONLY_WORDS` so support staff never see these rows in Activity.
 
