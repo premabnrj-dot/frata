@@ -4,7 +4,6 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { keyOf } from '@/domains/catalogue/variants'
 import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/product-form'
-import { sellsSized } from '@/domains/catalogue/sell-keys'
 import type { Status } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
 import { storeHost } from '@/domains/media/sizes'
@@ -22,7 +21,8 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
-import { isKind, kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
+import { isKind, startSizes } from '@/domains/catalogue/kind'
+import { firstProductShape } from '@/domains/catalogue/first-product'
 import { arrayParam } from '@/lib/db/sql-array'
 import { setStatusIn } from '@/lib/catalogue/status'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
@@ -53,9 +53,9 @@ export async function createProduct(input: { title: string; kind?: string }): Pr
       // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
       // The kind the merchant chose on the new-product step, else the name's guess (an unknown value is the guess too).
-      const kind = isKind(input?.kind) ? input.kind : kindOf(title)
-      const sizes = sellsSized(shop?.sells ?? []) ? startSizes[kind] : []
-      const typeId = sizes.length || kind === 'one_size' ? typeFor(title, types, undefined, kind) : null
+      const shape = firstProductShape(title, types, shop?.sells ?? [], isKind(input?.kind) ? input.kind : undefined)
+      const sizes = shape.sized ? startSizes[shape.kind] : []
+      const typeId = shape.typeId
       const [p] = await tx.insert(products).values({
         tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId, hsn: shop?.hsn ?? null,
         ...(sizes.length ? { options: ['Size'], optionValues: [sizes] } : {}),
