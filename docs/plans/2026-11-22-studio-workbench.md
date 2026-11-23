@@ -258,3 +258,36 @@ V3, so reserve and settle ship with tests only; per-person caps and Leads settin
 pill's panel is built by lane C and mounted by lane D at V3b; about a dozen undrawn screens and five emails (the RBI
 pre-debit notice among them) are drawn as one small mockup for the owner before they are built. Open: the live billing
 webhook is unconfirmed (production has stored none).
+
+## The agent spike (V3a·1) and the owner-only first test (2026-11-22)
+Report: `docs/research/2026-11-22-studio-agent-spike.md` (17 runs, $0.45 list cost on `claude-opus-5-5` at low effort:
+the owner's "use haiku … for the agent for testing" reached the session after the probes; every later run uses
+`claude-haiku-5-5`, one constant in `scripts/studio/spike.mjs`). Nine items passed, none failed, nine wait on owner
+set-up (GitHub Team with the session and fleet Apps and a fixture repository; a build key for a store; the Console's
+service account, federation rule and webhook endpoint; a hosting team with a protected preview; a Mac and an iPhone).
+**Into the Studio plan:** the agent file pins `inference_geo: us` (the workspace's default measured `global`);
+`allow_package_managers` stays false and `registry.npmjs.org` is listed by name if the sandbox installs; vault
+credentials are sent `{header:true}` and api.frrata.shop never reflects the key header; `/api/cron/studio` is the main
+path (one idle per round of tool calls, deliveries can drop) and every pending call of a round is answered in one send;
+the 30-day session sweep is ours; data is stored in the US.
+**Owner, 2026-11-22: "yes, start the agents runtime lane."** Next target: Studio working end to end on one test store,
+Frrata staff only, under a hard spend cap and no credits. Lane D builds V3a's runtime against a stand-in for hosting
+(`claude/lane-d-agent-runtime`), plan check first. The first test still needs from the owner: GitHub Team and the two
+Apps, one new Vercel Pro team for hosted websites, the preview domain, and a yes to one 24-hour build key.
+
+## C1: lane C's mockup and six questions (owner, 2026-11-22: "mockup approved. 1. tax on anthropic - no, all your recommendations apart from this.")
+Mockup of the screens neither earlier mockup drew: https://claude.ai/artifact/L2v5cVhiaaQMH7NhNhm5YB
+(`docs/mockups/2026-11-22-c1-undrawn.html` on `claude/lane-c-credits`), approved with its six calls as recommended.
+| # | Question | Answer |
+|---|---|---|
+| 1 | A ₹1,999 pack is 2.99× after Razorpay's fee | Keep ₹1,999; Amex, Diners and international cards off |
+| 2 | Withholding tax on Anthropic's invoice | **No** (owner): none is assumed, and no CA step gates C1 |
+| 3 | Seat credits against pack credits | Seat credits last 12 months too (replaces answer c above); the 20 free credits end after 90 days, once per PAN or GSTIN |
+| 4 | Any amount | Capped at 4,000 credits |
+| 5 | A Lead's and a Builder's view of Studio's panel | The client's used and budget only |
+| 6 | The rupee rate | The RBI reference rate, daily |
+Lane C has the go to build (plan `docs/plans/2026-11-22-c1-credits.md` on its branch; reviews: architecture CHANGES
+NEEDED, tenancy FIX BEFORE BUILD, security FIX BEFORE BUILD, speed OVER BUDGET as drafted, unit economics HELPS Frrata;
+all taken into its plan). **Outside C1, open:** merchant billing's `debit.ts` creates orders without a notification
+object, so Razorpay sends its own pre-debit notice and retries a failed UPI debit three times itself, against Frrata's
+own notice and its never-resent rule; its own fix before the first real monthly debit.
