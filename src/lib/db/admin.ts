@@ -4,6 +4,7 @@ import { after } from 'next/server'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { POOL } from './index'
+import { onePerConnection } from './one-per-connection'
 import { ADMIN_DATABASE_URL } from '@/lib/env'
 import * as schema from './schema'
 import { parseDatabaseUrl } from './url'
@@ -27,7 +28,7 @@ import { parseDatabaseUrl } from './url'
 // =============================================================================
 
 function open() {
-  const sql = postgres(parseDatabaseUrl(ADMIN_DATABASE_URL, 'frata_admin', 'ADMIN_DATABASE_URL'), { ...POOL, max: 2, idle_timeout: 5 })
+  const sql = onePerConnection(postgres(parseDatabaseUrl(ADMIN_DATABASE_URL, 'frata_admin', 'ADMIN_DATABASE_URL'), { ...POOL, max: 2, idle_timeout: 5 }), 2)
   // Outside a request (a script, a test) there is nothing to hook: its idle timeout closes it.
   try { after(() => sql.end({ timeout: 2 })) } catch { /* not in a request */ }
   return drizzle(sql, { schema })

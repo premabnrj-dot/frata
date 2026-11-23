@@ -29,7 +29,7 @@ const ProposalCard = dynamic(() => import('./card').then((m) => m.ProposalCard),
 /** Drawn on the server and handed in as nodes (the page's script pin): `design`, the brand record as it is now
  *  (./brand-read.tsx); `empty`, the feed's, Code's, Checks' and Versions' empty states (states 2 and 8). */
 export type Empties = { feed: React.ReactNode; code: React.ReactNode; checks: React.ReactNode; versions: React.ReactNode }
-type Props = { chat: Chat; design: React.ReactNode; empty: Empties; store: string; version: number | null }
+type Props = { chat: Chat; design: React.ReactNode; empty: Empties; store: string; storeId: string; version: number | null }
 const BACKOFF = [3000, 3000, 5000, 5000, 10_000, 20_000]
 
 function merge(lines: ChatLine[], more: ChatLine[]): ChatLine[] {
@@ -37,7 +37,10 @@ function merge(lines: ChatLine[], more: ChatLine[]): ChatLine[] {
   return [...lines, ...more.filter((l) => !seen.has(l.id))].sort((a, b) => a.seq - b.seq)
 }
 
-export function StudioApp({ store, chat: first, design, empty, version }: Props) {
+/** The person switched stores in another tab: this tab shows the store it now acts on, never sends to the other. */
+const reload = () => window.location.reload()
+
+export function StudioApp({ store, storeId, chat: first, design, empty, version }: Props) {
   const router = useRouter()
   const toast = useToast()
   const [chat, setChat] = useState<Chat>(first)
@@ -55,14 +58,16 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
   // The poll: after the last line, while a turn runs; each answer resets the wait when something new came.
   const poll = useCallback(async () => {
     const after = chat.lines.at(-1)?.seq
-    const r = await fetch(`/partner/studio/rows${after !== undefined ? `?after=${after}` : ''}`, { cache: 'no-store' }).catch(() => null)
+    const q = new URLSearchParams({ store: storeId, ...(after !== undefined ? { after: String(after) } : {}) })
+    const r = await fetch(`/partner/studio/rows?${q}`, { cache: 'no-store' }).catch(() => null)
+    if (r?.status === 409) { reload(); return false }
     if (!r?.ok) return false
     const next = (await r.json()) as Chat
     if (next.sessionId !== chat.sessionId) { setChat(next); setCards(new Map(next.cards.map((c) => [c.id, c]))); return true }
     setChat((c) => ({ ...next, lines: merge(c.lines, next.lines) }))
     setCards((m) => { const n = new Map(m); for (const c of next.cards) n.set(c.id, c); return n })
     return next.lines.length > 0 || next.turn?.state !== chat.turn?.state
-  }, [chat.lines, chat.sessionId, chat.turn?.state])
+  }, [chat.lines, chat.sessionId, chat.turn?.state, storeId])
   useEffect(() => {
     if (!working) { tries.current = 0; return }
     const t = setTimeout(async () => {
@@ -79,7 +84,8 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
 
   const send = (words: string) => start(async () => {
     setRefused(null)
-    const r = await sendAction({ text: words })
+    const r = await sendAction({ text: words, store: storeId })
+    if (!r.ok && r.why === 'moved') return reload()
     if (!r.ok) {
       const line = refusedWords(r.why)
       setDayLimit(r.why === 'person_day' || r.why === 'platform_day')
@@ -96,7 +102,7 @@ export function StudioApp({ store, chat: first, design, empty, version }: Props)
     tries.current = 0
     await poll()
   })
-  const stop = () => start(async () => { await stopAction(); await poll(); box.current?.focus() })
+  const stop = () => start(async () => { if ((await stopAction({ store: storeId })).moved) return reload(); await poll(); box.current?.focus() })
   const lastAsk = [...chat.lines].reverse().find((l) => l.kind === 'person')?.text ?? ''
   /** After Apply or Not this, its buttons leave: focus stays on the card (design-system review of R7). */
   const keepFocus = (id: string) => requestAnimationFrame(() => document.getElementById(`card-${id}-frame`)?.focus())

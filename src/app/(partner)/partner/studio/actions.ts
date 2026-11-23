@@ -13,13 +13,17 @@ import { applyProposal, dismissProposal, type ApplyResult } from '@/lib/studio/a
 // from the person's own open session. The refusal codes are drawn by the chat (R7, states 1–6).
 // =============================================================================
 
-const SendInput = z.strictObject({ text: z.string().trim().min(1).max(LINE_MAX) })
+// `store`: the store this tab was opened for. Never the source of the store (that is requireStudio's); a different one
+// means the person switched stores in another tab, so this tab reloads instead of sending to the other store.
+const SendInput = z.strictObject({ text: z.string().trim().min(1).max(LINE_MAX), store: z.uuid() })
+const StopInput = z.strictObject({ store: z.uuid() })
 
-export async function sendAction(input: unknown): Promise<{ ok: true } | { ok: false; why: SendWhy | 'input' }> {
+export async function sendAction(input: unknown): Promise<{ ok: true } | { ok: false; why: SendWhy | 'input' | 'moved' }> {
   const auth = await requireStudio()
   if (!auth.ok) return { ok: false, why: 'closed' }
   const p = SendInput.safeParse(input)
   if (!p.success) return { ok: false, why: 'input' }
+  if (p.data.store !== auth.tenantId) return { ok: false, why: 'moved' }
   const r = await send(auth, p.data.text)
   return r.ok ? { ok: true } : { ok: false, why: r.why }
 }
@@ -45,8 +49,11 @@ export async function dismissAction(input: unknown): Promise<{ ok: boolean }> {
   return dismissProposal(auth, p.data.id)
 }
 
-export async function stopAction(): Promise<{ ok: boolean }> {
+export async function stopAction(input: unknown): Promise<{ ok: boolean; moved?: true }> {
   const auth = await requireStudio()
   if (!auth.ok) return { ok: false }
+  const p = StopInput.safeParse(input)
+  if (!p.success) return { ok: false }
+  if (p.data.store !== auth.tenantId) return { ok: false, moved: true }
   return stop(auth)
 }

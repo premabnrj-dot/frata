@@ -6,6 +6,7 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { POOL, type Tx } from './index'
+import { onePerConnection } from './one-per-connection'
 import { DATABASE_URL_BUILDER, isBuilderDatabaseConfigured } from '@/lib/env'
 import * as schema from './schema'
 import { parseDatabaseUrl } from './url'
@@ -45,7 +46,7 @@ export class BuilderDbMissing extends Error { override name = 'BuilderDbMissing'
 
 const connect = (max = 2) => {
   if (!isBuilderDatabaseConfigured()) throw new BuilderDbMissing('DATABASE_URL_BUILDER is not set')
-  const conn = postgres(parseDatabaseUrl(DATABASE_URL_BUILDER, 'frata_builder', 'DATABASE_URL_BUILDER'), { ...POOL, max, idle_timeout: 5 })
+  const conn = onePerConnection(postgres(parseDatabaseUrl(DATABASE_URL_BUILDER, 'frata_builder', 'DATABASE_URL_BUILDER'), { ...POOL, max, idle_timeout: 5 }), max)
   return { conn, db: drizzle(conn, { schema }) }
 }
 /** Studio's advance (src/lib/studio/advance.ts) runs outside a render, where React's cache does not hold: one

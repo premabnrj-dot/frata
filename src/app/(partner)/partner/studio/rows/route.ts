@@ -19,7 +19,10 @@ export async function GET(request: Request) {
   if (request.headers.get('sec-fetch-site') === 'cross-site') return NextResponse.json({ closed: true }, { status: 403, headers: NO_STORE })
   const auth = await requireStudio()
   if (!auth.ok) return NextResponse.json({ closed: true }, { status: 403, headers: NO_STORE })
-  const raw = new URL(request.url).searchParams.get('after')
+  const url = new URL(request.url)
+  // The tab's own store, compared only (never used): another store now means the person switched in another tab.
+  if (url.searchParams.get('store') !== auth.tenantId) return NextResponse.json({ moved: true }, { status: 409, headers: NO_STORE })
+  const raw = url.searchParams.get('after')
   const after = raw && /^\d{1,15}$/.test(raw) ? Number(raw) : null
   try {
     const chat = await studioChat(auth, after)

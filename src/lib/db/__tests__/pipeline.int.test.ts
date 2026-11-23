@@ -3,10 +3,11 @@
 // postgres.js pipelines up to `max_pipeline` (default 100) queries on one connection without waiting for each answer, and
 // Supavisor's transaction mode can hand a pipelined query's answer to no one. The page that sends the most queries at once
 // (Admin › Partners: three counts, two lists, Today's sources, the layout's own) hung. Every pool sends one query at a time
-// (POOL.max_pipeline = 0: none behind the one running). This proves it on the wire: a proxy between postgres.js and Postgres counts queries in flight on
+// (onePerConnection, src/lib/db/one-per-connection.ts). This proves it on the wire: a proxy between postgres.js and Postgres counts queries in flight on
 // one connection (Syncs sent minus ReadyForQuery received). Skipped unless INT_DB_HOST is set.
 import { describe, expect, it } from 'vitest'
 import { createServer, connect, type Socket } from 'node:net'
+import { sql } from 'drizzle-orm'
 
 const host = process.env.INT_DB_HOST
 
@@ -45,20 +46,38 @@ async function proxy(target: string) {
   return { port: (server.address() as { port: number }).port, most: () => most, close: () => new Promise<void>((r) => server.close(() => r())) }
 }
 
-describe.skipIf(!host)('one query at a time on a pooled connection', () => {
-  it('the pool never pipelines, however many queries a page sends at once', async () => {
+describe.skipIf(!host)('no query sent behind another on a pooled connection', () => {
+  const open = async (gated: boolean) => {
     const postgres = (await import('postgres')).default
+    const { drizzle } = await import('drizzle-orm/postgres-js')
     const { POOL } = await import('../index')
+    const { onePerConnection } = await import('../one-per-connection')
     const px = await proxy(host!)
-    const sql = postgres(`postgresql://postgres@127.0.0.1:${px.port}/${process.env.INT_DB_NAME ?? 'postgres'}`, { ...POOL, max: 2, idle_timeout: 5, onnotice: () => {} })
+    const raw = postgres(`postgresql://postgres@127.0.0.1:${px.port}/${process.env.INT_DB_NAME ?? 'postgres'}`, { ...POOL, max: 2, idle_timeout: 5, onnotice: () => {} })
+    return { px, raw, db: drizzle(gated ? onePerConnection(raw, 2) : raw) }
+  }
+  // Admin › Partners' shape: a dozen reads at once on a pool of two, with no parameters (its three partner counts have
+  // none; postgres.js describes a parameterised query first and never pipelines past it).
+  const twelve = (db: Awaited<ReturnType<typeof open>>['db']) => Promise.all(Array.from({ length: 12 }, () => db.execute(sql`select pg_sleep(0.02)`)))
+
+  it('without the gate postgres.js pipelines (the failure); with it, one query in flight a connection', async () => {
+    const bare = await open(false)
+    try { await twelve(bare.db); expect(bare.px.most()).toBeGreaterThan(1) } finally { await bare.raw.end({ timeout: 1 }); await bare.px.close() }
+    const held = await open(true)
+    try { await twelve(held.db); expect(held.px.most()).toBe(1) } finally { await held.raw.end({ timeout: 1 }); await held.px.close() }
+  }, 30_000)
+
+  it('a transaction still claims its connection and runs beside held reads; results and errors come back as before', async () => {
+    const { px, raw, db } = await open(true)
     try {
-      // Admin › Partners' shape: a dozen reads at once on a pool of two, with no parameters (its three partner counts
-      // have none; postgres.js describes a parameterised query first and never pipelines past it).
-      await Promise.all(Array.from({ length: 12 }, () => sql`select pg_sleep(0.02)`))
+      const [tx, reads] = await Promise.all([
+        db.transaction(async (t) => { await t.execute(sql`select 1`); return (await t.execute(sql`select 2 as n`))[0] }),
+        Promise.all(Array.from({ length: 6 }, (_, i) => db.execute(sql`select ${i}::int as n`))),
+      ])
+      expect(tx).toEqual({ n: 2 })
+      expect(reads.map((r) => r[0])).toEqual([0, 1, 2, 3, 4, 5].map((n) => ({ n })))
+      await expect(db.execute(sql`select * from no_such_table`)).rejects.toThrow()
       expect(px.most()).toBe(1)
-    } finally {
-      await sql.end({ timeout: 1 })
-      await px.close()
-    }
+    } finally { await raw.end({ timeout: 1 }); await px.close() }
   }, 30_000)
 })
