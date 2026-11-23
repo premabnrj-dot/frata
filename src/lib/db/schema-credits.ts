@@ -42,11 +42,7 @@ export const partnerBilling = pgTable('partner_billing', {
   mandateMax: money('mandate_max'),
   mandateAt: at('mandate_at'),
   mandateRevokedAt: at('mandate_revoked_at'),
-  /** Cancelling the mandate at the gateway: due, then done (an attempt before the request, ADR-0008). */
-  /** A mandate no longer used (the seat ended, or a new one replaced it), cancelled at the gateway by the hourly run. */
-  cancelTokenId: text('cancel_token_id'),
-  tokenCancelDueAt: at('token_cancel_due_at'),
-  tokenCancelledAt: at('token_cancelled_at'),
+  // A mandate no longer used is cancelled through partner_mandate_cancels (C1·B: a queue, never one overwritten slot).
   createdAt: createdAt(),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -301,6 +297,24 @@ export const partnerCreditNotices = pgTable('partner_credit_notices', {
   foreignKey({ name: 'partner_credit_notices_purchase_fk', columns: [t.partnerId, t.purchaseId], foreignColumns: [partnerCreditPurchases.partnerId, partnerCreditPurchases.id] }).onDelete('restrict'),
   check('partner_credit_notices_kind', sql`${t.kind} in (${list(NOTICE_KINDS)})`),
   check('partner_credit_notices_error', sql`${t.error} is null or length(${t.error}) <= 40`),
+])
+
+/** Mandates no longer used (a seat ended, a new one replaced it, a refunded start's), cancelled at the gateway by the hourly
+ *  run: one row a token, due then done; a failure keeps its tries and reason for staff (C1·B, security H2 and M1). */
+export const partnerMandateCancels = pgTable('partner_mandate_cancels', {
+  id: id(),
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
+  tokenId: text('token_id').notNull(),
+  dueAt: at('due_at').notNull().defaultNow(),
+  cancelledAt: at('cancelled_at'),
+  tries: smallint('tries').notNull().default(0),
+  error: text('error'),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex('partner_mandate_cancels_token').on(t.partnerId, t.tokenId),
+  index('partner_mandate_cancels_due').on(t.dueAt).where(sql`${t.cancelledAt} is null`),
+  check('partner_mandate_cancels_token_shape', sql`${t.tokenId} ~ '^token_[A-Za-z0-9]{6,40}$'`),
+  check('partner_mandate_cancels_error', sql`${t.error} is null or length(${t.error}) <= 40`),
 ])
 
 /** Person writes counted before they run (security L1); reserve and settle are not counted (speed L3). */
