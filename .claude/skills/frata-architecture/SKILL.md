@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.12.0
+  version: 3.13.0
   owner: owner
   verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -151,6 +151,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
   The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
   `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Passkeys off** (owner 2026-11-23, drizzle/0171): a master admin turns passkeys off for everyone on Admin › Staff
+  (`app_admin_passkeys_set`, their own passkey in the last 5 minutes; on needs none). While `app_passkeys_off()`, every
+  definer that follows `app_partner_need` or a staff step-up counts this sign-in as checked; passkey lists, adds and
+  removals keep the real check, so their screens say "Passkeys are off". Read the state through `passkeys()` (`session.ts`).
 - **Partner passkeys** (T1b, 2026-11-15; `docs/specs/2026-11-15-partner-login.md`, drizzle/0128–0129): the same design
   for partner people. `app_access_for(user, session, staff hash, partner hash)` counts a `members` row with a
   `partner_member_id` only with a live partner step-up (answers `partnerConfirmedAt` and `partnerHeld`). `requirePartner`
