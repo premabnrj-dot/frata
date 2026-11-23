@@ -112,11 +112,14 @@ Probes now run on Haiku 5.5 (owner, 2026-11-22).
   [`mount-sha`, public repository].
 - `usage.list_cost` equals the tokens at list rates plus running time, **in whole cents** (a $0.044 turn reads $0.04)
   [`session`].
-- **2026-11-23, R8 (security M1), on Haiku 5.5:** the setup was an environment allowing only `api.frrata.shop` and a vault
-  header credential scoped to it. The egress **did not send the value** to a Frrata-owned echo named by a `Host:` header or
-  by `--connect-to`, or by going to the echo directly, which fails at DNS. `--resolve` to the echo's address was **not
-  exercised**, because the sandbox cannot resolve the echo. It is open until a run passes the address in [`fronting`;
-  report § R8].
+- **2026-11-23, R8 (security M1), on Haiku 5.5, two runs:** the setup was an environment allowing only `api.frrata.shop`
+  and a vault header credential scoped to it. The egress **never sent the value** to a Frrata-owned echo by any of four ways:
+  - a `Host:` header naming the echo got a 403 without the key;
+  - `--resolve` to Vercel's anycast address 76.76.21.21 got a 403 without the key (the address was supplied from outside,
+    because the sandbox cannot resolve the echo);
+  - `--connect-to` the echo, and going to it directly, failed at DNS before sending (curl exit 6).
+
+  Who sends the 403s is not known [`fronting`; report § R8].
 
 ## As built in V3a — 2026-11-23 (`src/lib/studio/runtime-managed.ts`, `docs/plans/2026-11-22-v3a-runtime.md`; checked against the SDK 1.12.0 types and the fake server, not yet the live API)
 - **Budgets are set at create and only raised.** A session is always created with `budget.max_list_cost` (cents, a

