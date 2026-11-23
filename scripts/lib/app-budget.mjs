@@ -10,9 +10,9 @@
 // next/dynamic, never raise a number. The customizer (/(lookeditor)) has its own ceiling in check-storefront-build.mjs.
 export const APP_BUDGET_KB = 150
 export const APP_PINNED = {
-  '/(console)/console/content/page': 227.2,
+  '/(console)/console/content/page': 196.2,
   '/(console)/console/products/[handle]/page': 209.1,
-  '/(console)/console/settings/[section]/page': 187.0,
+  '/(console)/console/settings/[section]/page': 155.7,
   '/(console)/console/orders/page': 160.2,
   '/(console)/console/offers/[id]/page': 154.1,
   '/(console)/console/collections/[handle]/page': 152.9,

@@ -1,6 +1,5 @@
 'use client'
 
-import { upload } from '@vercel/blob/client'
 import { baseFromUpload, blobPath, contentTypeOf, MAX_SOURCE_BYTES, type PhotoFormat, widthsFor } from '@/domains/media/sizes'
 import { maxBytesFor } from '@/domains/media/upload-limits'
 
@@ -51,6 +50,8 @@ export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: 
   if (bitmap.width < (folder === 'brand' ? 120 : 400)) throw new Error(`${file.name} is ${bitmap.width} px wide; at least ${folder === 'brand' ? 120 : 400} px is needed.`)
   const widths = widthsFor(bitmap.width)
   const id = crypto.randomUUID()
+  // The upload client (33 kB gzipped with its token library) loads at the first upload, never with the page (2026-11-23).
+  const { upload } = await import('@vercel/blob/client')
   let base = '', format: PhotoFormat | null = null
   for (const [i, w] of widths.entries()) {
     const made = await sized(bitmap, w, format)

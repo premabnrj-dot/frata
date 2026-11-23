@@ -112,7 +112,9 @@ for (const [k, files] of Object.entries(build)) {
 // The Look customizer's first-load script (Theme Studio spec § Guardrails, the Console gate; TS0b): 207.4 kB measured
 // 2026-11-11 after Menus and Site settings moved behind next/dynamic, with the designs added. It only comes down: the
 // studio (TS2) has its own ceiling. A new form loads when opened (next/dynamic), as the story and design forms do.
-const CUSTOMIZER_KB = 208
+// 2026-11-23: 171.4 kB once the upload client (@vercel/blob/client, 33 kB with its token library) loads at the first
+// upload and a section's form when first opened; the ceiling came down from 208 to that + 2.
+const CUSTOMIZER_KB = 174
 {
   const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
   if (!k) failures.push('the Look customizer page is missing from the build manifest')

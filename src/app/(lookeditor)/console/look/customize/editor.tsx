@@ -13,7 +13,7 @@ import { MAX_LOOPS, sectionName, type SectionInstance, type SectionKey } from '@
 import type { FooterVariant, HeaderVariant, Pairing, ThemeSettings } from '@/domains/themes/types'
 import { publishLookAction, saveLookAction } from '@/app/(console)/console/look/actions'
 import type { LinkTarget } from './controls'
-import { SectionForm, type FormCtx } from './section-form'
+import type { FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
 import type { LibraryDesign } from './section-library'
 import type { EditorPage } from '@/lib/queries/pages'
@@ -34,6 +34,9 @@ const ThemeForm = dynamic(() => import('./theme-form').then((m) => m.ThemeForm))
 // load when opened to pay for it.
 const PageForm = dynamic(() => import('./page-form').then((m) => m.PageForm))
 const PublishConfirm = dynamic(() => import('./publish-confirm').then((m) => m.PublishConfirm))
+// A section's form loads when a section is first opened (2026-11-23): the customizer was at its script ceiling again, and
+// every lazy chunk added anywhere in the app grows the runtime's chunk map that this page ships too.
+const SectionForm = dynamic(() => import('./section-form').then((m) => m.SectionForm))
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
