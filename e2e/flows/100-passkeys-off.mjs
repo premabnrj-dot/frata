@@ -87,6 +87,11 @@ export default {
         await meera.goto(CONSOLE + '/admin/staff')
         await banner(meera).waitFor()
         assert.ok(await meera.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll')
+        // The row's state stays whole and its button clear of it (mockup-parity review, 2026-11-23).
+        const row = meera.getByRole('region', { name: 'Passkeys' })
+        const text = await row.getByText(/since \d+ \w+ by/).boundingBox()
+        const btn = await row.getByRole('button', { name: 'Turn passkeys on' }).boundingBox()
+        assert.ok(btn.y >= text.y + text.height || btn.x >= text.x + text.width, 'the button overlaps the state')
         await meera.screenshot({ path: t.out('off-phone'), fullPage: true })
         await meera.setViewportSize({ width: 1280, height: 900 })
       })

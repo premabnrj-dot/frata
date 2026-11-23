@@ -45,7 +45,7 @@ export function PasskeysSwitch({ off, since, admin }: { off: boolean; since: str
   return (
     <Section ariaLabel="Passkeys" className="text-sm"><div className="flex flex-wrap items-center gap-3">
       <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Passkeys</span>
-      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <span className="flex min-w-0 flex-[1_1_12rem] flex-wrap items-center gap-2">
         <Badge tone={off ? 'warn' : 'ok'}>{off ? 'Off' : 'On'}</Badge>
         {off && since && <span className="text-muted-foreground">{since}</span>}
       </span>

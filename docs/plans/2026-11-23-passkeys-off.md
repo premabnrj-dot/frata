@@ -4,7 +4,7 @@ Status: active, built on `claude/lane-d-passkeys-off`; released by the orchestra
 **Approved:** owner, 2026-11-23 ("passkey switch mockup approved."; the four calls as recommended)
 **Review:** security-reviewer SAFE (1 medium, fixed; 3 low), 2026-11-23
 **Review:** tenancy-auditor SAFE, no cross-tenant path (4 medium, 2 low), 2026-11-23
-**Review:** words-reviewer and mockup-parity-reviewer on the control; impact-reviewer once on the whole diff, 2026-11-23
+**Review:** words-reviewer 3 rewrites, applied; mockup-parity-reviewer PASS after the phone-row fix (11 present, deviations 1 and 3 covered); impact-reviewer FIX BEFORE COMMIT, fixed (1 high, 3 medium), 2026-11-23
 Migrations: `drizzle/0170_passkeys_off.sql` (generated) and `drizzle/0171_passkeys_off_access.sql` (custom). Proof:
 `scripts/verify/tenancy.sql` § 88, § 88 (cont.), § 91.
 
@@ -98,3 +98,22 @@ covered Studio binding, Give key, the staff list and handover.
 - LOW, kept: `app_passkeys_state` gives `frata_app` the master admin's email. It is read on the server; only Admin
   renders it.
 - LOW, fixed: ADR-0020 § 4–5's text is amended, and so are ADR-0007 and ADR-0015.
+
+**words-reviewer.** Three rewrites applied: the action's error, and both email subjects ("… for all staff and
+partners").
+
+**mockup-parity-reviewer.** At phone width, the row's button covered "since … by …". The state text now keeps 12rem, and
+the button wraps under it. Flow 100 asserts they don't overlap. Every other drawn element is present.
+
+**impact-reviewer.** Fixed:
+- ADR-0018's Give key text is amended.
+- "Turn passkeys on" says why when it fails.
+- One confirm helper (`confirmWhenAsked`, form-dialog.tsx) and the `STAFF_CONFIRM_FIRST` constant.
+- Tests for `setPasskeysAction` and for `passkeysState`'s fail-safe.
+- docs/setup.md points here.
+- The storefront-api skill is bumped to 2.8.0.
+
+Kept: `passkeys()` is one cached read a request. Folding it into `app_access_for` waits for a speed review that asks.
+
+**e2e.** Flows 75, 80, 97, 98 and 99 run with passkeys on; flow 100 runs the off path end to end: 54 of 54 steps green.
+After the phone fix, flow 100 ran again: 6 of 6.
