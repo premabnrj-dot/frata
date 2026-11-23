@@ -1,18 +1,14 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { Plus } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { confirmPasskey } from '@/components/passkeys/passkey-client'
-import { FieldMessage, type ActionResult } from '@/components/ui/action-form'
+import type { ActionResult } from '@/components/ui/action-form'
 import { Button } from '@/components/ui/button'
-import { DateField } from '@/components/ui/date-field'
-import { FIELD } from '@/components/ui/field'
-import { Segmented } from '@/components/ui/segmented'
-import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/toast'
-import { UnitField } from '@/components/ui/unit-field'
-import { CADENCE_WORDS, CATEGORY_WORDS, COST_CADENCES, COST_CATEGORIES, type Cadence, type CostCategory, type CostCurrency } from '@/domains/admin/costs'
+import type { Cadence, CostCategory, CostCurrency } from '@/domains/admin/costs'
 import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
@@ -25,76 +21,6 @@ import { addCostAction, editCostAction, endCostAction, markPaidAction, undoPayme
 // (docs/mockups/2026-11-23-admin-costs.html § Add, § Mark paid). Forms open when asked (Admin rule 5): each is a
 // DialogSpec over the server action; the page decides who sees the buttons, the actions decide who may.
 // =============================================================================
-
-const SYMBOL: Record<CostCurrency, string> = { INR: '₹', USD: '$' }
-// The mistake sits beside the label, never inside it: a field's name stays "Name", not "Name Add a name.".
-const Row = ({ label, name, children }: { label: string; name: string; children: React.ReactNode }) => (
-  <div className="flex min-w-0 flex-col gap-1 text-sm"><label className="flex min-w-0 flex-col gap-1"><span className="font-medium">{label}</span>{children}</label><FieldMessage name={name} /></div>
-)
-const categoryOptions = COST_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_WORDS[c]}</option>)
-
-function Day({ label, name, value, today, max }: { label: string; name: string; value: string; today: string; max?: string }) {
-  const [day, setDay] = useState(value)
-  return (
-    <div className="flex min-w-0 flex-col gap-1 text-sm"><span aria-hidden="true" className="font-medium">{label}</span>
-      <input type="hidden" name={name} value={day} /><DateField label={label} value={day} onChange={setDay} today={today} {...(max ? { max } : {})} /><FieldMessage name={name} /></div>
-  )
-}
-
-function Money({ name, label, currency, defaultValue, autoFocus }: { name: string; label: string; currency: CostCurrency; defaultValue?: string; autoFocus?: boolean }) {
-  return <Row label={label} name={name}><UnitField unit={SYMBOL[currency]} name={name} inputMode="decimal" autoComplete="off" defaultValue={defaultValue} data-autofocus={autoFocus ? '' : undefined} /></Row>
-}
-
-function Varies({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  const id = useId()
-  return <div className="flex items-center gap-2.5 text-sm"><Switch id={id} on={on} onChange={onChange} /><label htmlFor={id}>Amount changes each time</label></div>
-}
-
-/** Amount with its currency as the prefix (as drawn): the currency choice is part of the field. */
-function AmountField({ currency, onCurrency }: { currency: CostCurrency; onCurrency: (c: CostCurrency) => void }) {
-  return (
-    <Row label="Amount" name="amount">
-      <span className="flex">
-        <select aria-label="Currency" name="currency" value={currency} onChange={(e) => onCurrency(e.target.value as CostCurrency)} className={`${FIELD} w-20 shrink-0 rounded-r-none border-r-0 bg-sunk`}><option value="INR">INR</option><option value="USD">USD</option></select>
-        <input name="amount" inputMode="decimal" autoComplete="off" className={`${FIELD} w-full min-w-0 rounded-l-none font-num`} />
-      </span>
-    </Row>
-  )
-}
-
-// ── Add a cost ──────────────────────────────────────────────────────────────────────────────────────────────────────
-
-function AddFields({ today, starter }: { today: string; starter: { name: string; category: CostCategory } | null }) {
-  const [kind, setKind] = useState<'recurring' | 'one_time'>('recurring')
-  const [currency, setCurrency] = useState<CostCurrency>('INR')
-  const [varies, setVaries] = useState(false)
-  return (
-    <>
-      <input type="hidden" name="kind" value={kind} /><input type="hidden" name="varies" value={varies ? 'on' : 'off'} />
-      <Segmented label="Type" value={kind} options={[['recurring', 'Repeats'], ['one_time', 'Once']]} onPick={setKind} className="self-start" />
-      <Row label="Name" name="name"><input name="name" maxLength={80} autoComplete="off" defaultValue={starter?.name ?? ''} className={FIELD} data-autofocus="" /></Row>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Row label="Vendor" name="vendor"><input name="vendor" maxLength={80} autoComplete="off" placeholder="Optional" className={FIELD} /></Row>
-        <Row label="Category" name="category"><select name="category" defaultValue={starter?.category ?? 'software'} className={FIELD}>{categoryOptions}</select></Row>
-      </div>
-      {kind === 'one_time' ? (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2"><AmountField currency={currency} onCurrency={setCurrency} /><Day label="Paid on" name="paidOn" value={today} today={today} max={today} /></div>
-          <div className="grid gap-3 sm:grid-cols-2">{currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" /> : null}<Money name="gst" label="GST included" currency="INR" /></div>
-        </>
-      ) : (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <AmountField currency={currency} onCurrency={setCurrency} />
-            <Row label="Repeats" name="cadence"><select name="cadence" defaultValue="monthly" className={FIELD}>{COST_CADENCES.map((c) => <option key={c} value={c}>{CADENCE_WORDS[c]}</option>)}</select></Row>
-          </div>
-          <Day label="Next due on" name="anchorOn" value={today} today={today} />
-          <Varies on={varies} onChange={setVaries} />
-        </>
-      )}
-    </>
-  )
-}
 
 /** The page's one primary. `starter` prefills the dialog from an empty-state chip. */
 export function AddCostButton({ today, starter = null, label = 'Add cost', variant = 'primary' }: { today: string; starter?: { name: string; category: CostCategory } | null; label?: string; variant?: 'primary' | 'secondary' }) {
@@ -134,25 +60,7 @@ export function MarkPaidButton({ t, primary = false, small = false, label = 'Mar
   }
   const spec: DialogSpec = {
     label, title: `Mark ${t.name} paid`, action, keep: 'Cancel', go: 'Mark paid',
-    fields: (
-      <>
-        <input type="hidden" name="itemId" value={t.itemId} /><input type="hidden" name="periodFor" value={t.period} /><input type="hidden" name="currency" value={t.currency} />
-        {t.varies ? <Money name="amount" label="Billed" currency={t.currency} autoFocus /> : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Day label="Paid on" name="paidOn" value={t.today} today={t.today} max={t.today} />
-          {t.varies
-            ? (t.currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" defaultValue={t.inr} /> : <Money name="gst" label="GST included" currency="INR" />)
-            : <div className="flex min-w-0 flex-col gap-1 text-sm"><span className="font-medium">For the bill due</span><div className={`${FIELD} flex items-center bg-sunk font-num`}>{t.periodText}</div></div>}
-        </div>
-        {t.varies ? null : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Money name="amount" label="Billed" currency={t.currency} defaultValue={t.amount} />
-            {t.currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" defaultValue={t.inr} /> : <Money name="gst" label="GST included" currency="INR" />}
-          </div>
-        )}
-        {t.currency === 'USD' ? <Money name="gst" label="GST included" currency="INR" /> : null}
-      </>
-    ),
+    fields: <PaidFields t={t} />,
   }
   return <DialogButton spec={{ ...spec, ...(small ? { size: 'sm' as const } : {}) }} variant={primary ? 'primary' : 'secondary'} />
 }
@@ -175,26 +83,18 @@ export function UndoPaymentButton({ itemId, paymentId }: { itemId: string; payme
 
 export type CostFacts = { id: string; name: string; vendor: string | null; category: CostCategory; note: string | null; varies: boolean; currency: CostCurrency; amount: string; cadence: Cadence | null; anchorOn: string; recurring: boolean; paid: boolean }
 
-function DetailsFields({ c }: { c: CostFacts }) {
-  const [varies, setVaries] = useState(c.varies)
-  return (
-    <>
-      <input type="hidden" name="itemId" value={c.id} />{c.recurring ? <input type="hidden" name="varies" value={varies ? 'on' : 'off'} /> : null}
-      <Row label="Name" name="name"><input name="name" maxLength={80} defaultValue={c.name} autoComplete="off" className={FIELD} data-autofocus="" /></Row>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Row label="Vendor" name="vendor"><input name="vendor" maxLength={80} defaultValue={c.vendor ?? ''} autoComplete="off" className={FIELD} /></Row>
-        <Row label="Category" name="category"><select name="category" defaultValue={c.category} className={FIELD}>{categoryOptions}</select></Row>
-      </div>
-      <Row label="Note" name="note"><input name="note" maxLength={300} defaultValue={c.note ?? ''} autoComplete="off" className={FIELD} /></Row>
-      {c.recurring ? <Varies on={varies} onChange={setVaries} /> : null}
-    </>
-  )
-}
+// The fields load when a dialog opens (they hold the date picker, the switch and the segmented choice).
+const AddFields = dynamic(() => import('./fields').then((m) => m.AddFields))
+const PaidFields = dynamic(() => import('./fields').then((m) => m.PaidFields))
+const DetailsFields = dynamic(() => import('./fields').then((m) => m.DetailsFields))
+const AmountChangeFields = dynamic(() => import('./fields').then((m) => m.AmountChangeFields))
+const ScheduleFields = dynamic(() => import('./fields').then((m) => m.ScheduleFields))
+const EndFields = dynamic(() => import('./fields').then((m) => m.EndFields))
 
 const editSpec = (c: CostFacts): DialogSpec => ({ label: 'Edit', title: `Edit ${c.name}`, action: editCostAction, fields: <DetailsFields c={c} />, keep: 'Cancel', go: 'Save details' })
 const endSpec = (c: CostFacts, today: string): DialogSpec => ({
   label: 'End cost', title: `End ${c.name}?`, description: 'Bills stop after the last day you pick. Past payments stay.', action: endCostAction, danger: true, keep: 'Keep it', go: 'End cost',
-  fields: <><input type="hidden" name="itemId" value={c.id} /><Day label="Last day" name="endsOn" value={today} today={today} /></>,
+  fields: <EndFields c={c} today={today} />,
 })
 
 /** The panel's header menu: the two changes that need a fresh passkey check (a repeating cost only). */
@@ -202,14 +102,10 @@ export function CostHeaderMenu({ c, today }: { c: CostFacts; today: string }) {
   if (!c.recurring) return null
   const specs: DialogSpec[] = [{
     label: 'Change amount…', title: `Change the amount of ${c.name}?`, description: 'Past payments keep their figures.', action: editCostAction, confirm: true, keep: 'Keep amount', go: 'Change amount',
-    fields: <><input type="hidden" name="itemId" value={c.id} /><input type="hidden" name="currency" value={c.currency} /><Money name="amount" label="Amount" currency={c.currency} defaultValue={c.amount} autoFocus /></>,
+    fields: <AmountChangeFields c={c} />,
   }, {
     label: 'Change schedule…', title: `Change the schedule of ${c.name}?`, description: 'Bills count from the new date. Paid bills stay paid.', action: editCostAction, confirm: true, keep: 'Keep schedule', go: 'Change schedule',
-    fields: <>
-      <input type="hidden" name="itemId" value={c.id} />
-      {c.paid ? null : <Row label="Repeats" name="cadence"><select name="cadence" defaultValue={c.cadence ?? 'monthly'} className={FIELD}>{COST_CADENCES.map((k) => <option key={k} value={k}>{CADENCE_WORDS[k]}</option>)}</select></Row>}
-      <Day label="Next due on" name="anchorOn" value={c.anchorOn} today={today} />
-    </>,
+    fields: <ScheduleFields c={c} today={today} />,
   }]
   return <MoreDialogs specs={specs} label={`More for ${c.name}`} />
 }
