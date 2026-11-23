@@ -805,12 +805,17 @@ create or replace function app_pc_notice_done(p_notice uuid, p_ok boolean, p_err
 $$;
 --> statement-breakpoint
 
--- ── The day's USD/INR rate (owner 2026-11-22, 6): one writer, one reader. ──
-create or replace function app_fx_rate_set(p_day date, p_rate integer, p_source text) returns void
-  language sql volatile security definer set search_path = '' as $$
-  insert into public.fx_rates (day, rate_e4, source, fetched_at) values (p_day, p_rate, p_source, now())
-  on conflict (day) do update set rate_e4 = excluded.rate_e4, source = excluded.source, fetched_at = now()
-$$;
+-- ── The day's USD/INR rate (owner 2026-11-22, 6; orchestrator 2026-11-22: FBIL's rate is licence- and fee-bound for
+--    pricing, so for now the ONLY source is a row Frrata staff type in Admin, audited by the caller in the same
+--    transaction). One writer, frata_admin only; one reader for the door. ──
+create or replace function app_fx_rate_set(p_day date, p_rate integer) returns void
+  language plpgsql volatile security definer set search_path = '' as $$
+begin
+  if p_day is null or p_day > (now() at time zone 'Asia/Kolkata')::date or p_rate is null or p_rate not between 500000 and 2000000 then
+    raise exception 'bad_input' using errcode = 'P0001'; end if;
+  insert into public.fx_rates (day, rate_e4, source, fetched_at) values (p_day, p_rate, 'manual', now())
+  on conflict (day) do update set rate_e4 = excluded.rate_e4, source = 'manual', fetched_at = now();
+end $$;
 --> statement-breakpoint
 create or replace function app_fx_rate_latest() returns table (day date, rate_e4 integer)
   language sql stable security definer set search_path = '' as $$
@@ -956,7 +961,7 @@ revoke all on function app_pc_owner(uuid, uuid, text, boolean, boolean), app_pc_
   app_pc_renewals(integer), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
-  app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer, text), app_fx_rate_latest(),
+  app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer), app_fx_rate_latest(),
   app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_give_back(uuid, integer), app_pc_settle(uuid, bigint),
   app_pc_return(uuid, text), admin_partner_gst_rows(timestamptz, timestamptz)
   from public, anon, authenticated, service_role, frata_builder, frata_app, frata_admin;
@@ -974,8 +979,8 @@ grant execute on function app_partner_credit_try(uuid, uuid, text, text),
   app_pc_renewals(integer), app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
-  app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer, text), app_fx_rate_latest(),
+  app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_latest(),
   app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_settle(uuid, bigint), app_pc_return(uuid, text)
   to frata_app;
 --> statement-breakpoint
-grant execute on function admin_partner_gst_rows(timestamptz, timestamptz) to frata_admin;
+grant execute on function admin_partner_gst_rows(timestamptz, timestamptz), app_fx_rate_set(date, integer) to frata_admin;

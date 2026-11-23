@@ -3996,7 +3996,10 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('aaaaaaaa-0000-0000-0000-000000000189', 'e89@nook.test', now()), ('aaaaaaaa-0000-0000-0000-000000000190', 'y89@yarn.test', now());
 set local role frata_app;
 select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000190', 'Yami', 'Yarn', '919845012389', 'Pune', '{}', '', '1-4', 1);
-select app_fx_rate_set((now() at time zone 'Asia/Kolkata')::date, 940000, 'manual');
+reset role;
+-- the rate: typed by Frrata staff in Admin (frata_admin), never the app
+set local role frata_admin;
+select app_fx_rate_set((now() at time zone 'Asia/Kolkata')::date, 940000);
 reset role;
 update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
 set local role frata_app;
@@ -4268,7 +4271,7 @@ do $$ declare r text; f text; begin
     'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
     'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
     'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',
-    'app_pc_dispute(text)', 'app_pc_notices_claim(integer)', 'app_pc_notice_done(uuid, boolean, text)', 'app_fx_rate_set(date, integer, text)',
+    'app_pc_dispute(text)', 'app_pc_notices_claim(integer)', 'app_pc_notice_done(uuid, boolean, text)',
     'app_fx_rate_latest()', 'app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean)', 'app_pc_settle(uuid, bigint)', 'app_pc_return(uuid, text)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin'] loop
       if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run %', r, f; end if;
@@ -4286,6 +4289,10 @@ do $$ declare r text; f text; begin
     if has_function_privilege(r, 'admin_partner_gst_rows(timestamptz, timestamptz)', 'execute') then raise exception 'FAIL: % can run the GST rows', r; end if;
   end loop;
   if not has_function_privilege('frata_admin', 'admin_partner_gst_rows(timestamptz, timestamptz)', 'execute') then raise exception 'FAIL: frata_admin cannot read the GST rows'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_app'] loop
+    if has_function_privilege(r, 'app_fx_rate_set(date, integer)', 'execute') then raise exception 'FAIL: % can set the rate', r; end if;
+  end loop;
+  if not has_function_privilege('frata_admin', 'app_fx_rate_set(date, integer)', 'execute') then raise exception 'FAIL: Admin cannot set the rate'; end if;
   foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
     foreach f in array array['partner_billing', 'partner_seats', 'partner_credit_purchases', 'partner_invoices', 'partner_credit_uses',
       'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates'] loop

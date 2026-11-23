@@ -295,7 +295,6 @@ export const system = {
       leads: (r.leads as string[] | null) ?? [], ownerName: (r.owner_name as string | null) ?? '', data: (r.data as Record<string, any>) ?? {} }))
   },
   async noticeDone(id: string, ok: boolean, error: string | null) { await db().execute(sql`select app_pc_notice_done(${id}::uuid, ${ok}, ${error})`) },
-  async rateSet(day: string, rateE4: number, source: string) { await db().execute(sql`select app_fx_rate_set(${day}::date, ${rateE4}, ${source})`) },
   async rateLatest(): Promise<{ day: Date; rateE4: number } | null> {
     const [r] = await db().execute<{ day: string; rate_e4: number }>(sql`select * from app_fx_rate_latest()`)
     return r ? { day: new Date(r.day), rateE4: num(r.rate_e4) } : null

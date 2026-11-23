@@ -34,7 +34,8 @@ export const SEAT_METHODS = ['upi', 'card'] as const
 export const NOTICE_KINDS = ['low', 'budget_80', 'predebit', 'renewal_failed', 'paid', 'details_changed', 'lapsed'] as const
 export type NoticeKind = (typeof NOTICE_KINDS)[number]
 
-/** Where a day's USD/INR rate came from (owner 2026-11-22, 6; the source is still open: FBIL licence). */
+/** Where a day's USD/INR rate came from. For now ONLY 'manual': typed by Frrata staff in Admin (orchestrator 2026-11-22:
+ *  FBIL's rate is licence- and fee-bound for pricing; the owner is asked to use the bank's rate on Anthropic's last debit). */
 export const RATE_SOURCES = ['fbil', 'frankfurter_fbil', 'manual'] as const
 
 /** The person counters (security L1), each its own window in the definer. */
