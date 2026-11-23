@@ -26,3 +26,10 @@ export function ipBucket(ip: string): string {
   if (full.length !== 8 || full.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return bare
   return full.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':') + '::/64'
 }
+
+/** A wider bucket for one site: an IPv6 /64 bucket cut to its /48 (one customer's many /64s count together); IPv4
+ *  and anything unparsed stay as they are. Takes ipBucket's answer. */
+export function netBucket(bucket: string): string {
+  const m = /^([0-9a-f]{1,4}):([0-9a-f]{1,4}):([0-9a-f]{1,4}):[0-9a-f]{1,4}::\/64$/.exec(bucket)
+  return m ? `${m[1]}:${m[2]}:${m[3]}::/48` : bucket
+}

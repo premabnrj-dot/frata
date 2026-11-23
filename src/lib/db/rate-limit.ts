@@ -26,6 +26,12 @@ export const LIMITS = {
   // Builders T1c (security review L11): an owner changes Lead ↔ Builder at most 30 times an hour; fail closed.
   partnerRole: { action: 'partner_role:owner', max: 30, windowSeconds: 3600 },
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
+  // Sign-up's address check before sign-in (O1·7), all three failing closed (an answer of `limited` costs a person
+  // nothing): per network (a name typed with the 300 ms pause is ~10 checks; a carrier NAT shares an address), per IPv6
+  // /48 (one site's many /64s), and across Frrata (5 a second; bounds enumeration through many networks).
+  addressOpenIp: { action: 'address_open:ip', max: 60, windowSeconds: 600 },
+  addressOpenNet: { action: 'address_open:net', max: 300, windowSeconds: 600 },
+  addressOpenAll: { action: 'address_open:all', max: 3000, windowSeconds: 600 },
   // Checkout (1C). Subjects are "<tenant>:<ip>" or "<tenant>:<phone>" (hashed with the action below). Mobile networks share IPs: generous per IP.
   quoteIp: { action: 'shop_quote:ip', max: 300, windowSeconds: 600 },
   // Delivery Zones: the product page's PIN code check, apart from checkout's quote budget (security review L1).

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails: a server action file or route handler that reaches no auth check (per exported action, comments ignored), and is not an entry point named below with the credential it checks; a console, look-editor or look-preview page that does not call requireMember itself.
+// Fails: a server action file or route handler that reaches no auth check (per exported action, comments ignored), and is not an entry point named below with the credential it checks; a public entry point that exports more than its EXACT_EXPORTS; a console, look-editor or look-preview page that does not call requireMember itself.
 //
 // ⚠️ WHY. A server action is a public POST endpoint whether or not any page
 // imports it, and a page's sign-in check does not cover the actions on it
@@ -14,6 +14,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 /** Functions that establish who is calling, and refuse who may not. */
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
@@ -59,6 +60,35 @@ const ENTRY_POINTS = {
   // for any store name; poll's credential is the device secret, whose sign-in a signed-in person confirmed with a passkey.
   'src/app/api/dev/device/start/route.ts': ['a developer CLI starts a device sign-in: no shop read, limited per network', 'startDeviceSignIn('],
   'src/app/api/dev/device/poll/route.ts': ['a developer CLI polls with its device secret: a build key once its person confirmed', 'pollDeviceSignIn('],
+  // O1·7: sign-up's address check before sign-in. Reads no tenant; limited per network, per IPv6 /48 and globally.
+  'src/app/start/check-address-open.ts': ['sign-up: is an address free, before sign-in; public by nature, limited per network and globally, failing closed', 'LIMITS.addressOpenAll'],
+}
+
+/** An entry point that is public by nature holds exactly these exports: a second one would be a second public door
+ *  behind the same listing (security review of O1, 2026-11-23). */
+export const EXACT_EXPORTS = {
+  'src/app/start/check-address-open.ts': ['checkAddressOpen'],
+}
+
+/** Every name a module exports (functions, consts, re-exports), comments out. */
+export function exportedNames(text) {
+  const src = code(text)
+  const names = new Set()
+  for (const m of src.matchAll(/^\s*export\s+(?:async\s+)?(?:function\*?|const|let|var|class|type|interface|enum)\s+(\w+)/gm)) names.add(m[1])
+  if (/^\s*export\s+default\b/m.test(src)) names.add('default')
+  for (const m of src.matchAll(/^\s*export\s*(?:type\s*)?\{([^}]*)\}/gm)) for (const n of m[1].split(',')) { const x = n.trim().split(/\s+as\s+/).pop(); if (x) names.add(x) }
+  for (const m of src.matchAll(/^\s*export\s*\*/gm)) names.add(`* (${m.index})`)
+  return [...names]
+}
+
+/** A file in EXACT_EXPORTS that exports anything else, or lacks one it must export. */
+export function exactExportProblems(file, text, exact = EXACT_EXPORTS) {
+  const want = exact[file]
+  if (!want) return []
+  const got = exportedNames(text)
+  const extra = got.filter((n) => !want.includes(n)), missing = want.filter((n) => !got.includes(n))
+  return [...extra.map((n) => `${file}  exports ${n}, but a public entry point holds exactly ${want.join(', ')} — move it to another file`),
+    ...missing.map((n) => `${file}  no longer exports ${n} — update EXACT_EXPORTS`)]
 }
 
 const walk = dir => readdirSync(dir).flatMap(n => {
@@ -91,6 +121,7 @@ function unguardedExports(src) {
   return [...fns].filter(([n, f]) => f.exported && !ok.has(n)).map(([n]) => n)
 }
 
+function main() {
 const failures = []
 const seen = new Set()
 for (const file of walk('src')) {
@@ -103,6 +134,7 @@ for (const file of walk('src')) {
   if (entry) {
     seen.add(file)
     if (!text.includes(entry[1])) failures.push(`${file}  listed as "${entry[0]}" but no longer contains \`${entry[1]}\` — re-check how it is protected`)
+    failures.push(...exactExportProblems(file, raw))
     continue
   }
   if (!guards(text)) {
@@ -167,3 +199,6 @@ if (failures.length) {
   process.exit(1)
 }
 console.log('check:actions — clean')
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()
