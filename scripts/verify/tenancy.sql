@@ -6482,4 +6482,89 @@ do $$ declare r text; tb text; fn text; begin
   if (select pg_get_function_result('app_studio_due(integer)'::regprocedure)) <> 'TABLE(session_id uuid, tenant_id uuid, turn_id uuid, kind text)' then raise exception 'FAIL: 91 the cron list returns more than ids'; end if;
   if (select pg_get_function_result('app_turn_actor(uuid)'::regprocedure)) <> 'TABLE(tenant_id uuid, partner_id uuid, session_id uuid, user_id uuid, member_id uuid)' then raise exception 'FAIL: 91 app_turn_actor returns more than ids'; end if;
 end $$;
-\echo 'tenancy proof — all checks passed (through § 101)'
+-- 102. Admin › Costs (drizzle/0170; spec docs/specs/2026-11-23-admin-costs.md, tenancy review 2026-11-23): two platform
+-- tables only frata_admin touches, with exactly the privileges the spec lists, RLS on and one permissive policy each.
+do $$ declare r text; t text; p text; begin
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
+    foreach t in array array['cost_items', 'cost_payments'] loop
+      foreach p in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+        if has_table_privilege(r, 'public.' || t, p) then raise exception 'FAIL: 102 % holds % on %', r, p, t; end if;
+      end loop;
+      if has_any_column_privilege(r, 'public.' || t, 'select') then raise exception 'FAIL: 102 % reads a column of %', r, t; end if;
+    end loop;
+  end loop;
+  foreach p in array array['select', 'insert', 'update'] loop
+    if not has_table_privilege('frata_admin', 'public.cost_items', p) then raise exception 'FAIL: 102 Admin cannot % cost_items', p; end if;
+  end loop;
+  foreach p in array array['delete', 'truncate', 'references', 'trigger'] loop
+    if has_table_privilege('frata_admin', 'public.cost_items', p) then raise exception 'FAIL: 102 Admin holds % on cost_items', p; end if;
+  end loop;
+  foreach p in array array['select', 'insert', 'delete'] loop
+    if not has_table_privilege('frata_admin', 'public.cost_payments', p) then raise exception 'FAIL: 102 Admin cannot % cost_payments', p; end if;
+  end loop;
+  foreach p in array array['update', 'truncate', 'references', 'trigger'] loop
+    if has_table_privilege('frata_admin', 'public.cost_payments', p) then raise exception 'FAIL: 102 Admin holds % on cost_payments', p; end if;
+  end loop;
+  foreach t in array array['cost_items', 'cost_payments'] loop
+    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 102 % without RLS', t; end if;
+    if (select count(*) from pg_policies where schemaname = 'public' and tablename = t) <> 1
+       or exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and (permissive <> 'PERMISSIVE' or roles <> '{frata_admin}'::name[]))
+    then raise exception 'FAIL: 102 % must have exactly one permissive policy, to frata_admin', t; end if;
+  end loop;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
+    if has_function_privilege(r, 'public.admin_fx_rate_latest()', 'execute') then raise exception 'FAIL: 102 % runs admin_fx_rate_latest', r; end if;
+  end loop;
+  if not has_function_privilege('frata_admin', 'public.admin_fx_rate_latest()', 'execute') then raise exception 'FAIL: 102 Admin cannot read the rate'; end if;
+  if not coalesce((select p2.prosecdef and 'search_path=""' = any(p2.proconfig) from pg_proc p2 where p2.oid = 'public.admin_fx_rate_latest()'::regprocedure), false)
+    then raise exception 'FAIL: 102 admin_fx_rate_latest is not a definer with an empty search_path'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from cost_items; raise exception 'FAIL: 102 frata_app read costs'; exception when insufficient_privilege then null; end;
+  begin insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values (gen_random_uuid(), '2026-11-01', '2026-11-01', 1, 'INR', 1);
+    raise exception 'FAIL: 102 frata_app forged a payment'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_builder;
+do $$ begin begin perform 1 from cost_payments; raise exception 'FAIL: 102 frata_builder read payments'; exception when insufficient_privilege then null; end; end $$;
+rollback;
+begin; set local role frata_admin;
+insert into cost_items (id, name, category, kind, cadence, amount, currency, anchor_on) values ('00000000-0000-0000-0000-0000000c0001', 'Vercel Pro', 'infrastructure', 'recurring', 'monthly', 20000000, 'USD', '2026-11-26');
+insert into cost_items (id, name, category, kind, amount, currency, anchor_on) values ('00000000-0000-0000-0000-0000000c0002', 'Logo', 'design', 'one_time', 2500000, 'INR', '2026-11-09');
+insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, gst_paise) values ('00000000-0000-0000-0000-0000000c0001', '2026-11-26', '2026-11-23', 20000000, 'USD', 188400, 0);
+insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0001', '2026-11-26', '2026-11-23', 20000000, 'USD', 188400) on conflict do nothing;
+do $$ begin
+  if (select count(*) from cost_payments where item_id = '00000000-0000-0000-0000-0000000c0001') <> 1 then raise exception 'FAIL: 102 the same bill paid twice is two rows'; end if;
+  if (select inr_paise from cost_payments where item_id = '00000000-0000-0000-0000-0000000c0001') <> 188400 then raise exception 'FAIL: 102 Admin cannot read a payment back'; end if;
+  begin delete from cost_items where id = '00000000-0000-0000-0000-0000000c0002'; raise exception 'FAIL: 102 Admin deleted an item'; exception when insufficient_privilege then null; end;
+  begin update cost_payments set inr_paise = 1 where item_id = '00000000-0000-0000-0000-0000000c0001'; raise exception 'FAIL: 102 Admin edited a payment'; exception when insufficient_privilege then null; end;
+end $$;
+-- every CHECK refuses a bad row (each in its own savepoint)
+do $$ declare bad text; begin
+  foreach bad in array array[
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', null, 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'one_time', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'nope', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 0, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 1, 'EUR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('   ', 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 1, 'INR', '0001-01-01')$q$,
+    $q$insert into cost_items (name, category, kind, amount, currency, anchor_on, varies) values ('x', 'ai', 'one_time', 1, 'INR', '2026-11-01', true)$q$,
+    $q$insert into cost_items (name, category, kind, amount, currency, anchor_on, ends_on) values ('x', 'ai', 'one_time', 1, 'INR', '2026-11-01', '2026-12-01')$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2499999)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, gst_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2500000, 2500001)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values (gen_random_uuid(), '2026-11-09', '2026-11-09', 1, 'INR', 1)$q$
+  ] loop
+    begin execute bad; raise exception 'FAIL: 102 a bad cost row was accepted: %', bad;
+    exception when check_violation or foreign_key_violation then null; end;
+  end loop;
+end $$;
+rollback;
+begin;
+insert into fx_rates (day, rate_e4, source, fetched_at) values ('2099-01-01', 942000, 'manual', now()) on conflict do nothing;
+set local role frata_admin;
+do $$ begin
+  if (select rate_e4 from admin_fx_rate_latest()) is distinct from 942000 then raise exception 'FAIL: 102 Admin cannot read the latest rate'; end if;
+end $$;
+rollback;
+\echo 'tenancy proof — all checks passed (through § 102)'

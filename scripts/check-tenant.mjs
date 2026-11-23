@@ -275,6 +275,27 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:billing|seats|credit_purchases|invoices|credit_uses|credit_entries|client_budgets|credit_notices|credit_tries|mandate_cancels)|fx_rates)\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — Studio credit tables have no table grants; the app_partner_credit* / app_pc_* definers are the only door (C1)`)
 }
+// 10. Admin › Costs (drizzle/0170, tenancy review 2026-11-23): platform tables only frata_admin touches. A grant on either
+// to any other role, or a privilege beyond its list, fails; so does a policy on either that is not `to frata_admin`; and the
+// tables are imported only by the Admin library files named here (the database cannot tell a master admin from support
+// staff, so the code is the second lock: every export there re-checks ADMIN_ONLY).
+const COST_GRANTS = { cost_items: 'select, insert, update', cost_payments: 'select, insert, delete' }
+for (const m of sql.matchAll(/grant\s+([^;]*?)\bon\s+(?:table\s+)?([^;]*?)\bto\s+([^;]*);/g)) {
+  for (const t of Object.keys(COST_GRANTS)) {
+    if (!new RegExp(`\\b${t}\\b`).test(m[2])) continue
+    if (m[1].trim().replace(/\s+/g, ' ') !== COST_GRANTS[t] || m[2].trim() !== t || m[3].trim() !== 'frata_admin') {
+      failures.push(`grant on ${t}  — only "grant ${COST_GRANTS[t]} on ${t} to frata_admin" is allowed (Admin › Costs, drizzle/0170)`)
+    }
+  }
+}
+for (const { name, table, body } of finalPolicies.values()) {
+  if (COST_GRANTS[table] && !/^\s*for all to frata_admin\b/.test(body)) failures.push(`policy ${name} on ${table}  must be "for all to frata_admin" and nothing else (Admin › Costs)`)
+}
+const COSTS_IN_APP = { 'src/lib/admin/costs.ts': 'Costs\' reads and writes', 'src/lib/admin/today.ts': 'the Today source (C2) reads the due set' }
+for (const f of walk('src')) {
+  if (f === 'src/lib/db/schema-costs.ts' || COSTS_IN_APP[f]) continue
+  if (/schema-costs['"]/.test(code(f))) failures.push(`${f}  imports the Costs tables — only src/lib/admin/costs.ts (and today.ts) may (check:tenant § 10)`)
+}
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
   if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)
