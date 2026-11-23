@@ -96,7 +96,8 @@ export default {
 
       await t.step('a client budget, and usage as CSV', async () => {
         await pia.goto(CONSOLE + '/partner/credits?tab=budgets')
-        await pia.getByRole('button', { name: 'Set budget' }).first().click()
+        // By name: earlier flows (80-partner-team, 97-developer) give the same partner more stores, sorted before Kesar.
+        await pia.getByRole('button', { name: 'Set budget for Kesar Studio' }).click()
         const d = pia.getByRole('dialog', { name: /Kesar Studio’s budget/ })
         await d.getByRole('textbox').fill('300')
         await d.getByRole('button', { name: 'Save budget' }).click()
