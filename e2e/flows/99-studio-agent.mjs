@@ -93,6 +93,10 @@ export default {
       await q.getByRole('button', { name: 'Confirm partner passkey' }).waitFor()
       assert.deepEqual(await audit(q), [])
       await q.screenshot({ path: 'e2e/.out/99-studio-agent-1b-check.png' })
+      await q.setViewportSize({ width: 390, height: 844 })
+      assert.equal(await q.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll at 390')
+      await q.getByRole('button', { name: 'Confirm partner passkey' }).waitFor()
+      await q.screenshot({ path: 'e2e/.out/99-studio-agent-1b-check-390.png' })
       await c.close()
     })
     await t.step('1a: both checks made, on another store: Open the test store, then Studio', async () => {
