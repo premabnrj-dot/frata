@@ -6,8 +6,7 @@ import { Icon } from '@/components/icons/icon'
 import { STUDIO_ICONS } from '@/components/icons/studio-icons'
 import { Badge } from '@/components/ui/badge'
 import { ICON_BUTTON, PanelRail } from '@/components/ui/panel-rail'
-import { ResizeEdge } from '@/components/ui/resize-edge'
-import { TabPanel, Tabs } from '@/components/ui/tabs'
+import type { Tabs as TabsType } from '@/components/ui/tabs'
 import { useShortcutsEnabled } from '@/components/ui/use-shortcuts'
 import {
   PHONE_BELOW, PHONE_TABS, columns, defaultLayout, edgeOf, inspectorTabs, layoutFor, open, previewOnly, previewOnlyOn, resize,
@@ -16,6 +15,11 @@ import {
 import { cn } from '@/lib/utils'
 // The key list opens only on ? (a dialog): loaded then, not with the first paint (the page's script pin).
 const KeyList = dynamic(() => import('./key-list').then((m) => m.KeyList))
+// Drawn on the server as they are; their script (a drag, a tab's keys) loads after the first paint, keeping the page's
+// first-load script 1.5 kB under its pin, as the release asks (Vercel measures higher than the local build).
+const ResizeEdge = dynamic(() => import('@/components/ui/resize-edge').then((m) => m.ResizeEdge))
+const Tabs = dynamic(() => import('@/components/ui/tabs').then((m) => m.Tabs)) as typeof TabsType
+const TabPanel = dynamic(() => import('@/components/ui/tabs').then((m) => m.TabPanel))
 import { PanelError } from './panel-error'
 
 // =============================================================================
