@@ -258,3 +258,29 @@ export const partnerBillTries = pgTable('partner_bill_tries', {
   index('partner_bill_tries_user').on(t.userId, t.at),
   index('partner_bill_tries_at').on(t.at),
 ])
+
+/**
+ * A store owner asks a partner to take the store on (docs/specs/2026-11-23-add-partner.md). Named by the partner
+ * owner's email: the store never learns whether that email is a partner until one accepts. Written only by definers
+ * (drizzle/0174); frata_app reads its own store's rows. State is derived from the stamps and `expires_at`. A partner
+ * who accepts gets a link with no share (owner, 2026-11-23: "no revenue share").
+ */
+export const partnerRequests = pgTable('partner_requests', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  expiresAt: at('expires_at').notNull(),
+  acceptedAt: at('accepted_at'),
+  declinedAt: at('declined_at'),
+  cancelledAt: at('cancelled_at'),
+  /** The partner that answered (set by the answer definer from the caller's own partner, never from input). */
+  partnerId: uuid('partner_id').references(() => partners.id, { onDelete: 'restrict' }),
+}, (t) => [
+  uniqueIndex('partner_requests_one_open').on(t.tenantId)
+    .where(sql`${t.acceptedAt} is null and ${t.declinedAt} is null and ${t.cancelledAt} is null`),
+  index('partner_requests_email').on(t.email).where(sql`${t.acceptedAt} is null and ${t.declinedAt} is null and ${t.cancelledAt} is null`),
+  check('partner_requests_email', sql`${t.email} = lower(${t.email}) and char_length(${t.email}) between 3 and 254`),
+  check('partner_requests_one_end', sql`num_nonnulls(${t.acceptedAt}, ${t.declinedAt}, ${t.cancelledAt}) <= 1`),
+])

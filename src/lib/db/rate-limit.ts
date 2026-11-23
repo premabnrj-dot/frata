@@ -25,6 +25,11 @@ export const LIMITS = {
   partnerInvite: { action: 'partner_invite:owner', max: 20, windowSeconds: 3600 },
   // Builders T1c (security review L11): an owner changes Lead ↔ Builder at most 30 times an hour; fail closed.
   partnerRole: { action: 'partner_role:owner', max: 30, windowSeconds: 3600 },
+  // Settings › People (security re-review H1, 2026-11-23): invitations a person sends, and a store sends, an hour; and a
+  // person's day. Counted before any check, failing closed. Per recipient is capped in SQL (app_people_mail).
+  peopleInvitePerson: { action: 'people_invite:person', max: 20, windowSeconds: 3600 },
+  peopleInviteStore: { action: 'people_invite:store', max: 20, windowSeconds: 3600 },
+  peopleInviteDay: { action: 'people_invite:day', max: 50, windowSeconds: 86400 },
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
   // Checkout (1C). Subjects are "<tenant>:<ip>" or "<tenant>:<phone>" (hashed with the action below). Mobile networks share IPs: generous per IP.
   quoteIp: { action: 'shop_quote:ip', max: 300, windowSeconds: 600 },
