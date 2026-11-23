@@ -9,7 +9,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
-import { appBudgetProblems } from './lib/app-budget.mjs'
+import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, VERCEL_MARGIN_KB, zodProblems } from './lib/app-budget.mjs'
 
 // Next 15 + React 19's shared framework script is ~103 kB gzipped on its own; a shop page may add ~17 kB.
 const BUDGET_KB = 120
@@ -39,7 +39,9 @@ const BUDGET_KB = 120
 // down): 119.75 kB here measured 120.0x on Vercel on a6b1a90b after passing on the two builds before it. A build that
 // fails by chance also blocks the redeploy that switches Studio off, so the half kB is room for Vercel's variance, not for
 // code: check the three closest pages before adding any.
-const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.8, '/s/[host]/(checkout)/checkout/page': 120.5 }
+// Back on the 120 budget the same day (lane F, page weight): the checkout's offer rows read one rule (says-online.ts)
+// instead of every offer sentence, 119.8 → 118.8 kB here.
+const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.8 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
@@ -57,6 +59,8 @@ const css_total_over = (files) => files.filter((f) => f.endsWith('.css')).reduce
 // 2026-11-11), but its bytes are shown beside each page's and held by scripts/build-beacon.mjs (≤ 1.7 kB gzip).
 const BEACON_KB = existsSync('public/fe.js') ? gzipSync(readFileSync('public/fe.js')).length / 1024 : 0
 const failures = []
+// Every budgeted page's first-load script and its limit: the margin check and the success line read them (below).
+const rows = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }
 
@@ -100,6 +104,7 @@ for (const [k, files] of Object.entries(build)) {
   const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
   if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
+  rows.push({ page: k, kb, limit })
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }
 
@@ -117,13 +122,22 @@ for (const [k, files] of Object.entries(build)) {
   if (!pages.length) failures.push('no app pages found to check for the app stylesheet')
 }
 
+// Zod never loads with a page (page weight 2026-11-23: 26 kB gzipped in Console › Content's, the product editor's and
+// the customizer's first load, through files their forms read for a cap or a list). Every action validates on the
+// server; a browser that wants a cheap check reads the zod-free half of a domain module (its *-facts.ts). A form that
+// truly needs zod loads it with next/dynamic. And every Console page loads the shell's one chunk (next.config appShell).
+for (const p of zodProblems(build, (f) => readFileSync(join('.next', f), 'utf8'))) failures.push(p)
+for (const p of appShellProblems(build)) failures.push(p)
+
 // The Look customizer's first-load script (Theme Studio spec § Guardrails, the Console gate; TS0b): 207.4 kB measured
 // 2026-11-11 after Menus and Site settings moved behind next/dynamic, with the designs added. It only comes down: the
 // studio (TS2) has its own ceiling. A new form loads when opened (next/dynamic), as the story and design forms do.
 // 2026-11-23: 171.4 kB once the upload client (@vercel/blob/client, 33 kB with its token library) loads at the first
 // upload; the ceiling came down from 208. A section's form is back in the first load (175.0 kB): its lazy chunk cost every
 // shop page a few bytes of runtime, and checkout crossed 120 on Vercel that day.
-const CUSTOMIZER_KB = 177
+// 147.7 kB the same day once zod left (its forms read their caps from sections-facts.ts and site-facts.ts) and the shell
+// loads once (lane F, page weight): the ceiling came down from 177 to that + 2.
+const CUSTOMIZER_KB = 149.7
 {
   const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
   if (!k) failures.push('the Look customizer page is missing from the build manifest')
@@ -132,11 +146,15 @@ const CUSTOMIZER_KB = 177
     const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
     const kb = [...new Set([...above.flatMap((l) => build[l] ?? []), ...build[k]])].filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
     if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS`)
+    rows.push({ page: k, kb, limit: CUSTOMIZER_KB })
     if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB) — load a form when it opens (next/dynamic)`)
   }
 }
 
 for (const p of appBudgetProblems(build, gz, process.env.SHOW_BUDGETS ? console.log : () => {})) failures.push(p)
+rows.push(...appBudgetRows(build, gz))
+// Off Vercel, a page within VERCEL_MARGIN_KB of its limit fails here, before a deploy meets it (scripts/lib/app-budget.mjs).
+if (!process.env.VERCEL) for (const p of marginProblems(rows)) failures.push(p)
 
 // TS0b: the block rules alone, gzipped (speed review 7): every .store-b- rule in the shop's sheets, @media included.
 {
@@ -153,4 +171,5 @@ if (failures.length) {
   for (const f of failures) console.error('  ' + f)
   process.exit(1)
 }
-console.log(`check:storefront-build — clean (${shopPages.length} shop routes cached per path, script under ${BUDGET_KB} kB)`)
+console.log(`check:storefront-build — clean (${shopPages.length} shop routes cached per path, script under ${BUDGET_KB} kB${process.env.VERCEL ? '' : `, every page at least ${VERCEL_MARGIN_KB} kB under its limit`})`)
+console.log(`  closest to their limits: ${closest(rows)}`)
