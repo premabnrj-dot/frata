@@ -26,8 +26,11 @@ import { parseDatabaseUrl } from './url'
  * The pool (speed review P12): an idle connection is let go after 20 s, so warm-but-idle functions stop holding
  * Supavisor's client slots (about 200 on small tiers: 20 instances × 10 used them all); a connect that hangs
  * fails in 5 s; a connection is renewed every 10 minutes. `prepare: false` for Supavisor's transaction mode.
+ * `max_pipeline: 0`: one query at a time on a connection (the count is of queries sent behind the running one). postgres.js otherwise sends up to 100 at once on one
+ * connection, and through Supavisor's transaction mode a pipelined query's answer can be lost: Admin › Partners, the
+ * page with the most reads at once, hung to Vercel's 60 s limit (2026-11-23; src/lib/db/__tests__/pipeline.int.test.ts).
  */
-export const POOL = { prepare: false, max: 10, idle_timeout: 20, connect_timeout: 5, max_lifetime: 600 } as const
+export const POOL = { prepare: false, max: 10, idle_timeout: 20, connect_timeout: 5, max_lifetime: 600, max_pipeline: 0 } as const
 
 let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 
