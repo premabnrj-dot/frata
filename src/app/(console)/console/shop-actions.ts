@@ -3,7 +3,7 @@
 import { refreshKeys } from '@/lib/queries/storefront-api'
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { notYet, setupSteps, BUILT_PAGES, websiteBlocksOpening } from '@/domains/setup/checklist'
+import { notYet, setupSteps, websiteBlocksOpening } from '@/domains/setup/checklist'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_MANAGE } from '@/lib/auth/require-member'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
@@ -42,15 +42,14 @@ export async function openShop(): Promise<Result> {
       // D0·3's facts join this first read (speed review L): the Website, and the store's Test and Build keys that answer
       // now by the key definer's own rules (app_store_building_keys, 0158: 0 once the store ever opened). The settings row
       // is held, as key creation and mintBuildKey hold it, so no key slips in between this check and the opening.
-      const [s] = await tx.select({ name: tenants.name, slug: tenants.slug, legalName: shopSettings.legalName, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone, codOn: shopSettings.codOn, codMax: shopSettings.codMax, publishedAt: shopSettings.publishedAt,
+      const [s] = await tx.select({ slug: tenants.slug, legalName: shopSettings.legalName, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone, codOn: shopSettings.codOn, publishedAt: shopSettings.publishedAt,
         siteOrigin: shopSettings.siteOrigin,
         siteLock: shopSettings.tenantId })
         .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, t)).for('update', { of: shopSettings })
       if (!s) return 'Your store’s settings are missing.'
       if (s.publishedAt) return null
       const [p] = await tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, t), eq(products.status, 'active')))
-      const steps = setupSteps({ shopName: s.name, address: hostFor(s.slug), productCount: p?.n ?? 0, legalName: s.legalName, grievanceName: s.grievanceName, grievanceEmail: s.grievanceEmail, grievancePhone: s.grievancePhone, codOn: s.codOn, codMaxPaise: Number(s.codMax), paymentsConnected: canTakeOnline(await keysFor(tx, t)), publishedAt: null },
-        BUILT_PAGES, String)
+      const steps = setupSteps({ productCount: p?.n ?? 0, legalName: s.legalName, grievanceName: s.grievanceName, grievanceEmail: s.grievanceEmail, grievancePhone: s.grievancePhone, codOn: s.codOn, paymentsConnected: canTakeOnline(await keysFor(tx, t)), publishedAt: null })
       const refusal = notYet(steps)
       if (refusal) return refusal
       // Counted after the lock (a second statement sees a key committed while this one waited: security LOW-4).

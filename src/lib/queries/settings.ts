@@ -9,10 +9,8 @@ import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import type { ShipCosts } from '@/domains/settings/ship-costs'
 import { seesCosts, type MemberRole } from '@/domains/tenancy/roles'
-import { paise } from '@/domains/money/paise'
 import { hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
-import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
-import { formatInr } from '@/lib/format'
+import { readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
 import { activeProductCount, paymentStatusFor } from './payments'
 
 // The settings row WITHOUT the shop's shipping-cost estimates: a merchant's cost, read only through shipCostsIn by
@@ -58,10 +56,10 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
   if (!shop) return null
   const address = await mainHostFor(tenantId, shop.slug)
   const steps = setupSteps({
-    shopName: shop.name, address, productCount: products,
+    productCount: products,
     legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName, grievanceEmail: shop.settings.grievanceEmail, grievancePhone: shop.settings.grievancePhone,
-    codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
-  }, BUILT_PAGES, (p) => formatInr(paise(p)))
+    codOn: shop.settings.codOn, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
+  })
   return {
     name: shop.name, address, open: !!shop.settings.publishedAt, steps, done: steps.filter((s) => s.done).length, ready: readyToOpen(steps),
     left: steps.filter((s) => !s.done && s.key !== 'publish'),

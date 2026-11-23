@@ -1,18 +1,15 @@
 // =============================================================================
 // FILE: src/domains/setup/checklist.ts
 //
-// "GET YOUR SHOP READY TO SELL" on console Home. Every step is DERIVED from
-// what the shop has (a product, its details, a way to pay, a publish time) —
-// never a stored "done" flag that can disagree with the data. Pure.
-// A step whose page is not built yet says when it arrives instead of linking
-// nowhere (frata-design-language: no "coming soon" navigation).
+// THE FOUR SETUP STEPS on console Home before the store opens (plan docs/plans/2026-11-23-o2a-setup-card.md O2a·1,
+// mockup § 2 "O2 · four steps"). Every step is DERIVED from what the store has (a product, its details, a way to
+// pay, a publish time) — never a stored "done" flag that can disagree with the data. Pure.
 // =============================================================================
 
 import { grievanceComplete } from '../settings/sections'
+import type { Capability } from '../tenancy/roles'
 
 export type SetupFacts = {
-  shopName: string
-  address: string
   /** Active products (a draft cannot be bought). */
   productCount: number
   legalName: string
@@ -20,55 +17,52 @@ export type SetupFacts = {
   grievanceEmail: string
   grievancePhone: string
   codOn: boolean
-  codMaxPaise: number
   /** Razorpay with LIVE keys and a webhook that has worked (test keys do not count). */
   paymentsConnected: boolean
   publishedAt: Date | null
 }
 
+export type SetupStepKey = 'product' | 'details' | 'payments' | 'publish'
+
 export type SetupStep = {
-  key: 'shop' | 'product' | 'details' | 'payments' | 'publish'
+  key: SetupStepKey
+  /** The row's words, and the focus panel's title while it is next. */
   title: string
-  detail: string
+  /** The focus panel's one button. */
+  action: string
+  /** The row's right side once done ("3 products", the legal name); empty while open. */
+  value: string
   done: boolean
-  /** Where the merchant fixes it; null while that page is not built yet. */
-  href: string | null
+  /** Who may act on it: a row the person may not act on is text, not a button (nextStep skips it). */
+  who: Capability
 }
 
-/** Which console pages exist, so a step links only to a real page. Grows with each sub-phase. */
-export type BuiltPages = { products: boolean; settings: boolean; publish: boolean }
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
-/** Pages the checklist may link to: each flips to true when its sub-phase ships. One copy, read by the checklist and openShop. */
-export const BUILT_PAGES: BuiltPages = { products: true, settings: true, publish: true }
-
-export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: number) => string): SetupStep[] {
+export function setupSteps(f: SetupFacts): SetupStep[] {
   const hasProduct = f.productCount > 0
+  const details = !!f.legalName.trim() && grievanceComplete(f)
   const canPay = f.codOn || f.paymentsConnected
+  const pay = f.paymentsConnected ? (f.codOn ? 'UPI, cards and Pay on delivery' : 'UPI and cards') : f.codOn ? 'Pay on delivery' : ''
   return [
-    { key: 'shop', title: 'Name and address', done: true, href: built.settings ? '/console/settings/web-address' : null, detail: `${f.shopName} · ${f.address}` },
-    {
-      key: 'product', title: 'Add your first product', done: hasProduct, href: built.products ? '/console/products' : null,
-      detail: hasProduct ? `${f.productCount} active product${f.productCount === 1 ? '' : 's'}`
-        : built.products ? 'Photos on a model, sizes and colours, the size chart for its type. About 10 minutes.'
-        : 'Products open in the next release, with photos, sizes, colours and size charts.',
-    },
-    {
-      key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && grievanceComplete(f),
-      href: built.settings ? (f.legalName.trim() ? '/console/settings/contact' : '/console/settings/business') : null,
-      detail: 'Your store must show your legal name, address and a grievance officer. Razorpay checks them too.',
-    },
-    {
-      key: 'payments', title: 'How shoppers pay', done: canPay, href: built.settings ? '/console/settings/payments' : null,
-      detail: f.paymentsConnected ? 'UPI and cards through Razorpay' + (f.codOn ? `, and Pay on delivery up to ${formatInr(f.codMaxPaise)}` : '')
-        : f.codOn ? `Pay on delivery, up to ${formatInr(f.codMaxPaise)} an order. Connect Razorpay for UPI and cards when you are ready.`
-        : 'Turn on Pay on delivery, or connect Razorpay.',
-    },
-    {
-      key: 'publish', title: 'Open your store', done: f.publishedAt !== null, href: null,
-      detail: f.publishedAt ? `Open at ${f.address}.` : !hasProduct ? 'Needs one Active product first. Until then your store shows "Opening soon".'
-        : !canPay ? 'Needs a way to pay first.' : `Ready. Your store opens at ${f.address}.`,
-    },
+    { key: 'product', title: 'Add your first product', action: 'Add product', value: hasProduct ? plural(f.productCount, 'product') : '', done: hasProduct, who: 'shop.work' },
+    { key: 'details', title: 'Add business details', action: 'Add details', value: details ? f.legalName.trim() : '', done: details, who: 'shop.build' },
+    { key: 'payments', title: 'Choose how shoppers pay', action: 'Change payments', value: pay, done: canPay, who: 'shop.build' },
+    { key: 'publish', title: 'Open your store', action: 'Open store', value: f.publishedAt ? 'Open' : '', done: f.publishedAt !== null, who: 'shop.manage' },
   ]
+}
+
+/**
+ * The step Home leads with for this person: the first open one they may act on. Opening comes only once every other
+ * step is done (whoever may do them); null when nothing is left for this person.
+ */
+export function nextStep(steps: SetupStep[], can: (c: Capability) => boolean): SetupStep | null {
+  const rest = steps.filter((s) => s.key !== 'publish')
+  const first = rest.find((s) => !s.done && can(s.who))
+  if (first) return first
+  if (rest.some((s) => !s.done)) return null
+  const open = steps.find((s) => s.key === 'publish' && !s.done && can(s.who))
+  return open ?? null
 }
 
 /** Every step before "Open your shop" is done: the button may be pressed (the action checks again on the server). */

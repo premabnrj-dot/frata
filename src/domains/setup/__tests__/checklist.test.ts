@@ -1,48 +1,78 @@
 import { describe, expect, it } from 'vitest'
-import { notYet, readyToOpen, setupSteps, type SetupFacts } from '../checklist'
+import { holds, type Capability } from '../../tenancy/roles'
+import { nextStep, notYet, readyToOpen, setupSteps, type SetupFacts } from '../checklist'
 
-const inr = (p: number) => `₹${p / 100}`
-const fresh: SetupFacts = { shopName: 'Kesar Studio', address: 'kesar.frata.store', productCount: 0, legalName: '', grievanceName: '', grievanceEmail: '', grievancePhone: '', codOn: true, codMaxPaise: 300000, paymentsConnected: false, publishedAt: null }
+const fresh: SetupFacts = { productCount: 0, legalName: '', grievanceName: '', grievanceEmail: '', grievancePhone: '', codOn: true, paymentsConnected: false, publishedAt: null }
 const officer = { grievanceName: 'Riya', grievanceEmail: 'care@kesar.in', grievancePhone: '9827041001' }
-const none = { products: false, settings: false, publish: false }
+const details = { legalName: 'Kesar Studio LLP', ...officer }
+const as = (role: string) => (c: Capability) => holds(role, c)
 
-describe('setupSteps', () => {
-  it('a new shop: named, can take COD, nothing else done', () => {
-    const s = setupSteps(fresh, none, inr)
-    expect(s.map((x) => [x.key, x.done])).toEqual([['shop', true], ['product', false], ['details', false], ['payments', true], ['publish', false]])
-    expect(s.find((x) => x.key === 'payments')!.detail).toContain('₹3000')
+describe('setupSteps (O2a·1: four derived steps)', () => {
+  it('a new store: can take Pay on delivery, nothing else done, 1 of 4', () => {
+    const s = setupSteps(fresh)
+    expect(s.map((x) => [x.key, x.done])).toEqual([['product', false], ['details', false], ['payments', true], ['publish', false]])
+    expect(s.filter((x) => x.done)).toHaveLength(1)
   })
-  it('never links to a page that is not built', () => {
-    expect(setupSteps(fresh, none, inr).every((x) => x.href === null)).toBe(true)
-    expect(setupSteps(fresh, { products: true, settings: true, publish: true }, inr).find((x) => x.key === 'product')!.href).toBe('/console/products')
+  it('each step has its title, its button and who may act on it, as drawn', () => {
+    expect(setupSteps(fresh).map((x) => [x.key, x.title, x.action, x.who])).toEqual([
+      ['product', 'Add your first product', 'Add product', 'shop.work'],
+      ['details', 'Add business details', 'Add details', 'shop.build'],
+      ['payments', 'Choose how shoppers pay', 'Change payments', 'shop.build'],
+      ['publish', 'Open your store', 'Open store', 'shop.manage'],
+    ])
   })
-  it('details go where the missing field is: the legal name in Business and GST, then the grievance officer in Contact', () => {
-    const built = { products: true, settings: true, publish: true }
-    expect(setupSteps(fresh, built, inr).find((x) => x.key === 'details')!.href).toBe('/console/settings/business')
-    expect(setupSteps({ ...fresh, legalName: 'Kesar LLP' }, built, inr).find((x) => x.key === 'details')!.href).toBe('/console/settings/contact')
-  })
-  it('publishing waits for a product and a way to pay', () => {
-    const built = { products: true, settings: true, publish: true }
-    expect(setupSteps(fresh, built, inr).find((x) => x.key === 'publish')!.href).toBeNull()
-    expect(setupSteps({ ...fresh, productCount: 1, codOn: false }, built, inr).find((x) => x.key === 'publish')!.detail).toBe('Needs a way to pay first.')
-    // The step itself is a button on Home (Open my shop), pressed only when every other step is done.
-    expect(readyToOpen(setupSteps({ ...fresh, productCount: 1 }, built, inr))).toBe(false)
-    expect(readyToOpen(setupSteps({ ...fresh, productCount: 1, legalName: 'Kesar Studio LLP', ...officer }, built, inr))).toBe(true)
+  it('a done step says what it holds; an open one says nothing', () => {
+    const value = (f: Partial<SetupFacts>, k: string) => setupSteps({ ...fresh, ...f }).find((x) => x.key === k)!.value
+    expect(value({}, 'product')).toBe('')
+    expect(value({ productCount: 1 }, 'product')).toBe('1 product')
+    expect(value({ productCount: 3 }, 'product')).toBe('3 products')
+    expect(value({ legalName: 'Kesar Studio LLP' }, 'details')).toBe('')
+    expect(value(details, 'details')).toBe('Kesar Studio LLP')
+    expect(value({}, 'payments')).toBe('Pay on delivery')
+    expect(value({ paymentsConnected: true }, 'payments')).toBe('UPI, cards and Pay on delivery')
+    expect(value({ codOn: false, paymentsConnected: true }, 'payments')).toBe('UPI and cards')
+    expect(value({ codOn: false }, 'payments')).toBe('')
+    expect(value({}, 'publish')).toBe('')
+    expect(value({ publishedAt: new Date() }, 'publish')).toBe('Open')
   })
   it('details are done only with a legal name AND a whole grievance officer: name, email and phone (owner 2026-11-07)', () => {
-    const done = (f: Partial<SetupFacts>) => setupSteps({ ...fresh, legalName: 'Kesar LLP', ...f }, none, inr).find((x) => x.key === 'details')!.done
+    const done = (f: Partial<SetupFacts>) => setupSteps({ ...fresh, legalName: 'Kesar LLP', ...f }).find((x) => x.key === 'details')!.done
     expect(done({})).toBe(false)
     expect(done({ grievanceName: 'Riya' })).toBe(false) // a name alone opened a shop before 2026-11-07
     expect(done({ grievanceName: 'Riya', grievanceEmail: 'care@kesar.in' })).toBe(false)
     expect(done(officer)).toBe(true)
+    expect(done({ ...officer, legalName: '  ' })).toBe(false)
+  })
+})
+
+describe('nextStep', () => {
+  const next = (f: Partial<SetupFacts>, role: string) => nextStep(setupSteps({ ...fresh, ...f }), as(role))?.key ?? null
+  it('an owner: the product, then the details, then opening', () => {
+    expect(next({}, 'owner')).toBe('product')
+    expect(next({ productCount: 1 }, 'owner')).toBe('details')
+    expect(next({ productCount: 1, ...details }, 'owner')).toBe('publish')
+    expect(next({ productCount: 1, ...details, codOn: false }, 'owner')).toBe('payments')
+    expect(next({ productCount: 1, ...details, publishedAt: new Date() }, 'owner')).toBeNull()
+  })
+  it('Staff: the product, then nothing', () => {
+    expect(next({}, 'staff')).toBe('product')
+    expect(next({ productCount: 1 }, 'staff')).toBeNull()
+  })
+  it('a partner: the product, then the details, never opening', () => {
+    expect(next({}, 'partner')).toBe('product')
+    expect(next({ productCount: 1 }, 'partner')).toBe('details')
+    expect(next({ productCount: 1, ...details }, 'partner')).toBeNull()
+  })
+  it('opening is never next while another step is open, even for someone who may not do that step', () => {
+    const noBuild = (c: Capability) => c !== 'shop.build'
+    expect(nextStep(setupSteps({ ...fresh, productCount: 1 }), noBuild)).toBeNull()
+    expect(nextStep(setupSteps({ ...fresh, ...details }), as('admin'))?.key).toBe('product')
   })
 })
 
 describe('the opening gate (O2a·0 regression net)', () => {
-  const built = { products: true, settings: true, publish: true }
-  const details = { legalName: 'Kesar Studio LLP', ...officer }
   it('readyToOpen is false until a product, the details and a way to pay are all done', () => {
-    const ready = (f: Partial<SetupFacts>) => readyToOpen(setupSteps({ ...fresh, ...f }, built, inr))
+    const ready = (f: Partial<SetupFacts>) => readyToOpen(setupSteps({ ...fresh, ...f }))
     expect(ready({})).toBe(false)
     expect(ready({ productCount: 1 })).toBe(false)
     expect(ready({ ...details })).toBe(false)
@@ -51,10 +81,10 @@ describe('the opening gate (O2a·0 regression net)', () => {
     expect(ready({ productCount: 1, ...details, codOn: false, paymentsConnected: true })).toBe(true)
   })
   it('openShop’s refusal names each missing step, in order, and nothing once ready', () => {
-    const line = (f: Partial<SetupFacts>) => notYet(setupSteps({ ...fresh, ...f }, built, inr))
-    expect(line({ codOn: false })).toBe('Not yet: add your first product, business details and grievance officer, how shoppers pay.')
-    expect(line({})).toBe('Not yet: add your first product, business details and grievance officer.')
-    expect(line({ productCount: 1 })).toBe('Not yet: business details and grievance officer.')
+    const line = (f: Partial<SetupFacts>) => notYet(setupSteps({ ...fresh, ...f }))
+    expect(line({ codOn: false })).toBe('Not yet: add your first product, add business details, choose how shoppers pay.')
+    expect(line({})).toBe('Not yet: add your first product, add business details.')
+    expect(line({ productCount: 1 })).toBe('Not yet: add business details.')
     expect(line({ ...details })).toBe('Not yet: add your first product.')
     expect(line({ productCount: 1, ...details })).toBeNull()
   })

@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import type { Setup } from '@/lib/queries/settings'
@@ -23,8 +22,8 @@ export function Checklist({ setup, canManage }: { setup: Setup; canManage: boole
           <li key={s.key} className="flex items-start gap-3 border-t border-border px-4 py-3">
             <Badge tone={s.done ? 'ok' : 'neutral'} className="mt-0.5 w-14 justify-center">{s.done ? 'Done' : 'To do'}</Badge>
             <div className="min-w-0 flex-1">
-              <p className="font-medium">{s.href && !s.done ? <Link href={s.href} className="underline-offset-2 hover:underline">{s.title}</Link> : s.title}</p>
-              <p className="text-sm text-muted-foreground">{s.detail}</p>
+              <p className="font-medium">{s.title}</p>
+              {s.done && s.value ? <p className="text-sm text-muted-foreground">{s.value}</p> : null}
               {s.key === 'publish' && <div className="mt-2"><OpenShop address={setup.address} open={s.done} ready={setup.ready} canManage={canManage} /></div>}
             </div>
           </li>
