@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { istDayKey } from '@/domains/time/day'
 import {
-  anchorMayMove, burnOf, byCategory, cleanText, costsCsv, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
+  overview, HORIZON_DAYS, anchorMayMove, burnOf, byCategory, cleanText, costsCsv, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
   type CostItem, type CostPayment,
 } from '../costs'
 
@@ -202,7 +202,7 @@ describe('what a person types', () => {
 })
 
 describe('the CA export', () => {
-  const row = (o: object = {}) => ({ id: 'p', itemId: 'i', periodFor: '2026-11-26', paidOn: '2026-11-23', amount: 20_000_000, currency: 'USD', inrPaise: 188_400, gstPaise: null, createdAt: new Date(0), category: 'Infrastructure', name: 'Vercel Pro', vendor: 'Vercel', ...o })
+  const row = (o: object = {}) => ({ id: 'p', itemId: 'i', periodFor: '2026-11-26', paidOn: '2026-11-23', amount: 20_000_000, currency: 'USD' as const, inrPaise: 188_400, gstPaise: null, createdAt: new Date(0), category: 'Infrastructure', name: 'Vercel Pro', vendor: 'Vercel', ...o })
   it('one quoted line a payment, dollars and rupees, with a header', () => {
     expect(costsCsv([row()]).split('\r\n')).toEqual([
       '"Cost","Vendor","Category","Paid on","For the bill due","Currency","Billed","In rupees","GST in rupees"',
@@ -211,5 +211,49 @@ describe('the CA export', () => {
   })
   it('a name that starts like a formula is made text', () => {
     expect(costsCsv([row({ name: '=HYPERLINK("x")', vendor: '+1' })])).toContain(`"'=HYPERLINK(""x"")","'+1"`)
+  })
+})
+
+describe('overview', () => {
+  const today = '2026-11-23'
+  const pay = (itemId: string, paidOn: string, inr: number, category = 'infrastructure', periodFor = paidOn) => ({ id: `${itemId}${paidOn}`, itemId, paidOn, periodFor, inrPaise: inr, category, amount: inr, currency: 'INR' as const, gstPaise: null, createdAt: new Date(0) })
+  const inr = (id: string, anchorOn: string, amount = 100_000, extra: Partial<CostItem> = {}) => item({ id, name: id, currency: 'INR', amount, anchorOn, ...extra })
+
+  it('a cost due on day 30 is ahead, on day 31 it is not; the late ones come first', () => {
+    const o = overview([inr('a', '2026-12-23'), inr('b', '2026-12-24'), inr('late', '2026-11-20')], [], today, null)
+    expect(HORIZON_DAYS).toBe(30)
+    expect(o.due.map((d) => d.item.id)).toEqual(['late', 'a'])
+    expect(o.overdue).toBe(1)
+    expect(o.coming).toEqual({ count: 1, paise: 100_000 })
+  })
+  it('a dollar cost with no rate is counted but not summed; with a rate it is', () => {
+    const rows = [item({ id: 'usd', anchorOn: '2026-11-26' }), inr('r', '2026-11-27', 5_000)]
+    expect(overview(rows, [], today, null).coming).toEqual({ count: 2, paise: 5_000 })
+    expect(overview(rows, [], today, 942_000).coming).toEqual({ count: 2, paise: 188_400 + 5_000 })
+  })
+  it('a paid due drops out, and what is paid this month and last month feeds the figures and the categories', () => {
+    const rows = [inr('a', '2026-11-26')]
+    const ps = [pay('a', '2026-11-02', 10_000, 'ai', '2026-11-26'), pay('a', '2026-10-30', 4_000, 'ai', '2026-10-26'), pay('a', '2026-09-30', 999, 'ai', '2026-09-26')]
+    const o = overview(rows, ps, today, null)
+    expect(o.due).toEqual([])
+    expect(o.spent).toEqual({ paise: 10_000, count: 1 })
+    expect(o.categories).toEqual([{ category: 'ai', paise: 10_000, before: 4_000 }])
+  })
+  it('the previous month crosses a year', () => {
+    const ps = [pay('a', '2025-12-31', 700, 'legal'), pay('a', '2026-01-05', 300, 'legal')]
+    expect(overview([], ps, '2026-01-20', null).categories).toEqual([{ category: 'legal', paise: 300, before: 700 }])
+  })
+  it('an ended cost is not due and not in the burn', () => {
+    const o = overview([inr('x', '2026-10-01', 100, { endsOn: '2026-10-31' })], [], today, null)
+    expect(o.due).toEqual([])
+    expect(o.burn.count).toBe(0)
+  })
+})
+
+describe('the CSV cap', () => {
+  it('a capped export says so on its last line', () => {
+    const r = { id: 'p', itemId: 'i', periodFor: '2026-11-26', paidOn: '2026-11-23', amount: 100, currency: 'INR' as const, inrPaise: 100, gstPaise: null, createdAt: new Date(0), category: 'AI', name: 'A', vendor: null }
+    expect(costsCsv([r], true).trim().split('\r\n').at(-1)).toBe('"Export capped at 1 rows. Pick a shorter period."')
+    expect(costsCsv([r]).includes('capped')).toBe(false)
   })
 })

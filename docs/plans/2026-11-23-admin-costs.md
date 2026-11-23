@@ -6,6 +6,10 @@
 **Review:** tenancy-auditor 9 findings fixed in the spec and task 3; re-audit of 0170 SAFE, 9 gate and proof findings fixed, 2026-11-23
 **Review:** security-reviewer 8 findings fixed in the spec, one for the owner (a passkey on edits and old Undo), 2026-11-23
 **Review:** speed-reviewer 4 findings fixed in the spec, 2026-11-23
+**Review:** design-system-reviewer 5 findings fixed or in Deviations, 2026-11-23
+**Review:** words-reviewer findings fixed except words the approved mockup drew (owner's call), 2026-11-23
+**Review:** mockup-parity-reviewer 27 rows fixed or in Deviations, 2026-11-23
+**Review:** impact-reviewer task 6 findings fixed, 2026-11-23
 
 Unit economics: not run, nothing a merchant pays or Frrata charges changes.
 
@@ -37,6 +41,16 @@ Each task ends with `impact-reviewer` on its diff. Task 6 closes only after pari
 | Production SQL for 0170 | existing `scripts/prod-migrate.mjs` |
 
 ## Deviations
+
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| Nav badge on Costs | Arrives with C2 | The badge reads the Today source, which ships after 0170 is live | Told in this plan's review, 2026-11-23 |
+| Nav badge on Costs | Arrives with C2 | The badge reads the Today source, which ships after 0170 is live | Told in the plan review and the build report, 2026-11-23 |
+| A scrim over the list behind the open cost | The shared quick look: no scrim, the list stays usable, it takes focus, Esc closes, ↑ ↓ move to the next cost | frata-design-language § Quick look; the keyboard path the scrim version lacks | Told in the build report, 2026-11-23 |
+| No column header row on the tables | A header row on every table | The shared DataTable needs headers for screen readers | Told in the build report, 2026-11-23 |
+| Add dialog drew no way to choose the currency (a fixed "USD" prefix) | The prefix is a small currency choice (INR, USD) | The mockup showed no control to switch it | Told in the build report, 2026-11-23 |
+| The date field drawn with a calendar icon and the year ("26 Nov 2026") | The shared date field ("23 Nov") | A shared primitive | Told in the build report, 2026-11-23 |
+| A loading skeleton | The shared top progress bar, no `loading.tsx` | frata-design-language § Console patterns (a loading file made search-param links commit nothing) | Told in the build report, 2026-11-23 |
+| Phone bottom bar with a Money item | The shared bar (Today, Merchants, Partners, More); Costs is under More | The Admin shell is shared and its bar is not this plan's to change | Told in the build report, 2026-11-23 |
+| "Overdue" in the list | "Overdue 3 days" | The mockup said both; the days are what a person acts on | Told in the build report, 2026-11-23 |
+| Error words "Enter an amount above ₹0." | "Enter an amount above zero." | The field takes dollars as well as rupees | Told in the build report, 2026-11-23 |
+| A cost icon on the empty state's tile | The payments pictogram | The pictogram set has no cost drawing | Told in the build report, 2026-11-23 |

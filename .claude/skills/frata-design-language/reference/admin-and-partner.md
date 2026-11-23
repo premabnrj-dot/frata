@@ -112,6 +112,6 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 ## Admin › Costs (owner-approved 2026-11-23; mockup https://claude.ai/artifact/MEoxVFhu7EUHpfzbA8obvA, `docs/mockups/2026-11-23-admin-costs.html`)
 
 - Master admin only; support staff see a panel, never a hidden button. Three tabs (Overview, All costs, Payments), one primary (Add cost) and Export CSV.
-- A due or overdue cost leads the page in a `NeedsBand`; every due row has one action, **Mark paid**, opening a prefilled dialog. A cost opens in a side panel by `?id=`, the list stays put.
+- A due or overdue cost leads the page in a `NeedsBand`; every due row has one action, **Mark paid**, opening a prefilled dialog. A cost opens in the shared quick look by `?id=` (a page of its own on a phone), the list stays usable and ↑ ↓ move to the next cost.
 - A cost that varies shows "about" and a `varies` tag; its Mark paid opens on the amount. A dollar cost shows dollars, and rupees where a person reads a total.
 - Add is one dialog with a Repeats or Once switch. A payment's Undo is a toast action.

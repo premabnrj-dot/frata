@@ -13,9 +13,9 @@ import type { CostPatch } from '@/lib/admin/costs'
 
 export type Parsed<T> = { ok: true; data: T } | { ok: false; fields: Record<string, string> }
 export const FIELD_WORDS = {
-  name: 'Add a name.', amount: 'Enter an amount above zero.', anchorOn: 'Pick a date.', paidOn: 'Pick a date that has passed.', endsOn: 'Pick a date.',
-  inr: 'Enter the rupees that left your account.', gst: 'Enter the GST in rupees.', periodFor: 'Pick the bill this pays.', category: 'Pick a category.',
-  cadence: 'Pick how often it repeats.', currency: 'Pick rupees or dollars.', other: 'Check this.',
+  name: 'Add a name.', amount: 'Enter an amount above zero.', anchorOn: 'Pick the next due date.', paidOn: 'Pick today or an earlier day.', endsOn: 'Pick the last day.',
+  inr: 'Enter the rupees charged.', gst: 'Enter the GST in rupees.', periodFor: 'Pick the bill this pays.', category: 'Pick a category.',
+  cadence: 'Pick how often it repeats.', currency: 'Pick rupees or dollars.', other: 'Check this field.',
 } as const
 
 const clean = (max: number) => z.string().max(max * 4).transform(cleanText).pipe(z.string().max(max))

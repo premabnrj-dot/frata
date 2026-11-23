@@ -7,8 +7,8 @@
 // Amounts are paise for INR and micro-dollars for USD (`MicroUsd`); a dollar total converts at the day's rate
 // (rupees × 10,000) and rounds once, on the sum.
 // =============================================================================
-import { csvCell } from '@/domains/billing/document'
-import { addMonths } from '@/domains/time/month'
+import { csvCell } from '@/domains/csv'
+import { addMonths, monthKey } from '@/domains/time/month'
 
 export const COST_CATEGORIES = ['infrastructure', 'ai', 'messaging', 'software', 'marketing', 'legal', 'people', 'design', 'other'] as const
 export type CostCategory = (typeof COST_CATEGORIES)[number]
@@ -30,6 +30,8 @@ export const LOOKBACK_MONTHS = 13
 export const SOON_DAYS = 7
 /** The most Today shows. */
 export const MAX_DUE_ROWS = 20
+/** Overview's "due" window. */
+export const HORIZON_DAYS = 30
 
 export type CostItem = {
   id: string
@@ -49,7 +51,7 @@ export type CostItem = {
 }
 export type CostPayment = { id: string; itemId: string; paidOn: string; periodFor: string; inrPaise: number; category: string }
 /** A payment as the Admin library reads it (a CostPayment and what the panel and the CSV show). */
-export type PaymentRow = CostPayment & { amount: number; currency: string; gstPaise: number | null; createdAt: Date }
+export type PaymentRow = CostPayment & { amount: number; currency: CostCurrency; gstPaise: number | null; createdAt: Date }
 
 /** The most live repeating costs there can be: Overview reads them all. */
 export const MAX_LIVE_COSTS = 500
@@ -120,17 +122,21 @@ export function dueState(item: CostItem, paid: ReadonlySet<string>, today: strin
   return { unpaid, next, tone: inDays <= SOON_DAYS ? 'soon' : 'later', overdueDays: 0, inDays }
 }
 
-export type DueRow = { id: string; name: string; next: string; tone: 'overdue' | 'soon'; overdueDays: number; inDays: number; unpaidCount: number }
+export type DueRow = { id: string; name: string; next: string; tone: 'overdue' | 'soon' | 'later'; overdueDays: number; inDays: number; unpaidCount: number }
 
-/** One row per live cost that is overdue or due within a week, overdue first then by date (Today and the nav badge). */
-export function dueRows(items: readonly CostItem[], paidByItem: ReadonlyMap<string, ReadonlySet<string>>, today: string): DueRow[] {
+/** One row per live repeating cost that is overdue or due within `days` days, overdue first then by date. Today's source and
+ *  the nav badge use the week (`SOON_DAYS`); Overview uses the month (`HORIZON_DAYS`): the same rule, one definition. */
+export function dueRows(
+  items: readonly CostItem[], paidByItem: ReadonlyMap<string, ReadonlySet<string>>, today: string,
+  { days = SOON_DAYS, limit = MAX_DUE_ROWS }: { days?: number; limit?: number } = {},
+): DueRow[] {
   const rows: DueRow[] = []
   for (const it of items) {
     if (!isLive(it, today)) continue
     const s = dueState(it, paidByItem.get(it.id) ?? new Set(), today)
-    if (s.next && (s.tone === 'overdue' || s.tone === 'soon')) rows.push({ id: it.id, name: it.name, next: s.next, tone: s.tone, overdueDays: s.overdueDays, inDays: s.inDays, unpaidCount: s.unpaid.length })
+    if (s.next && s.tone && (s.tone === 'overdue' || s.inDays <= days)) rows.push({ id: it.id, name: it.name, next: s.next, tone: s.tone, overdueDays: s.overdueDays, inDays: s.inDays, unpaidCount: s.unpaid.length })
   }
-  return rows.sort((a, b) => a.next.localeCompare(b.next) || a.name.localeCompare(b.name)).slice(0, MAX_DUE_ROWS)
+  return rows.sort((a, b) => a.next.localeCompare(b.next) || a.name.localeCompare(b.name)).slice(0, limit)
 }
 
 // ── Money ───────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -223,10 +229,47 @@ const dollars = (micro: number) => (micro / 1e6).toFixed(2)
 
 /** One financial year's payments, oldest first: the cost, its vendor and category, the bill's day and period, what was
  *  billed, what left the account in rupees, and the GST part. Every cell quoted and formula-safe. */
-export function costsCsv(rows: readonly (PaymentRow & { name: string; vendor: string | null })[]): string {
+export function costsCsv(rows: readonly (PaymentRow & { name: string; vendor: string | null })[], capped = false): string {
   const head = ['Cost', 'Vendor', 'Category', 'Paid on', 'For the bill due', 'Currency', 'Billed', 'In rupees', 'GST in rupees']
   const lines = rows.map((r) => [
     r.name, r.vendor ?? '', r.category, r.paidOn, r.periodFor, r.currency, r.currency === 'USD' ? dollars(r.amount) : rupees(r.amount), rupees(r.inrPaise), r.gstPaise === null ? '' : rupees(r.gstPaise),
   ].map(quote).join(','))
-  return [head.map(quote).join(','), ...lines].join('\r\n') + '\r\n'
+  return [head.map(quote).join(','), ...lines, ...(capped ? [quote(`Export capped at ${rows.length.toLocaleString('en-IN')} rows. Pick a shorter period.`)] : [])].join('\r\n') + '\r\n'
+}
+
+// ── Overview's figures ──────────────────────────────────────────────────────────────────────────────────────────────
+
+export type Overview = {
+  /** Overdue first, then due within the horizon; each with its due state and what it is worth in paise (null: dollars, no rate). */
+  due: { row: DueRow; item: CostItem; state: DueState; paise: number | null }[]
+  overdue: number
+  /** Due in the next HORIZON_DAYS, not yet late: how many and what they come to (a dollar cost with no rate is counted, not summed). */
+  coming: { count: number; paise: number }
+  spent: { paise: number; count: number }
+  burn: Burn
+  month: string
+  categories: { category: string; paise: number; before: number }[]
+}
+
+/** The Overview's figures, all from the due set, the payments and the rate: nothing here is stored. */
+export function overview(items: readonly CostItem[], payments: readonly PaymentRow[], today: string, rate: number | null): Overview {
+  const paidBy = new Map<string, Set<string>>()
+  for (const p of payments) { const s = paidBy.get(p.itemId) ?? new Set<string>(); s.add(p.periodFor); paidBy.set(p.itemId, s) }
+  const byId = new Map(items.map((i) => [i.id, i]))
+  const paiseOf = (i: CostItem) => (i.currency === 'INR' ? i.amount : rate ? usdToPaise(i.amount, rate) : null)
+  const due = dueRows(items, paidBy, today, { days: HORIZON_DAYS, limit: 500 }).map((row) => {
+    const item = byId.get(row.id)!
+    return { row, item, state: dueState(item, paidBy.get(item.id) ?? new Set(), today), paise: paiseOf(item) }
+  })
+  const late = due.filter((d) => d.row.tone === 'overdue')
+  const ahead = due.filter((d) => d.row.tone !== 'overdue')
+  const month = today.slice(0, 7)
+  const prev = monthKey(today, -1)
+  const before = new Map(byCategory(payments, prev).map((c) => [c.category, c.paise]))
+  return {
+    due, overdue: late.length,
+    coming: { count: ahead.length, paise: ahead.reduce((t, d) => t + (d.paise ?? 0), 0) },
+    spent: spentIn(payments, month), burn: burnOf(items, today, rate), month,
+    categories: byCategory(payments, month).map((c) => ({ ...c, before: before.get(c.category) ?? 0 })),
+  }
 }

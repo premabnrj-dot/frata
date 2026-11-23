@@ -5,7 +5,7 @@ import {
   type CostItem, type CostItemInput, type PaidInput, type PaymentRow,
 } from '@/domains/admin/costs'
 import { FX_RATE_BAND_E4 } from '@/domains/studio/credits'
-import { addMonths } from '@/domains/time/month'
+import { addMonths, monthKey } from '@/domains/time/month'
 import { ADMIN_ONLY, confirmedRecently, type StaffOk } from '@/lib/auth/require-staff'
 import { adminDb } from '@/lib/db/admin'
 import { costItems, costPayments } from '@/lib/db/schema-costs'
@@ -36,6 +36,9 @@ const toItem = (r: typeof costItems.$inferSelect): CostItem => ({
   currency: r.currency as CostCurrency, varies: r.varies, anchorOn: r.anchorOn, endsOn: r.endsOn, category: r.category, note: r.note,
 })
 
+/** A payment row with its currency as the closed type the CHECK guarantees. */
+const toPay = <T extends { currency: string }>(r: T) => ({ ...r, currency: r.currency as CostCurrency })
+
 // ── Reads ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export type CostsData = {
@@ -52,7 +55,7 @@ export async function costsData(staff: StaffOk, today: string): Promise<CostsDat
   adminOnly(staff)
   const db = adminDb()
   const back = addMonths(new Date(`${today}T00:00:00Z`), -LOOKBACK_MONTHS).toISOString().slice(0, 10)
-  const monthsBack = `${addMonths(new Date(`${today.slice(0, 7)}-01T00:00:00Z`), -1).toISOString().slice(0, 10)}` // the 1st of last month
+  const monthsBack = `${monthKey(today, -1)}-01` // the 1st of last month
   const [items, pays, rate] = await Promise.all([
     db.select().from(costItems).orderBy(asc(costItems.name)),
     db.select({
@@ -63,7 +66,7 @@ export async function costsData(staff: StaffOk, today: string): Promise<CostsDat
     db.execute<{ day: string; rate_e4: number }>(sql`select day::text as day, rate_e4 from admin_fx_rate_latest()`),
   ])
   const r = rate[0]
-  return { items: items.map(toItem), payments: pays.map((p) => ({ ...p, createdAt: p.createdAt })), rate: r ? { day: r.day, rateE4: Number(r.rate_e4) } : null }
+  return { items: items.map(toItem), payments: pays.map(toPay), rate: r ? { day: r.day, rateE4: Number(r.rate_e4) } : null }
 }
 
 /** One cost and all its payments, for the side panel. */
@@ -79,7 +82,7 @@ export async function costPanel(staff: StaffOk, id: string): Promise<{ item: Cos
     }).from(costPayments).innerJoin(costItems, eq(costItems.id, costPayments.itemId)).where(eq(costPayments.itemId, id))
       .orderBy(desc(costPayments.paidOn), desc(costPayments.id)),
   ])
-  return item ? { item: toItem(item), payments: pays } : null
+  return item ? { item: toItem(item), payments: pays.map(toPay) } : null
 }
 
 export type PaymentsPage = { rows: (PaymentRow & { name: string; vendor: string | null })[]; next: { paidOn: string; id: string } | null }
@@ -98,7 +101,7 @@ export async function paymentsPage(staff: StaffOk, q: { from: string; to: string
     .orderBy(desc(costPayments.paidOn), desc(costPayments.id)).limit(51)
   const page = rows.slice(0, 50), more = rows[50]
   const last = page[page.length - 1]
-  return { rows: page, next: more && last ? { paidOn: last.paidOn, id: last.id } : null }
+  return { rows: page.map(toPay), next: more && last ? { paidOn: last.paidOn, id: last.id } : null }
 }
 
 export const EXPORT_ROW_CAP = 5_000
@@ -107,13 +110,14 @@ export const EXPORT_ROW_CAP = 5_000
 export async function paymentsForYear(staff: StaffOk, startYear: number): Promise<PaymentsPage['rows']> {
   adminOnly(staff)
   const { from, to } = fyRange(startYear)
-  return adminDb().select({
+  const rows = await adminDb().select({
     id: costPayments.id, itemId: costPayments.itemId, periodFor: costPayments.periodFor, paidOn: costPayments.paidOn, amount: costPayments.amount,
     currency: costPayments.currency, inrPaise: costPayments.inrPaise, gstPaise: costPayments.gstPaise, createdAt: costPayments.createdAt,
     category: costItems.category, name: costItems.name, vendor: costItems.vendor,
   }).from(costPayments).innerJoin(costItems, eq(costItems.id, costPayments.itemId))
     .where(and(gte(costPayments.paidOn, from), sql`${costPayments.paidOn} <= ${to}::date`))
     .orderBy(asc(costPayments.paidOn), asc(costPayments.id)).limit(EXPORT_ROW_CAP)
+  return rows.map(toPay)
 }
 
 // ── Writes ──────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ describe('parseAdd', () => {
   })
   it('names each wrong field in words', () => {
     expect(parseAdd({ ...recurring, name: '   ' }, TODAY)).toEqual({ ok: false, fields: { name: 'Add a name.' } })
-    expect(parseAdd({ ...recurring, amount: '0', anchorOn: '2026-02-30' }, TODAY)).toEqual({ ok: false, fields: { amount: 'Enter an amount above zero.', anchorOn: 'Pick a date.' } })
+    expect(parseAdd({ ...recurring, amount: '0', anchorOn: '2026-02-30' }, TODAY)).toEqual({ ok: false, fields: { amount: 'Enter an amount above zero.', anchorOn: 'Pick the next due date.' } })
   })
   it('a repeating cost needs its cadence and a date no more than two years out', () => {
     expect(parseAdd({ ...recurring, cadence: '' }, TODAY).ok).toBe(false)

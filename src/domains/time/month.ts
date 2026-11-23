@@ -32,3 +32,13 @@ export function addMonths(from: Date, n: number): Date {
   const last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate()
   return new Date(Date.UTC(y, mo, Math.min(from.getUTCDate(), last), from.getUTCHours(), from.getUTCMinutes(), from.getUTCSeconds(), from.getUTCMilliseconds()))
 }
+
+/** "YYYY-MM" of the IST month `offset` months from the one a "YYYY-MM-DD" day falls in (0 this month, -1 last). */
+export function monthKey(day: string, offset = 0): string {
+  return addMonths(new Date(`${day.slice(0, 7)}-01T00:00:00Z`), offset).toISOString().slice(0, 7)
+}
+
+/** The first and last day of a "YYYY-MM" month, as day strings. */
+export function monthRange(ym: string): { from: string; to: string } {
+  return { from: `${ym}-01`, to: new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0)).toISOString().slice(0, 10) }
+}

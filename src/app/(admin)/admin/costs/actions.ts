@@ -20,16 +20,16 @@ import { parseAdd, parseEdit, parseEnd, parseIds, parsePaid } from './input'
 // =============================================================================
 
 const ERROR_WORDS: Record<CostError, string> = {
-  not_found: 'That cost is gone. Reload the page.',
+  not_found: 'We couldn’t find that cost. Reload the page.',
   already_paid: 'That bill is already marked paid.',
-  not_due: 'That date is not a bill for this cost.',
+  not_due: 'Pick a date this cost bills on.',
   locked: 'A paid cost keeps its schedule. End it and add a new one.',
   confirm_first: STAFF_CONFIRM_FIRST,
-  bad_input: 'Check the highlighted fields. Nothing was changed.',
-  too_many: 'You track 500 costs. End one first.',
-  unknown: 'We could not save that. Nothing was changed.',
+  bad_input: 'Fix the marked fields. Nothing was changed.',
+  too_many: 'You have 500 costs, the most we allow. End one to add another.',
+  unknown: 'We couldn’t save that. Nothing was changed.',
 }
-const CHECK_FIELDS = 'Check the highlighted fields.'
+const CHECK_FIELDS = 'Fix the marked fields.'
 const today = () => istDayKey(new Date()) // a server action: the real clock is right here
 const raw = (form: FormData) => Object.fromEntries([...form].filter(([, v]) => typeof v === 'string')) as Record<string, string>
 const failed = (tag: string) => (e: unknown) => { console.error(`[costs.${tag}]`, errName(e)); return { ok: false as const, error: 'unknown' as const } }
@@ -49,7 +49,7 @@ export async function addCostAction(form: FormData): Promise<ActionResult & { id
   return { ok: `${p.data.name} added.`, id: r.id }
 }
 
-export async function markPaidAction(form: FormData): Promise<ActionResult & { itemId?: string; paymentId?: string }> {
+export async function markPaidAction(form: FormData): Promise<ActionResult & { itemId?: string; paymentId?: string; inrPaise?: number }> {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
   const p = parsePaid(raw(form), today())
@@ -57,7 +57,8 @@ export async function markPaidAction(form: FormData): Promise<ActionResult & { i
   const r = await markPaid(staff, p.data.itemId, p.data.input, today()).catch(failed('pay'))
   if (!r.ok) return r.error === 'bad_input' && p.data.currency === 'USD' ? { fields: { inr: `Use a rate between ₹${FX_RATE_BAND_E4[0] / 1e4} and ₹${FX_RATE_BAND_E4[1] / 1e4} to the dollar.` } } : { error: ERROR_WORDS[r.error] }
   revalidatePath('/admin/costs')
-  return { ok: 'Marked paid.', itemId: p.data.itemId, paymentId: r.paymentId }
+  const inrPaise = p.data.currency === 'INR' ? p.data.input.amount : p.data.input.inrPaise
+  return { ok: 'Marked paid.', itemId: p.data.itemId, paymentId: r.paymentId, ...(inrPaise ? { inrPaise } : {}) }
 }
 
 export async function undoPaymentAction(form: FormData): Promise<ActionResult> {
