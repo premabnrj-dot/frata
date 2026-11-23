@@ -24,8 +24,9 @@ import { addCostAction, editCostAction, endCostAction, markPaidAction, undoPayme
 // =============================================================================
 
 const SYMBOL: Record<CostCurrency, string> = { INR: '₹', USD: '$' }
+// The mistake sits beside the label, never inside it: a field's name stays "Name", not "Name Add a name.".
 const Row = ({ label, name, children }: { label: string; name: string; children: React.ReactNode }) => (
-  <label className="flex min-w-0 flex-col gap-1 text-sm"><span className="font-medium">{label}</span>{children}<FieldMessage name={name} /></label>
+  <div className="flex min-w-0 flex-col gap-1 text-sm"><label className="flex min-w-0 flex-col gap-1"><span className="font-medium">{label}</span>{children}</label><FieldMessage name={name} /></div>
 )
 const categoryOptions = COST_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_WORDS[c]}</option>)
 
