@@ -49,8 +49,12 @@ const SETTING = /set_config\s*\(\s*['"`]app\.(studio_bind|partner_id)['"`]/
 const DEFINERS = {
   app_studio_partner: ['src/lib/studio/with-studio.ts'],
   app_studio_bind_turn: ['src/lib/studio/as-turn.ts', 'src/lib/studio/advance.ts'],
-  app_turn_actor: ['src/lib/db/studio.ts'],
+  app_turn_actor: ['src/lib/studio/as-turn.ts'],
   app_studio_due: ['src/lib/db/studio.ts'],
+  app_studio_sweep_binds: ['src/lib/db/studio.ts'],
+  app_studio_new_session: ['src/lib/studio/sessions.ts'],
+  app_studio_set_vendor: ['src/lib/studio/sessions.ts'],
+  app_studio_set_key: ['src/lib/studio/sessions.ts'],
   app_studio_open_turn: ['src/lib/studio/sessions.ts'],
   app_studio_spend_of: ['src/lib/studio/sessions.ts', 'src/lib/studio/advance.ts'],
   app_studio_close_turn: ['src/lib/studio/advance.ts', 'src/lib/studio/sessions.ts'],

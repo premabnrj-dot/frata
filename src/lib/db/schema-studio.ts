@@ -2,7 +2,8 @@
 // FILE: src/lib/db/schema-studio.ts — STUDIO'S AGENT: SESSIONS, TURNS, TOOL CALLS, PROPOSALS, LINES (plan
 // docs/plans/2026-11-22-v3a-runtime.md R2; spec docs/specs/2026-11-16-studio-agent.md § 4–6; ADR-0020 § 4–5).
 // Shop tables carry `tenant_id` AND `partner_id`: a restrictive policy matches both the store and the partner the caller
-// is working for (`app.partner_id`, set only by the definers app_studio_partner and app_studio_bind), and composite
+// is bound to in this transaction (a `studio_binds` row only the definers app_studio_partner and app_studio_bind_turn
+// write; app_current_partner()), and composite
 // foreign keys tie every row to its session's store and partner, so the brand's own staff or a later partner never read
 // a session. No frata_builder or frata_admin grant in V3a. A turn's state is its timestamps (src/domains/studio/turn.ts);
 // a session's end is `ended_at`. No cost or credit lives here: spend and each turn's person and step-up are
@@ -12,7 +13,8 @@
 import { sql } from 'drizzle-orm'
 import { bigint, boolean, check, foreignKey, index, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { at, createdAt, id, tenants } from './schema'
-import { partnerMembers, partners } from './schema-partners'
+import { partnerMembers, partners, partnerStepups } from './schema-partners'
+import { staffStepups } from './schema-staff'
 import { FAIL_REASONS } from '@/domains/studio/turn'
 import { PROPOSAL_KINDS } from '@/domains/studio/proposals'
 import { sqlList } from '@/domains/tenancy/roles'
@@ -76,6 +78,7 @@ export const studioTurns = pgTable('studio_turns', {
 }, (t) => [
   foreignKey({ name: 'studio_turns_session', columns: [t.tenantId, t.partnerId, t.sessionId], foreignColumns: [studioSessions.tenantId, studioSessions.partnerId, studioSessions.id] }).onDelete('cascade'),
   unique('studio_turns_scope').on(t.tenantId, t.partnerId, t.id),
+  unique('studio_turns_full').on(t.tenantId, t.partnerId, t.sessionId, t.id),
   uniqueIndex('studio_turns_one_open').on(t.sessionId).where(sql`${t.endedAt} is null and ${t.pausedAt} is null and ${t.failedAt} is null`),
   index('studio_turns_session').on(t.sessionId, t.sentAt),
   check('studio_turns_reason', sql`(${t.failedAt} is null) = (${t.failedReason} is null) and (${t.failedReason} is null or ${t.failedReason} in (${sql.raw(sqlList(FAIL_REASONS))}))`),
@@ -99,7 +102,7 @@ export const studioToolCalls = pgTable('studio_tool_calls', {
   answeredAt: at('answered_at'),
 }, (t) => [
   foreignKey({ name: 'studio_tool_calls_session', columns: [t.tenantId, t.partnerId, t.sessionId], foreignColumns: [studioSessions.tenantId, studioSessions.partnerId, studioSessions.id] }).onDelete('cascade'),
-  foreignKey({ name: 'studio_tool_calls_turn', columns: [t.tenantId, t.partnerId, t.turnId], foreignColumns: [studioTurns.tenantId, studioTurns.partnerId, studioTurns.id] }).onDelete('cascade'),
+  foreignKey({ name: 'studio_tool_calls_turn', columns: [t.tenantId, t.partnerId, t.sessionId, t.turnId], foreignColumns: [studioTurns.tenantId, studioTurns.partnerId, studioTurns.sessionId, studioTurns.id] }).onDelete('cascade'),
   unique('studio_tool_calls_once').on(t.sessionId, t.toolUseId),
   unique('studio_tool_calls_scope').on(t.tenantId, t.partnerId, t.id),
   index('studio_tool_calls_pending').on(t.sessionId).where(sql`${t.answeredAt} is null`),
@@ -156,13 +159,13 @@ export const studioMessages = pgTable('studio_messages', {
 
 // ── Platform scope, definer-only: no role holds any privilege; a restrictive deny-all policy (drizzle/0164). ──────
 
-/** The person behind an open turn and the step-ups they sent it with: read only by app_turn_actor; deleted at close. */
+/** The person behind an open turn and the step-up ROWS they sent it with (never a hash: security review L3). Signing out
+ *  or an expired check deletes those rows, which deletes this one and ends the turn. Read only by app_turn_actor. */
 export const studioTurnKeys = pgTable('studio_turn_keys', {
   turnId: uuid('turn_id').primaryKey().references(() => studioTurns.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull(),
-  authSession: uuid('auth_session').notNull(),
-  staffHash: text('staff_hash').notNull(),
-  partnerHash: text('partner_hash').notNull(),
+  staffStepupId: uuid('staff_stepup_id').notNull().references(() => staffStepups.id, { onDelete: 'cascade' }),
+  partnerStepupId: uuid('partner_stepup_id').notNull().references(() => partnerStepups.id, { onDelete: 'cascade' }),
   createdAt: createdAt(),
 })
 
@@ -207,5 +210,10 @@ export const studioBinds = pgTable('studio_binds', {
   xact: text('xact').notNull(),
   tenantId: uuid('tenant_id').notNull(),
   partnerId: uuid('partner_id').notNull(),
+  /** The person the bind proves (security review M3): sessions and turns are theirs only. */
+  userId: uuid('user_id').notNull(),
+  memberId: uuid('member_id').notNull(),
+  staffStepupId: uuid('staff_stepup_id'),
+  partnerStepupId: uuid('partner_stepup_id'),
   createdAt: createdAt(),
 }, (t) => [index('studio_binds_age').on(t.createdAt)])

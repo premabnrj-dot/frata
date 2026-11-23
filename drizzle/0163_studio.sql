@@ -3,6 +3,10 @@ CREATE TABLE "studio_binds" (
 	"xact" text NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"partner_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"staff_stepup_id" uuid,
+	"partner_stepup_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -117,9 +121,8 @@ CREATE TABLE "studio_tool_calls" (
 CREATE TABLE "studio_turn_keys" (
 	"turn_id" uuid PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
-	"auth_session" uuid NOT NULL,
-	"staff_hash" text NOT NULL,
-	"partner_hash" text NOT NULL,
+	"staff_stepup_id" uuid NOT NULL,
+	"partner_stepup_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -136,6 +139,7 @@ CREATE TABLE "studio_turns" (
 	"failed_at" timestamp with time zone,
 	"failed_reason" text,
 	CONSTRAINT "studio_turns_scope" UNIQUE("tenant_id","partner_id","id"),
+	CONSTRAINT "studio_turns_full" UNIQUE("tenant_id","partner_id","session_id","id"),
 	CONSTRAINT "studio_turns_reason" CHECK (("studio_turns"."failed_at" is null) = ("studio_turns"."failed_reason" is null) and ("studio_turns"."failed_reason" is null or "studio_turns"."failed_reason" in ('start','send','budget','runtime','actor','switch','expired','workspace')))
 );
 --> statement-breakpoint
@@ -149,8 +153,10 @@ ALTER TABLE "studio_sessions" ADD CONSTRAINT "studio_sessions_partner_member_id_
 ALTER TABLE "studio_spend_sessions" ADD CONSTRAINT "studio_spend_sessions_session_id_studio_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."studio_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_spend_turns" ADD CONSTRAINT "studio_spend_turns_turn_id_studio_turns_id_fk" FOREIGN KEY ("turn_id") REFERENCES "public"."studio_turns"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_tool_calls" ADD CONSTRAINT "studio_tool_calls_session" FOREIGN KEY ("tenant_id","partner_id","session_id") REFERENCES "public"."studio_sessions"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "studio_tool_calls" ADD CONSTRAINT "studio_tool_calls_turn" FOREIGN KEY ("tenant_id","partner_id","turn_id") REFERENCES "public"."studio_turns"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "studio_tool_calls" ADD CONSTRAINT "studio_tool_calls_turn" FOREIGN KEY ("tenant_id","partner_id","session_id","turn_id") REFERENCES "public"."studio_turns"("tenant_id","partner_id","session_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_turn_keys" ADD CONSTRAINT "studio_turn_keys_turn_id_studio_turns_id_fk" FOREIGN KEY ("turn_id") REFERENCES "public"."studio_turns"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "studio_turn_keys" ADD CONSTRAINT "studio_turn_keys_staff_stepup_id_staff_stepups_id_fk" FOREIGN KEY ("staff_stepup_id") REFERENCES "public"."staff_stepups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "studio_turn_keys" ADD CONSTRAINT "studio_turn_keys_partner_stepup_id_partner_stepups_id_fk" FOREIGN KEY ("partner_stepup_id") REFERENCES "public"."partner_stepups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "studio_turns" ADD CONSTRAINT "studio_turns_session" FOREIGN KEY ("tenant_id","partner_id","session_id") REFERENCES "public"."studio_sessions"("tenant_id","partner_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "studio_binds_age" ON "studio_binds" USING btree ("created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "studio_messages_event" ON "studio_messages" USING btree ("session_id","event_id") WHERE "studio_messages"."event_id" is not null;--> statement-breakpoint

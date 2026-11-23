@@ -5320,15 +5320,16 @@ do $$ declare who uuid := '99999999-9999-9999-9999-999999999999'; begin
 end $$;
 rollback;
 -- § 91 · Studio's agent V3a (drizzle/0163–0164; docs/plans/2026-11-22-v3a-runtime.md R2; ADR-0020 § 4–5 as amended;
--- the R2 tenancy audit folded in). A store and a partner read only their own sessions. The partner lock is held by the
--- database: app_current_partner() answers only for a bind row written in THIS transaction by app_studio_partner (the
--- signed-in person: Frrata staff and partner step-ups both REAL and live, an owner or an assigned Lead, on THIS store)
--- or app_studio_bind_turn (an open turn whose person is still live); a variable set by hand binds nothing. A later
--- partner, the brand's own owner, a support visit, a non-staff partner person, an unassigned Lead and a Lead who owns
--- another store bind nothing; the passkeys-off switch opens nothing; sign-out (its step-up rows deleted) ends a cron
--- turn. Spend and closing a turn need the turn's partner bound; ending a session needs none and reads nothing. The
--- turn's person and every spend row are definer-only; Send's caps hold under the lock; closing settles the measured
--- cost uncapped; the cron reads ids only. Everything is rolled back.
+-- the R2 tenancy audits and security review folded in). A store and a partner read only their own sessions. The lock is
+-- held by the database: app_current_partner() answers only for a bind row of THIS transaction (a token replayed in
+-- another, or a bind rolled back with its savepoint, binds nothing), written only by app_studio_partner (the signed-in
+-- person: Frrata staff and partner step-ups REAL and live, an owner or an assigned Lead, on THIS store) or
+-- app_studio_bind_turn (an open turn whose person is still live); a variable set by hand binds nothing. The bind proves a
+-- person: sessions are made for, turns opened on, spend read and turns closed for that person only. A later partner, the
+-- brand's own owner, a support visit, a non-staff partner person, an unassigned Lead and a Lead who owns another store
+-- bind nothing; the passkeys-off switch opens nothing; sign-out (its step-up row deleted) ends a turn. Caps are required,
+-- held to hard ceilings, the day worked out in the database. Vendor ids and the build key are written once. The cron
+-- ends, cleans and deletes without a bind and settles at most the reserve then. Everything is undone at the end.
 begin;
 insert into tenants (id, slug, name) values
   ('c9100000-0000-0000-0000-000000000001', 'proof-91-a', 'Proof 91 A'), ('c9100000-0000-0000-0000-000000000002', 'proof-91-b', 'Proof 91 B');
@@ -5371,47 +5372,60 @@ set local role frata_app;
 do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; b constant uuid := 'c9100000-0000-0000-0000-000000000002';
   p constant uuid := 'c9100000-0000-0000-0000-0000000000f1'; q constant uuid := 'c9100000-0000-0000-0000-0000000000f2';
   po constant uuid := 'a9100000-0000-0000-0000-000000000001'; lead constant uuid := 'a9100000-0000-0000-0000-000000000002';
-  ss constant uuid := 'c9100000-0000-0000-0000-00000000ee01'; s uuid; t uuid; t2 uuid; n int; r record;
+  ss constant uuid := 'c9100000-0000-0000-0000-00000000ee01'; s uuid; so uuid; t uuid; t2 uuid; n int; r record;
 begin
   -- Nothing with no store set; no partner bound with no store set.
   if exists (select 1 from studio_sessions) then raise exception 'FAIL: 91 a session with no store set'; end if;
-  if app_studio_partner(po, ss, 'sh91-' || (po)::text, 'ph91-' || (po)::text) is not null then raise exception 'FAIL: 91 bound a partner with no store set'; end if;
+  if app_studio_partner(po, ss, 'sh91-' || po, 'ph91-' || po) is not null then raise exception 'FAIL: 91 bound a partner with no store set'; end if;
   perform set_config('app.tenant_id', a::text, true);
   -- Who binds on A: the partner owner and the assigned staff Lead, with real step-ups; nobody else.
-  if app_studio_partner('a9100000-0000-0000-0000-000000000003', ss, 'sh91-' || ('a9100000-0000-0000-0000-000000000003')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000003')::text) is not null then raise exception 'FAIL: 91 a partner person who is not staff bound'; end if;
-  if app_studio_partner('a9100000-0000-0000-0000-000000000004', ss, 'sh91-' || ('a9100000-0000-0000-0000-000000000004')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000004')::text) is not null then raise exception 'FAIL: 91 an unassigned Lead bound'; end if;
-  if app_studio_partner('a9100000-0000-0000-0000-000000000005', ss, 'sh91-' || ('a9100000-0000-0000-0000-000000000005')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000005')::text) is not null then raise exception 'FAIL: 91 the brand''s owner bound a partner'; end if;
-  if app_studio_partner('a9100000-0000-0000-0000-000000000006', ss, 'sh91-' || ('a9100000-0000-0000-0000-000000000006')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000006')::text) is not null then raise exception 'FAIL: 91 a support person with no membership bound'; end if;
-  if app_studio_partner('a9100000-0000-0000-0000-000000000009', ss, 'sh91-' || ('a9100000-0000-0000-0000-000000000009')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000009')::text) is not null then raise exception 'FAIL: 91 an unlinked partner bound'; end if;
-  if app_studio_partner(lead, ss, 'sh91-' || lead::text, 'wrong') is not null then raise exception 'FAIL: 91 bound with a wrong partner step-up'; end if;
-  if app_studio_partner(lead, ss, 'wrong', 'ph91-' || lead::text) is not null then raise exception 'FAIL: 91 bound with a wrong staff step-up'; end if;
-  if app_studio_partner(lead, gen_random_uuid(), 'sh91-' || (lead)::text, 'ph91-' || (lead)::text) is not null then raise exception 'FAIL: 91 bound from another browser session'; end if;
-  -- A variable set by hand binds nothing.
+  if app_studio_partner('a9100000-0000-0000-0000-000000000003', ss, 'sh91-a9100000-0000-0000-0000-000000000003', 'ph91-a9100000-0000-0000-0000-000000000003') is not null then raise exception 'FAIL: 91 a partner person who is not staff bound'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000004', ss, 'sh91-a9100000-0000-0000-0000-000000000004', 'ph91-a9100000-0000-0000-0000-000000000004') is not null then raise exception 'FAIL: 91 an unassigned Lead bound'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000005', ss, 'sh91-a9100000-0000-0000-0000-000000000005', 'ph91-a9100000-0000-0000-0000-000000000005') is not null then raise exception 'FAIL: 91 the brand''s owner bound a partner'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000006', ss, 'sh91-a9100000-0000-0000-0000-000000000006', 'ph91-a9100000-0000-0000-0000-000000000006') is not null then raise exception 'FAIL: 91 a support person with no membership bound'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000009', ss, 'sh91-a9100000-0000-0000-0000-000000000009', 'ph91-a9100000-0000-0000-0000-000000000009') is not null then raise exception 'FAIL: 91 an unlinked partner bound'; end if;
+  if app_studio_partner(lead, ss, 'sh91-' || lead, 'wrong') is not null then raise exception 'FAIL: 91 bound with a wrong partner step-up'; end if;
+  if app_studio_partner(lead, ss, 'wrong', 'ph91-' || lead) is not null then raise exception 'FAIL: 91 bound with a wrong staff step-up'; end if;
+  if app_studio_partner(lead, gen_random_uuid(), 'sh91-' || lead, 'ph91-' || lead) is not null then raise exception 'FAIL: 91 bound from another browser session'; end if;
+  -- A variable set by hand binds nothing; frata_app makes no session by hand.
   perform set_config('app.studio_bind', 'made-up', true); perform set_config('app.partner_id', p::text, true);
   if app_current_partner() is not null then raise exception 'FAIL: 91 a hand-set variable bound a partner'; end if;
-  if app_studio_partner(lead, ss, 'sh91-' || (lead)::text, 'ph91-' || (lead)::text) is distinct from p then raise exception 'FAIL: 91 the assigned staff Lead did not bind'; end if;
-  -- A session and a turn for the Lead; the caps under the lock.
-  insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id) values (a, p, 'c9100000-0000-0000-0000-0000000000a2', lead) returning id into s;
-  begin insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id) values (b, p, 'c9100000-0000-0000-0000-0000000000a2', lead);
-    raise exception 'FAIL: 91 A wrote a session into B'; exception when insufficient_privilege then null; end;
-  begin insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id) values (a, q, 'c9100000-0000-0000-0000-0000000000a9', lead);
-    raise exception 'FAIL: 91 a session for another partner'; exception when insufficient_privilege then null; end;
-  begin perform app_studio_open_turn(s, lead, ss, 'sh91-' || lead::text, 'ph91-' || lead::text, 600000, '2026-11-22', 500000, 10000000, 3, true); raise exception 'FAIL: 91 a turn over the person''s day';
-  exception when sqlstate 'P0001' then if sqlerrm <> 'person_day' then raise; end if; end;
-  begin perform app_studio_open_turn(s, lead, ss, 'sh91-' || lead::text, 'ph91-' || lead::text, 500000, '2026-11-22', 3000000, 400000, 3, true); raise exception 'FAIL: 91 a turn over the platform day';
-  exception when sqlstate 'P0001' then if sqlerrm <> 'platform_day' then raise; end if; end;
-  begin perform app_studio_open_turn(s, lead, ss, 'sh91-' || lead::text, 'ph91-' || lead::text, 500000, '2026-11-22', 3000000, 10000000, 0, true); raise exception 'FAIL: 91 a session over the open cap';
-  exception when sqlstate 'P0001' then if sqlerrm <> 'sessions' then raise; end if; end;
-  begin perform app_studio_open_turn(s, po, ss, 'sh91-' || po::text, 'ph91-' || po::text, 500000, '2026-11-22', 3000000, 10000000, 3, true); raise exception 'FAIL: 91 a turn on another person''s session';
+  begin perform app_studio_new_session(); raise exception 'FAIL: 91 a session with nobody bound'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_bound' then raise; end if; end;
+  begin insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id) values (a, p, 'c9100000-0000-0000-0000-0000000000a2', lead);
+    raise exception 'FAIL: 91 frata_app made a session by hand'; exception when insufficient_privilege then null; end;
+  -- The partner owner binds and makes their own session; it is theirs, not the Lead's.
+  if app_studio_partner(po, ss, 'sh91-' || po, 'ph91-' || po) is distinct from p then raise exception 'FAIL: 91 the partner owner did not bind'; end if;
+  so := app_studio_new_session();
+  if (select user_id from studio_sessions where id = so) <> po then raise exception 'FAIL: 91 the session is not the bound person''s'; end if;
+  -- The Lead binds and makes theirs; the owner's session is not the Lead's to use.
+  if app_studio_partner(lead, ss, 'sh91-' || lead, 'ph91-' || lead) is distinct from p then raise exception 'FAIL: 91 the assigned staff Lead did not bind'; end if;
+  s := app_studio_new_session();
+  begin perform app_studio_open_turn(so, 500000, 3000000, 10000000, 3); raise exception 'FAIL: 91 a turn on another person''s session';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
-  t := app_studio_open_turn(s, lead, ss, 'sh91-' || lead::text, 'ph91-' || lead::text, 500000, '2026-11-22', 3000000, 10000000, 3, true);
-  begin perform app_studio_open_turn(s, lead, ss, 'sh91-' || lead::text, 'ph91-' || lead::text, 500000, '2026-11-22', 3000000, 10000000, 3, false); raise exception 'FAIL: 91 two open turns';
+  if exists (select 1 from app_studio_spend_of(so)) then raise exception 'FAIL: 91 read another person''s session spend'; end if;
+  -- Caps: required, held to the ceilings, checked under the lock.
+  begin perform app_studio_open_turn(s, 500000, null, 10000000, 3); raise exception 'FAIL: 91 a null cap'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 9000000000, 90000000000, 900000000000, 3); raise exception 'FAIL: 91 caps over the ceilings'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 600000, 500000, 10000000, 3); raise exception 'FAIL: 91 a turn over the person''s day';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'person_day' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 500000, 3000000, 400000, 3); raise exception 'FAIL: 91 a turn over the platform day';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'platform_day' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 500000, 3000000, 10000000, 1); raise exception 'FAIL: 91 a new session over the open cap (the owner''s is open)';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'sessions' then raise; end if; end;
+  t := app_studio_open_turn(s, 500000, 3000000, 10000000, 3);
+  begin perform app_studio_open_turn(s, 500000, 3000000, 10000000, 3); raise exception 'FAIL: 91 two open turns';
   exception when sqlstate 'P0001' then if sqlerrm <> 'turn_open' then raise; end if; end;
-  -- The turn's person, step-ups, spend and binds are no role's.
-  begin perform 1 from studio_turn_keys; raise exception 'FAIL: 91 frata_app read a turn''s step-ups'; exception when insufficient_privilege then null; end;
+  -- Vendor ids and the build key: once, and only a session build key of this store by this person.
+  if not app_studio_set_vendor(s, 'runtime', 'sesn_proof91') or app_studio_set_vendor(s, 'runtime', 'sesn_other') then raise exception 'FAIL: 91 a runtime id written not once'; end if;
+  begin perform app_studio_set_vendor(s, 'runtime', 'bad value!'); raise exception 'FAIL: 91 a vendor id of any shape'; exception when sqlstate 'P0001' then null; end;
+  if app_studio_set_key(s, gen_random_uuid()) then raise exception 'FAIL: 91 a build key that is no key'; end if;
+  begin update studio_sessions set build_key_id = gen_random_uuid() where id = s; raise exception 'FAIL: 91 frata_app wrote a build key id'; exception when insufficient_privilege then null; end;
+  -- The turn's person, spend and binds are no role's.
+  begin perform 1 from studio_turn_keys; raise exception 'FAIL: 91 frata_app read a turn''s person'; exception when insufficient_privilege then null; end;
   begin perform 1 from studio_spend_days; raise exception 'FAIL: 91 frata_app read spend'; exception when insufficient_privilege then null; end;
   begin perform 1 from studio_binds; raise exception 'FAIL: 91 frata_app read the binds'; exception when insufficient_privilege then null; end;
-  begin insert into studio_binds (token, xact, tenant_id, partner_id) values ('x', pg_current_xact_id()::text, a, q); raise exception 'FAIL: 91 frata_app wrote a bind'; exception when insufficient_privilege then null; end;
+  begin insert into studio_binds (token, xact, tenant_id, partner_id, user_id, member_id) values ('x', pg_current_xact_id()::text, a, q, lead, 'c9100000-0000-0000-0000-0000000000a9');
+    raise exception 'FAIL: 91 frata_app wrote a bind'; exception when insufficient_privilege then null; end;
   -- frata_app never closes a turn or ends a session by hand, and never deletes.
   begin update studio_turns set ended_at = now() where id = t; raise exception 'FAIL: 91 frata_app closed a turn by hand'; exception when insufficient_privilege then null; end;
   begin update studio_sessions set ended_at = now() where id = s; raise exception 'FAIL: 91 frata_app ended a session by hand'; exception when insufficient_privilege then null; end;
@@ -5421,19 +5435,48 @@ begin
     raise exception 'FAIL: 91 a line over 2000'; exception when check_violation then null; end;
   begin insert into studio_messages (tenant_id, partner_id, session_id, kind, proposal_id) values (a, p, s, 'card', gen_random_uuid());
     raise exception 'FAIL: 91 a card pointing at no proposal'; exception when foreign_key_violation then null; end;
-  -- asTurn's person: live now.
+  begin insert into studio_tool_calls (tenant_id, partner_id, session_id, turn_id, tool_use_id, name, input) values (a, p, so, t, 'sevt_x', 'store_facts', '{}');
+    raise exception 'FAIL: 91 a tool call on another session''s turn'; exception when foreign_key_violation then null; end;
+  -- asTurn's person: live now; closing settles uncapped.
   select * into r from app_turn_actor(t);
   if r.tenant_id is distinct from a or r.partner_id is distinct from p or r.session_id is distinct from s or r.user_id is distinct from lead then raise exception 'FAIL: 91 app_turn_actor did not answer for the Lead'; end if;
-  -- Close and settle: measured uncapped against the reserve's day.
   if not app_studio_close_turn(t, 'ended', null, 700000, 90000) then raise exception 'FAIL: 91 the turn did not close'; end if;
   if app_studio_close_turn(t, 'ended', null, 1, 1) then raise exception 'FAIL: 91 a turn closed twice'; end if;
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a closed turn still has an actor'; end if;
   select spent_micro, largest_micro into r from app_studio_spend_of(s);
   if r.spent_micro <> 700000 or r.largest_micro <> 90000 then raise exception 'FAIL: 91 the session spend is % / %', r.spent_micro, r.largest_micro; end if;
-  t2 := app_studio_open_turn(s, lead, ss, 'sh91-' || lead::text, 'ph91-' || lead::text, 2300000, '2026-11-22', 3000000, 10000000, 3, false);
+  t2 := app_studio_open_turn(s, 2300000, 3000000, 10000000, 3);
   if t2 is null then raise exception 'FAIL: 91 a turn within the cap refused'; end if;
+  -- 'stopped' needs the person; the owner bound cannot stop the Lead's session.
+  if app_studio_partner(po, ss, 'sh91-' || po, 'ph91-' || po) is distinct from p then raise exception 'FAIL: 91 rebind'; end if;
+  if app_studio_end_session(s, 'stopped', 0) then raise exception 'FAIL: 91 one person stopped another''s session'; end if;
 end $$;
 commit;
+-- A bind belongs to its transaction: a token replayed in another, or a bind rolled back with its savepoint, binds nothing.
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', true);
+  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is null then raise exception 'FAIL: 91 bind for the replay'; end if;
+  perform set_config('proof91.token', current_setting('app.studio_bind'), false);
+end $$;
+commit;
+begin; set local role frata_app;
+do $$ declare n int; begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', true);
+  perform set_config('app.studio_bind', current_setting('proof91.token'), true);
+  perform pg_current_xact_id();
+  if app_current_partner() is not null then raise exception 'FAIL: 91 a token replayed in another transaction bound'; end if;
+  if exists (select 1 from studio_sessions) then raise exception 'FAIL: 91 a replayed token read sessions'; end if;
+end $$;
+savepoint sp;
+do $$ begin
+  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is null then raise exception 'FAIL: 91 bind in a savepoint'; end if;
+end $$;
+rollback to savepoint sp;
+do $$ begin
+  if app_current_partner() is not null then raise exception 'FAIL: 91 a bind outlived its savepoint'; end if;
+end $$;
+rollback;
 -- A new transaction on A with no bind: nothing to read, spend and closing refuse, the turn binds only while live.
 begin; set local role frata_app;
 do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; b constant uuid := 'c9100000-0000-0000-0000-000000000002';
@@ -5445,54 +5488,61 @@ begin
   if t is null then raise exception 'FAIL: 91 the cron does not see the open turn'; end if;
   if exists (select 1 from app_studio_spend_of(s)) then raise exception 'FAIL: 91 spend read with no partner bound'; end if;
   if app_studio_close_turn(t, 'ended', null, 0, 0) then raise exception 'FAIL: 91 a turn closed with no partner bound'; end if;
+  if app_studio_end_session(s, 'stopped', 0) then raise exception 'FAIL: 91 a session stopped with nobody bound'; end if;
   if app_studio_bind_turn(t) is distinct from p then raise exception 'FAIL: 91 the live turn did not bind'; end if;
   select count(*) into n from studio_messages; if n <> 1 then raise exception 'FAIL: 91 the bound turn sees % lines', n; end if;
   perform set_config('app.tenant_id', b::text, true);
   if app_current_partner() is not null then raise exception 'FAIL: 91 A''s bind answered on B'; end if;
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 app_turn_actor answered for A''s turn on B'; end if;
   if app_studio_bind_turn(t) is not null then raise exception 'FAIL: 91 B bound A''s turn'; end if;
-  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-' || ('a9100000-0000-0000-0000-000000000002')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000002')::text) is not null then raise exception 'FAIL: 91 a Lead bound the partner on a store they own'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is not null then raise exception 'FAIL: 91 a Lead bound the partner on a store they own'; end if;
   if app_studio_end_session(s, 'switch', null) then raise exception 'FAIL: 91 B ended A''s session'; end if;
   if exists (select 1 from app_studio_session_facts(s)) or exists (select 1 from app_studio_cleanup_of(s)) then raise exception 'FAIL: 91 B read A''s session facts'; end if;
 end $$;
 rollback;
 -- The person goes: each removal ends the open turn's actor; the switch opens nothing; sign-out ends it.
 do $$ declare t uuid; begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', false);
   select id into t from studio_turns where tenant_id = 'c9100000-0000-0000-0000-000000000001' and ended_at is null and paused_at is null and failed_at is null;
   if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the open turn has no actor before any removal'; end if;
   delete from partner_assignments where partner_member_id = 'c9100000-0000-0000-0000-0000000000a2';
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 an unassigned Lead''s turn still runs'; end if;
   insert into partner_assignments (partner_member_id, tenant_id) values ('c9100000-0000-0000-0000-0000000000a2', 'c9100000-0000-0000-0000-000000000001');
-  delete from platform_staff where user_id = 'a9100000-0000-0000-0000-000000000002';
-  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs for someone no longer staff'; end if;
-  insert into platform_staff (user_id, email, role) values ('a9100000-0000-0000-0000-000000000002', 'lead@p91.test', 'support');
-  insert into staff_passkeys (user_id, credential_id, public_key, name) values ('a9100000-0000-0000-0000-000000000002', 'proof91-again', 'proof', 'Proof 91');
-  insert into staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at)
-    select k.user_id, 'c9100000-0000-0000-0000-00000000ee01', k.id, 'sh91-' || k.user_id, now() + interval '1 hour' from staff_passkeys k where k.user_id = 'a9100000-0000-0000-0000-000000000002';
-  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
   update partner_links set removed_at = now() where tenant_id = 'c9100000-0000-0000-0000-000000000001';
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs for an unlinked partner'; end if;
   update partner_links set removed_at = null where tenant_id = 'c9100000-0000-0000-0000-000000000001';
-  -- Sign-out deletes the partner step-up (app_partner_pk_signout): the turn stops, switch or not.
+  update staff_stepups set expires_at = now() - interval '1 second' where user_id = 'a9100000-0000-0000-0000-000000000002';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs past its staff check'; end if;
+  update staff_stepups set expires_at = now() + interval '1 hour' where user_id = 'a9100000-0000-0000-0000-000000000002';
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
+  -- Sign-out deletes the partner step-up (app_partner_pk_signout): the turn's person goes with it, switch or not.
   insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 day', 'proof', 'proof 91');
   delete from partner_stepups where user_id = 'a9100000-0000-0000-0000-000000000002';
   if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a signed-out person''s turn runs under the switch'; end if;
   delete from platform_switches where key = 'passkeys_off';
+  perform set_config('app.tenant_id', '', false);
 end $$;
--- The cron ends a dead person's session without binding: the turn fails and settles, the session ends.
+-- The cron ends a dead person's session without binding: the turn fails and settles at most its reserve.
 begin; set local role frata_app;
 do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; s uuid; r record; begin
   perform set_config('app.tenant_id', a::text, true);
   select d.session_id into s from app_studio_due(10) d where d.tenant_id = a and d.kind = 'advance';
   select * into r from app_studio_session_facts(s);
   if r.person_live is not true then raise exception 'FAIL: 91 a person with no step-up is not live (facts ignore the step-up)'; end if;
-  if not app_studio_end_session(s, 'actor', 120000) then raise exception 'FAIL: 91 the cron could not end the session'; end if;
+  if not app_studio_end_session(s, 'actor', 999999999) then raise exception 'FAIL: 91 the cron could not end the session'; end if;
   if app_studio_end_session(s, 'actor', 1) then raise exception 'FAIL: 91 a session ended twice'; end if;
   perform 1 from app_studio_cleanup_of(s);
   if not found then raise exception 'FAIL: 91 no clean-up ids for an ended session'; end if;
   if not app_studio_mark(s, 'cleaned') or app_studio_mark(s, 'cleaned') then raise exception 'FAIL: 91 cleaned not once'; end if;
+  if exists (select 1 from app_studio_cleanup_of(s)) then raise exception 'FAIL: 91 clean-up ids after cleaning'; end if;
   if app_studio_mark(s, 'deleted') is not true then raise exception 'FAIL: 91 a cleaned session could not be marked deleted'; end if;
 end $$;
-rollback;
+commit;
+do $$ begin
+  if (select measured_micro from studio_spend_turns t join studio_turns x on x.id = t.turn_id where x.failed_reason = 'actor' and x.tenant_id = 'c9100000-0000-0000-0000-000000000001') <> 2300000
+    then raise exception 'FAIL: 91 an unbound end settled above the reserve'; end if;
+  if exists (select 1 from studio_turn_keys k join studio_turns x on x.id = k.turn_id where x.tenant_id = 'c9100000-0000-0000-0000-000000000001') then raise exception 'FAIL: 91 a closed turn kept its person'; end if;
+end $$;
 -- A later partner: P unlinked, Q linked to A, Q's owner staff with a members row: Q binds and reads none of P's rows.
 update partner_links set removed_at = now() where tenant_id = 'c9100000-0000-0000-0000-000000000001';
 insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-0000000000f2', 2000, 24, 90);
@@ -5500,13 +5550,14 @@ insert into members (tenant_id, user_id, role, partner_member_id) values ('c9100
 begin; set local role frata_app;
 do $$ begin
   perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', true);
-  if app_studio_partner('a9100000-0000-0000-0000-000000000009', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-' || ('a9100000-0000-0000-0000-000000000009')::text, 'ph91-' || ('a9100000-0000-0000-0000-000000000009')::text) is distinct from 'c9100000-0000-0000-0000-0000000000f2'::uuid then raise exception 'FAIL: 91 the later partner did not bind'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000009', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000009', 'ph91-a9100000-0000-0000-0000-000000000009') is distinct from 'c9100000-0000-0000-0000-0000000000f2'::uuid then raise exception 'FAIL: 91 the later partner did not bind'; end if;
   if exists (select 1 from studio_sessions) or exists (select 1 from studio_messages) or exists (select 1 from studio_turns) then raise exception 'FAIL: 91 a later partner reads the earlier partner''s Studio'; end if;
 end $$;
 rollback;
 -- Undo the committed fixtures.
 delete from studio_sessions where tenant_id in ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-000000000002');
-delete from studio_spend_people where user_id = 'a9100000-0000-0000-0000-000000000002'; delete from studio_spend_days where day = '2026-11-22';
+delete from studio_spend_people where user_id in ('a9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000002');
+delete from studio_spend_days where day = to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD');
 delete from studio_binds;
 delete from partner_stepups where token_hash like 'ph91-%'; delete from partner_passkeys where credential_id like 'proof91p-%';
 delete from staff_stepups where token_hash like 'sh91-%'; delete from staff_passkeys where credential_id like 'proof91-%';
@@ -5532,18 +5583,26 @@ do $$ declare r text; tb text; fn text; begin
     if has_table_privilege('frata_app', 'public.' || tb, 'select') or has_any_column_privilege('frata_app', 'public.' || tb, 'select') or has_table_privilege('frata_app', 'public.' || tb, 'insert')
       then raise exception 'FAIL: 91 frata_app reaches %', tb; end if;
   end loop;
-  if has_column_privilege('frata_app', 'public.studio_sessions', 'ended_at', 'update') then raise exception 'FAIL: 91 frata_app can end a session by hand'; end if;
-  foreach fn in array array['app_current_partner()', 'app_studio_partner(uuid, uuid, text, text)', 'app_studio_bind_turn(uuid)', 'app_studio_open_turn(uuid, uuid, uuid, text, text, bigint, text, bigint, bigint, integer, boolean)',
-    'app_turn_actor(uuid)', 'app_studio_spend_of(uuid)', 'app_studio_close_turn(uuid, text, text, bigint, bigint)', 'app_studio_end_session(uuid, text, bigint)',
+  foreach fn in array array['ended_at', 'end_reason', 'build_key_id', 'runtime_id', 'vault_id', 'file_id', 'cleaned_at', 'deleted_at', 'user_id', 'partner_id', 'tenant_id'] loop
+    if has_column_privilege('frata_app', 'public.studio_sessions', fn, 'update') then raise exception 'FAIL: 91 frata_app can write studio_sessions.% by hand', fn; end if;
+  end loop;
+  if has_table_privilege('frata_app', 'public.studio_sessions', 'insert') or has_table_privilege('frata_app', 'public.studio_turns', 'insert') then raise exception 'FAIL: 91 frata_app makes sessions or turns by hand'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_sequence_privilege(r, 'public.studio_messages_seq_seq', 'usage') then raise exception 'FAIL: 91 % holds the lines sequence', r; end if;
+  end loop;
+  foreach fn in array array['app_current_partner()', 'app_studio_sweep_binds()', 'app_studio_partner(uuid, uuid, text, text)', 'app_studio_bind_turn(uuid)', 'app_turn_actor(uuid)',
+    'app_studio_new_session()', 'app_studio_set_vendor(uuid, text, text)', 'app_studio_set_key(uuid, uuid)', 'app_studio_open_turn(uuid, bigint, bigint, bigint, integer)',
+    'app_studio_spend_of(uuid)', 'app_studio_close_turn(uuid, text, text, bigint, bigint)', 'app_studio_end_session(uuid, text, bigint)',
     'app_studio_session_facts(uuid)', 'app_studio_cleanup_of(uuid)', 'app_studio_mark(uuid, text)', 'app_studio_due(integer)',
-    'app_studio_staff_ok(uuid, uuid, text)', 'app_studio_person(uuid, uuid)', 'app_studio_member(uuid, uuid, text, uuid)', 'app_studio_write_bind(uuid, uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint)'] loop
+    'app_studio_bound()', 'app_studio_write_bind(uuid, uuid, uuid, uuid, uuid, uuid)', 'app_studio_person(uuid, uuid)', 'app_studio_proved(uuid, uuid, uuid, uuid)',
+    'app_studio_own_session(uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint, boolean)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
       if has_function_privilege(r, 'public.' || fn, 'execute') then raise exception 'FAIL: 91 % can run %', r, fn; end if;
     end loop;
     if not coalesce((select p.prosecdef and 'search_path=""' = any(p.proconfig) from pg_proc p where p.oid = ('public.' || fn)::regprocedure), false)
       then raise exception 'FAIL: 91 % is not a definer with an empty search_path', fn; end if;
   end loop;
-  foreach fn in array array['app_studio_staff_ok(uuid, uuid, text)', 'app_studio_person(uuid, uuid)', 'app_studio_member(uuid, uuid, text, uuid)', 'app_studio_write_bind(uuid, uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint)'] loop
+  foreach fn in array array['app_studio_bound()', 'app_studio_write_bind(uuid, uuid, uuid, uuid, uuid, uuid)', 'app_studio_person(uuid, uuid)', 'app_studio_proved(uuid, uuid, uuid, uuid)', 'app_studio_own_session(uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint, boolean)'] loop
     if has_function_privilege('frata_app', 'public.' || fn, 'execute') then raise exception 'FAIL: 91 frata_app can run the internal %', fn; end if;
   end loop;
   if (select pg_get_function_result('app_studio_due(integer)'::regprocedure)) <> 'TABLE(session_id uuid, tenant_id uuid, turn_id uuid, kind text)' then raise exception 'FAIL: 91 the cron list returns more than ids'; end if;

@@ -1,5 +1,5 @@
 {
-  "id": "82552ec7-cd60-40e9-acc4-7c44e1c15f0f",
+  "id": "ec8f8899-3343-402e-815e-0b112b3cf08c",
   "prevId": "351e778f-e239-4137-a050-8947e34ca2b0",
   "version": "7",
   "dialect": "postgresql",
@@ -19926,6 +19926,30 @@
           "primaryKey": false,
           "notNull": true
         },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_stepup_id": {
+          "name": "staff_stepup_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partner_stepup_id": {
+          "name": "partner_stepup_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -20886,11 +20910,13 @@
           "columnsFrom": [
             "tenant_id",
             "partner_id",
+            "session_id",
             "turn_id"
           ],
           "columnsTo": [
             "tenant_id",
             "partner_id",
+            "session_id",
             "id"
           ],
           "onDelete": "cascade",
@@ -20942,21 +20968,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "auth_session": {
-          "name": "auth_session",
+        "staff_stepup_id": {
+          "name": "staff_stepup_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "staff_hash": {
-          "name": "staff_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "partner_hash": {
-          "name": "partner_hash",
-          "type": "text",
+        "partner_stepup_id": {
+          "name": "partner_stepup_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -20976,6 +20996,32 @@
           "tableTo": "studio_turns",
           "columnsFrom": [
             "turn_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "studio_turn_keys_staff_stepup_id_staff_stepups_id_fk": {
+          "name": "studio_turn_keys_staff_stepup_id_staff_stepups_id_fk",
+          "tableFrom": "studio_turn_keys",
+          "tableTo": "staff_stepups",
+          "columnsFrom": [
+            "staff_stepup_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "studio_turn_keys_partner_stepup_id_partner_stepups_id_fk": {
+          "name": "studio_turn_keys_partner_stepup_id_partner_stepups_id_fk",
+          "tableFrom": "studio_turn_keys",
+          "tableTo": "partner_stepups",
+          "columnsFrom": [
+            "partner_stepup_id"
           ],
           "columnsTo": [
             "id"
@@ -21129,6 +21175,16 @@
           "columns": [
             "tenant_id",
             "partner_id",
+            "id"
+          ]
+        },
+        "studio_turns_full": {
+          "name": "studio_turns_full",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "partner_id",
+            "session_id",
             "id"
           ]
         }
