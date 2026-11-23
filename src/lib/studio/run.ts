@@ -8,6 +8,7 @@ import { paise } from '@/domains/money/paise'
 import { billingGatewayIsTest, cancelToken, chargeRecurring, createRenewalOrder, fetchPayment, isBillingGatewayConfigured, orderByReceipt, orderPayments, paymentRefunds, refundPayment } from '@/lib/billing/gateway'
 import { frrataSeller } from '@/lib/billing/seller'
 import { system, type NoticeRow, type RenewalRow } from '@/lib/db/partner-credits'
+import { applyBillingEvent, billingUnapplied } from '@/lib/db/platform'
 import { sendEmail } from '@/lib/email/ses'
 import { EMAIL_NOTICES_FROM, SES_CONFIG_NOTICES, isEmailConfigured } from '@/lib/env'
 import { CONSOLE_HOST } from '@/lib/public-env'
@@ -18,6 +19,7 @@ import { errName } from '@/lib/log'
 // =============================================================================
 // FILE: src/lib/studio/run.ts — STUDIO CREDITS' HOURLY RUN (/api/cron/credits; C1·3, C1·6; speed H3: its own route, not
 // the daily outbox). In order, each under the run's deadline:
+//   0. webhook events stored but not yet applied (drizzle/0165 routes a partner's to the ledger);
 //   1. attempts that never came back: ask the gateway about OUR order; apply, or close when nothing was taken;
 //   2. renewals: renewalStep decides — a notice (the attempt row and its email, amount frozen), a debit (claimed once,
 //      never resent), the seat's end, or its lapse to Partner on day 7;
@@ -33,6 +35,8 @@ export async function runCredits(now: Date, deadline: number): Promise<RunResult
   const out: RunResult = { settled: 0, notices: 0, debits: 0, ended: 0, orders: 0, refunds: 0, cancels: 0, emails: 0 }
   const live = () => Date.now() < deadline
   const configured = isBillingGatewayConfigured(), test = billingGatewayIsTest()
+  // Webhook events stored but not applied (a failed after(), a busy invoice counter): they may settle what follows.
+  await step('events', async () => { for (const id of await billingUnapplied(5)) { if (!live()) break; await applyBillingEvent(id).catch((e) => console.error('[credits] apply event', errName(e))) } })
   if (configured) {
     await step('settle', async () => { out.settled = await settleStragglers(now, live) })
     await step('renewals', async () => { const r = await renewals(now, test, live); out.notices = r.notices; out.debits = r.debits; out.ended = r.ended })

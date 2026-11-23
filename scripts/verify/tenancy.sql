@@ -4205,6 +4205,36 @@ begin
   if exists (select 1 from app_pc_token_cancels(10) x where x.partner_id = gp) then raise exception 'FAIL: a cancelled mandate listed again'; end if;
 end $$;
 reset role;
+-- the billing webhook's one inbox routes a partner's payment by OUR order (0165): applied in the server's mode only; a
+-- refund Frrata didn't make claws the credits back; a token event finds a partner's mandate by its id
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; p record; ev uuid; v_bal int;
+begin
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89w0001', false);
+  v_bal := (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int;
+  -- a live-mode event for a test attempt buys nothing (its money goes back)
+  ev := app_store_billing_event('proof89-w0', 'payment.captured', '{"_test": false, "payload": {"payment": {"entity": {"id": "pay_proof89w0000", "order_id": "order_proof89w0001", "amount": 235882, "currency": "INR", "status": "captured"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a live-mode event bought test credits'; end if;
+  ev := app_store_billing_event('proof89-w1', 'payment.captured', '{"_test": true, "payload": {"payment": {"entity": {"id": "pay_proof89w0001", "order_id": "order_proof89w0001", "amount": 235882, "currency": "INR", "status": "captured"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal + 100 then raise exception 'FAIL: the webhook did not apply a partner''s payment'; end if;
+  ev := app_store_billing_event('proof89-w2', 'refund.processed', '{"_test": true, "payload": {"refund": {"entity": {"id": "rfnd_proof89w001", "payment_id": "pay_proof89w0001", "amount": 235882}}, "payment": {"entity": {"id": "pay_proof89w0001"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+  if (app_partner_credits_overview(G, proof.sess(G), proof.h(G), false)->>'balance')::int <> v_bal then raise exception 'FAIL: a refund Frrata didn''t make kept the credits'; end if;
+end $$;
+reset role;
+update partner_billing set token_id = 'token_proof89w0001', mandate_method = 'upi', mandate_max = 360000, mandate_revoked_at = null where partner_id = current_setting('proof.g89p')::uuid;
+set local role frata_app;
+do $$ declare ev uuid; begin
+  ev := app_store_billing_event('proof89-w3', 'token.cancelled', '{"_test": true, "payload": {"token": {"entity": {"id": "token_proof89w0001", "status": "cancelled"}}}}'::jsonb);
+  perform app_apply_billing_event(ev);
+end $$;
+reset role;
+do $$ begin
+  if (select mandate_revoked_at from partner_billing where partner_id = current_setting('proof.g89p')::uuid) is null then raise exception 'FAIL: a partner''s token event was lost'; end if;
+end $$;
 -- Frrata's GST export sees the real invoice and never a test one
 set local role frata_admin;
 do $$ begin

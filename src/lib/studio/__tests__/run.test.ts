@@ -27,6 +27,7 @@ const sys = vi.hoisted(() => ({
   noticesClaim: vi.fn(async () => [] as unknown[]), noticeDone: vi.fn(async () => undefined),
 }))
 vi.mock('@/lib/db/partner-credits', () => ({ system: sys }))
+vi.mock('@/lib/db/platform', () => ({ billingUnapplied: vi.fn(async () => []), applyBillingEvent: vi.fn(async () => undefined) }))
 
 const later = () => Date.now() + 60_000
 const seat = (o: Record<string, unknown> = {}) => ({ seatId: 's1', partnerId: 'p', plan: 'studio', nextPlan: null, method: 'upi', test: true, periodEnd: new Date('2026-12-01T03:30:00Z'),
