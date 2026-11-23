@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Frrata onboarding flow</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:wght@500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: a proposal page (In short, Audit, Flow, Ladder, Packs, Calls). The flow is a live phone prototype. */
+:root{
+  --bg:#FBFAF9; --card:#FFFFFF; --sunk:#F6F5F3; --edge:#E4E1DC; --edge2:#CFCCC7; --field:#8C8780;
+  --fg:#171615; --fg2:#57534E; --fg3:#6B665F;
+  --primary:#3A44C2; --primary-hover:#2F37A3; --on-primary:#FFFFFF; --select:#EEF0FD;
+  --rani:#D61F69; --haldi:#F2B632; --haldi-soft:#FBF0D3; --indigo-soft:#E6E8F8;
+  --ok:#E7F5EC; --ok-text:#1A6B43; --warn:#FBEFD5; --warn-text:#8A5A0B; --danger-text:#B42626;
+  --shadow:0 6px 24px rgba(23,22,21,.10);
+  --store-accent:#7A2E1F; --store-font:'Fraunces',Georgia,serif;
+  --fast:120ms; --base:200ms; --slow:320ms;
+  --ease:cubic-bezier(.2,0,0,1); --enter:cubic-bezier(0,0,.2,1); --exit:cubic-bezier(.4,0,1,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141312; --card:#1C1B1A; --sunk:#22211F; --edge:#33312E; --edge2:#47443F; --field:#8A857E;
+  --fg:#F2F0ED; --fg2:#BDB8B1; --fg3:#948F88;
+  --primary:#8C95F2; --primary-hover:#A3AAF5; --on-primary:#10122E; --select:#23264A;
+  --haldi-soft:#3A3014; --indigo-soft:#24274A; --ok:#14301F; --ok-text:#7FD3A2; --warn:#3A2D10; --warn-text:#F0C675; --danger-text:#F28B8B;
+  --shadow:0 6px 24px rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141312; --card:#1C1B1A; --sunk:#22211F; --edge:#33312E; --edge2:#47443F; --field:#8A857E;
+  --fg:#F2F0ED; --fg2:#BDB8B1; --fg3:#948F88;
+  --primary:#8C95F2; --primary-hover:#A3AAF5; --on-primary:#10122E; --select:#23264A;
+  --haldi-soft:#3A3014; --indigo-soft:#24274A; --ok:#14301F; --ok-text:#7FD3A2; --warn:#3A2D10; --warn-text:#F0C675; --danger-text:#F28B8B;
+  --shadow:0 6px 24px rgba(0,0,0,.45); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/22px Inter,system-ui,sans-serif;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font:600 30px/36px Inter,sans-serif;margin:40px 0 8px;text-wrap:balance}
+h2{font:600 22px/28px Inter,sans-serif;margin:48px 0 12px;text-wrap:balance}
+h3{font:600 16px/24px Inter,sans-serif;margin:0 0 6px}
+p{margin:0 0 10px;max-width:68ch}
+.muted{color:var(--fg2)} .small{font-size:12px;line-height:16px;color:var(--fg3)}
+.rule{height:2px;background:var(--rani);width:48px;margin:0 0 16px;border-radius:2px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.card{background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:20px;min-width:0}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tblwrap{overflow-x:auto;background:var(--card);border:1px solid var(--edge);border-radius:12px}
+.tbl th{background:var(--sunk);text-align:left;font-weight:500;font-size:13px;color:var(--fg2);padding:8px 14px;white-space:nowrap}
+.tbl td{padding:12px 14px;border-top:1px solid var(--edge);vertical-align:top}
+.tag{display:inline-block;border:1px solid var(--edge2);border-radius:6px;padding:0 8px;font-size:12px;line-height:20px;color:var(--fg2);white-space:nowrap}
+.chip{display:inline-block;border-radius:999px;padding:0 10px;font-size:12px;line-height:20px;font-weight:500}
+.ok{background:var(--ok);color:var(--ok-text)} .warn{background:var(--warn);color:var(--warn-text)} .info{background:var(--select);color:var(--primary)}
+.reco{display:inline-block;background:var(--select);color:var(--primary);border-radius:6px;padding:0 8px;font-size:12px;line-height:20px;font-weight:600;margin-right:6px}
+.take{border-left:2px solid var(--primary);padding-left:12px;margin-top:10px;font-weight:500}
+.skip{border-left:2px solid var(--edge2);padding-left:12px;margin-top:10px;color:var(--fg2)}
+.btn{font:500 14px/20px Inter,sans-serif;border-radius:8px;border:1px solid transparent;padding:10px 16px;min-height:44px;cursor:pointer;background:var(--primary);color:var(--on-primary);transition:background var(--fast) var(--ease),transform var(--fast) var(--ease)}
+.btn:hover{background:var(--primary-hover)} 
+.btn.sec{background:var(--card);color:var(--fg);border-color:var(--edge2)} .btn.sec:hover{background:var(--sunk)}
+.btn.ghost{background:transparent;color:var(--fg2)}
+button:focus-visible,input:focus-visible,.q:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.addr:focus-within{outline:2px solid var(--primary);outline-offset:2px}.addr input:focus-visible{outline:0}
+.q:focus-visible{outline:0}
+.sw-t::before{content:"";position:absolute;inset:-12px -6px}
+.ferr{color:var(--danger-text);font-size:13px;line-height:18px;margin:6px 0 0}
+.ferr:not([hidden]){animation:stepf var(--base) var(--enter)}
+.lab{display:block;font-size:13px;line-height:18px;font-weight:500;margin:12px 0 4px}
+.toast{position:absolute;left:18px;right:18px;bottom:84px;background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;font-size:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity var(--base) var(--enter),transform var(--base) var(--enter)}
+.toast.on{opacity:1;transform:none;pointer-events:auto}
+.toast button{background:transparent;border:0;color:var(--bg);font:600 14px Inter;text-decoration:underline;min-height:44px;cursor:pointer}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:32px;align-items:start}
+.stage>*,.grid>*,.ladder>*{min-width:0}
+@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}}
+code{overflow-wrap:anywhere}
+.steps-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.steps-list li{display:flex;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--edge);border-radius:10px;background:var(--card)}
+.steps-list li[aria-current="step"]{border-color:var(--primary);background:var(--select)}
+.steps-list .n{width:24px;height:24px;border-radius:50%;background:var(--sunk);display:grid;place-items:center;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.steps-list li[aria-current="step"] .n{background:var(--primary);color:var(--on-primary)}
+.steps-list li.done .n{background:var(--ok);color:var(--ok-text)}
+/* phone prototype */
+.phone{width:400px;max-width:100%;border:1px solid var(--edge2);border-radius:32px;background:var(--bg);box-shadow:var(--shadow);overflow:hidden;position:relative;height:760px;display:flex;flex-direction:column}
+@media (max-width:440px){.phone{height:720px;border-radius:24px}}
+.p-top{padding:14px 18px 10px;display:flex;align-items:center;gap:12px}
+.p-top .back{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--fg2);font:500 14px Inter;cursor:pointer;border-radius:8px}
+.bar{flex:1;height:4px;background:var(--edge);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--rani);transform-origin:left;transform:scaleX(.1);transition:transform var(--slow) var(--ease)}
+.count{font-size:12px;color:var(--fg3);font-variant-numeric:tabular-nums;min-width:28px;text-align:right}
+.sketch-wrap{padding:0 18px 10px}
+.sketch{height:132px;border-radius:12px;border:1px solid var(--edge);background:#fff;overflow:hidden;position:relative;font-family:var(--store-font);color:#1d1b19}
+.sk-head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #eee}
+.sk-logo{width:20px;height:20px;border-radius:50%;background:var(--store-accent);}
+.sk-name{font-size:13px;font-weight:600;transition:opacity var(--base) var(--ease)}
+.sk-hero{margin:8px 12px;height:40px;border-radius:6px;background:var(--store-accent);display:flex;align-items:center;padding:0 12px;color:#fff;font-size:13px}
+.sk-cards{display:flex;gap:8px;padding:0 12px}
+.sk-card{flex:1;height:34px;border-radius:6px;background:#efece7;opacity:0;transform:translateY(8px)}
+.sk-card.in{animation:rise var(--base) var(--enter) forwards}
+.sk-card:nth-child(2).in{animation-delay:60ms}.sk-card:nth-child(3).in{animation-delay:120ms}
+.sk-card.real{background:var(--store-accent);opacity:.9}
+@keyframes rise{to{opacity:1;transform:none}}
+.p-body{flex:1;overflow:auto;padding:6px 18px 18px;position:relative}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.step{display:none}.step.on{display:block}
+.step.fwd{animation:stepf var(--slow) var(--enter)}.step.bwd{animation:stepb var(--slow) var(--enter)}
+@keyframes stepf{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes stepb{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+.q{font:600 22px/28px Inter,sans-serif;margin:16px 0 18px;text-wrap:balance}
+input[type=text]{font-size:18px}
+label{display:block;font-size:13px;line-height:18px;font-weight:500;margin:12px 0 4px}
+input[type=text]{width:100%;min-height:44px;border:1px solid var(--field);border-radius:8px;padding:0 12px;font:15px Inter,sans-serif;background:var(--card);color:var(--fg)}
+.addr{display:flex;align-items:center;border:1px solid var(--field);border-radius:8px;background:var(--card);min-height:44px;padding-left:12px}
+.addr input{border:0;min-height:42px;padding:0 4px;flex:1;background:transparent;color:var(--fg);font:15px Inter;min-width:0}
+.addr span{color:var(--fg3);padding-right:12px;font-size:14px}
+.picks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pick{border:1px solid var(--edge);background:var(--card);border-radius:12px;padding:10px 4px 8px;min-height:84px;display:grid;justify-items:center;gap:6px;cursor:pointer;font:500 13px Inter;color:var(--fg);transition:border-color var(--fast)}
+.pick:hover{background:var(--sunk)} .pick[aria-checked="true"]{border-color:var(--primary);background:var(--select);box-shadow:inset 0 0 0 1px var(--primary)}
+
+.tile{width:40px;height:40px;border-radius:10px;background:var(--haldi-soft);display:grid;place-items:center}
+.tile svg{width:28px;height:28px;stroke:var(--fg);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.tile svg .h{fill:var(--haldi);stroke:var(--fg)}
+.sws{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:44px;height:44px;border-radius:50%;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 2px var(--card);transition:transform var(--fast)}
+.sw[aria-checked="true"]{border-color:var(--fg)} 
+.fonts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.font{border:1px solid var(--edge);background:var(--card);border-radius:10px;min-height:56px;cursor:pointer;color:var(--fg);font-size:20px}
+.font[aria-checked="true"]{border-color:var(--primary);background:var(--select)}
+.drop{border:1.5px dashed var(--edge2);border-radius:12px;min-height:72px;display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;background:var(--card);color:var(--fg2);font-size:14px;width:100%;text-align:left}
+.drop .ph{width:48px;height:48px;border-radius:8px;background:var(--sunk);flex:none}
+.drop.has .ph{background:var(--store-accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.cp{border:1px solid var(--edge2);background:var(--card);color:var(--fg);border-radius:8px;min-height:36px;padding:0 14px;font:500 13px Inter;cursor:pointer}
+.cp[aria-pressed="true"]{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.choices{display:grid;gap:10px}
+.choice{border:1px solid var(--edge);background:var(--card);border-radius:12px;min-height:56px;font:500 16px Inter;color:var(--fg);cursor:pointer;text-align:left;padding:0 16px}
+.choice[aria-checked="true"]{border-color:var(--primary);background:var(--select)}
+.row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 0;border-top:1px solid var(--edge)}
+.row:first-of-type{border-top:0}
+.sw-t{width:34px;height:20px;border-radius:10px;background:var(--field);position:relative;border:0;cursor:pointer;flex:none}
+.sw-t::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform var(--base) var(--ease)}
+.sw-t[aria-checked="true"]{background:var(--primary)} .sw-t[aria-checked="true"]::after{transform:translateX(14px)}
+.foot{padding:12px 18px 16px;border-top:1px solid var(--edge);display:flex;gap:10px;background:var(--bg)}
+.foot .btn{flex:1}.foot .btn.ghost{flex:0 0 auto}
+.openbig{height:230px;border-radius:12px;overflow:hidden;border:1px solid var(--edge)}
+.moment{display:none;text-align:center;padding-top:28px}
+.moment.on{display:block;animation:stepf var(--slow) var(--enter)}
+.moment svg{width:88px;height:88px}
+.moment circle{stroke:var(--rani);stroke-width:3;fill:none;stroke-dasharray:252;stroke-dashoffset:252}
+.moment path{stroke:var(--rani);stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60}
+.moment.on circle{animation:draw 320ms var(--ease) forwards}
+.moment.on path{animation:draw 200ms var(--ease) 300ms forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.wait{margin-top:18px;border:1px solid var(--edge);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;text-align:left;background:var(--card)}
+.pulse{width:10px;height:10px;border-radius:50%;background:var(--ok-text);flex:none}
+.share{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.ladder{display:grid;gap:10px}
+.rung{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--edge);border-radius:12px;background:var(--card)}
+.rung b{font-size:13px;color:var(--primary)}
+.rung .tag{white-space:normal;max-width:100%}
+.rung.now{border-color:var(--primary);background:var(--select)}
+@media (max-width:560px){.rung{grid-template-columns:44px 1fr}.rung .tag{grid-column:2}}
+.web3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.webopt{border:1px solid var(--edge);border-radius:12px;padding:14px;background:var(--card)}
+.webopt.sel{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+.timeline{display:flex;gap:2px;align-items:flex-end;height:44px}
+.timeline i{display:block;background:var(--primary);border-radius:2px 2px 0 0;opacity:.85}
+@media (prefers-reduced-motion:reduce){
+  .step.fwd,.step.bwd,.moment.on,.sk-card.in
+  .bar i,.sk-hero,.sk-logo{transition:none}
+  .moment circle,.moment path{animation:none;stroke-dashoffset:0}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="rule"></div>
+  <h1>Onboarding that builds your store as you answer</h1>
+  <p class="muted">Proposal and live prototype · 2026-11-23 · Draft, awaiting owner sign-off · Spec <code>docs/specs/2026-11-23-onboarding-website-and-categories.md</code></p>
+</header>
+
+<h2>In short</h2>
+<div class="grid g3">
+  <div class="card"><h3>Onboarding</h3><p>One question at a time, over the checklist that exists. A small store sketch builds as each answer lands. It needs no hosting, no Studio and no theme work, so it can start first.</p></div>
+  <div class="card"><h3>Website and themes</h3><p>Retire the theme catalogue and customizer by a gate, not a date. Keep one Starter renderer until hosted code is priced. Merchants reach Studio through a guided, metered step later, not as the default.</p></div>
+  <div class="card"><h3>More categories</h3><p>One category pack replaces four copies of the same list. Waves: finish beauty and wellness, then home, food, electronics, each behind its own owner and CA call.</p></div>
+</div>
+<p class="small" style="margin-top:12px">Needed from you: eight decisions at the foot of this page. Nothing is built before you approve this mockup.</p>
+
+<h2>Audit: onboarding today</h2>
+<div class="tblwrap"><table class="tbl">
+<thead><tr><th>Where</th><th>What is there</th><th>What gets in the way</th><th>Proposed</th></tr></thead>
+<tbody>
+<tr><td>Sign-up</td><td>Name, address, pickup PIN code, plan, optional phone code, "What do you sell"</td><td>A plan is asked before the person has seen anything. Category only prefills tax and orders a gallery.</td><td>Name and address only. Pickup PIN code stays in Settings. Plan after the first product. Category becomes the pack.</td></tr>
+<tr><td>Home</td><td>A flat list of five rows. "Name and address" is always done.</td><td>No order, no guide. Progress starts at 1 of 5 for free.</td><td>One guided pass, same rows, derived from data.</td></tr>
+<tr><td>Look</td><td>Not in onboarding. Classic from default colour and font.</td><td>First preview is an empty store that says "Opening soon".</td><td>A brand step sets colour, font and logo.</td></tr>
+<tr><td>First product</td><td>Three separate pages. A fashion-only kind step.</td><td>"About 10 minutes" is copy, not a measure.</td><td>Photo first, then the pack's fields.</td></tr>
+<tr><td>Opening</td><td>A drawn check, nothing stored.</td><td>After it, nothing says what to do next.</td><td>Share, then a waiting card for the first order.</td></tr>
+<tr><td>Measure</td><td>15 minutes to first product is spec text.</td><td>Nobody can see where a shop stalls.</td><td>Derived timing in Admin › Trials.</td></tr>
+</tbody></table></div>
+
+<h2>The flow, live</h2>
+<p class="muted">One question at a time. Tap through the phone, or type and press Enter. Pick a category, a colour and a font and watch the sketch.</p>
+
+<div class="stage">
+  <div>
+    <ol class="steps-list" id="stepsList" aria-label="Chapters">
+      <li data-c="0" aria-current="step"><span class="n">1</span>Name and address</li>
+      <li data-c="1"><span class="n">2</span>What you sell</li>
+      <li data-c="2"><span class="n">3</span>Your brand</li>
+      <li data-c="3"><span class="n">4</span>First product</li>
+      <li data-c="4"><span class="n">5</span>How shoppers pay</li>
+      <li data-c="5"><span class="n">6</span>To open</li>
+      <li data-c="6"><span class="n">7</span>Open</li>
+    </ol>
+    <div class="card" style="margin-top:16px">
+      <h3>States drawn for every step</h3>
+      <p class="small">Drawn: phone, and the error on step 1 (clear the store name and tap Save and continue). The other states are drawn at build. An error shows a field line, then one toast. Staff and Accountant see the checklist, not the flow. A partner-built store starts at what is done. A support visit is read only.</p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>Motion, all from the existing set</h3>
+      <div class="timeline" aria-hidden="true"><i style="width:36px;height:28px"></i><i style="width:56px;height:44px"></i><i style="width:36px;height:20px"></i><i style="width:36px;height:28px"></i><i style="width:56px;height:44px"></i></div>
+      <p class="small" style="margin-top:8px">Step to step 320 ms · sketch rise 200 ms, three at most · progress by scaleX · open check drawn once, 320 and 200 ms (the existing Open moment) · reduced motion: a 120 ms fade. No single animation runs over 400 ms. Nothing animates a width or a layout. Here the colour and font change at once. The build crossfades two layers on opacity.</p>
+    </div>
+  </div>
+
+  <div class="phone" id="phone" aria-label="Prototype">
+    <div class="p-top">
+      <button class="back" id="back" type="button" aria-label="Back" hidden>Back</button>
+      <div class="bar" role="progressbar" aria-label="Setup progress" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1" aria-valuetext="Step 1 of 6" id="bar"><i id="barfill"></i></div>
+      <span class="count" id="count" aria-hidden="true">1/6</span>
+      <span class="sr" id="live" role="status" aria-live="polite"></span>
+    </div>
+    <div class="sketch-wrap">
+      <div class="sketch" id="sketch" aria-hidden="true">
+        <div class="sk-head"><span class="sk-logo"></span><span class="sk-name" id="skName">Your store</span></div>
+        <div class="sk-hero" id="skHero">New this week</div>
+        <div class="sk-cards" id="skCards"><span class="sk-card"></span><span class="sk-card"></span><span class="sk-card"></span></div>
+      </div>
+    </div>
+    <div class="p-body" id="body">
+      <section class="step on" data-q="name" aria-labelledby="h-name">
+        <h4 class="q" tabindex="-1" id="h-name">What is your store called?</h4>
+        <label for="n1" class="sr">Store name</label>
+        <input type="text" id="n1" value="Rangrez" autocomplete="off">
+        <p class="ferr" id="n1err" role="alert" hidden>Add your store name.</p>
+      </section>
+      <section class="step" data-q="addr" aria-labelledby="h-addr">
+        <h4 class="q" tabindex="-1" id="h-addr">Pick your store address</h4>
+        <label for="n2" class="sr">Store address</label>
+        <div class="addr"><input id="n2" value="rangrez" autocomplete="off" aria-describedby="sfx"><span id="sfx">.frrata.shop</span></div>
+      </section>
+      <section class="step" data-q="sells" aria-labelledby="h-sells">
+        <h4 class="q" tabindex="-1" id="h-sells">What do you sell?</h4>
+        <div class="picks" id="picks" role="radiogroup" aria-label="What you sell">
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="women" data-t="clothes"><span class="tile"><svg viewBox="0 0 48 48"><path d="M16 8l8 4 8-4 8 8-6 4v20H14V20l-6-4z"/><circle class="h" cx="24" cy="26" r="3"/></svg></span>Women</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="men" data-t="clothes"><span class="tile"><svg viewBox="0 0 48 48"><path d="M16 8l8 4 8-4 8 8-6 4v20H14V20l-6-4z"/><path class="h" d="M22 12h4v8h-4z"/></svg></span>Men</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="kids" data-t="clothes"><span class="tile"><svg viewBox="0 0 48 48"><path d="M18 12l6 3 6-3 6 6-4 3v15H16V21l-4-3z"/><circle class="h" cx="24" cy="28" r="2.5"/></svg></span>Kids</button>
+          <button class="pick" type="button" role="radio" aria-checked="true" data-k="ethnic" data-t="clothes"><span class="tile"><svg viewBox="0 0 48 48"><path d="M17 6h14l3 10-5 4v22H19V20l-5-4z"/><path class="h" d="M19 26h10v4H19z"/></svg></span>Ethnic</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="footwear" data-t="shoes"><span class="tile"><svg viewBox="0 0 48 48"><path d="M6 30c8 0 8-8 14-8l4 6c6 0 18 2 18 8H6z"/><path class="h" d="M6 38h36v3H6z"/></svg></span>Footwear</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="accessories" data-t="one"><span class="tile"><svg viewBox="0 0 48 48"><rect x="8" y="16" width="32" height="24" rx="4"/><path d="M17 16a7 7 0 0 1 14 0"/><circle class="h" cx="24" cy="28" r="3"/></svg></span>Accessories</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="jewellery" data-t="one"><span class="tile"><svg viewBox="0 0 48 48"><circle cx="24" cy="30" r="10"/><path class="h" d="M20 14l4-6 4 6z"/></svg></span>Jewellery</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="beauty" data-t="beauty"><span class="tile"><svg viewBox="0 0 48 48"><path d="M18 20h12v22H18z"/><path class="h" d="M21 8h6v12h-6z"/></svg></span>Beauty</button>
+          <button class="pick" type="button" role="radio" aria-checked="false" data-k="wellness" data-t="beauty"><span class="tile"><svg viewBox="0 0 48 48"><path d="M10 38C10 20 22 10 40 10c0 18-10 28-30 28z"/><path class="h" d="M12 36l16-16"/></svg></span>Wellness</button>
+        </div>
+      </section>
+      <section class="step" data-q="logo" aria-labelledby="h-logo">
+        <h4 class="q" tabindex="-1" id="h-logo">Add your logo</h4>
+        <button class="drop" type="button" id="logoDrop"><span class="ph" id="logoPh"></span><span id="logoTxt">Add your logo</span></button>
+      </section>
+      <section class="step" data-q="colour" aria-labelledby="h-colour">
+        <h4 class="q" tabindex="-1" id="h-colour">Pick your colour</h4>
+        <div class="sws" id="sws" role="radiogroup" aria-label="Colour"></div>
+      </section>
+      <section class="step" data-q="font" aria-labelledby="h-font">
+        <h4 class="q" tabindex="-1" id="h-font">Pick your font</h4>
+        <div class="fonts" id="fonts" role="radiogroup" aria-label="Font">
+          <button class="font" type="button" role="radio" aria-checked="true" aria-label="Fraunces" data-f="'Fraunces',Georgia,serif" style="font-family:'Fraunces',Georgia,serif">Aa</button>
+          <button class="font" type="button" role="radio" aria-checked="false" aria-label="Inter" data-f="'Inter',system-ui,sans-serif" style="font-family:Inter,sans-serif">Aa</button>
+          <button class="font" type="button" role="radio" aria-checked="false" aria-label="Space Grotesk" data-f="'Space Grotesk',system-ui,sans-serif" style="font-family:'Space Grotesk',sans-serif">Aa</button>
+        </div>
+      </section>
+      <section class="step" data-q="photo" aria-labelledby="h-photo">
+        <h4 class="q" tabindex="-1" id="h-photo">Add a photo of your first product</h4>
+        <button class="drop" type="button" id="photoDrop"><span class="ph"></span><span id="photoTxt">Add a photo</span></button>
+      </section>
+      <section class="step" data-q="title" aria-labelledby="h-title">
+        <h4 class="q" tabindex="-1" id="h-title">What is it called?</h4>
+        <label for="p1" class="sr">Product title</label>
+        <input type="text" id="p1" value="Linen kurta set" autocomplete="off">
+      </section>
+      <section class="step" data-q="price" aria-labelledby="h-price">
+        <h4 class="q" tabindex="-1" id="h-price">What does it cost?</h4>
+        <label for="p2" class="sr">Price</label>
+        <input type="text" id="p2" value="₹1,890" inputmode="numeric" autocomplete="off">
+      </section>
+      <section class="step" data-q="opt1" aria-labelledby="h-opt1">
+        <h4 class="q" tabindex="-1" id="h-opt1">Which sizes?</h4>
+        <div id="opt1" class="chips"></div>
+      </section>
+      <section class="step" data-q="opt2" aria-labelledby="h-opt2">
+        <h4 class="q" tabindex="-1" id="h-opt2">Which volumes?</h4>
+        <div id="opt2" class="chips"></div>
+      </section>
+      <section class="step" data-q="opt3" aria-labelledby="h-opt3">
+        <h4 class="q" tabindex="-1" id="h-opt3">What are the ingredients?</h4>
+        <label for="ing" class="sr">Ingredients and net quantity</label>
+        <input type="text" id="ing" value="Aqua, glycerin, niacinamide" autocomplete="off">
+      </section>
+      <section class="step" data-q="cod" aria-labelledby="h-cod">
+        <h4 class="q" tabindex="-1" id="h-cod">Take pay on delivery?</h4>
+        <div class="choices" role="radiogroup" aria-label="Pay on delivery"><button class="choice" type="button" role="radio" aria-checked="true">Yes</button><button class="choice" type="button" role="radio" aria-checked="false">No</button></div>
+      </section>
+      <section class="step" data-q="upi" aria-labelledby="h-upi">
+        <h4 class="q" tabindex="-1" id="h-upi">Take UPI and cards?</h4>
+        <div class="choices" role="radiogroup" aria-label="UPI and cards"><button class="choice" type="button" role="radio" aria-checked="true">Connect Razorpay</button><button class="choice" type="button" role="radio" aria-checked="false">Not now</button></div>
+      </section>
+      <section class="step" data-q="plan" aria-labelledby="h-plan">
+        <h4 class="q" tabindex="-1" id="h-plan">Pick your plan</h4>
+        <div class="choices" role="radiogroup" aria-label="Plan"><button class="choice" type="button" role="radio" aria-checked="false">Launch</button><button class="choice" type="button" role="radio" aria-checked="true">Growth</button><button class="choice" type="button" role="radio" aria-checked="false">Scale</button></div>
+      </section>
+      <section class="step" data-q="gst" aria-labelledby="h-gst">
+        <h4 class="q" tabindex="-1" id="h-gst">What is your GSTIN?</h4>
+        <label for="g1" class="sr">GSTIN</label>
+        <input type="text" id="g1" value="29ABCDE1234F1Z5" autocomplete="off" style="font-family:ui-monospace,Menlo,monospace">
+      </section>
+      <section class="step" data-q="grv1" aria-labelledby="h-grv1">
+        <h4 class="q" tabindex="-1" id="h-grv1">Who handles complaints?</h4>
+        <label for="g2" class="sr">Grievance officer name</label>
+        <input type="text" id="g2" value="Meera Rao" autocomplete="off">
+      </section>
+      <section class="step" data-q="grv2" aria-labelledby="h-grv2">
+        <h4 class="q" tabindex="-1" id="h-grv2">What is their email?</h4>
+        <label for="g3" class="sr">Grievance officer email</label>
+        <input type="text" id="g3" value="meera@rangrez.in" autocomplete="off">
+      </section>
+      <section class="step" data-q="open" aria-labelledby="h-open">
+        <h4 class="q" tabindex="-1" id="h-open">Open your store</h4>
+        <div class="openbig" id="bigsk"></div>
+      </section>
+      <section class="moment" id="moment" aria-labelledby="hm">
+        <svg viewBox="0 0 88 88" aria-hidden="true"><circle cx="44" cy="44" r="40" transform="rotate(-90 44 44)"/><path d="M26 46l12 12 24-26"/></svg>
+        <h4 class="q" tabindex="-1" id="hm" style="margin-top:12px">Your store is open</h4>
+        <div class="share"><button class="btn sec" type="button">Copy link</button><button class="btn sec" type="button">Share on WhatsApp</button><button class="btn sec" type="button">Share on Instagram</button></div>
+        <div class="wait"><span class="pulse"></span><span>Waiting for your first order</span></div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status"><span id="toastTxt"></span><button type="button" id="toastBtn">Show</button></div>
+    <div class="foot"><button class="btn ghost" id="skip" type="button" hidden>Skip for now</button><button class="btn" id="next" type="button">Save and continue</button></div>
+  </div>
+</div>
+
+<h2>The website ladder</h2>
+<p class="muted">What a merchant's route to a storefront looks like, one rung at a time. Each rung opens only when its gate passes.</p>
+<div class="ladder">
+  <div class="rung now"><b>M0</b><div><h3>Brand sets the first look</h3><span class="muted">Colour, font and logo from onboarding. The store is Classic from them. Builds with this mockup.</span></div><span class="tag">Now</span></div>
+  <div class="rung"><b>M1</b><div><h3>Starter website</h3><span class="muted">Made from Brand, Content and the catalogue. Edited in Brand and Content. Free.</span></div><span class="tag">Gate: Brand serves every shop, content parity, speed floors</span></div>
+  <div class="rung"><b>M2</b><div><h3>Ask Frrata</h3><span class="muted">Pick a change, see before and after, tap Apply, Undo in one tap. Credits.</span></div><span class="tag">Gate: hosting priced, V3a proof, 20 partner sites measured, owner review, merchant wallet</span></div>
+  <div class="rung"><b>M3</b><div><h3>Hire a partner</h3><span class="muted">Available at any rung. Unchanged.</span></div><span class="tag">Built</span></div>
+  <div class="rung"><b>M4</b><div><h3>Retire the theme catalogue</h3><span class="muted">Frrata moves each theme store to the Starter and removes the customizer, six themes and ADR-0012.</span></div><span class="tag">Gate: no theme store serving for 30 days, every store checked against its Starter</span></div>
+</div>
+
+<h3 style="margin-top:24px">The step that appears at M1 and M2</h3>
+<div class="card" style="max-width:480px">
+  <h4 class="q" style="margin-top:0">Who builds your website?</h4>
+  <div class="web3">
+    <div class="webopt sel"><h3>Starter website</h3><span class="small">Built from your brand</span></div>
+    <div class="webopt"><h3>A partner</h3><span class="small">Choose one of ours</span></div>
+    <div class="webopt"><h3>Ask Frrata</h3><span class="small">Pay per change</span></div>
+  </div>
+</div>
+
+<h2>More categories: one list of fields per category</h2>
+<div class="tblwrap"><table class="tbl">
+<thead><tr><th>Wave</th><th>Categories</th><th>The pack changes</th><th>Needs first</th></tr></thead>
+<tbody>
+<tr><td>W0</td><td>Fashion, footwear, accessories, jewellery</td><td>Scaffold only. Same behaviour, one list.</td><td>Nothing</td></tr>
+<tr><td>W1</td><td>Beauty, wellness</td><td>Shade and volume options, ingredients, declarations, a taxonomy slice</td><td>Your mockup sign-off</td></tr>
+<tr><td>W2</td><td>Home and kitchen</td><td>Weight and dimensions, damage returns, COD cap</td><td>CA on HSN rows</td></tr>
+<tr><td>W3</td><td>Packaged food</td><td>FSSAI and shelf life, no restock, no returns by default</td><td>CA and counsel</td></tr>
+<tr><td>W4</td><td>Electronics, fine jewellery</td><td>BIS, serial, warranty, HUID, prepaid or COD cap</td><td>CA and counsel</td></tr>
+</tbody></table></div>
+<p class="small" style="margin-top:10px">Flow step 4 reads the pack: tap Beauty and the first-product fields become Shade and Volume. Order and wave dates come from the repo research dated 2026-11-09.</p>
+
+<h2>What to take</h2>
+<div class="grid g2">
+  <div class="card"><h3>This repo</h3><p class="small">Verified 2026-11-23</p>
+    <div class="take">Take: the derived checklist, the step motion, the scaleX bar, the value flash and the drawn open check. They already exist and pass <code>check:motion</code>.</div></div>
+  <div class="card"><h3>Shopify, Wix, Framer, Dukaan, GoKwik</h3><p class="small">No current source found. The research could not read these sites in this session.</p>
+    <div class="skip">Skip until read and dated. Nothing here depends on them.</div></div>
+  <div class="card"><h3>Onboarding UX research (NN/g, Baymard)</h3><p class="small">No current source found. Hosts were blocked.</p>
+    <div class="skip">Skip until read and dated.</div></div>
+  <div class="card"><h3>Studio today</h3><p class="small">From the Studio lane, 2026-11-23</p>
+    <div class="take">Take: partners only, staff-only runtime, no live model call yet. That is why merchants do not start in Studio.</div></div>
+</div>
+
+<h2>Your decisions</h2>
+<div class="tblwrap"><table class="tbl">
+<thead><tr><th>#</th><th>Decision</th><th>Recommendation</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Retire the theme catalogue and customizer</td><td><span class="reco">Yes</span>by gate (M4), not by date</td></tr>
+<tr><td>2</td><td>Keep one first-party Starter renderer until hosting is priced. Needs an ADR-0014 amendment.</td><td><span class="reco">Yes</span>Themes cost the most to keep. The renderer costs least to run.</td></tr>
+<tr><td>3</td><td>Merchants in Studio</td><td><span class="reco">Later</span>guided and metered after the M2 gate</td></tr>
+<tr><td>4</td><td>Who pays to move theme stores to the Starter</td><td><span class="reco">Frrata pays, capped</span>Count live theme stores first.</td></tr>
+<tr><td>5</td><td>Price a credit at ₹19 (ADR-0014) or ₹20 (approved packs)?</td><td><span class="reco">₹20</span>₹19 fails the margin rule after fees. Amend ADR-0014.</td></tr>
+<tr><td>6</td><td>Build the onboarding flow now (phases P0, P1)</td><td><span class="reco">Yes</span>It depends on none of the above.</td></tr>
+<tr><td>7</td><td>Category order</td><td><span class="reco">Scaffold, beauty, home, food, electronics</span>each its own mockup</td></tr>
+<tr><td>8</td><td>Unblock the research sites so competitor and regulatory facts can be read and dated</td><td><span class="reco">Yes</span>Before this mockup is signed.</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:28px">Not built, on purpose</h3>
+<p class="muted">A theme picker in onboarding · AI product descriptions · a merchant chat with the agent · the Starter renderer's build · WhatsApp-first sign-up · theme blocks for other categories.</p>
+
+<h3 style="margin-top:28px">Figures from the Studio spec, hypotheses dated 2026-11-16</h3>
+<p class="muted">A page turn costs 19 credits, about ₹380. An 8-page site costs 251 credits, about ₹5,000 at partner pricing. None of it is measured. It is why the agent is a metered step and not the first thing a merchant meets.</p>
+
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, body=document.getElementById('body'), next=document.getElementById('next'), skip=document.getElementById('skip'),
+      back=document.getElementById('back'), fill=document.getElementById('barfill'), count=document.getElementById('count'), bar=document.getElementById('bar'),
+      live=document.getElementById('live'), moment=document.getElementById('moment'), toast=document.getElementById('toast'),
+      chapters=[].slice.call(document.querySelectorAll('#stepsList li')),
+      cards=[].slice.call(document.querySelectorAll('.sk-card')), type='clothes', cur=0, tt;
+  var Q=[
+   {id:'name',c:0},{id:'addr',c:0},{id:'sells',c:1},{id:'logo',c:2,opt:1},{id:'colour',c:2},{id:'font',c:2},
+   {id:'photo',c:3},{id:'title',c:3},{id:'price',c:3},{id:'opt1',c:3},{id:'opt2',c:3,when:function(){return type==='beauty'}},{id:'opt3',c:3,when:function(){return type==='beauty'}},
+   {id:'cod',c:4},{id:'upi',c:4},{id:'plan',c:5},{id:'gst',c:5},{id:'grv1',c:5},{id:'grv2',c:5},{id:'open',c:6}
+  ];
+  function active(){return Q.filter(function(q){return !q.when||q.when()})}
+  function sec(id){return document.querySelector('[data-q="'+id+'"]')}
+  function el(t,c){var e=document.createElement(t);if(c)e.className=c;return e}
+  /* colour and font */
+  var COLOURS=['#7A2E1F','#1F4E5F','#2F6B3F','#B4531B','#3A44C2','#8A2B5B','#222222','#9A6A0C'], NAMES=['Rust','Teal','Moss','Saffron','Indigo','Plum','Ink','Gold'], sws=document.getElementById('sws');
+  COLOURS.forEach(function(c,i){var b=el('button','sw');b.type='button';b.style.background=c;b.setAttribute('aria-label',NAMES[i]);b.setAttribute('role','radio');b.setAttribute('aria-checked',i===0?'true':'false');
+    b.onclick=function(){[].forEach.call(sws.children,function(x){x.setAttribute('aria-checked','false')});b.setAttribute('aria-checked','true');root.style.setProperty('--store-accent',c)};sws.appendChild(b)});
+  function radios(group,cb){var all=[].slice.call(group.querySelectorAll('[role=radio]'));all.forEach(function(b){b.addEventListener('click',function(){all.forEach(function(x){x.setAttribute('aria-checked','false')});b.setAttribute('aria-checked','true');if(cb)cb(b)})})}
+  radios(document.getElementById('fonts'),function(b){root.style.setProperty('--store-font',b.dataset.f)});
+  radios(document.getElementById('picks'),function(b){type=b.dataset.t;fill_opts()});
+  [].forEach.call(document.querySelectorAll('.choices'),function(g){radios(g)});
+  /* category-driven questions */
+  function chips(box,arr,sel){box.innerHTML='';arr.forEach(function(a,i){var b=el('button','cp');b.type='button';b.textContent=a;b.setAttribute('aria-pressed',sel.indexOf(i)>-1?'true':'false');b.onclick=function(){b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true')};box.appendChild(b)})}
+  function fill_opts(){
+    var h=document.getElementById('h-opt1'),t=document.getElementById('p1');
+    if(type==='clothes'){h.textContent='Which sizes?';chips(document.getElementById('opt1'),['S','M','L','XL'],[1,2]);t.value='Linen kurta set'}
+    else if(type==='shoes'){h.textContent='Which sizes?';chips(document.getElementById('opt1'),['6','7','8','9','10'],[1,2,3]);t.value='Leather juttis'}
+    else if(type==='beauty'){h.textContent='Which shades?';chips(document.getElementById('opt1'),['Rose','Nude','Berry'],[0,1]);chips(document.getElementById('opt2'),['15 ml','30 ml','50 ml'],[1]);t.value='Rose tinted balm'}
+    else{h.textContent='Which colours?';chips(document.getElementById('opt1'),['Black','Tan','Olive'],[0,1]);t.value='Brass jhumka pair'}
+    sync();
+  }
+  /* sketch */
+  var n1=document.getElementById('n1'),n2=document.getElementById('n2'),skName=document.getElementById('skName');
+  n1.oninput=function(){skName.textContent=n1.value||'Your store';n2.value=n1.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')};
+  document.getElementById('logoDrop').onclick=function(){var d=this;d.classList.toggle('has');document.getElementById('logoTxt').textContent=d.classList.contains('has')?'logo.png':'Add your logo';document.getElementById('logoPh').style.background=d.classList.contains('has')?'var(--store-accent)':''};
+  document.getElementById('photoDrop').onclick=function(){this.classList.add('has');document.getElementById('photoTxt').textContent='photo-1.jpg';showCards(true)};
+  function showCards(real){cards.forEach(function(c,k){c.classList.remove('in');void c.offsetWidth;c.classList.add('in');if(k===0&&real)c.classList.add('real')})}
+  function cloneSketch(){var big=document.getElementById('bigsk');big.innerHTML='';var c=document.getElementById('sketch').cloneNode(true);c.removeAttribute('id');c.style.height='100%';c.style.border='0';c.style.borderRadius='0';big.appendChild(c);
+    [].forEach.call(c.querySelectorAll('.sk-card'),function(x){x.style.height='64px';x.classList.add('in')});c.querySelector('.sk-hero').style.height='72px'}
+  /* toast */
+  function say(t,btn,fn){document.getElementById('toastTxt').textContent=t;var b=document.getElementById('toastBtn');b.hidden=!btn;if(btn){b.textContent=btn;b.onclick=fn}toast.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('on')},5000)}
+  document.querySelector('.share').addEventListener('click',function(e){if(e.target.tagName==='BUTTON')say(e.target.textContent==='Copy link'?'Link copied.':'Opening '+e.target.textContent.replace('Share on ','')+'.')});
+  /* flow */
+  function sync(){var A=active();bar.setAttribute('aria-valuemax',A.length);count.textContent=(cur+1)+'/'+A.length;fill.style.transform='scaleX('+((cur+1)/A.length)+')'}
+  function show(i,dir){
+    var A=active(), q=A[i];
+    [].forEach.call(document.querySelectorAll('.step'),function(x){x.classList.remove('on','fwd','bwd')});
+    moment.classList.remove('on');
+    var s=sec(q.id);void s.offsetWidth;s.classList.add('on',dir>=0?'fwd':'bwd');
+    cur=i;sync();
+    back.hidden=i===0;skip.hidden=!q.opt;
+    next.textContent=q.id==='open'?'Open store':'Save and continue';
+    chapters.forEach(function(l,k){l.classList.toggle('done',k<q.c);if(k===q.c)l.setAttribute('aria-current','step');else l.removeAttribute('aria-current')});
+    if(q.id==='open')cloneSketch();
+    if(q.id==='photo'||q.id==='title'||q.id==='price')showCards(document.getElementById('photoDrop').classList.contains('has'));
+    body.scrollTop=0;
+    var h=s.querySelector('.q');h.focus({preventScroll:true});
+    live.textContent='Question '+(i+1)+' of '+A.length+', '+h.textContent;
+    bar.setAttribute('aria-valuenow',i+1);bar.setAttribute('aria-valuetext','Question '+(i+1)+' of '+A.length);
+    var inp=s.querySelector('input[type=text]');if(inp&&matchMedia('(hover:hover)').matches)inp.focus({preventScroll:true});
+  }
+  function advance(){
+    var A=active(), q=A[cur];
+    if(q.id==='name'&&!n1.value.trim()){document.getElementById('n1err').hidden=false;n1.setAttribute('aria-invalid','true');n1.focus();say('1 field needs fixing.','Show',function(){n1.focus()});return}
+    document.getElementById('n1err').hidden=true;n1.removeAttribute('aria-invalid');toast.classList.remove('on');
+    if(q.id==='open'){
+      moment.classList.add('on');[].forEach.call(document.querySelectorAll('.step'),function(x){x.classList.remove('on')});
+      document.querySelector('.foot').hidden=true;back.hidden=true;fill.style.transform='scaleX(1)';count.textContent='';
+      chapters.forEach(function(l){l.classList.add('done');l.removeAttribute('aria-current')});
+      document.getElementById('hm').focus({preventScroll:true});live.textContent='Your store is open';return}
+    show(cur+1,1)
+  }
+  next.onclick=advance; skip.onclick=function(){show(cur+1,1)}; back.onclick=function(){if(cur>0)show(cur-1,-1)};
+  body.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();advance()}});
+  skName.textContent=n1.value||'Your store'; fill_opts(); show(0,1);
+})();
+</script>
+</body>
+</html>
