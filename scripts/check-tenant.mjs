@@ -95,6 +95,12 @@ for (const file of walk('src')) {
     const onlyTypes = [...text.matchAll(/import\s+(type\s+)?\{[^}]*\}\s+from\s+['"]@\/lib\/db['"]/g)].every(m => m[1])
     if (!onlyTypes) failures.push(`${file}  imports the raw db — read merchant rows through src/lib/queries/ (withTenant)`)
   }
+  // Studio credits' SYSTEM definers (ids only: apply a payment, settle, refund, renew; C1, architecture B2) are called
+  // only by the code that measured or fetched what they record: src/lib/studio/** and the billing webhook.
+  if (/import\s*\{[^}]*\bsystem\b[^}]*\}\s*from\s*['"]@\/lib\/db\/partner-credits['"]/.test(text)
+      && !file.startsWith('src/lib/studio/') && file !== 'src/app/api/webhooks/billing/route.ts') {
+    failures.push(`${file}  imports Studio credits' system definers — only src/lib/studio/** and the billing webhook may (C1)`)
+  }
   if (ADMIN_DB.test(text) && !file.startsWith('src/lib/admin/') && file !== 'src/lib/db/admin.ts') {
     failures.push(`${file}  imports the admin connection — only src/lib/admin/** may (ADR-0007)`)
   }

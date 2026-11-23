@@ -73,7 +73,9 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const can = (what: Parameters<typeof partnerCan>[1]) => partnerCan(auth.partner.memberRole, what)
   // Everyone's own passkeys (T1b; mockup screen 18).
   const passkeys: NavItem = { href: '/partner/passkeys', label: 'Passkeys', icon: 'key' }
-  const items = [clients, ...(can('manageTeam') ? [team] : []), passkeys, ...(can('seeDetails') ? [details] : [])]
+  // Credits and billing (C1; undrawn mockup, owner 2026-11-22): under Clients, for the owner and Leads; never a Builder.
+  const credits: NavItem = { href: '/partner/credits', label: 'Credits and billing', icon: 'payments' }
+  const items = [clients, ...(can('budgets') ? [credits] : []), ...(can('manageTeam') ? [team] : []), passkeys, ...(can('seeDetails') ? [details] : [])]
   const name = auth.partner.businessName || auth.partner.name
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}

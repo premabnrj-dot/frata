@@ -381,7 +381,8 @@ end $$;
 -- ── A purchase's attempt row, committed before Razorpay hears of it (ADR-0008). The amounts come from the server's
 --    price table (src/domains/studio/prices.ts quote), the seller from frrataSeller(); the buyer is frozen here from the
 --    billing details, which must exist (architecture M10). A seat needs the real check, fresh; one live seat, unless
---    this one starts the plan the live seat is moving to (the upgrade at renewal, when the old mandate is too small). ──
+--    this one starts the plan the live seat is moving to (the upgrade at renewal, when the old mandate is too small) or
+--    pays a seat whose renewal failed (a fresh seat and mandate; the failed one ends when this is paid). ──
 create or replace function app_partner_credit_buy(p_uid uuid, p_session uuid, p_stepup text, p_kind text, p_credits integer,
   p_plan text, p_method text, p_mandate_max bigint, p_taxable bigint, p_cgst bigint, p_sgst bigint, p_igst bigint, p_test boolean,
   p_invoice_test boolean, p_seller_name text, p_seller_gstin text, p_seller_address text, p_sac text, p_prefix text, p_fy text)
@@ -396,7 +397,8 @@ begin
   if p_kind = 'seat_start' then
     if p_plan not in ('studio', 'plus') or p_method not in ('upi', 'card') or p_mandate_max is null then raise exception 'bad_input' using errcode = 'P0001'; end if;
     select * into s from public.partner_seats ps where ps.partner_id = o.partner_id and ps.ended_at is null;
-    if s.id is not null and s.next_plan is distinct from p_plan then raise exception 'has_seat' using errcode = 'P0001'; end if;
+    -- One live seat, unless this starts the plan it is moving to, or pays a seat whose renewal failed (the banner's Pay).
+    if s.id is not null and s.next_plan is distinct from p_plan and s.failed_at is null then raise exception 'has_seat' using errcode = 'P0001'; end if;
   elsif p_plan is not null or p_method is not null or p_mandate_max is not null then raise exception 'bad_input' using errcode = 'P0001';
   end if;
   insert into public.partner_credit_purchases (id, partner_id, kind, credits, plan, method, mandate_max, taxable, cgst, sgst, igst, total,

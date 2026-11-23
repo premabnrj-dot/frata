@@ -262,5 +262,23 @@
     "rule": "W2",
     "text": "Bust or chest: around the fullest part, tape level.",
     "why": "A store's own Size help words the agent proposes, as drawn in the approved Studio redraw (16 Nov); store content, not Frrata's words; a test-only fixture"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/credits/actions.ts",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/credits/page.tsx",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/credits/credits-parts.tsx",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Approved C1 mockup (2026-11-22, Client budgets: \"New websites · Start at 300 credits\"); Website is the glossary's exception for a brand's own site built as code"
   }
 ]

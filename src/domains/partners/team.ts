@@ -26,6 +26,10 @@ export const PARTNER_CAN = {
   seeClientTerms: ['owner'],
   /** The partner's own bills to its clients and the share in rupees (P2; owner, 2026-11-15, Q3): the owner only. */
   billing: ['owner'],
+  /** Studio credits and billing: buying, the seat, invoices, usage, alerts, budgets set (C1; owner call 3, 2026-11-22). */
+  credits: ['owner'],
+  /** Client budgets read on Credits and billing: the owner every client, a Lead its assigned ones (owner call 3). */
+  budgets: ['owner', 'lead'],
 } as const satisfies Record<string, readonly PartnerRole[]>
 
 export const partnerCan = (role: PartnerRole, what: keyof typeof PARTNER_CAN): boolean =>
