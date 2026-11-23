@@ -10,7 +10,7 @@ const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 
-type FakeState = { requests: { route: string; body: Record<string, unknown> }[]; vaults: Map<string, unknown>; files: Map<string, unknown>; sessions: Map<string, { budget: number; archived: boolean }>; failNext: Record<string, number> }
+type FakeState = { requests: { route: string; body: Record<string, unknown> }[]; vaults: Map<string, unknown>; files: Map<string, unknown>; sessions: Map<string, { budget: number; listCost: number; archived: boolean }>; failNext: Record<string, number> }
 type Fake = { url: string; key: string; state: FakeState; close: () => Promise<void> }
 
 describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
@@ -208,6 +208,8 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     expect((await su`select end_reason from studio_sessions where id = ${s.id}`)[0]!.end_reason).toBe('idle')
     expect((await S.send(f.auth, 'facts please', deps())).ok).toBe(true)
     s = (await openSession())!
+    // The runtime measured more than the reserve: the cron's end settles it, capped at the reserve (no person vouches).
+    fake.state.sessions.get(s.runtime_id)!.listCost += 80
     await su`update partner_links set removed_at = now() where tenant_id = ${f.tenant}`
     try {
       await cron()
@@ -215,9 +217,11 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
       expect(await su`select 1 from studio_tool_calls where session_id = ${s.id} and executed_at is not null`).toHaveLength(0)
     } finally { await su`update partner_links set removed_at = null where tenant_id = ${f.tenant}` }
     await cron()
-    // Ended with no person to vouch for its cost, the turn keeps its whole reserve counted for the day (the cautious
-    // side; for the caps the same as measuring it at the reserve).
-    expect(await reserved()).toBe(500_000)
+    // Ended with no person to vouch for its cost: the turn settles what the runtime measured, capped at its reserve, and
+    // its reserve is given back (unit economics review of the phase, F2).
+    expect(await reserved()).toBe(0)
+    const [t] = await su`select x.measured_micro, x.settled_at is not null as settled from studio_spend_turns x join studio_turns t on t.id = x.turn_id where t.session_id = ${s.id}`
+    expect(t).toEqual({ measured_micro: '500000', settled: true })
   })
 
   it('Stop pressed during each start step: what the start made is deleted, nothing runs, nothing stays live', async () => {

@@ -18,14 +18,6 @@ export const TOOL_NAMES = ['store_facts', 'tokens_propose', 'logo_propose', 'pre
 export type ToolName = (typeof TOOL_NAMES)[number]
 export const isToolName = (n: string): n is ToolName => (TOOL_NAMES as readonly string[]).includes(n)
 
-/** Reads run as frata_builder, whatever the person's role; proposals are rows a person applies; nothing else writes. */
-export const TOOL_KIND: Record<ToolName, 'read' | 'propose' | 'hosting'> = {
-  store_facts: 'read', tokens_propose: 'propose', logo_propose: 'propose', preview_build: 'hosting',
-}
-
-/** The store role that may start a Studio session (members.role). */
-export const mayStartSession = (storeRole: string) => storeRole === 'partner'
-
 /** The most an SVG logo proposal may hold (the cleaner allows 200 kB; a logo needs far less). */
 export const LOGO_PROPOSAL_MAX = 64 * 1024
 

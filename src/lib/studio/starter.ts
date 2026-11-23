@@ -12,7 +12,9 @@ import { tarOf, type ArchiveFile } from '@/domains/studio/archive'
 // =============================================================================
 
 const ROOT = join(process.cwd(), 'kit', 'starter')
-const SKIP = new Set(['node_modules', '.next', '.vercel', '.git', '.turbo', 'dist', 'out', '.DS_Store'])
+// `package-lock.json`: npm is closed in the sandbox, so the lock is a third of the tar for nothing (unit economics review
+// of the phase, F4).
+const SKIP = new Set(['node_modules', '.next', '.vercel', '.git', '.turbo', 'dist', 'out', '.DS_Store', 'package-lock.json'])
 /** Never an env file of any name (`.env.example`, the kit's own list of names, is the one kept). */
 const skipped = (n: string) => SKIP.has(n) || (n.startsWith('.env') && n !== '.env.example')
 

@@ -1,19 +1,20 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { microUsd, type MicroUsd } from '@/domains/money/usd'
+import { microUsd } from '@/domains/money/usd'
 import { DEFAULT_PALETTE } from '@/domains/brand/defaults'
 import { emptyRecord } from '@/domains/brand/record'
 import { outlineLogo } from '@/domains/brand/outline'
 import { STUDIO_MODEL } from '../model'
-import { budgetFor, capsFor, ceilingOf, deltaOf, fromCents, mayReserve, studioCaps, toCents } from '../spend'
-import { callAccepted, turnOpen, turnState } from '../turn'
-import { dueForDelete, endReason, IDLE_END_MS, MAX_AGE_MS } from '../session'
-import { isToolName, mayStartSession, parseToolInput, TOOL_NAMES } from '../tools'
+import { budgetFor, CAPS, capsFor, ceilingOf, deltaOf, fromCents, HARD, studioCaps, toCents } from '../spend'
+import { inCallWindow, turnOpen, turnState } from '../turn'
+import { endReason, IDLE_END_MS, MAX_AGE_MS, START_GRACE_MS } from '../session'
+import { isToolName, parseToolInput, TOOL_NAMES } from '../tools'
 import { changesSomething, checkLogo, checkTokens, LOGO_SLOT, PROPOSAL_VALUE_MAX_BYTES } from '../proposals'
 import { BrandPatchSchema } from '@/domains/brand/patch'
-import { TOOL_ERRORS, TOOL_KIND } from '../tools'
+import { TOOL_ERRORS } from '../tools'
 
 const u = (d: number) => microUsd(d)
-const zero = { reserved: 0 as MicroUsd, measured: 0 as MicroUsd }
 
 describe('spend: caps keyed by model', () => {
   it('the studio model has a caps row (check:studio holds this too)', () => {
@@ -54,26 +55,21 @@ describe('spend: the session budget before a send (spec § 6.7)', () => {
   })
 })
 
-describe('spend: may a Send reserve', () => {
-  const c = studioCaps()!
-  it('allows under every cap', () => {
-    expect(mayReserve({ caps: c, ceiling: u(0.5), person: zero, platform: zero, openSessions: 0, newSession: true })).toEqual({ ok: true })
-  })
-  it('counts reserved and measured against the person day', () => {
-    expect(mayReserve({ caps: c, ceiling: u(0.5), person: { reserved: u(1), measured: u(1.6) }, platform: zero, openSessions: 0, newSession: false }))
-      .toEqual({ ok: false, why: 'person_day' })
-  })
-  it('the platform day', () => {
-    expect(mayReserve({ caps: c, ceiling: u(0.5), person: zero, platform: { reserved: u(0), measured: u(9.6) }, openSessions: 0, newSession: false }))
-      .toEqual({ ok: false, why: 'platform_day' })
-  })
-  it('open sessions count only for a new session', () => {
-    expect(mayReserve({ caps: c, ceiling: u(0.5), person: zero, platform: zero, openSessions: 3, newSession: true })).toEqual({ ok: false, why: 'sessions' })
-    expect(mayReserve({ caps: c, ceiling: u(0.5), person: zero, platform: zero, openSessions: 3, newSession: false })).toEqual({ ok: true })
-  })
+describe('spend: the measured delta and the database ceilings', () => {
   it('the measured delta is never negative and is uncapped', () => {
     expect(deltaOf(u(1), u(0.9))).toBe(0)
     expect(deltaOf(u(1), u(1.8))).toBe(u(0.8))
+  })
+  it('the SQL ceilings are HARD, and every caps row stays at or below them (unit economics review of the phase, F1)', () => {
+    const sqlText = readFileSync(join(process.cwd(), 'drizzle/0167_studio_access.sql'), 'utf8')
+    const m = /p_ceiling > (\d+) or p_person_cap > (\d+) or p_platform_cap > (\d+) or p_open_cap > (\d+)/.exec(sqlText)
+    expect(m && m.slice(1).map(Number)).toEqual([HARD.turn, HARD.personDay, HARD.platformDay, HARD.openSessions])
+    for (const c of Object.values(CAPS)) {
+      expect(Math.max(c.turnCeiling, c.turnMax)).toBeLessThanOrEqual(HARD.turn)
+      expect(c.personDay).toBeLessThanOrEqual(HARD.personDay)
+      expect(c.platformDay).toBeLessThanOrEqual(HARD.platformDay)
+      expect(c.openSessions).toBeLessThanOrEqual(HARD.openSessions)
+    }
   })
 })
 
@@ -89,10 +85,10 @@ describe('turn state from timestamps', () => {
     expect(turnOpen({ ...base, startedAt: t0 })).toBe(true)
   })
   it('a call is accepted only in the open turn, after its message', () => {
-    expect(callAccepted({ ...base, startedAt: t0 }, true)).toBe(true)
-    expect(callAccepted({ ...base, startedAt: t0 }, false)).toBe(false)
-    expect(callAccepted(base, true)).toBe(false)
-    expect(callAccepted({ ...base, startedAt: t0, endedAt: t0 }, true)).toBe(false)
+    expect(inCallWindow({ open: true, started: true, afterUserMessage: true })).toBe(true)
+    expect(inCallWindow({ open: true, started: true, afterUserMessage: false })).toBe(false)
+    expect(inCallWindow({ open: true, started: false, afterUserMessage: true })).toBe(false)
+    expect(inCallWindow({ open: false, started: true, afterUserMessage: true })).toBe(false)
   })
 })
 
@@ -112,19 +108,18 @@ describe('session end', () => {
     expect(endReason(idle)).toBe('idle')
     expect(endReason({ ...idle, turnOpen: true })).toBeNull()
   })
-  it('deleted at Anthropic 30 days after it ends', () => {
-    expect(dueForDelete(new Date(now.getTime() - 31 * 86_400_000), now)).toBe(true)
-    expect(dueForDelete(new Date(now.getTime() - 29 * 86_400_000), now)).toBe(false)
+  it('a turn the runtime never took, past the start grace, ends the session as a failed start', () => {
+    const open = { ...facts, turnOpen: true, turnStarted: false }
+    expect(endReason({ ...open, turnSentAt: new Date(now.getTime() - START_GRACE_MS) })).toBe('start_failed')
+    expect(endReason({ ...open, turnSentAt: new Date(now.getTime() - START_GRACE_MS + 1_000) })).toBeNull()
+    expect(endReason({ ...open, turnStarted: true, turnSentAt: new Date(now.getTime() - START_GRACE_MS) })).toBeNull()
   })
 })
 
 describe('tools', () => {
-  it('names and who starts', () => {
+  it('names', () => {
     expect(TOOL_NAMES).toEqual(['store_facts', 'tokens_propose', 'logo_propose', 'preview_build'])
     expect(isToolName('content_propose')).toBe(false)
-    expect(mayStartSession('partner')).toBe(true)
-    expect(mayStartSession('builder')).toBe(false)
-    expect(mayStartSession('owner')).toBe(false)
   })
   it('inputs are closed: no store, person or row id slips in', () => {
     expect(parseToolInput('store_facts', {})).toEqual({})
@@ -179,8 +174,7 @@ describe('the gaps impact review named', () => {
     const r = checkTokens(live, { palette: { accent: 'red' } })
     expect(r.ok).toBe(false)
   })
-  it('tool kinds and errors cover every tool, in our words', () => {
-    expect(Object.keys(TOOL_KIND).sort()).toEqual([...TOOL_NAMES].sort())
+  it('tool errors are in our words', () => {
     for (const w of Object.values(TOOL_ERRORS)) expect(w.length).toBeLessThan(120)
     expect(LOGO_SLOT).toBe('main')
   })

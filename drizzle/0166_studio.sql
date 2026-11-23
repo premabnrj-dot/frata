@@ -166,6 +166,9 @@ CREATE UNIQUE INDEX "studio_sessions_runtime" ON "studio_sessions" USING btree (
 CREATE UNIQUE INDEX "studio_sessions_one_open" ON "studio_sessions" USING btree ("tenant_id","user_id") WHERE "studio_sessions"."ended_at" is null;--> statement-breakpoint
 CREATE INDEX "studio_sessions_open" ON "studio_sessions" USING btree ("last_read_at") WHERE "studio_sessions"."ended_at" is null;--> statement-breakpoint
 CREATE INDEX "studio_sessions_ended" ON "studio_sessions" USING btree ("ended_at") WHERE "studio_sessions"."ended_at" is not null and "studio_sessions"."deleted_at" is null;--> statement-breakpoint
+CREATE INDEX "studio_sessions_unclean" ON "studio_sessions" USING btree ("ended_at") WHERE "studio_sessions"."ended_at" is not null and "studio_sessions"."cleaned_at" is null;--> statement-breakpoint
+CREATE INDEX "studio_sessions_latest" ON "studio_sessions" USING btree ("tenant_id","user_id","created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "studio_tool_calls_pending" ON "studio_tool_calls" USING btree ("session_id") WHERE "studio_tool_calls"."answered_at" is null;--> statement-breakpoint
+CREATE INDEX "studio_tool_calls_by_turn" ON "studio_tool_calls" USING btree ("turn_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "studio_turns_one_open" ON "studio_turns" USING btree ("session_id") WHERE "studio_turns"."ended_at" is null and "studio_turns"."paused_at" is null and "studio_turns"."failed_at" is null;--> statement-breakpoint
 CREATE INDEX "studio_turns_session" ON "studio_turns" USING btree ("session_id","sent_at");

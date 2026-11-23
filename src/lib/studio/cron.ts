@@ -4,10 +4,13 @@ import { endReason, type EndReason } from '@/domains/studio/session'
 import { auditEvents } from '@/lib/db/schema'
 import { storefrontKeys } from '@/lib/db/schema-storefront-api'
 import { withTenant } from '@/lib/db/tenant'
-import { studioDue, sweepStudioBinds } from '@/lib/db/studio'
+import { studioDue, sweepStudioBinds, type DueRow } from '@/lib/db/studio'
 import { STUDIO_OPEN } from '@/lib/env'
 import { errName } from '@/lib/log'
+import type { MicroUsd } from '@/domains/money/usd'
 import { advance } from './advance'
+import { CALL_MS } from './client'
+import { listCostOf, measuredOf } from './measure'
 import { managedRuntime } from './runtime-managed'
 import { RuntimeError, type StudioRuntime } from './runtime'
 
@@ -22,24 +25,37 @@ import { RuntimeError, type StudioRuntime } from './runtime'
 const one = <T>(rows: unknown) => (rows as T[])[0]
 
 
-/** Ends a session for a reason the cron decides (no bind; its open turn settles at most its reserve). */
-async function endUnbound(tenantId: string, sessionId: string, reason: EndReason): Promise<boolean> {
+type Facts = { created_at: string; last_activity_at: string; ended_at: string | null; person_live: boolean; turn_open: boolean; turn_sent_at: string | null; turn_started: boolean; runtime_id: string | null; spent_micro: string | number }
+const factsOf = (tenantId: string, sessionId: string) => withTenant(tenantId, async (tx) =>
+  one<Facts>(await tx.execute(sql`select created_at, last_activity_at, ended_at, person_live, turn_open, turn_sent_at, turn_started, runtime_id, spent_micro from app_studio_session_facts(${sessionId}::uuid)`)))
+
+/** Ends a session for a reason the cron decides (no bind). Its open turn settles what the runtime measured, capped at
+ *  its reserve in the database: 0 when no runtime session was recorded, the reserve kept counted only when the list cost
+ *  cannot be read (unit economics F2, F3). `vendor` false: Anthropic is not reached. */
+async function endUnbound(tenantId: string, sessionId: string, reason: EndReason, rt: StudioRuntime, vendor: boolean, f?: Facts | null): Promise<boolean> {
+  const facts = f ?? (await factsOf(tenantId, sessionId))
+  if (!facts) return false
+  const runtimeId = facts.runtime_id
+  const listCost = vendor ? await listCostOf(rt, runtimeId) : runtimeId ? null : (0 as MicroUsd)
+  const measured = facts.turn_open ? measuredOf(Number(facts.spent_micro) as MicroUsd, listCost) : null
   return withTenant(tenantId, async (tx) =>
-    one<{ ok: boolean }>(await tx.execute(sql`select app_studio_end_session(${sessionId}::uuid, ${reason}, null::bigint) as ok`))?.ok === true)
+    one<{ ok: boolean }>(await tx.execute(sql`select app_studio_end_session(${sessionId}::uuid, ${reason}, ${measured}::bigint) as ok`))?.ok === true)
 }
 
-/** Why the cron ends this open session now, or null. */
-async function dueEnd(tenantId: string, sessionId: string, turnOpen: boolean): Promise<EndReason | null> {
-  const f = await withTenant(tenantId, async (tx) => one<{ created_at: string; last_activity_at: string; ended_at: string | null; person_live: boolean }>(
-    await tx.execute(sql`select created_at, last_activity_at, ended_at, person_live from app_studio_session_facts(${sessionId}::uuid)`)))
+/** Why the cron ends this open session now, or null (the facts read now: a turn may have closed since the work list). */
+function dueEnd(f: Facts | undefined): EndReason | null {
   if (!f || f.ended_at) return null
-  return endReason({ now: new Date(), createdAt: new Date(f.created_at), lastActivityAt: new Date(f.last_activity_at), turnOpen, studioOpen: STUDIO_OPEN === 'staff', actorLive: f.person_live })
+  return endReason({
+    now: new Date(), createdAt: new Date(f.created_at), lastActivityAt: new Date(f.last_activity_at), turnOpen: f.turn_open,
+    studioOpen: STUDIO_OPEN === 'staff', actorLive: f.person_live, turnSentAt: f.turn_sent_at ? new Date(f.turn_sent_at) : null, turnStarted: f.turn_started,
+  })
 }
 
 /** An ended session's key revoked, its vault and file deleted and the session archived; then marked cleaned. A failure
  *  leaves it for the next run (each step is safe to repeat). `vendor` false (Studio unconfigured: no key to reach
- *  Anthropic): the key is revoked and the rest waits. */
-export async function cleanSession(tenantId: string, sessionId: string, rt: StudioRuntime = managedRuntime, vendor = true): Promise<boolean> {
+ *  Anthropic): the key is revoked and the rest waits. `room`: no call begins unless it can end before the cron's deadline. */
+export async function cleanSession(tenantId: string, sessionId: string, rt: StudioRuntime = managedRuntime, vendor = true,
+  room: (ms: number) => boolean = () => true): Promise<boolean> {
   const ids = await withTenant(tenantId, async (tx) => {
     const r = one<{ runtime_id: string | null; vault_id: string | null; file_id: string | null; build_key_id: string | null }>(
       await tx.execute(sql`select runtime_id, vault_id, file_id, build_key_id from app_studio_cleanup_of(${sessionId}::uuid)`))
@@ -51,9 +67,11 @@ export async function cleanSession(tenantId: string, sessionId: string, rt: Stud
     return r
   })
   if (!ids || !vendor) return false
+  const next = () => { if (!room(CALL_MS.control)) throw new RuntimeError('timeout') }
   try {
-    if (ids.vault_id) await rt.deleteVault(ids.vault_id)
-    if (ids.file_id) await rt.deleteFile(ids.file_id)
+    if (ids.vault_id) { next(); await rt.deleteVault(ids.vault_id) }
+    if (ids.file_id) { next(); await rt.deleteFile(ids.file_id) }
+    if (ids.runtime_id) next()
     if (ids.runtime_id) await rt.archive(ids.runtime_id).catch((e: unknown) => { if (!(e instanceof RuntimeError && e.code === 'not_found')) throw e })
   } catch (err) {
     console.error('[studio] clean', err instanceof RuntimeError ? err.code : errName(err))
@@ -75,39 +93,58 @@ async function deleteSession(tenantId: string, sessionId: string, rt: StudioRunt
 
 export type CronReport = { advanced: number; ended: number; cleaned: number; deleted: number; errors: number }
 
-/** The per-minute net (src/app/api/cron/studio/route.ts): each open turn advanced, sessions ended for the switch, a gone
- *  person, age or idleness, ended ones cleaned up, old ones deleted at Anthropic. No step starts past the deadline. */
+/** The most one step of each kind can take once begun (speed review of the phase, MED-2): an end reads the list cost (one
+ *  control call); an advance is held to 30 s; a clean checks for room before each of its calls; a delete is one call. */
+const STEP_MS = { end: CALL_MS.control + 5_000, advance: 30_000, clean: CALL_MS.control + 2_000, delete: CALL_MS.control + 2_000 } as const
+/** Advances run this many at once (speed review of the phase, MED-1): each holds one connection at a time. */
+const ADVANCE_AT_ONCE = 4
+
+/** Runs `work` over `items`, `n` at a time. */
+async function pool<T>(items: T[], n: number, work: (t: T) => Promise<void>): Promise<void> {
+  let i = 0
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) await work(items[i++]!) }))
+}
+
+/** The per-minute net (src/app/api/cron/studio/route.ts): sessions ended for the switch, a gone person, age, idleness or
+ *  a start that died; each open turn advanced; ended ones cleaned up; old ones deleted at Anthropic. The cheap ends run
+ *  first and the advances four at once, so a slow Anthropic never starves the ends and clean-ups (speed review of the
+ *  phase, MED-1); no step starts unless its kind's longest step still ends before the deadline (MED-2). */
 export async function runStudioCron(deadline: number, rt: StudioRuntime = managedRuntime, onlyStore?: string, vendor = true): Promise<CronReport> {
   const out: CronReport = { advanced: 0, ended: 0, cleaned: 0, deleted: 0, errors: 0 }
   const room = (ms: number) => Date.now() + ms < deadline
   await sweepStudioBinds().catch((e) => { out.errors++; console.error('[studio] sweep', errName(e)) })
   // `onlyStore`: the int tests share one database across files; the route never passes it.
   const due = (await studioDue(20)).filter((d) => !onlyStore || d.tenantId === onlyStore)
-  for (const d of due) {
-    if (!room(20_000)) break
-    try {
-      // Studio unconfigured (the key removed is half the switch: security review of R6, MED-2): the database half still
-      // runs. Every open session ends as `switch` and its key is revoked; Anthropic's side waits for a key.
-      if (!vendor && (d.kind === 'advance' || d.kind === 'end')) { if (await endUnbound(d.tenantId, d.sessionId, 'switch')) out.ended++; continue }
-      if (!vendor && d.kind === 'delete') continue
-      if (d.kind === 'advance' || d.kind === 'end') {
-        const why = await dueEnd(d.tenantId, d.sessionId, d.kind === 'advance')
-        if (why) { if (await endUnbound(d.tenantId, d.sessionId, why)) out.ended++; continue }
-        if (d.kind === 'advance' && d.turnId) {
-          const r = await advance({ tenantId: d.tenantId, turnId: d.turnId }, { runtime: rt, deadline: Math.min(deadline, Date.now() + 30_000) })
-          if (r === 'actor' && (await endUnbound(d.tenantId, d.sessionId, 'actor'))) out.ended++
-          else if (r === 'error') out.errors++
-          else out.advanced++
-        }
-      } else if (d.kind === 'clean') {
-        if (await cleanSession(d.tenantId, d.sessionId, rt, vendor)) out.cleaned++
-      } else if (d.kind === 'delete') {
-        if (await deleteSession(d.tenantId, d.sessionId, rt)) out.deleted++
-      }
-    } catch (err) {
-      out.errors++
-      console.error('[studio] cron', d.kind, errName(err))
+  const step = async (d: DueRow) => {
+    try { await work(d) } catch (err) { out.errors++; console.error('[studio] cron', d.kind, errName(err)) }
+  }
+  const work = async (d: DueRow) => {
+    // Studio unconfigured (the key removed is half the switch: security review of R6, MED-2): the database half still
+    // runs. Every open session ends as `switch` and its key is revoked; Anthropic's side waits for a key.
+    if (!vendor && (d.kind === 'advance' || d.kind === 'end')) { if (await endUnbound(d.tenantId, d.sessionId, 'switch', rt, false)) out.ended++; return }
+    if (d.kind === 'advance' || d.kind === 'end') {
+      const f = await factsOf(d.tenantId, d.sessionId)
+      const why = dueEnd(f)
+      if (why) { if (await endUnbound(d.tenantId, d.sessionId, why, rt, true, f)) out.ended++; return }
+      if (d.kind !== 'advance' || !d.turnId) return
+      const r = await advance({ tenantId: d.tenantId, turnId: d.turnId }, { runtime: rt, deadline: Math.min(deadline, Date.now() + STEP_MS.advance) })
+      // `actor`: the turn's person no longer binds. A turn the poll closed meanwhile binds nobody either: only a turn
+      // still open is ended for it (architecture review of the phase); with no room left, the next minute ends it.
+      if (r === 'actor') {
+        const now = room(STEP_MS.end) ? await factsOf(d.tenantId, d.sessionId) : null
+        if (now?.turn_open && (await endUnbound(d.tenantId, d.sessionId, 'actor', rt, true, now))) out.ended++
+      } else if (r === 'error') out.errors++
+      else out.advanced++
+    } else if (d.kind === 'clean') {
+      if (await cleanSession(d.tenantId, d.sessionId, rt, vendor, room)) out.cleaned++
+    } else if (vendor) {
+      if (await deleteSession(d.tenantId, d.sessionId, rt)) out.deleted++
     }
   }
+  const of = (k: DueRow['kind']) => due.filter((d) => d.kind === k)
+  for (const d of of('end')) { if (!room(STEP_MS.end)) break; await step(d) }
+  await pool(of('advance'), ADVANCE_AT_ONCE, async (d) => { if (room(STEP_MS.advance)) await step(d) })
+  for (const d of of('clean')) { if (!room(STEP_MS.clean)) break; await step(d) }
+  for (const d of of('delete')) { if (!room(STEP_MS.delete)) break; await step(d) }
   return out
 }

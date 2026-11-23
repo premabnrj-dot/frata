@@ -46,6 +46,11 @@ export const CAPS: Readonly<Record<string, Caps>> = {
   },
 }
 
+/** The database's hard ceilings (drizzle/0167 app_studio_open_turn refuses any cap above them; a test reads the SQL):
+ *  sized to the spec's C1 budgets at ₹94 and 1.10 (unit economics review of the phase, F1): a turn of 120 credits
+ *  ($7.35), a person's 300 credits ($18.37) under $50, the platform's ₹25,000 day ($265.96), 70 sessions (decision 29). */
+export const HARD = { turn: microUsd(7.5), personDay: microUsd(50), platformDay: microUsd(270), openSessions: 70 } as const
+
 export const capsFor = (model: string): Caps | null => CAPS[model] ?? null
 export const studioCaps = (): Caps | null => capsFor(STUDIO_MODEL)
 
@@ -75,21 +80,6 @@ export function budgetFor(a: { spent: MicroUsd; largest: MicroUsd; ceiling: Micr
 /** A turn's ceiling as asked (null: the default), clamped to the model's maximum. */
 export const ceilingOf = (caps: Caps, asked?: MicroUsd | null): MicroUsd =>
   (asked && asked > 0 ? Math.min(asked, caps.turnMax) : caps.turnCeiling) as MicroUsd
-
-export type DayTotals = { reserved: MicroUsd; measured: MicroUsd }
-export type SendRefusal = 'person_day' | 'platform_day' | 'sessions'
-
-/**
- * Whether a Send may reserve `ceiling` now. Each day row counts what open turns reserve plus what settled turns
- * measured. `newSession`: this Send opens a session (counted against the open-session cap).
- */
-export function mayReserve(a: { caps: Caps; ceiling: MicroUsd; person: DayTotals; platform: DayTotals; openSessions: number; newSession: boolean }):
-  { ok: true } | { ok: false; why: SendRefusal } {
-  if (a.newSession && a.openSessions >= a.caps.openSessions) return { ok: false, why: 'sessions' }
-  if (a.person.reserved + a.person.measured + a.ceiling > a.caps.personDay) return { ok: false, why: 'person_day' }
-  if (a.platform.reserved + a.platform.measured + a.ceiling > a.caps.platformDay) return { ok: false, why: 'platform_day' }
-  return { ok: true }
-}
 
 /** The delta a turn cost, from the session's cumulative list cost before and after (whole cents; never negative). */
 export const deltaOf = (before: MicroUsd, after: MicroUsd): MicroUsd => Math.max(0, after - before) as MicroUsd

@@ -2,7 +2,6 @@ import 'server-only'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { inCallWindow } from '@/domains/studio/turn'
 import { cursorAfter, opensTurn } from '@/domains/studio/events'
-import { deltaOf } from '@/domains/studio/spend'
 import { TOOL_ERRORS } from '@/domains/studio/tools'
 import type { MicroUsd } from '@/domains/money/usd'
 import type { Tx } from '@/lib/db'
@@ -11,6 +10,7 @@ import { STUDIO_OPEN } from '@/lib/env'
 import { LINE_MAX, studioMessages, studioSessions, studioToolCalls, studioTurns } from '@/lib/db/schema-studio'
 import { asTurn, withTurnBound, type TurnRef } from './as-turn'
 import { CALL_MS } from './client'
+import { listCostOf, measuredOf, spendOf } from './measure'
 import { managedRuntime } from './runtime-managed'
 import { RuntimeError, type StudioEvent, type StudioRuntime } from './runtime'
 import { runCall, type CallResult } from './tools'
@@ -216,11 +216,9 @@ async function answerRound(ref: AdvanceRef, lease: Lease, rt: StudioRuntime, pen
 
 /** Closes the turn and settles the measured delta of the session's list cost (uncapped; null keeps the reserve counted). */
 async function closeTurn(ref: AdvanceRef, lease: Lease, rt: StudioRuntime, how: 'ended' | 'paused' | 'failed', largest: MicroUsd): Promise<boolean> {
-  const listCost = await rt.usage(lease.runtimeId).then((u) => u.listCost as number, () => null)
+  const listCost = await listCostOf(rt, lease.runtimeId)
   const done = await bound(ref, async (tx) => {
-    const rows = await tx.execute(sql`select spent_micro from app_studio_spend_of(${lease.sessionId}::uuid)`)
-    const spent = Number((rows as unknown as { spent_micro: number }[])[0]?.spent_micro ?? 0)
-    const measured = listCost === null ? null : deltaOf(spent as MicroUsd, listCost as MicroUsd)
+    const measured = measuredOf((await spendOf(tx, lease.sessionId)).spent, listCost)
     const r = await tx.execute(sql`select app_studio_close_turn(${ref.turnId}::uuid, ${how}, ${how === 'failed' ? 'runtime' : null}, ${measured}::bigint, ${largest}::bigint) as ok`)
     await tx.update(studioSessions).set({ advancingUntil: null }).where(and(eq(studioSessions.tenantId, ref.tenantId), eq(studioSessions.id, lease.sessionId)))
     return (r as unknown as { ok: boolean }[])[0]?.ok === true
@@ -245,24 +243,32 @@ async function advanceIn(ref: AdvanceRef, opts: AdvanceOptions): Promise<Advance
   let outcome: AdvanceOutcome = 'waiting'
   let largest = 0 as MicroUsd
   const followUntil = Date.now() + (opts.followMs ?? 0)
+  // A close reads the list cost (a control call) and clears the lease itself; with no room for it, the next trigger
+  // closes the turn (speed review of the phase, LOW-8, LOW-10).
+  let released = false
+  const close = async <H extends 'ended' | 'paused' | 'failed'>(how: H): Promise<H | 'waiting' | AdvanceOutcome> => {
+    if (!room(CALL_MS.control + 2_000)) return outcome
+    released = await closeTurn(ref, lease, rt, how, largest)
+    return released ? how : 'waiting'
+  }
   try {
     for (;;) {
       if (!room(CALL_MS.events)) return outcome
       let events: StudioEvent[]
       try { events = await rt.events(lease.runtimeId, lease.cursor, PAGE) } catch (err) {
         console.error('[studio] events', err instanceof RuntimeError ? err.code : 'error')
-        if (err instanceof RuntimeError && err.code === 'not_found') return (await closeTurn(ref, lease, rt, 'failed', largest)) ? 'failed' : 'waiting'
+        if (err instanceof RuntimeError && err.code === 'not_found') return await close('failed')
         return 'error'
       }
       const batch = await storeEvents(ref, lease, events)
       if (!batch) return 'actor'
       if (batch.largest > largest) largest = batch.largest
-      if (batch.terminal) return (await closeTurn(ref, lease, rt, 'failed', largest)) ? 'failed' : 'waiting'
+      if (batch.terminal) return await close('failed')
       const idle = batch.idle
       if (idle && !batch.moving) {
         const how = idle.stop === 'end_turn' ? 'ended' : idle.stop === 'budget_reached' ? 'paused' : idle.stop === 'refusal' || idle.stop === 'retries_exhausted' ? 'failed' : null
         // Closed by someone else first (a Stop, the cron): nothing of ours to report.
-        if (how) return (await closeTurn(ref, lease, rt, how, largest)) ? how : 'waiting'
+        if (how) return await close(how)
         if (idle.stop === 'requires_action' && idle.pending.length) {
           // A round needs its tools (reads, a few seconds) and ONE answer send (CALL_MS.control).
           if (!room(CALL_MS.control + 5_000)) return outcome
@@ -279,6 +285,6 @@ async function advanceIn(ref: AdvanceRef, opts: AdvanceOptions): Promise<Advance
     console.error('[studio] advance', codeOf(err))
     return 'error'
   } finally {
-    await releaseLease(ref, lease.sessionId)
+    if (!released) await releaseLease(ref, lease.sessionId)
   }
 }

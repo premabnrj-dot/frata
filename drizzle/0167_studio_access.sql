@@ -18,8 +18,9 @@
 -- studio_spend_*, studio_binds): no role holds any privilege; a restrictive deny-all policy; definers only.
 -- Every definer: security definer, search_path '', EXECUTE revoked from public, anon, authenticated, service_role,
 -- frata_builder and frata_admin, granted to frata_app only where the app calls it. Ids only to the cron.
--- The hard ceilings below hold whatever the code passes (security review M1): a turn ≤ $5, a person's day ≤ $50, the
--- platform's day ≤ $200, ≤ 70 sessions open (spec § 6.7, decision 29).
+-- The hard ceilings below hold whatever the code passes (security review M1): a turn ≤ $7.50, a person's day ≤ $50, the
+-- platform's day ≤ $270, ≤ 70 sessions open (spec § 6.7, decision 29; sized to the C1 budgets, unit economics review of
+-- the phase F1; src/domains/studio/spend.ts HARD, held equal by a test).
 
 -- ── Platform scope: definers only ───────────────────────────────────────────────────────────────────────────────────
 alter table studio_turn_keys enable row level security;--> statement-breakpoint
@@ -237,7 +238,7 @@ create or replace function app_studio_open_turn(p_session uuid, p_ceiling bigint
 declare b record; s public.studio_sessions; v_turn uuid; pr record; dr record; v_open integer; v_day text; v_new boolean;
 begin
   if p_ceiling is null or p_person_cap is null or p_platform_cap is null or p_open_cap is null
-     or p_ceiling <= 0 or p_ceiling > 5000000 or p_person_cap > 50000000 or p_platform_cap > 200000000 or p_open_cap > 70 then
+     or p_ceiling <= 0 or p_ceiling > 7500000 or p_person_cap > 50000000 or p_platform_cap > 270000000 or p_open_cap > 70 then
     raise exception 'bad_input' using errcode = 'P0001';
   end if;
   s := public.app_studio_own_session(p_session);
@@ -350,13 +351,22 @@ end $$;--> statement-breakpoint
 
 -- ── The cron's facts about one session of the current store: times and whether its person is still there (without the
 --    step-up). No partner's content. ──
+--    The open turn too, if any (architecture review of the phase): whether one is open, when it was sent, whether the
+--    runtime took its message, so the cron tells a turn closed meanwhile from a person gone, and fails a start that died;
+--    and the session's runtime id and settled spend, so an end the cron decides settles what was measured (unit economics F2).
 create or replace function app_studio_session_facts(p_session uuid)
-  returns table (created_at timestamptz, last_activity_at timestamptz, ended_at timestamptz, cleaned_at timestamptz, person_live boolean)
+  returns table (created_at timestamptz, last_activity_at timestamptz, ended_at timestamptz, cleaned_at timestamptz, person_live boolean,
+                 turn_open boolean, turn_sent_at timestamptz, turn_started boolean, runtime_id text, spent_micro bigint)
   language sql stable security definer set search_path = '' as $$
   select s.created_at, s.last_activity_at, s.ended_at, s.cleaned_at,
          exists (select 1 from public.app_studio_person(s.user_id, s.tenant_id) p where p.partner_id = s.partner_id and p.member_id = s.partner_member_id)
-           and exists (select 1 from public.platform_staff ps where ps.user_id = s.user_id)
-    from public.studio_sessions s where s.id = p_session and s.tenant_id = public.app_current_tenant()
+           and exists (select 1 from public.platform_staff ps where ps.user_id = s.user_id),
+         t.id is not null, t.sent_at, t.started_at is not null, s.runtime_id, coalesce(x.spent_micro, 0)
+    from public.studio_sessions s
+    left join public.studio_spend_sessions x on x.session_id = s.id
+    left join lateral (select x.id, x.sent_at, x.started_at from public.studio_turns x
+                        where x.session_id = s.id and x.ended_at is null and x.paused_at is null and x.failed_at is null limit 1) t on true
+   where s.id = p_session and s.tenant_id = public.app_current_tenant()
 $$;--> statement-breakpoint
 
 -- ── An ENDED session's vendor ids and build key, for the cron to clean up; then mark it cleaned or deleted. ──

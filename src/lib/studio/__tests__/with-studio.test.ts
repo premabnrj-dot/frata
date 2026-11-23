@@ -15,7 +15,7 @@ vi.mock('@/lib/env', () => ({ get STUDIO_OPEN() { return s.open }, isStudioConfi
 vi.mock('@/lib/auth/require-staff', () => ({ ANY_STAFF: ['admin', 'support'], requireStaff: vi.fn(async () => s.staff) }))
 vi.mock('@/lib/auth/require-partner', () => ({ requirePartner: vi.fn(async () => s.partner) }))
 vi.mock('@/lib/auth/require-member', () => ({ requireMember: vi.fn(async (roles: string[]) => (s.member.ok && !roles.includes((s.member.membership as { role: string }).role) ? { ok: false } : s.member)) }))
-vi.mock('@/lib/auth/session', () => ({ staffProof: vi.fn(async () => s.staffProof), partnerProof: vi.fn(async () => s.partnerProof) }))
+vi.mock('@/lib/auth/session', () => ({ staffProof: vi.fn(async () => s.staffProof), partnerProof: vi.fn(async () => s.partnerProof), oncePerCall: <T>(w: () => Promise<T>) => w() }))
 vi.mock('@/lib/db/tenant', () => ({ withTenant: vi.fn() }))
 const { requireStudio } = await import('../with-studio')
 

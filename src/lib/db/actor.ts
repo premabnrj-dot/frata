@@ -43,9 +43,9 @@ export class CapabilityError extends Error { override name = 'CapabilityError'; 
 /** The Builder's login is not set (a preview, or before the orchestrator adds the secret): refuse, never fall back. */
 export class BuilderDbMissing extends Error { override name = 'BuilderDbMissing' }
 
-const connect = () => {
+const connect = (max = 2) => {
   if (!isBuilderDatabaseConfigured()) throw new BuilderDbMissing('DATABASE_URL_BUILDER is not set')
-  const conn = postgres(parseDatabaseUrl(DATABASE_URL_BUILDER, 'frata_builder', 'DATABASE_URL_BUILDER'), { ...POOL, max: 2, idle_timeout: 5 })
+  const conn = postgres(parseDatabaseUrl(DATABASE_URL_BUILDER, 'frata_builder', 'DATABASE_URL_BUILDER'), { ...POOL, max, idle_timeout: 5 })
   return { conn, db: drizzle(conn, { schema }) }
 }
 /** Studio's advance (src/lib/studio/advance.ts) runs outside a render, where React's cache does not hold: one
@@ -66,7 +66,7 @@ const requestDb = cache(() => {
 const builderDb = () => {
   const s = scope.getStore()
   if (!s) return requestDb()
-  s.made ??= connect()
+  s.made ??= connect(1) // one connection for the whole advance (speed review of the phase, LOW-9)
   return s.made.db
 }
 

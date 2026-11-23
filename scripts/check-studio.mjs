@@ -58,7 +58,7 @@ const DEFINERS = {
   app_studio_set_vendor: ['src/lib/studio/sessions.ts'],
   app_studio_set_key: ['src/lib/studio/sessions.ts'],
   app_studio_open_turn: ['src/lib/studio/sessions.ts'],
-  app_studio_spend_of: ['src/lib/studio/sessions.ts', 'src/lib/studio/advance.ts'],
+  app_studio_spend_of: ['src/lib/studio/measure.ts'],
   app_studio_close_turn: ['src/lib/studio/advance.ts', 'src/lib/studio/sessions.ts'],
   app_studio_end_session: ['src/lib/studio/sessions.ts', 'src/lib/studio/cron.ts'],
   app_studio_session_facts: ['src/lib/studio/cron.ts'],

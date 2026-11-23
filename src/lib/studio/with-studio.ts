@@ -6,7 +6,7 @@ import { isStudioConfigured, STUDIO_OPEN } from '@/lib/env'
 import { requireMember } from '@/lib/auth/require-member'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { partnerProof, staffProof } from '@/lib/auth/session'
+import { oncePerCall, partnerProof, staffProof } from '@/lib/auth/session'
 
 // =============================================================================
 // FILE: src/lib/studio/with-studio.ts — STUDIO'S DOOR FOR A PERSON (plan docs/plans/2026-11-22-v3a-runtime.md ruling k;
@@ -27,7 +27,12 @@ export type StudioClosed = { ok: false; reason: 'closed' | 'not_staff' | 'not_pa
 
 export const STUDIO_CLOSED = 'Studio isn’t open yet'
 
-export async function requireStudio(): Promise<StudioOk | StudioClosed> {
+/** One Supabase check and one access query for the whole door, in a page, an action or the poll (oncePerCall). */
+export function requireStudio(): Promise<StudioOk | StudioClosed> {
+  return oncePerCall(studioDoor)
+}
+
+async function studioDoor(): Promise<StudioOk | StudioClosed> {
   if (STUDIO_OPEN !== 'staff' || !isStudioConfigured()) return { ok: false, reason: 'closed', message: STUDIO_CLOSED }
   const [staff, partner] = await Promise.all([requireStaff(ANY_STAFF), requirePartner()])
   if (!staff.ok) return { ok: false, reason: 'not_staff', message: STUDIO_CLOSED }

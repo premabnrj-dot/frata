@@ -5406,6 +5406,8 @@ begin
   -- Caps: required, held to the ceilings, checked under the lock.
   begin perform app_studio_open_turn(s, 500000, null, 10000000, 3); raise exception 'FAIL: 91 a null cap'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
   begin perform app_studio_open_turn(s, 9000000000, 90000000000, 900000000000, 3); raise exception 'FAIL: 91 caps over the ceilings'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 7500001, 3000000, 10000000, 3); raise exception 'FAIL: 91 a turn a micro-dollar over its ceiling'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 500000, 3000000, 270000001, 3); raise exception 'FAIL: 91 a platform day over its ceiling'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
   begin perform app_studio_open_turn(s, 600000, 500000, 10000000, 3); raise exception 'FAIL: 91 a turn over the person''s day';
   exception when sqlstate 'P0001' then if sqlerrm <> 'person_day' then raise; end if; end;
   begin perform app_studio_open_turn(s, 500000, 3000000, 400000, 3); raise exception 'FAIL: 91 a turn over the platform day';
@@ -5529,6 +5531,7 @@ do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; s uuid;
   select d.session_id into s from app_studio_due(10) d where d.tenant_id = a and d.kind = 'advance';
   select * into r from app_studio_session_facts(s);
   if r.person_live is not true then raise exception 'FAIL: 91 a person with no step-up is not live (facts ignore the step-up)'; end if;
+  if r.turn_open is not true or r.turn_sent_at is null or r.spent_micro is null then raise exception 'FAIL: 91 the facts miss the open turn'; end if;
   if not app_studio_end_session(s, 'actor', 999999999) then raise exception 'FAIL: 91 the cron could not end the session'; end if;
   if app_studio_end_session(s, 'actor', 1) then raise exception 'FAIL: 91 a session ended twice'; end if;
   perform 1 from app_studio_cleanup_of(s);

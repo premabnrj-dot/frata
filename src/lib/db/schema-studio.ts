@@ -57,6 +57,9 @@ export const studioSessions = pgTable('studio_sessions', {
   uniqueIndex('studio_sessions_one_open').on(t.tenantId, t.userId).where(sql`${t.endedAt} is null`),
   index('studio_sessions_open').on(t.lastReadAt).where(sql`${t.endedAt} is null`),
   index('studio_sessions_ended').on(t.endedAt).where(sql`${t.endedAt} is not null and ${t.deletedAt} is null`),
+  // The cron's clean list, and the chat's latest session (speed review of the phase, LOW-5, LOW-6).
+  index('studio_sessions_unclean').on(t.endedAt).where(sql`${t.endedAt} is not null and ${t.cleanedAt} is null`),
+  index('studio_sessions_latest').on(t.tenantId, t.userId, t.createdAt.desc()),
   check('studio_sessions_end_reason', sql`${t.endReason} is null or ${t.endReason} in (${sql.raw(sqlList(END_REASONS))})`),
   check('studio_sessions_ended', sql`(${t.endedAt} is null) = (${t.endReason} is null)`),
 ])
@@ -106,6 +109,7 @@ export const studioToolCalls = pgTable('studio_tool_calls', {
   unique('studio_tool_calls_once').on(t.sessionId, t.toolUseId),
   unique('studio_tool_calls_scope').on(t.tenantId, t.partnerId, t.id),
   index('studio_tool_calls_pending').on(t.sessionId).where(sql`${t.answeredAt} is null`),
+  index('studio_tool_calls_by_turn').on(t.turnId, t.seenAt), // the chat's work lines (speed review of the phase, LOW-6)
   check('studio_tool_calls_caps', sql`octet_length(${t.input}::text) <= ${sql.raw(String(INPUT_MAX_BYTES))} and (${t.result} is null or octet_length(${t.result}::text) <= ${sql.raw(String(RESULT_MAX_BYTES))})`),
 ])
 

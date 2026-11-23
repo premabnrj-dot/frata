@@ -1,15 +1,14 @@
 import 'server-only'
 import { after } from 'next/server'
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
-import { budgetFor, deltaOf, studioCaps } from '@/domains/studio/spend'
-import type { MicroUsd } from '@/domains/money/usd'
-import type { Tx } from '@/lib/db'
+import { budgetFor, studioCaps } from '@/domains/studio/spend'
 import { LINE_MAX, studioMessages, studioSessions, studioTurns } from '@/lib/db/schema-studio'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { STUDIO_OPEN } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { buildKeyLimitOk, buildKeyUncount, mintBuildKey } from '@/lib/storefront-api/build-keys'
 import { advance } from './advance'
+import { listCostOf, measuredOf, spendOf } from './measure'
 import { managedRuntime } from './runtime-managed'
 import { RuntimeError, type StudioRuntime } from './runtime'
 import { starterArchive } from './starter'
@@ -51,24 +50,30 @@ function refusalOf(err: unknown): SendWhy {
 
 const one = <T>(rows: unknown) => (rows as T[])[0]
 
-async function spendOf(tx: Tx, sessionId: string) {
-  const r = one<{ spent_micro: number; largest_micro: number }>(await tx.execute(sql`select spent_micro, largest_micro from app_studio_spend_of(${sessionId}::uuid)`))
-  return { spent: Number(r?.spent_micro ?? 0) as MicroUsd, largest: Number(r?.largest_micro ?? 0) as MicroUsd }
+
+/** Whether the agent and environment at Anthropic are the ones this code was built for (the drift check,
+ *  runtime-managed.ts agentMatches): asked before every fresh start, a yes kept 5 minutes per process; a no or an error
+ *  refuses the start and is asked again next time (architecture review of the phase, B1). */
+const MATCH_MS = 5 * 60_000
+const matched = new WeakMap<StudioRuntime, number>()
+async function agentOk(rt: StudioRuntime): Promise<boolean> {
+  const at = matched.get(rt)
+  if (at && Date.now() - at < MATCH_MS) return true
+  const ok = await rt.agentMatches().catch(() => false)
+  if (ok) matched.set(rt, Date.now())
+  else matched.delete(rt)
+  return ok
 }
 
-/** The measured delta of a session's list cost since its last settle, or null when it cannot be read. */
-async function listCostOf(rt: StudioRuntime, runtimeId: string | null): Promise<number | null> {
-  if (!runtimeId) return 0
-  return rt.usage(runtimeId).then((u) => u.listCost as number, () => null)
-}
-/** The one measured delta (src/domains/studio/spend.ts deltaOf, as the advance settles): null when it cannot be read. */
-const deltaIn = async (tx: Tx, sessionId: string, listCost: number | null) =>
-  listCost === null ? null : deltaOf((await spendOf(tx, sessionId)).spent, listCost as MicroUsd)
+/** A Send's whole request (the page's maxDuration 60): the start's steps begin before START_MS, the follow ends by FOLLOW_MS. */
+const START_MS = 35_000
+const FOLLOW_MS = 55_000
 
 type Opened = { sessionId: string; turnId: string; runtimeId: string | null; budgetCents: number; pausedBefore: boolean; fresh: boolean }
 
 /** Send: the person's line and a turn on their own session (a new one when none is open or its margin is gone). */
 export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): Promise<SendResult> {
+  const t0 = Date.now()
   const text = sendText(raw)
   const caps = studioCaps()
   if (!text) return { ok: false, why: 'input' }
@@ -108,7 +113,7 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
   const rt = deps.runtime
   let runtimeId = opened.runtimeId
   if (opened.fresh || !runtimeId) {
-    const started = await start(auth, opened, deps)
+    const started = await start(auth, opened, deps, t0 + START_MS)
     if (!started.ok) {
       await failSession(auth, opened, 'start', started.runtimeId, rt)
       return { ok: false, why: 'start' }
@@ -135,14 +140,18 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
   }
   if (deps.follow) {
     const ref = { tenantId: auth.tenantId, turnId: opened.turnId }
-    try { after(() => advance(ref, { followMs: 20_000, deadline: Date.now() + 55_000 }).then(() => undefined, (e) => console.error('[studio] follow', errName(e)))) } catch { /* not in a request: the cron reads it */ }
+    try { after(() => advance(ref, { followMs: 20_000, deadline: t0 + FOLLOW_MS }).then(() => undefined, (e) => console.error('[studio] follow', errName(e)))) } catch { /* not in a request: the cron reads it */ }
   }
   return { ok: true, sessionId: opened.sessionId, turnId: opened.turnId }
 }
 
-/** A fresh session's start; each runtime call after a committed row. Returns the runtime id once recorded. */
-async function start(auth: StudioOk, o: Opened, deps: Deps): Promise<{ ok: true; runtimeId: string } | { ok: false; runtimeId: string | null }> {
+/** A fresh session's start; each runtime call after a committed row, and none begun past `deadline` (each call is held
+ *  to CALL_MS.control, so the request ends inside its minute). Returns the runtime id once recorded. */
+async function start(auth: StudioOk, o: Opened, deps: Deps, deadline: number): Promise<{ ok: true; runtimeId: string } | { ok: false; runtimeId: string | null }> {
   const rt = deps.runtime
+  const late = () => Date.now() > deadline
+  // 0. The agent and environment are the ones this code was built for (no key is minted for a drifted agent).
+  if (!(await agentOk(rt))) { console.error('[studio] start: the agent or environment differs'); return { ok: false, runtimeId: null } }
   const set = (kind: 'runtime' | 'vault' | 'file', value: string) => withStudio(auth, async (tx) =>
     one<{ ok: boolean }>(await tx.execute(sql`select app_studio_set_vendor(${o.sessionId}::uuid, ${kind}, ${value}) as ok`))?.ok === true).catch(() => false)
   // 1. The build key, minted and recorded on the session in one transaction (its row before any vault call).
@@ -156,10 +165,12 @@ async function start(auth: StudioOk, o: Opened, deps: Deps): Promise<{ ok: true;
   }).catch((e) => { console.error('[studio] key', errName(e)); return null })
   if (!minted) { if (limited) await buildKeyUncount(auth.tenantId).catch(() => {}); return { ok: false, runtimeId: null } }
   // 2. The vault holding it, then its id (a vault not recorded is deleted here).
+  if (late()) return { ok: false, runtimeId: null }
   let vaultId: string
   try { vaultId = await rt.createVault(minted) } catch { return { ok: false, runtimeId: null } }
   if (!(await set('vault', vaultId))) { await rt.deleteVault(vaultId).catch(() => {}); return { ok: false, runtimeId: null } }
   // 3. Starter 0's file, then its id.
+  if (late()) return { ok: false, runtimeId: null }
   let fileId: string | null = null
   try {
     const s = deps.starter()
@@ -167,6 +178,7 @@ async function start(auth: StudioOk, o: Opened, deps: Deps): Promise<{ ok: true;
     if (!(await set('file', fileId))) { await rt.deleteFile(fileId).catch(() => {}); return { ok: false, runtimeId: null } }
   } catch (err) { console.error('[studio] starter', err instanceof RuntimeError ? err.code : errName(err)); return { ok: false, runtimeId: null } }
   // 4. The session, always with its budget, then its id.
+  if (late()) return { ok: false, runtimeId: null }
   let runtimeId: string
   try { runtimeId = await rt.start({ title: 'Frrata agent', budgetCents: o.budgetCents, vaultId, fileId }) } catch { return { ok: false, runtimeId: null } }
   if (!(await set('runtime', runtimeId))) { await rt.remove(runtimeId).catch(() => {}); return { ok: false, runtimeId: null } }
@@ -178,7 +190,7 @@ async function start(auth: StudioOk, o: Opened, deps: Deps): Promise<{ ok: true;
 async function failSession(auth: StudioOk, o: Opened, reason: 'start' | 'send' | 'budget', runtimeId: string | null, rt: StudioRuntime) {
   const listCost = await listCostOf(rt, runtimeId)
   await withStudio(auth, async (tx) => {
-    const measured = await deltaIn(tx, o.sessionId, listCost)
+    const measured = measuredOf((await spendOf(tx, o.sessionId)).spent, listCost)
     await tx.execute(sql`select app_studio_close_turn(${o.turnId}::uuid, 'failed', ${reason}, ${measured}::bigint, null::bigint)`)
     await tx.execute(sql`select app_studio_end_session(${o.sessionId}::uuid, ${reason === 'start' ? 'start_failed' : 'restart'}, 0::bigint)`)
   }).catch((e) => console.error('[studio] fail', reason, errName(e)))
@@ -191,12 +203,14 @@ export async function stop(auth: StudioOk, rt: StudioRuntime = managedRuntime): 
     .where(and(eq(studioSessions.tenantId, auth.tenantId), eq(studioSessions.userId, auth.userId), isNull(studioSessions.endedAt)))).catch(() => [])
   const s = open[0]
   if (!s) return { ok: true }
-  if (s.runtimeId) await rt.interrupt(s.runtimeId).catch(() => {})
+  // The cost read, the session's end recorded (no later turn adopts anything of it), then the interrupt (architecture
+  // review of the phase): whatever runs past the read is held by the session's budget, and the cron archives it.
   const listCost = await listCostOf(rt, s.runtimeId)
   const ended = await withStudio(auth, async (tx) => {
-    const measured = await deltaIn(tx, s.id, listCost)
+    const measured = measuredOf((await spendOf(tx, s.id)).spent, listCost)
     return one<{ ok: boolean }>(await tx.execute(sql`select app_studio_end_session(${s.id}::uuid, 'stopped', ${measured}::bigint) as ok`))?.ok === true
   }).catch(() => false)
+  if (s.runtimeId) await rt.interrupt(s.runtimeId).catch(() => {})
   // Its key, vault and file are cleaned by the next cron minute (src/lib/studio/cron.ts), never from a person's request.
   return { ok: ended }
 }

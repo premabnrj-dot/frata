@@ -17,7 +17,7 @@ vi.mock('@/lib/db/actor', () => ({ builderActor: vi.fn(() => ({ kind: 'builder',
 const { outcomeOf } = await import('../tools')
 const { TurnUnbound } = await import('../as-turn')
 
-const ctx = { turn: { tenantId: 't', sessionId: 's', turnId: 'u' }, reads: { kind: 'builder', role: 'builder' }, write: vi.fn() } as never
+const ctx = { turn: { tenantId: 't', sessionId: 's', turnId: 'u' }, reads: { kind: 'builder', role: 'builder' }, write: vi.fn(async (work: (tx: unknown, p: string) => Promise<unknown>) => work({}, 'p')) } as never
 const SQUARE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#111"/></svg>'
 
 describe('the tool runner', () => {
