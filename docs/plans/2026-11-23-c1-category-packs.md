@@ -1,11 +1,13 @@
 # C1 · Category packs: the task plan
-Status: draft
+Status: active (C1a and C1c; C1b blocked on its mockup)
 **Mockup:** none — C1a and C1c are a refactor with no visible change; C1b (Settings › Store details, "What you sell") is to be drawn, and its build tasks wait for its approval
 **Approved:** owner, 2026-11-23 (calls 10 and 11)
-**Review:** architecture-reviewer pending
-**Review:** tenancy-auditor pending
-**Review:** security-reviewer pending (C1b changes `saveSection` and a lock)
-**Review:** speed-reviewer pending (C1b adds one read to the Store details page's `Promise.all`)
+**Review:** architecture-reviewer 3 major, 6 minor findings fixed, 2026-11-23
+**Review (C1b):** tenancy-auditor pending
+**Review (C1b):** security-reviewer pending (C1b changes `saveSection` and a lock)
+**Review (C1b):** speed-reviewer pending (C1b adds one read to the Store details page's `Promise.all`)
+(The three C1b lines carry "(C1b)" so `check:plans`, which reads `**Review:**` lines once a plan is active, holds C1a and C1c
+to their one review; each becomes a `**Review:**` line with its verdict before C1b executes.)
 Spec: `docs/specs/2026-11-23-merchant-onboarding.md` § C1–C3, § What is there today, calls 10 and 11. Builds on
 `docs/plans/2026-11-09-gst-core-and-categories.md` § 4 (phase 6) and `docs/research/2026-11-09-all-categories.md` § 3.
 **api-contract-reviewer is not needed.** No accessor feeds a Storefront API mapper (`src/domains/storefront-api/2026-12/map.ts`
@@ -24,7 +26,7 @@ is open question 1: if the owner wants Ask the owner on Store details, that is `
 ## Regression net (first; green before C1a·2 starts)
 | What | Where | Pins |
 |---|---|---|
-| New characterization test (C1a·1), written against today's exports and unchanged afterwards | `src/domains/catalogue/__tests__/sells-today.test.ts` | every derived value for 18 lists (table below) |
+| New characterization test (C1a·1), written against today's exports and unchanged afterwards | `src/domains/catalogue/__tests__/sells-today.test.ts` | every derived value for 19 lists (table below) |
 | Labels | `src/domains/catalogue/__tests__/label.test.ts:5-10` | `labelAsked` |
 | Size charts | `src/domains/catalogue/__tests__/size-charts.test.ts:5-8` | `presetsFor` order |
 | Sample sets | `src/lib/themes/__tests__/sample.test.ts:62-68` | `sampleSetFor` |
@@ -41,6 +43,7 @@ The characterization table. Each row was measured on today's code on 2026-11-23 
 | `[]` | 6211 | true | Kurta set · Women, Shirt · Men, One size | false | clothing | F |
 | women | 6204 | true | Kurta set · Women, One size | false | clothing | F |
 | men | 6203 | true | Shirt · Men, One size | false | clothing | F |
+| men, women | 6204 | true | Shirt · Men, Kurta set · Women, One size | false | clothing | F |
 | kids | 6209 | true | Kids, One size | false | clothing | F |
 | ethnic | 6211 | true | Kurta set · Women, One size | false | clothing | F |
 | accessories | 4202 | false | One size | false | accessories | F |
@@ -57,21 +60,22 @@ The characterization table. Each row was measured on today's code on 2026-11-23 
 | beauty, wellness | 3304 | false | One size | true | clothing | S |
 | unknown | 6211 | false | One size | false | clothing | (empty) |
 
+The packs a store sells are taken in the store's own order (`of(sells) = sells.flatMap((k) => BY_KEY[k] ?? [])`), which is
+today's: `men, women` gives Shirt · Men before Kurta set · Women, and `jewellery, men` gives One size, then Shirt · Men (architecture
+review, finding 4). The `men, women` row was added at the review; it was measured on today's code like the rest.
+
 F, J and S are the three sentences in `src/domains/policies/render.ts:87-89`, in that order and joined by one space. The test
 reads them through `renderPolicy('returns', …)` because `condition` is private. It also pins `SELL_KEYS` (order
 women, men, kids, ethnic, accessories, footwear, jewellery, beauty, wellness) and `SELL_LABELS` (order and words,
 `sell-keys.ts:6-9`).
 
 ## The Pack type
-`src/domains/catalogue/packs/types.ts` holds the final shape. A pack is pure data and imports types only.
+`src/domains/catalogue/packs/types.ts` holds the shape C1 needs. A pack is pure data and imports types only.
 ```ts
 import type { PresetKey } from '../size-charts'
 
 /** One sentence of the returns page (policies/render.ts). A store that sells several packs gets each distinct line once, by rank. */
 export type ReturnLine = { readonly rank: number; readonly text: string }
-/** The theme preview's sample sets (themes retire, ADR-0014; no pack adds one). */
-export type SampleKind = 'clothing' | 'accessories' | 'footwear'
-export type PhotoRatio = '4:5' | '3:4' | '1:1'
 
 export type Pack = {
   /** The sell key in shop_settings.sells and its CHECK: /^[a-z][a-z_]{1,23}$/. Never renamed or removed, because stores hold it. */
@@ -87,12 +91,8 @@ export type Pack = {
   /** The editor asks what the pack says (label.ts), and Active needs it. */
   readonly label: boolean
   readonly returns: ReturnLine
-  readonly sample: SampleKind | null
-  /** Carried as data in C1; nothing reads it until C1d. */
-  readonly noun: { readonly one: string; readonly many: string }
-  /** Carried as data in C1; nothing reads it until C1d. */
-  readonly photo: PhotoRatio
-  // Reserved names for C2 and C3. They are not declared in C1 (YAGNI); each will be an optional member, so no reader changes:
+  // Not declared in C1 (YAGNI, architecture review finding 5); each arrives as an optional member, so no reader changes:
+  //   noun?, photo?: shopper words and photo shape                                     C1d
   //   fields?: typed product fields (text, number with unit, date, choice)            C2
   //   declarations?: what Active needs by law (licence or mark number, batch, dates)  C3, absorbs `label`
   //   shipping?: flags (fragile, liquid, perishable, volumetric)                       C2 and C3
@@ -101,6 +101,8 @@ export type Pack = {
   //   kindWords?: one-size and sized words for the name guess (kind.ts:17-23)          C2
 }
 ```
+The theme preview's sample set is not a pack fact: `sampleSetFor` stays in frozen theme code
+(`src/domains/themes/catalogue/samples.ts`, ADR-0014), untouched, and rule 5 allowlists it (finding 5).
 `size-charts.ts:21` becomes `export const PRESETS = { … } satisfies Record<string, Preset>` and `export type PresetKey = keyof typeof PRESETS`.
 `kind.ts:40` `first3` takes a `PresetKey`.
 
@@ -109,10 +111,9 @@ Shared lines, `packs/shared.ts`. The wording is today's, `render.ts:87-89`:
 export const FASHION_RETURNS = { rank: 10, text: 'Clothes, footwear and accessories must be unused, unwashed and with their tags.' } as const
 export const JEWELLERY_RETURNS = { rank: 20, text: 'Jewellery must be unworn, in its original packaging.' } as const
 export const SEALED_RETURNS = { rank: 30, text: 'Beauty, personal care and wellness products can be returned only unopened, with their seal intact: once opened they can’t be taken back, for hygiene.' } as const
-export const PIECE = { one: 'piece', many: 'pieces' } as const
 ```
 The filled examples. Every value is today's (`sell-keys.ts:7-8,16-17,23`, `size-charts.ts:37-41`, `label.ts:20`, `render.ts:85-89`,
-`samples.ts:43-46`, `create-shop-form.tsx:251-254`; photos are 4:5 everywhere today, for example `buy-box.tsx:195,208,220`):
+`create-shop-form.tsx:251-254`):
 ```ts
 // packs/women.ts
 export const women = {
@@ -120,7 +121,7 @@ export const women = {
   tile: { label: 'Women', order: 10, icon: 'M9 3h6l1 5-2 1 2 12H8l2-12-2-1z' },
   startingHsn: { code: '6204', rank: 20 },
   sized: true, charts: ['womens_kurta'], label: false,
-  returns: FASHION_RETURNS, sample: 'clothing', noun: PIECE, photo: '4:5',
+  returns: FASHION_RETURNS,
 } as const satisfies Pack
 
 // packs/beauty.ts
@@ -129,26 +130,31 @@ export const beauty = {
   tile: { label: 'Beauty and personal care', order: 80, icon: 'M9 3h6v4l2 3v10H7V10l2-3z' },
   startingHsn: { code: '3304', rank: 80 },
   sized: false, charts: ['one_size'], label: true,
-  returns: SEALED_RETURNS, sample: null, noun: PIECE, photo: '4:5',
+  returns: SEALED_RETURNS,
 } as const satisfies Pack
 ```
-The other seven packs, as key · tile order · HSN code and rank · sized · charts · label · returns · sample:
-men 20 · 6203/30 · yes · mens_shirt · no · F · clothing; kids 30 · 6209/40 · yes · kids · no · F · clothing; ethnic 40 ·
-6211/10 · yes · womens_kurta · no · F · clothing; footwear 50 · 6403/50 · yes · footwear · no · F · footwear; accessories 60 ·
-4202/60 · no · one_size · no · F · accessories; jewellery 70 · 7117/70 · no · one_size · no · J · accessories; wellness 90 ·
-3004/90 · no · one_size · yes · S · null. Icons are the paths at `create-shop-form.tsx:251-254`.
+The other seven packs, as key · tile order · HSN code and rank · sized · charts · label · returns:
+men 20 · 6203/30 · yes · mens_shirt · no · F; kids 30 · 6209/40 · yes · kids · no · F; ethnic 40 ·
+6211/10 · yes · womens_kurta · no · F; footwear 50 · 6403/50 · yes · footwear · no · F; accessories 60 ·
+4202/60 · no · one_size · no · F; jewellery 70 · 7117/70 · no · one_size · no · J; wellness 90 ·
+3004/90 · no · one_size · yes · S. Icons are the paths at `create-shop-form.tsx:251-254`.
 
-The registry is `packs/index.ts`. It is pure and imports only the pack files:
+The list is its own file, `packs/list.ts`, so a test can append a fixture pack to it and re-import the real readers (C1c·1,
+finding 3):
 ```ts
 /** Append only: this order is the CHECK's order (schema.ts, check:packs). */
 export const PACKS = [women, men, kids, ethnic, accessories, footwear, jewellery, beauty, wellness] as const
+```
+`packs/registry.ts` is the pure, generic `registry()`; `packs/index.ts` applies it to the list and is what readers import:
+```ts
+// packs/registry.ts
 /** A store that skipped "What do you sell?" is treated as selling these. Its labels follow these packs, so none is asked. */
-const UNSAID = ['ethnic', 'women', 'men'] as const
+export const UNSAID = ['ethnic', 'women', 'men'] as const
 export const FALLBACK_HSN = '6211'
-const SAMPLE_ORDER: readonly SampleKind[] = ['clothing', 'accessories', 'footwear']
 
 export function registry<const P extends readonly Pack[]>(packs: P) {
-  // of(sells): the packs a store sells. An empty list is UNSAID; an unknown key is ignored.
+  // of(sells): the packs a store sells, in the store's own order: sells.flatMap((k) => BY_KEY[k] ?? []).
+  // An empty list is UNSAID; an unknown key is ignored.
   return {
     keys,            // packs.map(key), typed { [I in keyof P]: P[I]['key'] }, so z.enum and the CHECK take it
     tiles,           // { key, label, order, icon }[] sorted by tile.order
@@ -157,42 +163,53 @@ export function registry<const P extends readonly Pack[]>(packs: P) {
     chartKeys,       // (sells) => unique, in of(sells) order, of each pack's charts, then 'one_size'
     labelAsked,      // (sells) => of(sells).some(p => p.label)
     returnLines,     // (sells) => distinct ReturnLine texts of of(sells), sorted by rank
-    sampleSet,       // (sells) => the first of SAMPLE_ORDER any of of(sells) has, else 'clothing'
-    packsOf,         // (sells) => of(sells), for later readers (noun, photo)
     change,          // (before, after, defaultHsn) => { added, removed, hsn: string | null }   (C1b·1)
   }
 }
+
+// packs/index.ts
 const R = registry(PACKS)
 export const SELL_KEYS = R.keys
 export type SellKey = (typeof SELL_KEYS)[number]
-export const { tiles: SELL_TILES, startingHsn, sized: sellsSized, chartKeys, labelAsked, returnLines, sampleSet: sampleSetOf, packsOf, change: packChange } = R
+export const { tiles: SELL_TILES, startingHsn, sized: sellsSized, chartKeys, labelAsked, returnLines } = R
+/** The starting charts (moved here from size-charts.ts, so size-charts.ts stays free of the registry: finding 2). */
+export const presetsFor = (sells: readonly string[]) => chartKeys(sells).map((k) => PRESETS[k])
 ```
-UNSAID reproduces every `[]` row of the table: ethnic gives HSN 6211, women and men give the three charts, all three are sized, F, clothing, and no label.
-`['unknown']` is not empty, so it matches no pack: 6211, unsized, One size only, no line, clothing.
+UNSAID reproduces every `[]` row of the table: ethnic gives HSN 6211, women and men give the three charts, all three are sized, F, and no label.
+`['unknown']` is not empty, so it matches no pack: 6211, unsized, One size only, no line.
+
+**Pack data and the browser (finding 2).** Client files import `label.ts` (`product-editor.tsx:29`, `label-panel.tsx:4`),
+`size-charts.ts` (`size-chart.tsx:7`, and `kind.ts:11`, which `new-product-form.tsx:7` imports) and `policies/render.ts`
+(`policy-pages.tsx:10`, loaded with `next/dynamic` from `settings-form.tsx:36`), and `registry(PACKS)` is a top-level call that no
+bundler drops. So `label.ts` and `size-charts.ts` never import the packs: `labelAsked` and `presetsFor` are read from
+`@/domains/catalogue/packs` directly (`[handle]/page.tsx`, `readiness.ts`, `handles.ts`, all server code). `render.ts` does read
+`returnLines`, so pack data reaches whichever chunk renders a policy in the browser; the two pinned pages are measured before and
+after (C1a·3) and must not grow. `create-shop-form.tsx` (`/start`, a client file, not pinned) reads `SELL_LABELS` through
+`sell-keys.ts` until C1a·6 hands it the tiles from the server.
 
 ## Reader map
 | # | Read today | file:line | Derives | After C1 |
 |---|---|---|---|---|
 | 1 | `SELL_KEYS` | `src/domains/catalogue/sell-keys.ts:2` | the keys | `sell-keys.ts` re-exports `SELL_KEYS`, `SellKey` from `packs` |
-| 2 | `SELL_LABELS` | `sell-keys.ts:6-9` | tile words and order | derived from `SELL_TILES`; kept for the pinned test |
+| 2 | `SELL_LABELS` | `sell-keys.ts:6-9` | tile words and order | derived from `SELL_TILES`; kept for the pinned test. **Debt:** after C1a·6 its only reader is `sells-today.test.ts`; it goes when C1b's field reads `SELL_TILES` too (finding 8) |
 | 3 | `STARTING`, `startingHsn` | `sell-keys.ts:15-21` | starting HSN | re-export of `startingHsn` |
 | 4 | `sellsSized` | `sell-keys.ts:23` | sized | re-export of `sellsSized` |
 | 5 | `SELLS` | `src/lib/db/schema.ts:224` | re-export for Zod | unchanged (via sell-keys) |
 | 6 | CHECK literal | `schema.ts:321` | DB domain | `array[${sql.raw(sqlList(SELL_KEYS))}]::text[]` (`sqlList`: `src/domains/tenancy/roles.ts:105`, as `schema-modules.ts:26`) |
 | 7 | CHECK in SQL | `drizzle/0070_serious_payback.sql:19` (after `0007:58`, dropped at `0070:1`) | DB domain | `check:packs` compares it with the registry |
-| 8 | `presetsFor` | `src/domains/catalogue/size-charts.ts:34-47` | starting charts | body `chartKeys(sells).map((k) => PRESETS[k])`; takes `readonly string[]` |
-| 9 | `labelAsked` | `src/domains/catalogue/label.ts:19-20` | label asked | re-export of `labelAsked`; the false comment at :19 fixed (C1a·3, C1b·5) |
+| 8 | `presetsFor` | `src/domains/catalogue/size-charts.ts:34-47` | starting charts | moves to `src/domains/catalogue/starting-charts.ts` as `chartKeys(sells).map((k) => PRESETS[k])`, taking `readonly string[]`; `size-charts.ts` keeps no registry import, because client files import it (finding 2) |
+| 9 | `labelAsked` | `src/domains/catalogue/label.ts:19-20` | label asked | removed from `label.ts` (client files import it: finding 2); readers import `labelAsked` from `@/domains/catalogue/packs`; the comment moves with it, saying "set at sign-up" (C1a·3; C1b·5 adds Settings) |
 | 10 | `condition` | `src/domains/policies/render.ts:82-91` | returns lines | `returnLines(f.sells).join(' ')` |
-| 11 | `sampleSetFor` | `src/domains/themes/catalogue/samples.ts:37-48` | sample set | two lines in frozen theme code: `export type SampleSet = SampleKind`, `export const sampleSetFor = sampleSetOf`. Done because it is an accessor swap, and the theme callers (`preview-body.tsx:32`, `look/customize/page.tsx:73`, `theme-preview/…/page.tsx:41,45`, `lib/themes/sample.ts:19`) do not change |
+| 11 | `sampleSetFor` | `src/domains/themes/catalogue/samples.ts:37-48` | sample set | left untouched: frozen theme code (ADR-0014), not a pack fact; allowlisted by rule 5 (finding 5) |
 | 12 | Zod `z.enum(SELLS)` | `src/app/start/actions.ts:44` | input | unchanged |
 | 13 | `startingHsn(sells)` | `start/actions.ts:5,76` | sign-up prefill | unchanged import |
 | 14 | `SELL_LABELS`, `SellIcon` | `start/create-shop-form.tsx:3,223-234,249-256` | tiles and icons | a `tiles` prop from `start/page.tsx:37` (`SELL_TILES`) rendered by `<SellTiles>` (C1a·6) |
 | 15 | `sellsSized` | `console/products/actions.ts:7,57` | starting sizes | unchanged import |
 | 16 | `sellsSized` | `console/products/new/page.tsx:2,13` | kind step | unchanged |
-| 17 | `sellsSized`, `labelAsked` | `console/products/[handle]/page.tsx:16-17,113` | editor panels | unchanged |
+| 17 | `sellsSized`, `labelAsked` | `console/products/[handle]/page.tsx:16-17,113` | editor panels | `labelAsked` imported from `@/domains/catalogue/packs` (one import line) |
 | 18 | `EditorShop.sized/label` | `products/_components/product-editor.tsx:63-64` | panels, readiness | unchanged (flags) |
-| 19 | `presetsFor` + cast | `src/lib/catalogue/handles.ts:14-20` | `ensureTypes` | cast removed; C1b adds `packTypesIn` beside it |
-| 20 | `labelAsked` | `src/lib/catalogue/readiness.ts:38,41` | Active rule | unchanged |
+| 19 | `presetsFor` + cast | `src/lib/catalogue/handles.ts:14-20` | `ensureTypes` | `presetsFor` imported from `@/domains/catalogue/starting-charts`, cast removed; C1b adds `packTypesIn` beside it |
+| 20 | `labelAsked` | `src/lib/catalogue/readiness.ts:38,41` | Active rule | `labelAsked` imported from `@/domains/catalogue/packs` (one import line) |
 | 21 | `readiness()` | `src/domains/catalogue/product-form.ts:173-188` | the list | unchanged (takes flags) |
 | 22 | `shopSells` | `src/lib/queries/settings.ts:146-150` | read | unchanged |
 | 23 | `setStartingHsn` | `settings.ts:152-155` | write | unchanged; C1b writes the HSN in `packTypesIn`'s transaction instead |
@@ -211,7 +228,9 @@ UNSAID reproduces every `[]` row of the table: ethnic gives HSN 6211, women and 
 | 36 | API mappers | `src/domains/storefront-api/2026-12/map.ts:119-127` | details, model, chart | no sells read; unchanged |
 | 37 | `availability.ts` | `src/domains/catalogue/availability.ts` | stock | no sells read |
 
-After C1a, nothing in `src` outside `packs/` puts a quoted sell key on a line that names `sells`. Rule 6 of `check:packs` holds this.
+After C1a, nothing in `src` outside `packs/` and tests holds a quoted sell key, except the allowlisted files, each with its reason.
+Rule 5 of `check:packs` holds this (finding 1: the first draft's rule, a key on a line that names `sells`, missed today's
+`size-charts.ts:37-41`, whose lines name `s`).
 
 ## Tasks
 Each task: write the test first, make the change, run the verify command and read its output, then `npm test && npm run typecheck`, then
@@ -222,19 +241,21 @@ Each task: write the test first, make the change, run the verify command and rea
 Verify: `npx vitest run src/domains/catalogue src/domains/policies src/lib/themes src/domains/settings src/domains/tenancy`
 reports all passed; `npm run e2e -- --only signup,products-pr0,neel-settings,owner-only,look` reports 5 flows passed. No commit.
 
-**C1a·1 · Pin today.** Test first, and this test is the whole task: `src/domains/catalogue/__tests__/sells-today.test.ts` holds the 18-row
-table, `SELL_KEYS` and `SELL_LABELS`. It imports only today's names: `startingHsn`, `sellsSized`, `SELL_KEYS`, `SELL_LABELS` (sell-keys),
+**C1a·1 · Pin today.** Test first, and this test is the whole task: `src/domains/catalogue/__tests__/sells-today.test.ts` reads the 19-row
+table (kept beside it in `sells-today.rows.ts`, so C1a·2's bridge and C1c·1 read the same rows), `SELL_KEYS` and `SELL_LABELS`. It imports only today's names: `startingHsn`, `sellsSized`, `SELL_KEYS`, `SELL_LABELS` (sell-keys),
 `presetsFor` (size-charts), `labelAsked` (label), `sampleSetFor` (`@/lib/themes/sample`), `renderPolicy` (policies).
 Verify: `npx vitest run src/domains/catalogue/__tests__/sells-today.test.ts` reports 1 file passed on unchanged code. Commit it alone.
-This file is not edited again until C1c·1, which adds rows only.
+Its table and assertions are not edited again until C1c·1, which adds rows only. One edit is planned: C1a·3 moves `presetsFor` and
+`labelAsked` out of `size-charts.ts` and `label.ts` (finding 2), so their two import lines change path, and nothing else does.
 
-**C1a·2 · The packs.** Files: `src/domains/catalogue/packs/{types,shared,index}.ts` and the nine pack files
+**C1a·2 · The packs.** Files: `src/domains/catalogue/packs/{types,shared,registry,list,index}.ts` and the nine pack files
 `women,men,kids,ethnic,accessories,footwear,jewellery,beauty,wellness.ts`; `size-charts.ts:21` (`satisfies`, `PresetKey`);
 `kind.ts:40` (`PresetKey`). No reader is touched. Test first, `packs/__tests__/registry.test.ts`:
 - keys are unique and match the key regex;
 - `tile.order` values and `startingHsn.rank` values are each unique;
 - labels are 1–30 characters;
-- icons match `/^[MmLlHhVvCcSsQqAaZz0-9 .,-]+$/`;
+- icons match `/^[MmLlHhVvCcSsQqAaZz0-9 .,-]+$/`, and the nine paths equal literal copies of `create-shop-form.tsx:251-254`
+  (finding 7), so the move cannot change a tile;
 - every `charts` key is in `PRESETS`; every `UNSAID` key is a pack;
 - HSN codes match `^\d{4}(\d{2}){0,2}$`;
 - for every row of the C1a·1 table, each registry accessor equals the old function.
@@ -243,10 +264,30 @@ The last test is a bridge: it is deleted in C1a·3, once the old functions are t
 Verify: `npx vitest run src/domains/catalogue` all passed; `node scripts/check-layers.mjs` reports clean; `npm run typecheck` reports 0 errors.
 
 **C1a·3 · Readers move to the registry.** Files: `sell-keys.ts` (becomes re-exports: `SELL_KEYS`, `SellKey`, `SELL_LABELS` derived,
-`startingHsn`, `sellsSized`), `size-charts.ts:10,33-47`, `label.ts:19-20` (the comment says "set at sign-up"; Settings
-comes in C1b), `render.ts:82-91`, `themes/catalogue/samples.ts:37-48` (two lines), `lib/catalogue/handles.ts:18` (cast removed).
-Delete the bridge test. The test written first is C1a·1, unchanged.
-Verify: `npx vitest run src/domains src/lib/themes` all passed, and `git diff --stat src/domains/catalogue/__tests__/sells-today.test.ts` prints nothing.
+`startingHsn`, `sellsSized`), `size-charts.ts:10,33-47` (`presetsFor` leaves for `starting-charts.ts`), `label.ts:19-20` (`labelAsked`
+leaves for the packs), `render.ts:82-91`, `lib/catalogue/handles.ts:3,18` (import from the packs, cast removed),
+`lib/catalogue/readiness.ts:4` and `console/products/[handle]/page.tsx:16` (`labelAsked` from the packs), and the import lines of
+`label.test.ts` and `size-charts.test.ts` (the same two names). `themes/catalogue/samples.ts` is not touched (finding 5).
+Delete the bridge test. The test written first is C1a·1, its table and assertions unchanged.
+Verify: `npx vitest run src/domains src/lib/themes` all passed; the diff of `sells-today.test.ts` since C1a·1 is its two import lines
+only; `npm run build`, whose `check:storefront-build` is clean, and `SHOW_BUDGETS=1 node scripts/check-storefront-build.mjs` prints
+`products/[handle]` (pinned 209.1 kB) and `settings/[section]` (pinned 187.0 kB) no larger than before (finding 2):
+
+| Page (first-load JS, gz) | Before C1a | After C1a·3 |
+|---|---|---|
+| `/(console)/console/products/[handle]/page` | 208.4 kB | 208.4 kB |
+| `/(console)/console/settings/[section]/page` | 186.6 kB | 186.7 kB: no pack data in any of its first-load files (grep of the build for a tile word and the returns text); the 0.1 kB is webpack's runtime, whose chunk map names the new modules |
+| `/(console)/console/content/page` (pinned 227.2 kB) | 227.0 kB | 227.0 kB (231.3 kB before `pure`, below) |
+| `/start` (not pinned; until C1a·6) | 128 kB | 129 kB |
+
+As built (C1a·3), two changes to the shape above, both for the browser:
+- `presetsFor` lives in `src/domains/catalogue/starting-charts.ts`, not `packs/index.ts`: with it there, every chunk that read the packs
+  also carried all the size charts (Content's first load went to 231.3 kB, over its 227.2 pin).
+- Webpack counts a top-level object literal as a side effect and keeps such a module wherever it is imported, even for nothing:
+  `policies/answers.ts` imports `render.ts` in Content's browser chunk for a constant, so the packs and the whole of `render.ts` came
+  with it. Each pack, each shared line, the list and `SELL_LABELS` are therefore made through `packs/define.ts`'s
+  `/*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)`, and `packs/index.ts` exports only functions and pure calls; an unused
+  import of the packs is then dropped. A new pack file copies that form (the recipe, C1c·2).
 
 **C1a·4 · The CHECK from the registry.** File: `schema.ts:321` built with `sqlList(SELL_KEYS)`. The new SQL must be
 byte-identical to `0070:19`. Test first: in `src/lib/db/__tests__/public-plans.test.ts`'s style, a test that renders the
@@ -255,20 +296,27 @@ Verify: `npm run db:generate` prints drizzle-kit's "No schema changes, nothing t
 
 **C1a·5 · The gate `check:packs`.** Files: `scripts/check-packs.mjs` (pure `packProblems(tree)` exported, `main()` reads
 the disk), `package.json` (`check:packs`, and the gate in `gates` before `check-skills`), `scripts/__tests__/check-packs.test.ts`.
-The header opens `// Fails: a category pack that is not one file named by its key, a pack missing from the registry's list, a registry whose keys differ from the shop_settings_sells CHECK the newest migration adds, or a sell key written beside sells outside the packs.`
+The header opens `// Fails: a category pack that is not one file named by its key, a pack missing from the registry's list, a registry whose keys differ from the shop_settings_sells CHECK the newest migration adds, or a sell key quoted outside the packs.`
 Rules, with comment lines (`//`, `/*`, `*`, `--`) skipped everywhere:
-1. Every `src/domains/catalogue/packs/*.ts` except `index.ts`, `types.ts` and `shared.ts` holds exactly one `key: '<k>'`, and `<k>` is its file name.
-2. `index.ts` imports each pack file and names it in `PACKS = [ … ]`. A listed name has a file.
-3. Walk `drizzle/meta/_journal.json` in order and read each file. The last `ADD CONSTRAINT "shop_settings_sells" CHECK (… array[…]`
-   lists exactly the registry's keys, in `PACKS` order. A registry key the migration lacks fails with: "widen the CHECK
-   first: npm run db:generate, apply the migration before the deploy that adds the pack". A CHECK key with no pack fails with:
-   "a pack is never removed: stores hold its key".
+1. Every `src/domains/catalogue/packs/*.ts` except `index.ts`, `list.ts`, `registry.ts`, `types.ts`, `shared.ts` and `define.ts` holds exactly one
+   `key: '<k>'`, and `<k>` is its file name.
+2. `list.ts` imports each pack file and names it in `PACKS = [ … ]`. A listed name has a file.
+3. Walk `drizzle/meta/_journal.json` in order and read each file. The last `CONSTRAINT "shop_settings_sells" CHECK (… array[…]`
+   lists exactly the registry's keys, in `PACKS` order; a later `DROP CONSTRAINT "shop_settings_sells"` with no new one fails. The one
+   pattern matches both forms (finding 6): `ALTER TABLE … ADD CONSTRAINT` (`0070:19`) and the `CREATE TABLE` column list (`0007:58`).
+   A registry key the migration lacks fails with: "widen the CHECK first: npm run db:generate, apply the migration before the deploy
+   that adds the pack". A CHECK key with no pack fails with: "a pack is never removed: stores hold its key".
 4. The `shop_settings_sells` line in `schema.ts` names `SELL_KEYS` and holds no quoted key.
-5. Every `src/**` file outside `packs/` that is not a test: no line that names `sells` also holds a quoted registry key.
+5. Every `src/**` file outside `packs/` that is not a test holds no quoted registry key (`'women'`, `"men"`, `` `kids` ``), except
+   this allowlist, each with its reason (finding 1):
+   - `src/domains/catalogue/kind.ts` and `src/app/(console)/console/products/new/new-product-form.tsx`: product kinds
+     (`footwear`, `kids`), not sell keys;
+   - `src/domains/themes/catalogue/**`: frozen theme code (ADR-0014), `goodFor` and `SampleSet`/`sampleSetFor`.
 
-Test first, with fixtures for each rule's pass and fail. Two cases matter most: a 10th pack file with no migration fails rule 3,
-and the same pack with a migration passes. The gate must not match its own documentation, so a test runs `packProblems` with
-`scripts/check-packs.mjs` (whose header quotes the constraint) as a migration file and as a src file, and expects nothing.
+Test first, with fixtures for each rule's pass and fail. Cases that matter most: a 10th pack file with no migration fails rule 3,
+and the same pack with a migration passes; a `CREATE TABLE` CHECK alone is read; today's `size-charts.ts` (its `presetsFor` before
+C1a·3, copied into the test) fails rule 5. The gate must not match its own documentation, so a test feeds `scripts/check-packs.mjs`
+(whose header names the constraint) in beside `0070` as a migration file and as a src file, and expects nothing.
 Verify: `node scripts/check-packs.mjs` prints `check:packs — clean (9 packs; CHECK in 0070_serious_payback)`;
 `npm run gates:list` shows its line; `npx vitest run scripts/__tests__/check-packs.test.ts` passed.
 
@@ -278,7 +326,8 @@ Verify: `node scripts/check-packs.mjs` prints `check:packs — clean (9 packs; C
 (drops `SELL_LABELS`, `SellIcon` and `SellKey`, and renders `<SellTiles>`). Nothing else in `src/app/start/*`. Test first,
 `src/components/catalogue/__tests__/sell-tiles.test.ts` (the renderToStaticMarkup pattern of `src/domains/themes/__tests__/manifest-schema.test.ts`):
 nine buttons in tile order with their words and paths, and `aria-pressed` set on the chosen ones.
-Verify: `npm run e2e -- --only signup` passed; `npm run build`, then the `/start` first-load JS is no larger than on main (build output).
+Verify: `npm run e2e -- --only signup` passed; `npm run build`, then the `/start` first-load JS is no larger than on main (build output:
+128 kB before C1a).
 
 **C1a·7 · Record the practice.** Files: `.claude/skills/frata-architecture/reference/catalogue-and-content.md` (a new
 § Category packs: the registry, its accessors, UNSAID, rule 5, `check:packs`; and the Contents list),
@@ -368,28 +417,33 @@ Verify: `npm run e2e -- --only neel-settings,owner-only,signup,products-pr0` pas
 difference is fixed or goes into § Deviations, shown to the owner. Verify: the reviewers' verdicts.
 
 ### C1c · Adding a category (the proof; no new category ships)
-**C1c·1 · A fixture pack, end to end.** The test is the task: `packs/__tests__/add-a-pack.test.ts` defines
-`pet_supplies` (`as const satisfies Pack`, its own `ReturnLine`, rank 25) only in the test. Then
-`registry([...PACKS, pet_supplies])` must:
-- list its key last in `keys`, and its tile by `order` in `tiles`;
-- give its HSN for `['pet_supplies']`;
-- give `sized` false and `chartKeys` `['one_size']`;
-- ask the label if the pack says so;
-- put its return line between J and S;
-- give `sampleSet` 'clothing';
-- leave all 18 C1a·1 rows equal, which proves that adding a pack changes no existing store.
+**C1c·1 · A fixture pack, end to end.** The test is the task: `src/lib/catalogue/__tests__/add-a-pack.test.ts` (in `src/lib`, not
+`packs/__tests__`, because it renders the schema's CHECK and `check:layers` keeps Drizzle out of domain tests) defines
+`pet_supplies` (`as const satisfies Pack`, its own `ReturnLine`, rank 25, `label: true`) only in the test, and mocks
+`@/domains/catalogue/packs/list` (`vi.mock`) with `[...PACKS, pet_supplies]` (finding 3). It then re-imports the REAL readers, none
+of which names the fixture, and asserts the new pack flows through each:
+- `SELL_KEYS` lists it last, and `SELLS` (`@/lib/db/schema`), from which the sign-up's `z.enum(SELLS)` is built, takes it in
+  `z.array(z.enum(SELLS))`. The sign-up schema itself (`Shop`, `start/actions.ts:40`) is not exported, and a `'use server'` file may
+  export only async functions, so the test parses the same expression over the real `SELLS`;
+- the rendered CHECK of `shop_settings` (`getTableConfig`, as C1a·4) ends `…,'wellness','pet_supplies']::text[]`;
+- `SELL_TILES` places its tile by `order`;
+- `startingHsn(['pet_supplies'])` is its code; `sellsSized` false; `presetsFor` One size only; `labelAsked` true;
+- `renderPolicy('returns', …)` puts its line between J and S;
+- `check:packs` rules 1–3 on the fixture are covered by the C1a·5 fixture cases;
+- all 19 C1a·1 rows stay equal under the mocked list, which proves that adding a pack changes no existing store.
 
-`sell-tiles.test.ts` renders the 10 tiles with the fixture's words and path. The C1a·5 fixture cases cover the gate.
-No reader file changes in this task: `git diff --stat main -- src ':!**/__tests__/**'` prints nothing.
-Verify: `npx vitest run src/domains/catalogue/packs src/components/catalogue scripts/__tests__/check-packs.test.ts` passed.
+`sell-tiles.test.ts` renders the 10 tiles with the fixture's words and path once C1a·6 has built `<SellTiles>`.
+No reader file changes in this task: `git diff --stat <C1a's last commit> -- src ':!**/__tests__/**'` prints nothing (finding 3:
+the diff is taken against C1a's last commit, not `main`, so C1a's own reader edits do not hide a C1c one).
+Verify: `npx vitest run src/domains/catalogue/packs src/lib/catalogue/__tests__/add-a-pack.test.ts scripts/__tests__/check-packs.test.ts` passed.
 
 **C1c·2 · The recipe in the skill.** `reference/catalogue-and-content.md` § Category packs gains "Adding a category":
-1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, `as const satisfies Pack`;
-2. append it to `PACKS`; never reorder;
+1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, `/*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)`;
+2. append it to `PACKS` in `packs/list.ts`; never reorder;
 3. `npm run db:generate`, which writes `01NN_*.sql` (DROP and ADD `shop_settings_sells`);
 4. apply that migration in production (`scripts/prod-migrate.mjs`, the Supabase API) before the push that adds the pack, because the widen comes first;
 5. `check:packs` clean;
-6. add the pack's row to `sells-today.test.ts` (new rows only) and its line to `registry.test.ts`;
+6. add the pack's rows to `sells-today.rows.ts` (new rows only) and its icon to `registry.test.ts`;
 7. date and source every fact the pack holds (HSN with a CA's read, legal lines), words-reviewer on its words, and `unit-economics-reviewer` when its order values are low (spec § C3).
 
 Version 3.11.0 → 3.12.0. Verify: `node scripts/check-skills.mjs` clean.
@@ -402,17 +456,18 @@ Version 3.11.0 → 3.12.0. Verify: `node scripts/check-skills.mjs` clean.
 | HSN waves and each pack's rate rules | C2, C3 | each needs a CA's read (spec § C1–C3) | `rates?` |
 | Shipping flags | C2 (fragile, volumetric), C3 (perishable, liquid) | Ship isn't built (`registry.ts` ship `next`) | `shipping?` |
 | Taxonomy beyond apparel, the organise-card placeholder | C2 | `taxonomy.ts` holds one extract | `taxonomy?`, `kindWords?` |
-| Non-fashion words on the storefront and in the console ("piece", Home's product line) | C1d (new: words and photo shape by pack, its own short mockup and words-reviewer), after C1b | shoppers see it; beauty and wellness stores exist today; the values for fashion packs stay today's | `noun` (carried) |
-| Photo ratio read by components | C1d | it changes what shoppers see and the photo crop | `photo` (carried) |
+| Non-fashion words on the storefront and in the console ("piece", Home's product line) | C1d (new: words and photo shape by pack, its own short mockup and words-reviewer), after C1b | shoppers see it; beauty and wellness stores exist today; the values for fashion packs stay today's | `noun?` (arrives in C1d) |
+| Photo ratio read by components | C1d | it changes what shoppers see and the photo crop | `photo?` (arrives in C1d) |
 | Storefront API typed fields (additive, `2026-12` grows) | with C2 | nothing to answer until `fields?` exists; api-contract-reviewer then | — |
 
 ## Practices recorded in skills
 | Area | Practice | Where, version |
 |---|---|---|
-| Architecture | A category fact is a pack field read through a registry accessor; no `sells.some(…)` outside `packs/` (`check:packs` rule 5) | frata-architecture reference § Category packs, 3.11.0 (C1a·7) |
+| Architecture | A category fact is a pack field read through a registry accessor; no quoted sell key outside `packs/` but an allowlisted file with its reason (`check:packs` rule 5) | frata-architecture reference § Category packs, 3.11.0 (C1a·7) |
 | Architecture | A DB CHECK of keys is built from the registry with `sqlList`; a new key widens the CHECK in production before the deploy | same § (C1a·7), recipe (C1c·2), 3.12.0 |
 | Testing | A refactor starts with a characterization test of today's values, committed alone and unchanged after | same § (C1a·7) |
-| Testing | A registry proves it is modular with a fixture entry in a test, never one shipped | same § (C1c·2) |
+| Testing | A registry proves it is modular with a fixture entry in a test, never one shipped: mock its list, re-import the real readers | same § (C1c·2) |
+| Speed | Registry data stays out of files a client component imports; readers import the registry directly | same § (C1a·7) |
 
 ## Repetitive work → agents and scripts
 | Chore | Becomes | Task |
@@ -426,7 +481,31 @@ Version 3.11.0 → 3.12.0. Verify: `node scripts/check-skills.mjs` clean.
 |---|---|---|---|
 | (C1b; filled at C1b·6, empty is the goal) | | | |
 
+## Debt
+- `SELL_LABELS` (`sell-keys.ts`) has a test as its only reader once C1a·6 hands sign-up `SELL_TILES` (finding 8). It stays while
+  `sells-today.test.ts` pins it; it goes when C1b's field reads `SELL_TILES` and the pin moves to the tiles.
+- Until C1a·6, `create-shop-form.tsx` reads `SELL_LABELS` through `sell-keys.ts`, so `/start`'s client chunk carries the pack list
+  beside the form's own `SellIcon` paths.
+
 ## Open questions for the orchestrator
+As built, 2026-11-23 (C1a·0–5, C1a·7, C1c):
+- **C1a·6 waits for O1.** O1 is changing `src/app/start/*` in the main checkout now, and the task says "after O1 has merged its
+  form", so `<SellTiles>`, `start/page.tsx` and `create-shop-form.tsx` were not touched; `sell-tiles.test.ts` (C1a·6, and its
+  10-tile case in C1c·1) waits with it. The Zod enum already comes from the registry (`SELLS` re-exports `SELL_KEYS`), with no
+  edit to `start/actions.ts`.
+- **The e2e regression net (C1a·0) was not run here.** Another session's `npm run e2e` held the shared stack (ports 3077,
+  54340) and the runner kills a running stack's server at start. The characterization test, the unit suites and `npm run build`
+  are the proof run; `npm run e2e -- --only signup,products-pr0,neel-settings,owner-only,look` is owed before merge.
+
+Answered by architecture-reviewer, 2026-11-23 (the orchestrator accepted every answer; each still goes to the owner where it says so):
+1. Ask the owner on Store details: **yes**, as its own C1b task with `0170_ask_owner_store.sql` and tenancy-auditor on it.
+2. A hand-written returns page: **a line in the saved state**, drawn in C1b·0.
+3. Partner-made stores: **enough for C1**.
+4. `checklist.ts:52` wording: **O2 reads `sellsSized`** for it.
+5. C1d: **approved in principle**, after C1b, pending the owner.
+6. Re-adding a pack: **accept**, and say so in the added state.
+
+The questions as first asked:
 1. **Ask the owner on Store details?** `app_ask_owner` accepts only policies, business, contact and invoices
    (`drizzle/0150_ask_owner.sql:18`). Recommendation: yes, to match PP1. That needs `0170_ask_owner_store.sql`, which replaces the
    definer with 'store' added, a tenancy proof line, and `ASK_PAGES` gaining 'store'. If no, the field shows the chip only.

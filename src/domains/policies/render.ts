@@ -12,6 +12,7 @@ import { POLICY_PAGES, type PolicyPage } from './pages'
 export { POLICY_PAGES, type PolicyPage }
 
 import type { PublicZone } from '@/domains/delivery/public'
+import { returnLines } from '@/domains/catalogue/packs'
 
 export type PolicyFacts = {
   shopName: string
@@ -79,16 +80,8 @@ export type Piece = { text: string } | { fact: string; value: string | null }
 const fact = (label: string, value: string | null | undefined): Piece => ({ fact: label, value: value && value.trim() ? value.trim() : null })
 const t = (text: string): Piece => ({ text })
 
-/** What a returned item must be, by what the shop sells (a mixed shop gets each line that applies). */
-function condition(sells: readonly string[]): string {
-  const has = (...k: string[]) => sells.some((x) => k.includes(x))
-  const fashion = sells.length === 0 || has('women', 'men', 'kids', 'ethnic', 'footwear', 'accessories')
-  return [
-    ...(fashion ? ['Clothes, footwear and accessories must be unused, unwashed and with their tags.'] : []),
-    ...(has('jewellery') ? ['Jewellery must be unworn, in its original packaging.'] : []),
-    ...(has('beauty', 'wellness') ? ['Beauty, personal care and wellness products can be returned only unopened, with their seal intact: once opened they can’t be taken back, for hygiene.'] : []),
-  ].join(' ')
-}
+/** What a returned item must be, by what the shop sells (a mixed shop gets each line that applies): the category packs'. */
+const condition = (sells: readonly string[]): string => returnLines(sells).join(' ')
 
 /** Each page as paragraphs of pieces. `inr` formats paise; injected so this stays pure and shares the console's formatting. */
 export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: number) => string): Piece[][] {

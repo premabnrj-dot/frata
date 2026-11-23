@@ -493,6 +493,6 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 | Open | When | Sections |
 |---|---|---|
 | [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials |
-| [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
+| [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), what a store sells (category packs), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Category packs, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
 | [reference/modules-themes-sites.md](reference/modules-themes-sites.md) | a module (apps), a theme (retiring, ADR-0014), or the kit and fleet rules for shop websites as code | Modules, Themes, Shop websites as code |
 | [reference/speed.md](reference/speed.md) | a page, query, cache or background job: the budgets, what holds each, and the findings P1–P15 | Speed |

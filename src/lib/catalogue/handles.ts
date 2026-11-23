@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
-import { presetsFor } from '@/domains/catalogue/size-charts'
+import { presetsFor } from '@/domains/catalogue/starting-charts'
 import { handleFor, RESERVED_HANDLES } from '@/domains/catalogue/variants'
 import type { Tx } from '@/lib/db'
 import { arrayParam } from '@/lib/db/sql-array'
@@ -15,7 +15,7 @@ export async function ensureTypes(tx: Tx, tenantId: string) {
   const existing = await tx.select({ id: productTypes.id }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).limit(1)
   if (existing.length) return
   const [s] = await tx.select({ sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-  const presets = presetsFor((s?.sells ?? []) as Parameters<typeof presetsFor>[0])
+  const presets = presetsFor(s?.sells ?? [])
   await tx.insert(productTypes).values(presets.map((p) => ({ tenantId, name: p.name, sizeChart: p.chart }))).onConflictDoNothing()
 }
 

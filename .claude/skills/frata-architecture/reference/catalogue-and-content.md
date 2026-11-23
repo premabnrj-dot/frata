@@ -5,6 +5,7 @@ Part of `frata-architecture` (SKILL.md holds the rules every change obeys: layer
 ## Contents
 
 - A store's content
+- Category packs
 - Writing products
 - Importing products
 - Catalogue links
@@ -45,6 +46,46 @@ Part of `frata-architecture` (SKILL.md holds the rules every change obeys: layer
   it sets `app.tenant_id` per store and names `tenant_id` in every statement; copies verbatim; re-runs reconcile (a row a
   person saved, `updated_by` set, is never touched); one parity int test against the TS rule
   (`site-content-move.int.test.ts`), and a two-store proof in tenancy.sql § 80.
+
+## Category packs (C1a, 2026-11-23; plan docs/plans/2026-11-23-c1-category-packs.md)
+
+- **What a store sells is read through the packs, never by key.** A pack (`src/domains/catalogue/packs/<key>.ts`, typed
+  `Pack` in `packs/types.ts`) is pure data: the sell key, its tile (label, order, icon), its starting HSN and rank, `sized`,
+  its starting `charts`, `label` (the editor asks what the pack says) and its return line. `packs/list.ts` holds `PACKS`,
+  append only (its order is the CHECK's). `packs/registry.ts` is the pure, generic `registry(packs)`; `packs/index.ts`
+  applies it and is what readers import: `SELL_KEYS`, `SellKey`, `SELL_TILES`, `startingHsn`, `sellsSized`, `chartKeys`,
+  `labelAsked`, `returnLines`. `sell-keys.ts` re-exports them; `starting-charts.ts` holds `presetsFor`.
+- **A store's packs are taken in its own order** (`sells.flatMap(k => byKey[k] ?? [])`): `men, women` starts Shirt · Men
+  before Kurta set · Women. An empty list is **UNSAID** (`ethnic, women, men`: fashion, HSN 6211, three charts, no
+  label); an unknown key is ignored. The starting HSN is the lowest rank among the packs, else `FALLBACK_HSN`.
+- **The CHECK is built from the registry.** `schema.ts` renders `shop_settings_sells` with `sqlList(SELL_KEYS)`; a test
+  pins its SQL to the migration's byte for byte (`src/lib/db/__tests__/sells-check.test.ts`).
+- **Pack data stays out of the browser where it is not used.** Files a client component imports (`label.ts`,
+  `size-charts.ts`) never import the packs; readers import `@/domains/catalogue/packs` directly. Webpack keeps a module with a
+  top-level object literal wherever it is imported, even for nothing, so each pack, shared line and the list are made
+  through `packs/define.ts`'s `/*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)` and `index.ts` exports only
+  functions and pure calls (C1a·3: without it Content's first load grew 227.0 → 231.3 kB through `policies/answers.ts`).
+- **`check:packs`** (`scripts/check-packs.mjs`) holds it: one key per pack file, its name (rule 1); every pack in
+  `PACKS` (2); the newest `shop_settings_sells` CHECK lists the registry's keys in order (3); `schema.ts` uses
+  `SELL_KEYS` (4); **no quoted sell key in `src` outside `packs/` and tests** (5), but its `ALLOW` list, each with its
+  reason (`kind.ts` and `new-product-form.tsx`: product kinds; `src/domains/themes/catalogue/**`: frozen theme code).
+  A new category fact is a pack field read through an accessor, never `sells.some(…)` in a reader.
+- **A refactor starts with a characterization test** of today's values, committed alone and unchanged after:
+  `src/domains/catalogue/__tests__/sells-today.test.ts` (19 rows in `sells-today.rows.ts`; rows are only added).
+- **Adding a category** (C1c, proven by `src/lib/catalogue/__tests__/add-a-pack.test.ts`: a fixture pack appended to the real
+  list flows through every reader, and no reader file changes):
+  1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, in its form:
+     `export const <key> = /*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)`;
+  2. append it to `PACKS` in `packs/list.ts`; never reorder;
+  3. `npm run db:generate`, which writes `01NN_*.sql` (DROP and ADD `shop_settings_sells`);
+  4. apply that migration in production (`scripts/prod-migrate.mjs`, the Supabase API) before the push that adds the pack,
+     because the widen comes first;
+  5. `check:packs` clean;
+  6. add the pack's rows to `sells-today.rows.ts` (new rows only) and its icon to `registry.test.ts`;
+  7. date and source every fact the pack holds (HSN with a CA's read, legal lines), `words-reviewer` on its words, and
+     `unit-economics-reviewer` when its order values are low (spec 2026-11-23-merchant-onboarding § C3).
+- **A registry proves it is modular with a fixture entry in a test, never one shipped**: mock its list, re-import the real
+  readers, and assert the entry reaches each while the existing rows stay equal.
 
 ## Writing products (PI·0, 2026-11-12; plan docs/plans/2026-11-12-product-import.md)
 

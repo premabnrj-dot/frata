@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { cleanChart, inches, presetsFor, PRESETS, chartFromText, sizeKey } from '../size-charts'
+import { cleanChart, inches, PRESETS, chartFromText, sizeKey } from '../size-charts'
+import { presetsFor } from '../starting-charts'
 
 describe('size charts', () => {
   it('starting charts follow what the shop sells; One size always there', () => {
