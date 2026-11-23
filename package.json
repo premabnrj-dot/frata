@@ -11,7 +11,7 @@
     "check:payload": "node scripts/check-payload.mjs",
     "postbuild": "node scripts/check-client-bundle.mjs && node scripts/check-storefront-build.mjs && node scripts/check-pdf-trace.mjs",
     "start": "next start",
-    "gates": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-logs.mjs && node scripts/check-documents.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-cookies.mjs && node scripts/check-api.mjs && node scripts/check-capabilities.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && node scripts/check-contrast.mjs && node scripts/check-scale.mjs && node scripts/check-words.mjs && node scripts/check-motion.mjs && node scripts/check-clock.mjs && node scripts/check-modules.mjs && node scripts/check-ekcode-brand.mjs && node scripts/check-name.mjs && node scripts/check-billing-read.mjs && node scripts/check-credits.mjs && node scripts/check-duration.mjs && node scripts/check-fonts.mjs && node scripts/check-feedback.mjs && node scripts/build-beacon.mjs --check && node scripts/check-skills.mjs && node scripts/check-plans.mjs && node scripts/merge-main.mjs --journal && node scripts/check-docs.mjs",
+    "gates": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-logs.mjs && node scripts/check-documents.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-cookies.mjs && node scripts/check-api.mjs && node scripts/check-capabilities.mjs && node scripts/check-studio.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && node scripts/check-contrast.mjs && node scripts/check-scale.mjs && node scripts/check-words.mjs && node scripts/check-motion.mjs && node scripts/check-clock.mjs && node scripts/check-modules.mjs && node scripts/check-ekcode-brand.mjs && node scripts/check-name.mjs && node scripts/check-billing-read.mjs && node scripts/check-credits.mjs && node scripts/check-duration.mjs && node scripts/check-fonts.mjs && node scripts/check-feedback.mjs && node scripts/build-beacon.mjs --check && node scripts/check-skills.mjs && node scripts/check-plans.mjs && node scripts/merge-main.mjs --journal && node scripts/check-docs.mjs",
     "gates:list": "node scripts/gates-list.mjs",
     "eval": "node scripts/eval.mjs",
     "test": "npm run gates && vitest run",
@@ -23,6 +23,7 @@
     "check:migrations": "node scripts/merge-main.mjs --journal",
     "check:docs": "node scripts/check-docs.mjs",
     "check:capabilities": "node scripts/check-capabilities.mjs",
+    "check:studio": "node scripts/check-studio.mjs",
     "check:config": "node scripts/check-config.mjs",
     "check:ekcode-brand": "node scripts/check-ekcode-brand.mjs",
     "check:logs": "node scripts/check-logs.mjs",
@@ -51,6 +52,7 @@
     "check:billing-read": "node scripts/check-billing-read.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.12.0",
     "@react-pdf/renderer": "4.9.0",
     "@simplewebauthn/browser": "14.0.0",
     "@simplewebauthn/server": "14.0.3",
@@ -76,7 +78,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "1.12.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.10.0",
     "@types/papaparse": "5.5.2",

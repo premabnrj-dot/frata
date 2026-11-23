@@ -180,3 +180,15 @@ export const MUX_READ_TOKEN_SECRET = secret(process.env.MUX_READ_TOKEN_SECRET)
 export const muxUsageToken = () => MUX_READ_TOKEN_ID && MUX_READ_TOKEN_SECRET ? { id: MUX_READ_TOKEN_ID, secret: MUX_READ_TOKEN_SECRET } : MUX_TOKEN_ID && MUX_TOKEN_SECRET ? { id: MUX_TOKEN_ID, secret: MUX_TOKEN_SECRET } : null
 export const isMuxUsageConfigured = () => muxUsageToken() !== null
 export const isVideoConfigured = () => MUX_TOKEN_ID !== '' && MUX_TOKEN_SECRET !== '' && MUX_WEBHOOK_SECRET !== '' && /^[A-Za-z0-9_-]{1,40}$/.test(MUX_ENVIRONMENT_ID)
+// Studio's agent (V3a, plan docs/plans/2026-11-22-v3a-runtime.md R3; owner, 2026-11-22): the app's one Anthropic key,
+// Production only, Sensitive; never ANTHROPIC_API_KEY (the SDK would read that on its own). Read here, used only by
+// src/lib/studio/client.ts. Unset, isStudioConfigured() is false and every turn refuses. STUDIO_OPEN is the switch
+// (`staff`, or anything else: off), read through secret() so a preview never opens Studio. The agent and environment ids
+// come from `ant apply` (frata-studio-eval or the owner). STUDIO_ANTHROPIC_BASE is the local fake only: refused on Vercel.
+export const STUDIO_ANTHROPIC_KEY = secret(process.env.STUDIO_ANTHROPIC_KEY)
+export const STUDIO_OPEN = secret(process.env.STUDIO_OPEN) === 'staff' ? 'staff' : 'off'
+export const STUDIO_AGENT_ID = process.env.STUDIO_AGENT_ID ?? ''
+export const STUDIO_AGENT_VERSION = Number(process.env.STUDIO_AGENT_VERSION ?? '') || 0
+export const STUDIO_ENVIRONMENT_ID = process.env.STUDIO_ENVIRONMENT_ID ?? ''
+export const STUDIO_ANTHROPIC_BASE = process.env.VERCEL ? '' : process.env.STUDIO_ANTHROPIC_BASE ?? ''
+export const isStudioConfigured = () => STUDIO_ANTHROPIC_KEY !== '' && /^agent_\w+$/.test(STUDIO_AGENT_ID) && STUDIO_AGENT_VERSION > 0 && /^env_\w+$/.test(STUDIO_ENVIRONMENT_ID)

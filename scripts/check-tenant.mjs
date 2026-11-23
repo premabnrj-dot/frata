@@ -188,9 +188,10 @@ for (const file of walk('src')) {
   if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts). The one
+    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts); Studio's
+    // through withStudio (withTenant plus the database's partner bind, src/lib/studio/with-studio.ts). The one
     // pre-tenant query file: which shop a storefront key names (ADR-0018), through the definer, cached.
-    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant( or withActor(`)
+    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(|\bwithStudio\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant(, withActor( or withStudio(`)
   }
 }
 
@@ -261,6 +262,11 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 // the app_partner_bill* / app_partner_client* definers are the only door, and Admin counts through admin_partner_bill_stats.
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:client_bills|client_deals|bill_tries))\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — a partner's own bills have no table grants; the partner definers are the only door (P2)`)
+}
+// Studio's agent (V3a, drizzle/*_studio_access.sql): a turn's person and step-ups and every spend row are platform scope;
+// no role holds a grant; the app_studio_* definers and app_turn_actor are the only door (ADR-0020 § 5 as amended).
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(studio_(?:turn_keys|binds|spend_[a-z]+))\b[^;]*?\bto\b/g)) {
+  failures.push(`grant on ${m[1]}  — Studio's turn keys and spend rows have no table grants; the app_studio_* definers are the only door (V3a)`)
 }
 // Studio credits (C1, drizzle/0163–0164; plan docs/plans/2026-11-22-c1-credits.md): no table grant to ANY role; the
 // person definers (app_partner_credit*, app_partner_set_*, app_partner_invoice, app_partner_seat_change) and the system

@@ -570,6 +570,28 @@ Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unbl
    submission (P4b) is opened from your GitHub account.
 7. **O6 · Preview domain** — buy one `.com`-priced domain for previews (about ₹3,200 for 3 years); tell me the name.
 
+### Studio's agent on one test store, Frrata staff only (V3a; plan `docs/plans/2026-11-22-v3a-runtime.md`, ADR-0020)
+What is built: Studio at `/partner/studio`, its Managed Agents runtime behind `src/lib/studio/runtime.ts`, the per-minute
+cron `/api/cron/studio`, migrations 0166–0167 (applied by the orchestrator at release, never by this lane). The model
+for all testing is `claude-haiku-5-5` (`src/domains/studio/model.ts`). Spend caps (per turn, per person per India day,
+for the platform per day, open sessions) live in the database and `src/domains/studio/spend.ts`.
+1. **`STUDIO_ANTHROPIC_KEY` — done 2026-11-23** (Production only, Sensitive): a new key of the **`studio-eval`** workspace
+   with its spend limit on (owner's choice). **Residual M3:** anything holding the eval environment's key can reach
+   Production's sessions in that workspace. **Before any partner uses Studio:** make the `studio` workspace, its own spend
+   limit and its own key, and replace this one (the plan's Residuals).
+2. **`DATABASE_URL_BUILDER` — done 2026-11-22** (every read tool runs as `frata_builder`).
+3. **The agent and its environment.** `ant apply` of `studio/agents/frrata-agent/` in the `studio-eval` workspace (or
+   `frata-studio-eval` does it), then in Vercel (Production): `STUDIO_AGENT_ID`, `STUDIO_AGENT_VERSION` (the version the
+   apply printed: every change to `agent.md` is a new version, and the app refuses a live agent that differs from the
+   committed file), `STUDIO_ENVIRONMENT_ID`. Never `STUDIO_ANTHROPIC_BASE` (tests only; refused on Vercel).
+4. **The switch.** `STUDIO_OPEN=staff` (Production, Sensitive) opens Studio to Frrata staff who are also the store's
+   partner, with both passkey checks. **To stop the agent:** set `STUDIO_OPEN` to `off` (or remove it) and redeploy; the
+   cron then ends every open session and revokes its build key. For a stop that cannot wait for a deploy, **revoke the
+   workspace key** in the Claude Console as well: nothing can then reach Anthropic, and the cron still ends sessions and
+   revokes keys. There is no Frrata Admin screen for this yet (owner call 4).
+5. **Before the first live turn:** the R8 probe (domain fronting) runs in `frata-studio-eval` on the orchestrator's
+   word, against a Frrata-owned echo preview (`SPIKE_FRONT_ECHO_HOST`). The workspace's spend limit stays on.
+
 ### Studio credits — Frrata's own Razorpay before the first real sale (C1, plan `docs/plans/2026-11-22-c1-credits.md`)
 Partners buy credits and the Studio seat from Frrata's own Razorpay account (the one merchant billing uses). Until each
 step is done, buying on Production refuses with "Payments aren't set up yet" or takes nothing it can't account for.

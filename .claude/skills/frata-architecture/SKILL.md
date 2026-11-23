@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.10.0
+  version: 3.11.0
   owner: owner
-  verified: 2026-11-22
+  verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
   covers: ["src/middleware.ts", "src/lib/db/tenant.ts"]
 ---
@@ -140,6 +140,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
   layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
   its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
+  A door that asks several checks in one call wraps them in `oncePerCall` (`session.ts`, an AsyncLocalStorage memo of
+  `signedInUser`, `sessionIdOf` and `accessOf` for that call only): `requireStudio` does, so a poll asks once, not three
+  times (2026-11-23).
 - **Staff passkeys** (ADR-0007 amended 2026-11-12; `docs/specs/2026-11-12-staff-passkeys.md`): staff access and every
   support visit need a live passkey step-up on this browser session. `app_access_for(user, session, stepup hash)`
   answers `staffConfirmedAt` and drops support visits without one, in the query every signed-in request already runs.
@@ -274,7 +277,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `accessFor` puts its stores in `builds`, so `requireMember`/`asMember` can never carry one and every tuple refuses it
   in words (`BUILDER_REFUSED`, drawn once by `Panel`). A Builder enters only through `requireCapability(cap)` in the
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
-  read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
+  read (Studio's `asTurn` is the one other maker: a partner person's tool reads as frata_builder, § Studio's agent); `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
   column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0155), the live
   `brand_tokens` columns and `shop_settings.logo_url`, and, for Brand › Checkout's preview (one-address P2, drizzle/0161), the live
   `checkout_design` columns and `shop_settings`' seven public delivery, returns and Pay on delivery facts, and nothing else, with
@@ -295,7 +298,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   script on the console origin (the Meta SDK, the look preview) into a stolen
   staff session (`sessionCookieOptions`, src/lib/security-headers.ts). Signed-in console pages
   carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
-  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security).
+  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security). Framed only by the
+  console itself (SAMEORIGIN, `frame-ancestors 'self'`, on the console host; DENY elsewhere): `/console/theme-preview/*`
+  and, for Studio's preview pane, `/console/preview[/*]` (`src/lib/__tests__/framing.test.ts`).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does; `requireShop` also weighs `Sec-Fetch-Site` (`src/lib/auth/fetch-site.ts`: sibling stores
@@ -453,28 +458,32 @@ console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are 
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
 
-## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a)
+## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a, docs/plans/2026-11-22-v3a-runtime.md)
 
 - **The loop runs outside the sandbox, code inside it, anything that touches Frrata on Frrata's server.** The runtime is
-  Managed Agents behind one adapter (runtime.ts under src/lib/studio, V3a·4): start, send, interrupt, stop, budget,
-  usage. Nothing else calls Anthropic for a session.
-- **Every custom tool runs through `asTurn(turn, cap, work)`**, the second Actor maker beside `require-capability.ts`.
-  The turn is Frrata's own open-turn row (one a session), never an id from a webhook or a tool's input. The person is
-  re-checked by `app_turn_actor` in its own short transaction, which closes; reads then run outside any transaction as
-  `frata_builder`, whatever the role; a write takes its `*In(tx)` form in its own `withTenant`. Every id in a tool's
-  input is matched with `where tenant_id = turn.tenant`.
-- **Tools call the console's own saves**, never a second writer: the agent's content, brand words, tokens and logos are
-  proposals a person applies; Apply runs that save as the person. No tool publishes, hands over, opens a store, touches
-  a domain or a key, or reads orders, shoppers, costs or members. A Builder's turn proposes nothing.
-- **`app.partner_id`** is a third setting beside `app.tenant_id` and `app.member_role`, set only by `requireMember` /
-  `requireCapability`; every `studio_*` table has a restrictive policy on tenant and partner and composite foreign keys
-  to its session. Credits and costs live in partner-scope definer-only tables, never a tenant row.
-- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, sent as a header
-  (ADR-0018's build-key amendment), looked up uncached.
-- Anthropic's webhooks are stored in `webhook_events` (`anthropic:<session>:<event>`) and each tool runs in that webhook's
-  `after()`, once per tool-use id, with a per-minute Studio cron as the net; never the shared outbox drain.
-- **`check:studio`** (V3a·10, to be written) holds the shape: executors through `asTurn`, never `db()`; no cached loader
-  inside a transaction; the agent file pins its model, web tools off, hosts equal to the policy.
+  Managed Agents behind one adapter (`src/lib/studio/runtime.ts`, `runtime-managed.ts`; the client only in `client.ts`,
+  `check:config`): vaults, files, start (always with a budget), budget, send, answer, interrupt, events, usage, archive,
+  remove. Nothing else calls Anthropic for a session. Tests use `e2e/fakes/anthropic.mjs`, never the live API.
+- **A person enters through `requireStudio()`** (`with-studio.ts`): `STUDIO_OPEN=staff`, Frrata staff with a live staff
+  check who is also a live partner person with their check, both on one browser session, on the switcher's store where
+  they are the partner (never a support visit). `withStudio` then asks the database to bind them.
+- **The partner is a database-held bind, never a setting:** `app_current_partner()` answers only for a `studio_binds` row
+  of THIS transaction whose token is in `app.studio_bind`, written only by `app_studio_partner` (withStudio) or
+  `app_studio_bind_turn` (asTurn, the advance). The bind proves a person (user, membership, the two step-up rows).
+  Every `studio_*` shop table has a restrictive `partner_only` policy on tenant and bound partner and composite foreign
+  keys to its session; spend, turn keys and binds are platform-scope, definer-only tables (drizzle/0167, proof § 91).
+- **Every custom tool runs through `asTurn(turn, work)`** (`as-turn.ts`), the second Actor maker beside
+  `require-capability.ts` (`check:capabilities`). The turn is Frrata's own open-turn row, from the cron's ids-only work
+  list or the person's own session, never an id from a request, an event or a tool's input (`check:studio` pins who
+  imports the advance and asTurn). The person is re-checked by `app_turn_actor` in its own short transaction, which
+  closes; reads then run outside any transaction as `frata_builder` through `ctx.reads` (`src/lib/queries/builder.ts`,
+  one connection per advance: `withBuilderScope`); a write is `ctx.write((tx, partnerId) => …)`, a store transaction the
+  database bound again. The person gone at either point answers `actor`.
+- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, a header credential for
+  `api.frrata.shop` only (ADR-0018's build-key amendment), looked up uncached; never reflected in an answer.
+- **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors
+  (who may import the advance, asTurn, sessions.ts and cron.ts), no runtime call or cached loader inside a transaction,
+  no id-shaped tool input.
 
 ## Reference files — open the one for the work in hand
 
@@ -487,3 +496,4 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 | [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
 | [reference/modules-themes-sites.md](reference/modules-themes-sites.md) | a module (apps), a theme (retiring, ADR-0014), or the kit and fleet rules for shop websites as code | Modules, Themes, Shop websites as code |
 | [reference/speed.md](reference/speed.md) | a page, query, cache or background job: the budgets, what holds each, and the findings P1–P15 | Speed |
+| [reference/studio.md](reference/studio.md) | Studio's agent: tools and Apply, the advance, the screen, Send, Stop and the cron as built (V3a) | Tools and Apply, The advance, The screen, Send and the cron |

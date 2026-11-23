@@ -20,6 +20,10 @@
       "schedule": "23 * * * *"
     },
     {
+      "path": "/api/cron/studio",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/credits",
       "schedule": "41 * * * *"
     }

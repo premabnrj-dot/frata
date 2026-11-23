@@ -174,9 +174,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
   of a shop with no publish row records its baseline (`baselineRevision`; migration 0034 is its SQL twin).
 - **Writes** are `src/app/(console)/console/look/actions.ts` (all `asMember`, a support visit refused). Every image
   in a layer is rebuilt by `acceptedBase(…, 'theme')` for this shop; uploads go to `tenants/<id>/theme/`.
-- **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is the ONLY
-  framed route: SAMEORIGIN + `frame-ancestors 'self'`, only on the console host (`next.config.ts`,
-  `framing.test.ts`). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
+- **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is framed by the
+  console: SAMEORIGIN + `frame-ancestors 'self'`, only on the console host (`next.config.ts`, `framing.test.ts`); the
+  one other framed route is the store preview `/console/preview`, for Studio's preview pane (V3a R7). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
 - **Page settings** (T2: gallery, details, card, desktop columns, collection top) are additive with today's values
   as `PAGE_DEFAULTS`; a manifest may leave them out. A new setting never edits a released manifest.
 - **Released manifests never change**: `released-manifests.test.ts` snapshots each manifest's evaluated content (so a

@@ -1,0 +1,1 @@
+{"config": {"type": "cloud", "networking": {"type": "limited", "allowed_hosts": ["api.frrata.shop"], "allow_package_managers": false, "allow_mcp_servers": false}}}

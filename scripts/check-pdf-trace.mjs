@@ -47,5 +47,20 @@ for (const route of ROUTES) {
     failed = true
   } finally { rmSync(box, { recursive: true, force: true }) }
 }
+// Studio's Starter 0 (src/lib/studio/starter.ts) is read from the deployment by the Send action, on the Studio page's
+// function (next.config.ts's outputFileTracingIncludes): every file of kit/starter must ship with it, or the first Send in
+// production would fail (impact review of V3a R6).
+{
+  const page = '.next/server/app/(partner)/partner/studio/page.js'
+  const nft = join(ROOT, page + '.nft.json')
+  if (!existsSync(nft)) { console.error(`check:pdf-trace — ${page}.nft.json is missing (no Studio page built)`); failed = true }
+  else {
+    const base = dirname(join(ROOT, page))
+    const shipped = new Set(JSON.parse(readFileSync(nft, 'utf8')).files.map((f) => relative(ROOT, resolve(base, f))))
+    const kit = execFileSync('git', ['ls-files', 'kit/starter'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean)
+    const lost = kit.filter((f) => !shipped.has(f))
+    if (!kit.length || lost.length) { console.error(`check:pdf-trace — the Studio page does not ship Starter 0: ${lost.slice(0, 5).join(', ') || 'no kit files'}`); failed = true }
+  }
+}
 if (failed) process.exit(1)
-console.log(`check:pdf-trace — clean (${ROUTES.length} PDF routes render from their traced files)`)
+console.log(`check:pdf-trace — clean (${ROUTES.length} PDF routes render from their traced files; Studio ships Starter 0)`)
