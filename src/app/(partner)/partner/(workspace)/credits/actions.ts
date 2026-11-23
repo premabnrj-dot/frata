@@ -38,6 +38,8 @@ const SAYS: Record<Refusal, string> = {
   person_day: 'You’ve used 300 credits today. Try again tomorrow.',
   budget: 'This client’s budget is used up.',
   balance: 'Not enough credits. Buy credits to continue.',
+  renewal_paying: 'Studio’s payment is with your bank. Try again once it’s paid.',
+  start_open: 'A payment is still waiting. Try again in 10 minutes.',
   not_configured: 'Payments aren’t set up yet. Nothing was charged.',
   test_keys: 'Payments are in test mode. Nothing was charged.',
   seller: 'Frrata can’t take payments yet. Nothing was charged.',

@@ -107,7 +107,7 @@ Rules the script keeps:
 ## Results (written by the script)
 <!-- spike:results:start -->
 
-Measured spend so far: **$0.45** of the $25 cap (list cost, 18 runs).
+Measured spend so far: **$0.45** of the $25 cap (list cost, 20 runs).
 
 | Probe | Ran | Model | Status | Answer | List cost |
 |---|---|---|---|---|---|
@@ -125,8 +125,45 @@ Measured spend so far: **$0.45** of the $25 cap (list cost, 18 runs).
 | `concurrency-active` | 2026-11-22 19:39 UTC | claude-opus-5-5 | answered | 20/20 turns ran a command at once in 6920 ms wall; turn p50 2688 ms, p90 3737 ms, max 6475 ms; errors: none | $0.14 |
 | `mount-sha` | 2026-11-22 19:40 UTC | claude-opus-5-5 | answered | HEAD equals the requested SHA: true; token used: false | $0.02 |
 | `limits` | 2026-11-22 19:40 UTC | claude-opus-5-5 | answered | see evidence: cgroup memory, cpu and pid limits, disk, user | $0.01 |
+| `fronting` | 2026-11-23 07:10 UTC | claude-haiku-5-5 | answered | pass: the vault value never reached frrata-echo.vercel.app (host header, connect-to, resolve, direct tried) | $0.00 |
 
 <!-- spike:results:end -->
+
+## R8: the fronting probe (2026-11-23, security M1; plan `docs/plans/2026-11-22-v3a-runtime.md` R8)
+Two runs, each on the orchestrator's word after the owner said yes on 2026-11-23. Both used Haiku 5.5 and one session
+with a $0.25 budget. The environment allows only `api.frrata.shop` (`env_01Ps1sBcVbbRtJ9ri71GkkXo`; no package managers,
+no MCP servers). Each run had its own throwaway vault holding `FRRATA_KEY`, a random 38-character value scoped to
+`api.frrata.shop` and sent as a header, deleted when the probe ended. The echo (`frrata-echo.vercel.app/headers`,
+Frrata-owned) answers with the headers it received. The sandbox reduced each reply to a length and a SHA-256, and in run 2
+also to curl's exit code, the HTTP status and the reply's size, before printing anything.
+
+- Run 1, 07:05 UTC (`sesn_01N1HaNNsYPAHpNLZ2syxr8c`): `SPIKE_FRONT_ECHO_HOST=frrata-echo.vercel.app node
+  scripts/studio/spike.mjs run fronting`. The sandbox could not resolve the echo, so `--resolve` sent nothing.
+- Run 2, 07:10 UTC (`sesn_01Qr1oPL9Rqcd5CxX8SFyF6p`): the same command with `SPIKE_FRONT_ECHO_IP=76.76.21.21`. That is
+  Vercel's documented anycast A record. **The address was supplied from outside the sandbox, not resolved.** This run also
+  printed exit codes and statuses.
+
+**Verdict: pass.** The echo never received the value by any of the four ways. The throwaway value's own hash appears in
+no line of either run.
+
+| Way | Run 2 printed (frrata-key length and hash · curl exit · HTTP · reply bytes) | Reading |
+|---|---|---|
+| `Host:` header (TLS to `api.frrata.shop`, `Host: frrata-echo.vercel.app`) | `0 e3b0c442…b855` · 0 · **403** · 109 | answered with a refusal and no key. Only the size was kept, so who refused (the gateway or Vercel's edge) is not known |
+| `--connect-to api.frrata.shop:443:frrata-echo.vercel.app:443` | `0 e3b0c442…b855` · **6** · 000 · 0 | refused before sending: curl could not resolve the echo's name (`limited` filters DNS) |
+| `--resolve api.frrata.shop:443:76.76.21.21` (supplied) | `0 e3b0c442…b855` · 0 · **403** · 59 | the sandbox connected, naming `api.frrata.shop`, and got a refusal without the key. As with the Host header, who refused is not known |
+| direct to `frrata-echo.vercel.app` | `0 e3b0c442…b855` · **6** · 000 · 0 | refused before sending, at DNS, as `network` measured |
+
+`e3b0c442…b855` is the hash of the empty string: the reply held no `frrata-key`. Run 1 printed the same hashes for the
+Host header, `--connect-to` and direct ways. (Run 1's report read `--connect-to` as "a reply without the value". Run 2's
+exit code shows it never connected.)
+
+Cost: `usage.list_cost` read **$0.00** for each session (it counts whole cents). Tokens at Haiku's list rates plus active
+time come to about **$0.002** per run (6.3 s and 12.3 s), about $0.004 for both. Both sessions and both vaults were
+deleted. The agent `agent_01KfCxQ8YWvy4HgVMUfW33bS` (Haiku 5.5, made by run 1) and the environment `env-api` are kept
+for re-runs, as the script keeps all of them.
+
+Still unknown: what answered the two 403s (the egress gateway, Vercel's edge or `api.frrata.shop`). Either way the value
+did not reach the echo. Telling them apart would mean printing the reply bodies, which the probe deliberately doesn't do.
 
 ## Measured beside documented (2026-11-22, workspace `studio-eval`; Opus 5.5 at effort `low` unless a row says otherwise)
 Each probe's measured answer, set against what the documentation said. "Same" means the measurement confirms it;

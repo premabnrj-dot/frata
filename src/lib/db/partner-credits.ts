@@ -19,7 +19,7 @@ import type { Caller } from './partners'
 // =============================================================================
 
 const CODES = ['not_owner', 'not_found', 'bad_input', 'bad_gstin', 'too_many', 'confirm_first', 'confirm_again', 'details_first', 'has_seat',
-  'no_seat', 'below_used', 'gstin_locked', 'rate', 'platform_day', 'person_day', 'budget', 'balance'] as const
+  'no_seat', 'below_used', 'gstin_locked', 'rate', 'platform_day', 'person_day', 'budget', 'balance', 'renewal_paying', 'start_open'] as const
 export type CreditError = (typeof CODES)[number] | 'unknown'
 
 function code(err: unknown, tag: string): CreditError {
@@ -59,6 +59,10 @@ export type Overview = {
   hasDetails: boolean; hasInvoices: boolean; newSiteBudget: number
   waiting: { id: string; kind: PurchaseKind; total: Paise; createdAt: Date } | null
   renewalFailed: { total: Paise; forPeriodEnd: Date; failedAt: Date } | null
+  /** The live seat's renewal for this period, open: Move to Studio Plus stops it, or waits while it is with the bank (C1·B). */
+  renewalOpen: { total: Paise; forPeriodEnd: Date; claimed: boolean } | null
+  /** An old mandate still being cancelled. */
+  cancelling: boolean
 }
 
 export function overview(c: Caller, realMoney: boolean): Promise<Result<Overview>> {
@@ -75,6 +79,8 @@ export function overview(c: Caller, realMoney: boolean): Promise<Result<Overview
       hasDetails: !!j.hasDetails, hasInvoices: !!j.hasInvoices, newSiteBudget: num(j.newSiteBudget ?? 300),
       waiting: j.waiting ? { id: j.waiting.id, kind: j.waiting.kind, total: paise(num(j.waiting.total)), createdAt: new Date(j.waiting.createdAt) } : null,
       renewalFailed: j.renewalFailed ? { total: paise(num(j.renewalFailed.total)), forPeriodEnd: new Date(j.renewalFailed.forPeriodEnd), failedAt: new Date(j.renewalFailed.failedAt) } : null,
+      renewalOpen: j.renewalOpen ? { total: paise(num(j.renewalOpen.total)), forPeriodEnd: new Date(j.renewalOpen.forPeriodEnd), claimed: !!j.renewalOpen.claimed } : null,
+      cancelling: !!j.cancelling,
     }
   })
 }
@@ -108,7 +114,7 @@ export function budgets(c: Caller): Promise<Result<BudgetRow[]>> {
 export type PurchaseRow = { id: string; at: Date; kind: PurchaseKind; credits: number; plan: SeatPlan | null; total: Paise; test: boolean
   paidAt: Date | null; failedAt: Date | null; closedAt: Date | null; sent: boolean; refundDue: boolean; refundedAt: Date | null; invoiceId: string | null; invoiceNumber: string | null }
 export type Details = { legalName: string | null; gstin: string | null; stateCode: string | null; address: string | null; email: string | null; gstinLocked: boolean }
-export type Payments = { purchases: PurchaseRow[]; details: Details | null; mandate: { method: 'upi' | 'card'; max: Paise; live: boolean } | null }
+export type Payments = { purchases: PurchaseRow[]; details: Details | null; mandate: { method: 'upi' | 'card'; max: Paise; live: boolean } | null; cancelling: boolean }
 
 export function payments(c: Caller): Promise<Result<Payments>> {
   return read('credits-payments', async () => {
@@ -121,6 +127,7 @@ export function payments(c: Caller): Promise<Result<Payments>> {
       details: j.details ? { legalName: j.details.legalName ?? null, gstin: j.details.gstin ?? null, stateCode: j.details.stateCode ?? null, address: j.details.address ?? null,
         email: j.details.email ?? null, gstinLocked: !!j.details.gstinLocked } : null,
       mandate: j.mandate ? { method: j.mandate.method, max: paise(num(j.mandate.max)), live: !!j.mandate.live } : null,
+      cancelling: !!j.cancelling,
     }
   })
 }
@@ -276,6 +283,8 @@ export const system = {
     return rows.map((r) => ({ partnerId: r.partner_id as string, customerId: (r.customer_id as string | null) ?? null, tokenId: r.token_id as string }))
   },
   async tokenCancelled(partnerId: string, token: string) { await db().execute(sql`select app_pc_token_cancelled(${partnerId}::uuid, ${token})`) },
+  /** A cancel that failed: its tries and reason kept for staff, tried again next hour. */
+  async tokenCancelTried(partnerId: string, token: string, error: string) { await db().execute(sql`select app_pc_token_cancel_tried(${partnerId}::uuid, ${token}, ${error.slice(0, 40)})`) },
   async tokenEvent(token: string, status: string): Promise<boolean> {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_token_event(${token}, ${status}) as ok`)
     return r?.ok === true
