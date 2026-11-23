@@ -119,10 +119,28 @@ one, many, overdue, ended, USD row, no permission (support staff), phone.
 
 ### Who may
 
-Master admin only (the stored role `admin`, `ADMIN_ONLY`), the same door as the fx rate. Support staff get a
-panel: "Only a master admin can open Costs". No fresh-passkey step: nothing here moves money, it records it. Every write is audited
-in the same transaction as the write (`tenantId` null) (`costs.item.add`, `.edit`, `.end`, `.pay`, `.unpay`; `auditStaff`, names of
-changed fields only), and `costs` joins `MASTER_ONLY_WORDS` so support staff never see these rows in Activity.
+Master admin only (the stored role `admin`, `ADMIN_ONLY`). Support staff get a panel: "Only a master admin can open Costs".
+The role is checked on the page, in every action, **and inside every `src/lib/admin/costs.ts` export** (as `adminOnly` in
+`billing.ts`), with a unit test that a support `StaffOk` is refused: support staff share the `frata_admin` connection, so
+the database cannot hold this line. Add, Mark paid and End need no fresh passkey. **Editing an amount, currency or
+anchor date, and Undo of a payment older than 10 minutes, need `confirmedRecently`** (security review 2026-11-23: a
+falsified record reaches the CA's input credit and the burn; the toast's Undo stays one tap). Every write is audited in
+the same transaction as the write (`tenantId` null): `costs.item.add`, `.edit`, `.end`, `.pay`, `.unpay`; `target` is the
+item id, never a name or note; `detail` carries names of changed fields, and for `.unpay` also `{itemId, periodFor,
+inrPaise, gstPaise}` so the figures survive the delete. `costs` joins `MASTER_ONLY_WORDS`, and Activity's filter reads
+that list (it hard-codes `billing` today, `activity/page.tsx`); `credits.rate.set` joins it too.
+
+### Input rules (Zod on the server, CHECKs in 0170)
+
+Names trimmed with control and bidi characters stripped; `name` 1–80, `vendor` ≤ 80, `note` ≤ 300; amounts integer 1 to
+₹1 crore (1e9 paise; USD in cents with the same ceiling in rupees); USD `inr_paise` within the `fx_rates` 50–200 band;
+`gst_paise` 0 to `inr_paise`; dates 2020-01-01 to today + 2 years, `paid_on` not after today in IST. `period_for` is
+accepted only if it is a real due date of the item (engine) and not after `ends_on`; a one-time item takes one payment
+(partial unique index on `item_id` where `kind = 'one_time'`, kept by a column or trigger-free check in the writer); Undo is
+`delete … where id = $p and item_id = $i returning`, zero rows answering not found. Overdue counts are arithmetic, not a loop.
+At most 500 live items. Search caps at 80 characters and escapes `%` and `_`. Free text renders only as text (dialog title,
+toast, CSV), never HTML or a link; the Infrastructure link on Vercel and Mux items is a fixed internal path chosen in code.
+Logs carry `errName(e)` only.
 
 ### Reminders (phase 2)
 
@@ -164,7 +182,7 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
    admin db fake, `npm run gates`.
 4. **Page and dialogs** built as drawn. Verify: `e2e` flow `costs` at phone and desktop width;
    `mockup-parity-reviewer`, `design-system-reviewer`, `words-reviewer`.
-5. **C2**: CSV export (server route, `Origin` checked, admin only), `cost_due` Today source.
+5. **C2**: CSV export (a GET route copied from `billing/export/route.ts`: `requireStaff(ADMIN_ONLY)` and the lib re-check, `fy` by regex, `text/csv; charset=utf-8`, fixed ASCII attachment filename, `no-store`, `nosniff`, row cap, `csvCell` from `domains/billing/document.ts`), `cost_due` Today source.
    Verify: e2e, `npm test`, `npm run typecheck`.
 6. **Production**: migration SQL printed with `scripts/prod-migrate.mjs`, applied, row inserted; push to
    `main`; production errors checked within the hour and next day.
@@ -202,8 +220,7 @@ Regression net first, every task ends with its tests and `impact-reviewer` on it
   on the same index. Zod runs on the server only, so no dialog ships it (P14). Admin pages render fresh; a write purges no tag.
 - **Reliability** — no outbound calls. A failed read shows "We could not read costs", never a zero.
 - **Security** — every action: `requireStaff(ADMIN_ONLY)`, Zod with length caps and amount ceiling,
-  item id matched together with the row id, named fields in the reply; CSV is admin-only, `Origin`
-  checked, formula-injection safe (cells starting `= + - @` are prefixed). Notes render as text, never HTML.
+  item id matched together with the row id, named fields in the reply; the CSV is a GET route copied from billing's export, admin-only, with `csvCell` (also covers tab and CR). Notes render as text, never HTML.
 - **Unit economics** — changes no merchant price or fee. It supplies the burn the model's break-even
   uses; `unit-economics-reviewer` checks the burn feeds `frata-unit-economics` without a second copy.
 - **Blast radius** — new files plus one nav group, one `TODAY_SOURCES` row, one activity word. Shared:
