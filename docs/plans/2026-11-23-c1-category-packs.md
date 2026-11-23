@@ -241,8 +241,8 @@ Each task: write the test first, make the change, run the verify command and rea
 Verify: `npx vitest run src/domains/catalogue src/domains/policies src/lib/themes src/domains/settings src/domains/tenancy`
 reports all passed; `npm run e2e -- --only signup,products-pr0,neel-settings,owner-only,look` reports 5 flows passed. No commit.
 
-**C1a·1 · Pin today.** Test first, and this test is the whole task: `src/domains/catalogue/__tests__/sells-today.test.ts` holds the 19-row
-table, `SELL_KEYS` and `SELL_LABELS`. It imports only today's names: `startingHsn`, `sellsSized`, `SELL_KEYS`, `SELL_LABELS` (sell-keys),
+**C1a·1 · Pin today.** Test first, and this test is the whole task: `src/domains/catalogue/__tests__/sells-today.test.ts` reads the 19-row
+table (kept beside it in `sells-today.rows.ts`, so C1a·2's bridge and C1c·1 read the same rows), `SELL_KEYS` and `SELL_LABELS`. It imports only today's names: `startingHsn`, `sellsSized`, `SELL_KEYS`, `SELL_LABELS` (sell-keys),
 `presetsFor` (size-charts), `labelAsked` (label), `sampleSetFor` (`@/lib/themes/sample`), `renderPolicy` (policies).
 Verify: `npx vitest run src/domains/catalogue/__tests__/sells-today.test.ts` reports 1 file passed on unchanged code. Commit it alone.
 Its table and assertions are not edited again until C1c·1, which adds rows only. One edit is planned: C1a·3 moves `presetsFor` and
