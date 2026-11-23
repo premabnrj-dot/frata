@@ -40,6 +40,24 @@ beforeEach(() => { vi.clearAllMocks(); sent.length = 0; sellerGstin.v = null })
 
 describe('the hourly run', async () => {
   const { runCredits } = await import('../run')
+  it('a mandate to cancel: cancelled then recorded; a gateway failure is a kept try; no customer is a try, never a hold', async () => {
+    sys.tokenCancels.mockResolvedValueOnce([{ partnerId: 'p1', customerId: 'cust_1', tokenId: 'token_a1' }, { partnerId: 'p1', customerId: 'cust_1', tokenId: 'token_b2' },
+      { partnerId: 'p2', customerId: null, tokenId: 'token_c3' }])
+    gw.cancelToken.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('gateway'))
+    const r = await runCredits(new Date('2026-11-30T03:00:00Z'), later())
+    expect(sys.tokenCancelled).toHaveBeenCalledWith('p1', 'token_a1')
+    expect(sys.tokenCancelled).toHaveBeenCalledTimes(1)
+    expect(sys.tokenCancelTried).toHaveBeenCalledWith('p1', 'token_b2', 'Error')
+    expect(sys.tokenCancelTried).toHaveBeenCalledWith('p2', 'token_c3', 'no_customer')
+    expect(gw.cancelToken).toHaveBeenCalledTimes(2)
+    expect(r.cancels).toBe(1)
+  })
+  it('a cancel that went through but failed to record is never a failed try', async () => {
+    sys.tokenCancels.mockResolvedValueOnce([{ partnerId: 'p1', customerId: 'cust_1', tokenId: 'token_a1' }])
+    sys.tokenCancelled.mockRejectedValueOnce(new Error('db'))
+    await runCredits(new Date('2026-11-30T03:00:00Z'), later())
+    expect(sys.tokenCancelTried).not.toHaveBeenCalled()
+  })
   it('a renewal near its end: the attempt and its notice, at the frozen price', async () => {
     sys.renewals.mockResolvedValueOnce([seat()])
     const r = await runCredits(new Date('2026-11-30T03:00:00Z'), later())

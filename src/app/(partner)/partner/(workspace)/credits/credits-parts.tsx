@@ -91,10 +91,12 @@ function usePay(done: (credits: string) => string) {
   return { pay, error, run, reset: () => { live.current = false; setPay({ state: 'idle' }); setError(null) } }
 }
 
-/** What the dialog shows while it waits, and after. */
+/** While the server waits for the bank, the dialog is titled by the wait and holds one line (as drawn, 22 and 23 Nov):
+ *  no buttons while waiting; Close once the wait ran out. */
+const waitTitle = (pay: Pay) => pay.state === 'waiting' ? 'Waiting for your bank' : pay.state === 'late' ? 'Still waiting for your bank' : null
 function PayState({ pay, amount }: { pay: Pay; amount: number }) {
-  if (pay.state === 'waiting') return <div role="status" className="grid gap-1"><b className="text-section">Waiting for your bank</b><p className="text-sm text-muted-foreground"><span className="font-num">{inr(amount)}</span> · up to 5 minutes.</p></div>
-  if (pay.state === 'late') return <div role="status" className="grid gap-1"><b className="text-section">Still waiting for your bank</b><p className="text-sm text-muted-foreground">If you paid, the credits arrive here. You’re never charged twice.</p></div>
+  if (pay.state === 'waiting') return <p role="status" className="text-sm text-muted-foreground"><span className="font-num">{inr(amount)}</span> · up to 5 minutes.</p>
+  if (pay.state === 'late') return <p role="status" className="text-sm text-muted-foreground">If you paid, the credits arrive here. You’re never charged twice.</p>
   return null
 }
 const payError = (pay: Pay, error: string | null) =>
@@ -126,8 +128,8 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
   return <>
     <Button size={size} variant={variant} onClick={() => (needDetails ? setAsking(true) : setOpen(true))}>{label}</Button>
     {asking && <DetailsDialog open d={NO_DETAILS} onClose={() => setAsking(false)} onSaved={() => { setAsking(false); setNeedDetails(false); setOpen(true) }} />}
-    <Dialog open={open} onClose={close} title="Buy credits" error={payError(pay, error)}
-      actions={pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
+    <Dialog open={open} onClose={close} title={waitTitle(pay) ?? 'Buy credits'} error={payError(pay, error)}
+      actions={pay.state === 'waiting' ? null : pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
         : <><Button variant="secondary" onClick={close} data-autofocus className="max-md:hidden">Not now</Button>
           <Button busy={waiting} onClick={go} className="max-md:w-full">{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
       {pay.state === 'waiting' || pay.state === 'late' ? <PayState pay={pay} amount={total} /> : <div className="grid gap-3">
@@ -166,9 +168,9 @@ export function StartSeat({ plan, renews, label, primary = true, move }: { plan:
       actions={<Button variant="secondary" onClick={close} data-autofocus>Close</Button>}>
       <p className="text-sm text-muted-foreground">{move.from}’s <span className="font-num">{inr(move.renewal.total)}</span> is being paid. Try again once it’s paid.</p>
     </Dialog> :
-    <Dialog open={open} onClose={close} title={`${move ? 'Move to' : 'Start'} ${p.name}`}
+    <Dialog open={open} onClose={close} title={waitTitle(pay) ?? `${move ? 'Move to' : 'Start'} ${p.name}`}
       error={pay.state === 'declined' && move ? `${payError(pay, error)} You’re still on ${move.from}.` : payError(pay, error)}
-      actions={pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
+      actions={pay.state === 'waiting' ? null : pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
         : <><Button variant="secondary" onClick={close} data-autofocus>Not now</Button>
           <Button busy={waiting} onClick={() => void run({ kind: 'seat', plan, method }, close)}>{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
       {pay.state === 'waiting' || pay.state === 'late' ? <PayState pay={pay} amount={total} /> : <div className="grid gap-3">

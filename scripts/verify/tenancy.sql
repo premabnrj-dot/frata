@@ -4509,6 +4509,8 @@ reset role;
 do $$ declare gr uuid := current_setting('proof.gr89b')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; begin
   if exists (select 1 from partner_invoices where purchase_id = gr) or exists (select 1 from partner_credit_entries where purchase_id = gr)
   then raise exception 'FAIL: B · an ended seat''s renewal took an invoice or credits'; end if;
+  if (select coalesce(sum(next), 0)::text from platform_counters where kind = 'invoice') <> current_setting('proof.counter89b')
+  then raise exception 'FAIL: B · a refunded renewal took an invoice number'; end if;
   if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' then raise exception 'FAIL: B · a tokenless start moved Y'; end if;
   if (select md5(coalesce((select string_agg(t::text, ',' order by t::text) from frrata_payments t), '')
     || coalesce((select string_agg(t::text, ',' order by t::text) from frrata_invoices t), '')

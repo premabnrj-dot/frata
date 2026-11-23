@@ -185,10 +185,13 @@ async function cancels(live: () => boolean): Promise<number> {
   let n = 0
   for (const t of await system.tokenCancels(20)) {
     if (!live()) break
-    // A mandate with no customer can't be cancelled from here: it stays listed, and the log says so.
-    if (!t.customerId) { console.error('[credits] token cancel without a customer', t.partnerId); continue }
-    try { await cancelToken(t.customerId, t.tokenId); await system.tokenCancelled(t.partnerId, t.tokenId); n++ }
-    catch (e) { console.error('[credits] token cancel', errName(e)); await system.tokenCancelTried(t.partnerId, t.tokenId, errName(e)).catch(() => undefined) }
+    // A mandate with no customer can't be cancelled from here: a failed try (kept for staff), so it never holds the queue.
+    if (!t.customerId) { console.error('[credits] token cancel without a customer', t.partnerId); await system.tokenCancelTried(t.partnerId, t.tokenId, 'no_customer').catch(() => undefined); continue }
+    // The gateway's answer and our record apart: a cancel that went through is never counted as a failed try.
+    try { await cancelToken(t.customerId, t.tokenId) }
+    catch (e) { console.error('[credits] token cancel', errName(e)); await system.tokenCancelTried(t.partnerId, t.tokenId, errName(e)).catch(() => undefined); continue }
+    try { await system.tokenCancelled(t.partnerId, t.tokenId); n++ }
+    catch (e) { console.error('[credits] token cancelled, not recorded', errName(e)) }
   }
   return n
 }
