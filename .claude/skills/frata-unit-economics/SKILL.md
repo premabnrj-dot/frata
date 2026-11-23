@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.19.0
+  version: 2.20.0
   owner: owner
   verified: 2026-11-16
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
@@ -239,6 +239,11 @@ higher caps, review of big sends, export/API.
   the free 20 end after 90 days, once per PAN or GSTIN; every bought credit (seat, pack, typed) lasts 12 months; Any amount
   20–4,000; ₹1,999 kept at 2.99× after a 2% fee with Amex, Diners and international cards off. Seats and credits
   stay outside the partner share.
+- **Studio → Studio Plus starts at once** (owner 2026-11-23, option B): Plus's first month is paid that day, 500 credits
+  now, a new cycle from that day; Studio credits left keep their own use-by dates; the Studio fee already paid is never
+  refunded or split by days (a split would refund up to ₹2,899.03 before GST on day 1 while the partner keeps all 150
+  credits). Every credit still sells at ₹19.99–20.00; Studio Plus → Studio waits for the renewal. Hypotheses: carried-over
+  seat lots spent by day 90; a move not undone within 60 days (review, 2026-11-23).
 - **Costs are net of GST.** Frrata claims the GST input credit on every bill it pays (Anthropic, Vercel, GitHub and
   the rest; owner, 2026-11-16), so list cost is the cost.
 - **Inputs:** Opus 5.5 $4 in, $20 out, cache read $0.20, 5-minute write $5, 1-hour write $8 per million; Managed Agents
