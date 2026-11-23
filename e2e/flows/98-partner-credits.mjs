@@ -79,6 +79,17 @@ export default {
         assert.deepEqual([b.legal_name, b.state_code], ['Pia Studio LLP', '27'])
       })
 
+      await t.step('Checkout closed without paying: the dialog comes back on the wait; Esc closes it', async () => {
+        await pia.goto(CONSOLE + '/partner/credits')
+        await pia.evaluate(() => { window.__rzpMode = 'dismiss' })
+        await pia.getByRole('button', { name: 'Buy credits' }).first().click()
+        await pia.getByRole('dialog', { name: 'Buy credits' }).getByRole('button', { name: 'Pay ₹2,358.82' }).click()
+        await pia.getByRole('dialog', { name: 'Waiting for your bank' }).waitFor()
+        await pia.keyboard.press('Escape')
+        await pia.waitForFunction(() => !document.querySelector('dialog[open]'))
+        await pia.evaluate(() => { window.__rzpMode = '' })
+      })
+
       await t.step('a pack: Checkout opens in front of our dialog; credits arrive only after the server saw the payment; its invoice is a PDF', async () => {
         await pia.goto(CONSOLE + '/partner/credits')
         await pia.evaluate(() => { window.__rzpMode = 'frame' })
@@ -91,8 +102,11 @@ export default {
         await frame.click({ timeout: 3_000 })
         await pia.evaluate(() => { window.__rzpMode = '' })
         await expectToast(pia, '100 credits added.', 'ok')
+        // Focus goes back to the button that opened the dialog, never the page's body (design review 2026-11-23).
+        await pia.waitForFunction(() => document.activeElement && document.activeElement.tagName !== 'BODY', null, { timeout: 2_000 })
+          .catch(() => { throw new Error('focus returned after Checkout') })
         await pia.getByText('120 credits').waitFor()
-        const [p] = await db`select paid_at, total, test, payment_id from partner_credit_purchases where partner_id = ${pid} and kind = 'pack'`
+        const [p] = await db`select paid_at, total, test, payment_id from partner_credit_purchases where partner_id = ${pid} and kind = 'pack' order by created_at desc limit 1`
         assert.ok(p.paid_at, 'paid'); assert.equal(Number(p.total), 235882); assert.equal(p.test, true)
         await pia.goto(CONSOLE + '/partner/credits?tab=payments')
         const inv = pia.getByRole('link', { name: /^FRR\/T\d{2}-\d{2}\/\d{6}$/ })
@@ -122,8 +136,10 @@ export default {
 
       await t.step('Studio, then Studio Plus at once: its credits stay, the old AutoPay is cancelled (C1·B)', async () => {
         await pia.goto(CONSOLE + '/partner/credits?tab=plan')
+        await pia.evaluate(() => { window.__rzpMode = 'frame' })
         await pia.getByRole('button', { name: 'Start Studio', exact: true }).click()
         await pia.getByRole('dialog', { name: 'Start Studio' }).getByRole('button', { name: 'Pay ₹3,538.82' }).click()
+        await pia.getByRole('button', { name: 'Pay in the fake Checkout' }).click({ timeout: 3_000 })
         await expectToast(pia, 'Studio started. 150 credits added.', 'ok')
         await pia.goto(CONSOLE + '/partner/credits?tab=plan')
         await pia.getByRole('button', { name: 'Move to Studio Plus' }).click()
@@ -132,7 +148,13 @@ export default {
         await d.getByText('150 stay').waitFor()
         await d.getByText('₹1,799.82').waitFor()
         await pia.screenshot({ path: t.out('move-plus') })
+        await pia.evaluate(() => { window.__rzpMode = 'frame' })
         await d.getByRole('button', { name: 'Pay ₹11,798.82' }).click()
+        const frame = pia.getByRole('button', { name: 'Pay in the fake Checkout' })
+        await frame.waitFor()
+        assert.equal(await pia.locator('dialog[open]').count(), 0, 'no dialog of ours over Checkout (Move to Studio Plus)')
+        await frame.click({ timeout: 3_000 })
+        await pia.evaluate(() => { window.__rzpMode = '' })
         await expectToast(pia, 'Studio Plus started. 500 credits added.', 'ok')
         const seats = await db`select plan from partner_seats where partner_id = ${pid} and ended_at is null`
         assert.deepEqual(seats.map((x) => x.plan), ['plus'])

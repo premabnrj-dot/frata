@@ -32,6 +32,9 @@ const DetailsDialog = dynamic(() => import('./credits-dialogs').then((m) => m.De
 // =============================================================================
 
 const inr = (p: number) => formatInr(paise(p), { decimals: true })
+/** The last button that opened a payment dialog (its click handler records it), for usePay to return focus to. */
+let lastOpener: HTMLElement | null = null
+const opening = (e: { currentTarget: HTMLElement }) => { lastOpener = e.currentTarget }
 
 /** Two-line choice cards, as drawn (a title and its price; Segmented holds one short word each). A radiogroup with one
  *  tab stop and the arrow keys, as Segmented (src/components/ui/segmented.tsx). */
@@ -67,6 +70,9 @@ function usePay(done: (credits: string) => string) {
   // behind it inert, Checkout's frame included, so it must be closed (never cancelled) while Checkout is up, and comes
   // back with the wait when Checkout closes (owner's bug report, 2026-11-23; the console's autopay does the same).
   const [checkout, setCheckout] = useState(false)
+  // The button that opened the dialog: focus goes back to it when the dialog finally closes (the dialog's second
+  // showModal, after Checkout, would otherwise return focus to the page's body; design review 2026-11-23).
+  const opener = useRef<HTMLElement | null>(null)
   const live = useRef(false)
   const run = async (input: object, close: () => void) => {
     setError(null); setPay({ state: 'busy' }); live.current = true
@@ -89,14 +95,26 @@ function usePay(done: (credits: string) => string) {
       }
     }
     const back = () => { setCheckout(false); void look() }
-    const rz = new window.Razorpay({ key: s.key, order_id: s.order, name: 'Frrata', ...(s.recurring && s.customer ? { customer_id: s.customer, recurring: '1' } : {}),
-      handler: (_a: Answer) => back(),
-      modal: { ondismiss: back } })
-    // Our dialog closes first (its effect runs inside flushSync), so Checkout opens on a page that isn't inert.
-    flushSync(() => setCheckout(true))
-    rz.open()
+    opener.current ??= lastOpener
+    try {
+      const rz = new window.Razorpay({ key: s.key, order_id: s.order, name: 'Frrata', ...(s.recurring && s.customer ? { customer_id: s.customer, recurring: '1' } : {}),
+        handler: (_a: Answer) => back(),
+        modal: { ondismiss: back } })
+      // Our dialog closes first, so Checkout opens on a page that isn't inert. flushSync is load-bearing: it renders
+      // `open` false before the dialog's close event, so the Dialog never reads this close as a cancel.
+      flushSync(() => setCheckout(true))
+      rz.open()
+    } catch {
+      setCheckout(false); setPay({ state: 'idle' }); setError('The payment page couldn’t open. Nothing was charged.')
+    }
   }
-  return { pay, error, run, checkout, reset: () => { live.current = false; setCheckout(false); setPay({ state: 'idle' }); setError(null) } }
+  const reset = () => {
+    live.current = false; setCheckout(false); setPay({ state: 'idle' }); setError(null)
+    const o = opener.current; opener.current = null
+    // After the dialog has closed (its close moves focus to where its last showModal began): up to ~0.5 s of frames.
+    if (o) { let n = 0; const go = () => { if (document.querySelector('dialog[open]') && n++ < 30) requestAnimationFrame(go); else if (o.isConnected) requestAnimationFrame(() => o.focus()) }; requestAnimationFrame(go) }
+  }
+  return { pay, error, run, checkout, reset }
 }
 
 /** While the server waits for the bank, the dialog is titled by the wait and holds one line (as drawn, 22 and 23 Nov):
@@ -134,7 +152,7 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
   }
   const waiting = pay.state === 'waiting' || pay.state === 'busy'
   return <>
-    <Button size={size} variant={variant} onClick={() => (needDetails ? setAsking(true) : setOpen(true))}>{label}</Button>
+    <Button size={size} variant={variant} onClick={(e) => { opening(e); if (needDetails) setAsking(true); else setOpen(true) }}>{label}</Button>
     {asking && <DetailsDialog open d={NO_DETAILS} onClose={() => setAsking(false)} onSaved={() => { setAsking(false); setNeedDetails(false); setOpen(true) }} />}
     <Dialog open={open && !checkout} onClose={close} title={waitTitle(pay) ?? 'Buy credits'} error={payError(pay, error)}
       actions={pay.state === 'waiting' ? null : pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
@@ -171,7 +189,7 @@ export function StartSeat({ plan, renews, label, primary = true, move }: { plan:
   const close = () => { setOpen(false); reset() }
   const waiting = pay.state === 'waiting' || pay.state === 'busy'
   return <>
-    <Button size="sm" variant={primary ? 'primary' : 'secondary'} onClick={() => setOpen(true)}>{label ?? `${move ? 'Move to' : 'Start'} ${p.name}`}</Button>
+    <Button size="sm" variant={primary ? 'primary' : 'secondary'} onClick={(e) => { opening(e); setOpen(true) }}>{label ?? `${move ? 'Move to' : 'Start'} ${p.name}`}</Button>
     {move?.renewal?.claimed ? <Dialog open={open} onClose={close} title={`${move.from}’s payment is with your bank`}
       actions={<Button variant="secondary" onClick={close} data-autofocus>Close</Button>}>
       <p className="text-sm text-muted-foreground">{move.from}’s <span className="font-num">{inr(move.renewal.total)}</span> is being paid. Try again once it’s paid.</p>
