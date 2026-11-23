@@ -33,7 +33,10 @@ export async function middleware(request: NextRequest) {
   if (!isSignedInPath(request.nextUrl.pathname)) return updateSession(request, NextResponse.next({ request }))
   // Signed-in pages: a per-request script nonce (security review S3). Next reads it from the request's CSP header.
   const nonce = btoa(crypto.randomUUID())
-  const framed = request.nextUrl.pathname.startsWith('/console/theme-preview/')
+  // Framed by the console itself, same origin only: the customizer's look preview, and the store preview Studio's
+  // preview pane shows (V3a R7, states mockup state 7).
+  const p = request.nextUrl.pathname
+  const framed = p.startsWith('/console/theme-preview/') || p === '/console/preview' || p.startsWith('/console/preview/')
   const csp = signedInCsp(nonce, process.env.NODE_ENV === 'development', framed)
   const headers = new Headers(request.headers)
   headers.set('x-nonce', nonce)

@@ -1167,12 +1167,26 @@
     {
       "idx": 166,
       "version": "7",
+      "when": 1795394200000,
+      "tag": "0166_studio",
+      "breakpoints": true
+    },
+    {
+      "idx": 167,
+      "version": "7",
+      "when": 1795394202000,
+      "tag": "0167_studio_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 168,
+      "version": "7",
       "when": 1795415430737,
       "tag": "0168_studio_mandate_cancels",
       "breakpoints": true
     },
     {
-      "idx": 167,
+      "idx": 169,
       "version": "7",
       "when": 1795415459782,
       "tag": "0169_studio_plus_now",

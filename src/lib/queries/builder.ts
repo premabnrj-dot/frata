@@ -1,6 +1,6 @@
 import 'server-only'
 import type { ListQuery } from '@/domains/catalogue/list-query'
-import { withActor, type BuilderActor } from '@/lib/db/actor'
+import { assertCan, withActor, type BuilderActor } from '@/lib/db/actor'
 import { listCollectionsWith, listProductsWith } from './catalogue'
 import { builderBrandWith, builderCheckoutWith } from './brand'
 import { urlFor } from '@/domains/media/sizes'
@@ -40,5 +40,26 @@ export function builderCheckout(actor: BuilderActor) {
   return withActor(actor, 'preview.read', async (tx, tenantId) => {
     const [record, c] = await Promise.all([builderBrandWith(tx, tenantId), builderCheckoutWith(tx, tenantId)])
     return { record, ...c }
+  })
+}
+
+/** Studio's `store_facts` tool (plan docs/plans/2026-11-22-v3a-runtime.md R5): what the store's public pages already
+ *  show, as frata_builder whatever the person's role, in one transaction: the live brand, the first 20 active products
+ *  (title, handle, type, price range in paise, variant count) and the collections. Never stock, a cost, an order or a
+ *  person (ADR-0020 § 6). */
+export function builderStoreFacts(actor: BuilderActor) {
+  // It reads the brand too (builderBrand's grant), so it needs both capabilities; withActor asserts the second.
+  assertCan(actor, 'preview.read')
+  return withActor(actor, 'catalogue.read', async (tx, tenantId) => {
+    const [brand, list, cols] = await Promise.all([
+      builderBrandWith(tx, tenantId),
+      listProductsWith(tx, tenantId, { filter: 'active', sort: 'edited', q: '', page: 1 }),
+      listCollectionsWith(tx, tenantId),
+    ])
+    return {
+      brand: { palette: brand.palette, display: brand.display, body: brand.body, radius: brand.radius, density: brand.density, hasLogo: brand.logos.main !== null },
+      products: { active: list.counts.active, first: list.rows.slice(0, 20).map((r) => ({ title: r.title, handle: r.handle, type: r.typeName ?? null, minPrice: r.minPrice, maxPrice: r.maxPrice, variants: r.variantCount })) },
+      collections: cols.slice(0, 50).map((c) => ({ title: c.title, handle: c.handle, products: c.count })),
+    }
   })
 }

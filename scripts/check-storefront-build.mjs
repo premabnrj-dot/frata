@@ -31,7 +31,15 @@ const BUDGET_KB = 120
 // Measured here: checkout 121.08 → 119.46, About/FAQ 112.84 → 109.03, product 120.54 → 117.24 kB. The ceilings came down
 // to about that + 0.5 (impact and speed reviews, 2026-11-16) so the room can't silently fill again: checkout back on the
 // 120 budget, the product page too; About/FAQ 109.5.
-const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.5 }
+// 109.8 (2026-11-23, release of credits and Studio's agent; the owner told the same day): the page's own script did not
+// change (0.16 kB), but webpack's runtime, which every page ships, lists every lazy chunk in the app (2.52 kB gzipped
+// now), and that day's console and partner pages took it from 109.3 here to 109.5x on Vercel. The fix is fewer, larger
+// lazy chunks app-wide (or a runtime per surface), not a split of this page: it has nothing left to split.
+// Checkout 120.5 (2026-11-23, the owner told the same day; lane F, docs/plans/2026-11-23-page-weight.md, brings both back
+// down): 119.75 kB here measured 120.0x on Vercel on a6b1a90b after passing on the two builds before it. A build that
+// fails by chance also blocks the redeploy that switches Studio off, so the half kB is room for Vercel's variance, not for
+// code: check the three closest pages before adding any.
+const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 109.8, '/s/[host]/(checkout)/checkout/page': 120.5 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
@@ -112,7 +120,10 @@ for (const [k, files] of Object.entries(build)) {
 // The Look customizer's first-load script (Theme Studio spec § Guardrails, the Console gate; TS0b): 207.4 kB measured
 // 2026-11-11 after Menus and Site settings moved behind next/dynamic, with the designs added. It only comes down: the
 // studio (TS2) has its own ceiling. A new form loads when opened (next/dynamic), as the story and design forms do.
-const CUSTOMIZER_KB = 208
+// 2026-11-23: 171.4 kB once the upload client (@vercel/blob/client, 33 kB with its token library) loads at the first
+// upload; the ceiling came down from 208. A section's form is back in the first load (175.0 kB): its lazy chunk cost every
+// shop page a few bytes of runtime, and checkout crossed 120 on Vercel that day.
+const CUSTOMIZER_KB = 177
 {
   const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
   if (!k) failures.push('the Look customizer page is missing from the build manifest')

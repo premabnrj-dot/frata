@@ -10,9 +10,9 @@
 // next/dynamic, never raise a number. The customizer (/(lookeditor)) has its own ceiling in check-storefront-build.mjs.
 export const APP_BUDGET_KB = 150
 export const APP_PINNED = {
-  '/(console)/console/content/page': 227.2,
+  '/(console)/console/content/page': 196.2,
   '/(console)/console/products/[handle]/page': 209.1,
-  '/(console)/console/settings/[section]/page': 187.0,
+  '/(console)/console/settings/[section]/page': 155.7,
   '/(console)/console/orders/page': 160.2,
   '/(console)/console/offers/[id]/page': 154.1,
   '/(console)/console/collections/[handle]/page': 152.9,
@@ -22,6 +22,8 @@ export const APP_PINNED = {
   // The Studio workbench (plan 2026-11-22 WB·3, speed review M: at most 150): what the shell loaded on 2026-11-22
   // (131.4 kB) + 2, so growth is a finding. Code, Checks and Versions load with next/dynamic; no diff or highlight library.
   '/(partner)/partner/fixtures/studio/page': 133.4,
+  // The live Studio screen (V3a R7): the same shell, at the fixture's pin (plan docs/plans/2026-11-22-v3a-runtime.md).
+  '/(partner)/partner/studio/page': 133.4,
 }
 // build: app-build-manifest's pages; gz: (file) => gzipped bytes. Pure, so a test can hand it a manifest.
 /** @param {Record<string, number>} [pinned] */

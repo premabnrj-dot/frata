@@ -40,7 +40,7 @@ const PREVIEW_FILES = ['src/app/(console)/console/preview/[[...path]]/page.tsx',
 // '@/lib/queries/content' (lane B, V1): previewContent reads site_content only — the bars, menus and Contact line
 // shoppers see; no shopper, order or cost column.
 const PREVIEW_DATA = new Set(['@/lib/queries/storefront', '@/lib/queries/pages', '@/lib/queries/content', '@/lib/queries/videos', '@/lib/themes/manifests', '@/lib/themes/page-look', '@/lib/themes/sample', '@/lib/auth/require-capability', '@/lib/db/actor'])
-const ACTOR_IMPORTERS = new Set(['src/lib/auth/require-capability.ts', 'src/lib/queries/builder.ts', ...DOORS])
+const ACTOR_IMPORTERS = new Set(['src/lib/auth/require-capability.ts', 'src/lib/queries/builder.ts', 'src/lib/studio/as-turn.ts', 'src/lib/studio/advance.ts', ...DOORS])
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -60,7 +60,9 @@ for (const abs of walk(join(ROOT, 'src'))) {
   if (/\brequireCapability\(/.test(text) && !DOORS.has(file) && file !== 'src/lib/auth/require-capability.ts') {
     failures.push(`${file}  doors: requireCapability( outside scripts/builder-doors.json — a new Builder door is a plan change, and the e2e sweep reads that list`)
   }
-  if (/\bbuilderActor\(/.test(text) && !['src/lib/db/actor.ts', 'src/lib/auth/require-capability.ts'].includes(file)) failures.push(`${file}  actor: builderActor( outside require-capability.ts`)
+  // ADR-0020 point 4: Studio's asTurn is the second sanctioned Actor maker (a turn's reads run as frata_builder).
+  if (/\bbuilderActor\(/.test(text) && !['src/lib/db/actor.ts', 'src/lib/auth/require-capability.ts', 'src/lib/studio/as-turn.ts'].includes(file)) failures.push(`${file}  actor: builderActor( outside require-capability.ts and Studio's asTurn`)
+  if (/\bwithBuilderScope\(/.test(text) && !['src/lib/db/actor.ts', 'src/lib/studio/advance.ts'].includes(file)) failures.push(`${file}  actor: withBuilderScope( outside Studio's advance`)
   if (/\bwithActor\(/.test(text) && !['src/lib/db/actor.ts', 'src/lib/queries/builder.ts'].includes(file)) failures.push(`${file}  actor: withActor( outside src/lib/queries/builder.ts — its callback holds the shop id`)
   if (/\bnavOf\(/.test(text) && !['src/lib/auth/require-capability.ts', 'src/app/(console)/console/_builder/shell.tsx'].includes(file)) failures.push(`${file}  actor: navOf( outside the Builder's shell — it holds the person's shop ids`)
   if (/\bcurrentStore\(/.test(text) && !['src/lib/auth/require-member.ts', 'src/lib/auth/require-capability.ts', 'src/app/choose/actions.ts', 'src/app/api/console/tenant/route.ts'].includes(file)) failures.push(`${file}  actor: currentStore( outside the access modules, the switch and the tenant check`)

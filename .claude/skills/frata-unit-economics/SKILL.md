@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.20.0
+  version: 2.21.0
   owner: owner
   verified: 2026-11-16
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
@@ -268,7 +268,7 @@ higher caps, review of big sends, export/API.
 |---|---|---|
 | 251 credits an 8-page Opus site, ≤ 280 median | Studio spec · 2026-11-16 | proof task 1, three runs with real pauses |
 | 19 credits a page turn, 3–4 an edit | same | proof tasks 4–13 |
-| 1.10 loading | unit-economics review · 2026-11-16 | the first two Anthropic invoices against the bank's debits; returned turns ÷ all turns, month 1; Razorpay fees on purchases |
+| 1.10 loading | unit-economics review · 2026-11-16 | the first two Anthropic invoices against the bank's debits; returned turns ÷ all turns, month 1; Razorpay fees on purchases. It leaves out Frrata's own function time (V3a review · 2026-11-23: about $0.22 a month idle cron, about $0.47 of staff polls; at V3b's 70 sessions about $60 a month of polls) and turns that overshoot their reserve (charged never above it): read `studio_spend_turns` measured > reserved and Vercel's charges for `/api/cron/studio` and the poll route over the staff test's 30 days |
 | Hosting ₹294 / ₹2,937 / ₹9,764 a month | ADR-0017 guess · 2026-11-15 | the pilot's 30 days of Vercel usage |
 | Partners pay ₹380 a page against ₹40–80 elsewhere | review · 2026-11-16 | win/loss notes, first 20 partners |
 | The share repays a site's credits in 7.1 months on Launch, 1.3 on Growth | share table · 2026-11-07 | Phase 6 statements of partner-built stores |

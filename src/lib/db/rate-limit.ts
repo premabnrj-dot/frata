@@ -168,6 +168,8 @@ export const LIMITS = {
   apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
   // G·2: build keys minted per store (a session, a preview, a developer's computer each make one), failing closed.
   apiBuildKeyShop: { action: 'api_build_key:shop', max: 30, windowSeconds: 3600 },
+  // Studio V3a: a person's Sends (each one a turn under the spend caps) and Stops, failing closed.
+  studioSendUser: { action: 'studio_send:user', max: 60, windowSeconds: 3600 },
   // G·3, a developer's device sign-in, all failing closed: starts per network (each is a row for 10 minutes), the CLI's
   // polls per network first (any 43-character string is a well-formed secret) then per device (one every 5 s for 10
   // minutes is 120). The page (four screens § 2: "Too many tries. Wait a minute."), per person a minute: Check code (a

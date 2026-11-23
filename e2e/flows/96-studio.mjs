@@ -250,6 +250,7 @@ export default {
       const n = await open({ width: 390, height: 844 })
       const q = n.p
       const bar = q.getByRole('navigation', { name: 'Studio sections' })
+      await bar.getByRole('button', { name: 'Chat' }).waitFor() // the phone bar appears once the page knows its width
       assert.deepEqual(await bar.getByRole('button').allTextContents(), ['Chat', 'Website', 'More'])
       assert.equal(await bar.getByRole('button', { name: 'Chat' }).getAttribute('aria-pressed'), 'true')
       await q.getByRole('complementary', { name: 'Chat' }).waitFor()

@@ -3,7 +3,6 @@
 import { useTransition } from 'react'
 import { RemoveButton } from '@/components/ui/remove-button'
 import { useRouter } from 'next/navigation'
-import { upload } from '@vercel/blob/client'
 import { Section } from '@/components/layout/section'
 import { button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -41,6 +40,7 @@ export function DocLogo({ tenantId, current }: { tenantId: string; current: stri
     start(async () => {
       try {
         const png = await toPng(file)
+        const { upload } = await import('@vercel/blob/client')
         const res = await upload(`tenants/${tenantId}/documents/${crypto.randomUUID()}.png`, png, { access: 'public', handleUploadUrl: '/api/console/upload', contentType: 'image/png' })
         const r = await setDocLogo(res.url)
         if (!r.ok) { toast.error(r.error); return }
