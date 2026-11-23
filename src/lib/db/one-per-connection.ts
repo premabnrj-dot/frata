@@ -1,7 +1,7 @@
 import type postgres from 'postgres'
 
 // =============================================================================
-// FILE: src/lib/db/one-per-connection.ts — NO QUERY SENT BEHIND ANOTHER ON A CONNECTION (2026-11-23).
+// FILE: src/lib/db/one-per-connection.ts — OUTSIDE A TRANSACTION, NO QUERY SENT BEHIND ANOTHER ON A CONNECTION (2026-11-23).
 //
 // Admin › Partners hung to Vercel's 60 s limit. Supavisor's log for those requests shows their connections
 // authenticated, then idle until the client closed them, while the page's queries waited: answers lost, not a slow
@@ -12,7 +12,8 @@ import type postgres from 'postgres'
 //
 // The fix holds the pool's queries to its size: a query waits for a free slot instead of riding behind another. A query
 // (`unsafe`, every drizzle query outside a transaction) holds a slot while it runs; a transaction (`begin`) holds one for
-// its whole length, and the queries inside it run on its own connection, one after another, as they always did. A
+// its whole length. Inside a transaction postgres.js may still send parameterless statements behind one another on the
+// transaction's own connection (speed review LOW-1); Supavisor keeps one server connection for a transaction's length. A
 // transaction that waits on a pool read outside itself could wait for ever with every slot held by transactions, as it
 // already could for a connection; nothing here does that (withTenant's work runs on its own tx). (postgres.js's own `max_pipeline: 0`
 // would do it, but it also stops `begin` from claiming its connection: UNSAFE_TRANSACTION.)
