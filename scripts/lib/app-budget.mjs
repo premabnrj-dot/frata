@@ -12,17 +12,18 @@ export const APP_BUDGET_KB = 150
 // 2026-11-23 (page weight, docs/plans/2026-11-23-page-weight.md): the shell loads once (next.config's appShell) and zod,
 // the GST rate table and the discount maths left these pages' first load; each pin came down to what it measured + 2.
 // Several now sit under the 150 budget: they hold what was won (before → after: Content 194.4 → 155.8, a product 208.3
-// → 176.0, Orders 159.0 → 146.7).
+// → 176.0, Orders 159.0 → 146.7). Lowered again the same day after the 8-character hashes and the theme faces'
+// stylesheet (each page 0.2–0.4 kB lighter): measured + 2.
 export const APP_PINNED = {
-  '/(console)/console/content/page': 157.8,
-  '/(console)/console/products/[handle]/page': 178,
-  '/(console)/console/settings/[section]/page': 151.7,
-  '/(console)/console/orders/page': 148.7,
-  '/(console)/console/offers/[id]/page': 144.5,
-  '/(console)/console/collections/[handle]/page': 146.9,
-  '/(console)/console/collections/new/page': 145.6,
-  '/(console)/console/offers/new/page': 141.6,
-  '/(console)/console/preview/[[...path]]/page': 150.5,
+  '/(console)/console/content/page': 157.6,
+  '/(console)/console/products/[handle]/page': 177.7,
+  '/(console)/console/settings/[section]/page': 150.9,
+  '/(console)/console/orders/page': 148.5,
+  '/(console)/console/offers/[id]/page': 144.3,
+  '/(console)/console/collections/[handle]/page': 146.8,
+  '/(console)/console/collections/new/page': 145.5,
+  '/(console)/console/offers/new/page': 141.5,
+  '/(console)/console/preview/[[...path]]/page': 150.1,
   // The Studio workbench (plan 2026-11-22 WB·3, speed review M: at most 150): what the shell loaded on 2026-11-22
   // (131.4 kB) + 2, so growth is a finding. Code, Checks and Versions load with next/dynamic; no diff or highlight library.
   '/(partner)/partner/fixtures/studio/page': 133.4,
@@ -35,6 +36,9 @@ export const APP_PINNED = {
 // this much of its limit fails, so a local build or CI meets the limit before a deploy does. On Vercel only the limit
 // itself counts: there the margin is already spent.
 export const VERCEL_MARGIN_KB = 0.5
+
+/** What a failure tells a developer to run first: the page's files, heaviest first, and the components that bring each. */
+export const weighIt = (page) => `npm run weight -- '${page}'`
 
 /** The layouts above a page, then the page: every file it loads first, each once. */
 export const firstLoad = (build, k) => {
@@ -62,7 +66,7 @@ export function appBudgetProblems(build, gz, show = () => {}, budget = APP_BUDGE
   const out = []
   for (const { page, kb, limit } of appBudgetRows(build, gz, budget, pinned)) {
     show(`  ${page}: ${kb.toFixed(1)} kB JS`)
-    if (kb > limit) out.push(`${page}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — load what the first paint does not need with next/dynamic`)
+    if (kb > limit) out.push(`${page}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB). Run ${weighIt(page)} to see which files and components it loads; load what the first paint does not need with next/dynamic, or import a constant from a *-facts.ts half instead of a file that brings a library. Never raise the number`)
   }
   for (const k of Object.keys(pinned)) if (!build[k]) out.push(`${k}  is pinned in APP_PINNED but no longer built — remove its pin`)
   return out
@@ -78,8 +82,8 @@ export function marginProblems(rows, margin = VERCEL_MARGIN_KB) {
     (r.page.startsWith('/s/')
       // A shop page is mostly framework, and webpack's runtime (every page ships it) lists every lazy chunk in the app,
       // about 16 bytes each: a next/dynamic added in the console can tip a shop page nobody touched.
-      ? 'A shop page: if its own files did not change, a new lazy chunk elsewhere grew the runtime (docs/plans/2026-11-23-page-weight.md § Point 3); load that form with the page instead, or take weight off the shop'
-      : 'A lighter import (a *-facts.ts half), or next/dynamic for what the first paint does not need')
+      ? `A shop page: ${weighIt(r.page)} shows its own files beside the framework; if they did not change, React, Next or webpack's runtime grew (a Next upgrade, or many new lazy chunks elsewhere), which is the owner's call, not this page's`
+      : `Run ${weighIt(r.page)}: a lighter import (a *-facts.ts half), or next/dynamic for what the first paint does not need`)
   )
 }
 
@@ -91,7 +95,7 @@ export function zodProblems(build, read) {
   const out = []
   for (const k of Object.keys(build).filter((x) => x.endsWith('/page'))) {
     const hit = firstLoad(build, k).find((f) => f.endsWith('.js') && read(f).includes(ZOD_MARK))
-    if (hit) out.push(`${k}  loads zod in its first load (${hit}): import the zod-free *-facts.ts half, or load the form with next/dynamic`)
+    if (hit) out.push(`${k}  loads zod in its first load (${hit}). Run ${weighIt(k)}: the components listed against that file bring it. Import their constants from the zod-free *-facts.ts half of the domain file (check:layers keeps those zod-free), or load the form with next/dynamic. Validation stays in the server action`)
   }
   return out
 }
@@ -128,7 +132,7 @@ export function ownKb(files, rootMain, gz) {
  * @param {string[]} ceilingKeys every page named in check-storefront-build's TIGHT and SHOP_OWN */
 export function ownProblems(rows, ceilingKeys) {
   const out = rows.filter((r) => r.own && r.own.kb > r.own.limit).map((r) =>
-    `${r.page}  ships ${r.own.kb.toFixed(2)} kB of its own script gzipped (React, Next's router and webpack's runtime aside; ceiling ${r.own.limit} kB): the shop's own code only comes down — split what the first paint does not need. If no shop file changed, a Next upgrade may have grown next/link's chunk (app-dir/link)`)
+    `${r.page}  ships ${r.own.kb.toFixed(2)} kB of its own script gzipped (React, Next's router and webpack's runtime aside; ceiling ${r.own.limit} kB): the shop's own code only comes down. Run ${weighIt(r.page)} to see which shop components bring which file, and load what the first paint does not need with next/dynamic. If no shop file changed, a Next upgrade may have grown next/link's chunk (app-dir/link)`)
   const built = new Set(rows.map((r) => r.page))
   for (const k of new Set(ceilingKeys)) if (!built.has(k)) out.push(`${k}  has a shop ceiling (TIGHT or SHOP_OWN) but no longer builds: move its ceiling to the page's new name`)
   return out

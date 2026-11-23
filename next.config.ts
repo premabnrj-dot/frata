@@ -85,6 +85,26 @@ const config: NextConfig = {
         chunks: (chunk: { name?: string | null }) => APP_SHELL_ENTRY.test(chunk.name ?? ''),
         test: /[\\/]src[\\/](components[\\/](shell[\\/](nav|nav-progress|rail-toggle|announce)|ui[\\/](toast|toast-context|button|use-shortcuts)|icons[\\/]icon)\.tsx?|lib[\\/]utils\.ts|domains[\\/]ui[\\/]shortcuts\.ts)$/,
       }
+      // The same, one surface each (page weight 2026-11-23): what a surface's own layout loads, once for its pages.
+      // The partner workspace's passkey gate and its form parts (1.1–2.4 kB twice on each workspace page); Admin's passkey
+      // gate (0.8–1.3 kB on each Admin page); the Toaster on the sign-in pages (2.4 kB on sign-in, start, join, handover
+      // and the partner application). Each group's modules are ones its layout already loads, so no page loads a module it
+      // didn't; the 12 Admin pages that never had the duplicate pay 0.1–0.17 kB for the extra file, the other 13 save 0.6–1.0.
+      split.cacheGroups.partnerShell = {
+        name: 'partner-shell', enforce: true, priority: 19,
+        chunks: (chunk: { name?: string | null }) => /^app\/\(partner\)\/partner\/\(workspace\)\//.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](passkeys[\\/](partner-gate|partner-frame|passkey-client|check-timer)|ui[\\/](action-form|field-error|submit|dialog|banner)|brand[\\/]mark-paths|shell[\\/]fonts)\.tsx?|lib[\\/](format-date|settle)\.ts|domains[\\/]partners[\\/]passkeys\.ts)$/,
+      }
+      split.cacheGroups.adminShell = {
+        name: 'admin-shell', enforce: true, priority: 19,
+        chunks: (chunk: { name?: string | null }) => /^app\/\(admin\)\//.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](passkeys[\\/](passkey-gate|passkey-client)|layout[\\/]section)\.tsx?|lib[\\/](format-date|settle)\.ts)$/,
+      }
+      split.cacheGroups.signInToaster = {
+        name: 'sign-in-toaster', enforce: true, priority: 19,
+        chunks: (chunk: { name?: string | null }) => /^app\/(login|start|join|handover|partners)\//.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/]components[\\/](ui[\\/](toast|toast-context)|shell[\\/]announce)\.tsx?$/,
+      }
     }
     return config
   },

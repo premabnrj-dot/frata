@@ -9,7 +9,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
-import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, ownKb as ownFilesKb, ownProblems, runtimeHashProblems, VERCEL_MARGIN_KB, zodProblems } from './lib/app-budget.mjs'
+import { appBudgetProblems, appBudgetRows, appShellProblems, closest, marginProblems, ownKb as ownFilesKb, ownProblems, runtimeHashProblems, VERCEL_MARGIN_KB, weighIt, zodProblems } from './lib/app-budget.mjs'
 
 // Next 15 + React 19's shared framework script is ~103 kB gzipped on its own; a shop page may add ~17 kB.
 const BUDGET_KB = 120
@@ -54,13 +54,17 @@ const BUDGET_KB = 120
 // Set 2026-11-23 after option A (8-character chunk hashes: the runtime 2.50 → 2.28 kB): About/FAQ 109.06 whole, 8.13 own;
 // checkout 118.52 whole (its whole limit stays the 120 budget), 17.59 own. About/FAQ's whole number moves 109.8 → 110.6
 // because it now holds a different thing: the runtime's room; the page's own code is held at 8.7.
-const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 110.6 }
-const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.7, '/s/[host]/(checkout)/checkout/page': 18.1 }
+// Lowered the same day after the theme faces became a stylesheet (scripts/build-store-fonts.mjs: no JS object a face):
+// About/FAQ 108.75 whole, 7.81 own; checkout 118.27 whole, 17.33 own (its whole limit stays 120, the owner's word).
+const TIGHT = { '/s/[host]/(shop)/pages/[handle]/page': 110.3 }
+const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.4, '/s/[host]/(checkout)/checkout/page': 17.9 }
 // (OWN still counts the next/link chunk, Next's app-dir link.js: a Next upgrade can move it. scripts/lib/app-budget.mjs.)
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
 const BLOCK_CSS_KB = 1.0
+/** What a CSS failure tells a developer to do. */
+const CSS_FIX = " The shop's sheet (src/app/shop.css with base.css) and the theme faces (store-fonts.css) load on every shop page and block its first paint: remove or narrow rules rather than add them, and never raise the number"
 // One-address P2·3: a code-site store's checkout, bag-link, order and policy pages draw the brand record's faces
 // (Mukta, Tiro Devanagari Hindi: src/components/shop-preview/brand-fonts.ts), so those routes carry their @font-face
 // rules (0.35 kB gzipped, measured 2026-11-22; the faces themselves download only where a record uses them). They have
@@ -120,12 +124,12 @@ for (const [k, files] of Object.entries(build)) {
   const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
   const all = [...new Set([...above.flatMap((l) => build[l] ?? []), ...files])]
   const fonts = all.filter((f) => f.endsWith('.css') && isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
-  if (css_total_over(all)) failures.push(`${k}  loads more than ${CSS_BUDGET_KB + BRAND_FONTS_CSS_KB} kB of CSS gzipped in all (the sheet and the brand faces)`)
-  if (fonts > BRAND_FONTS_CSS_KB) failures.push(`${k}  loads ${fonts.toFixed(2)} kB of the brand faces' rules gzipped (budget ${BRAND_FONTS_CSS_KB} kB)`)
+  if (css_total_over(all)) failures.push(`${k}  loads more than ${CSS_BUDGET_KB + BRAND_FONTS_CSS_KB} kB of CSS gzipped in all (the sheet and the brand faces).${CSS_FIX}`)
+  if (fonts > BRAND_FONTS_CSS_KB) failures.push(`${k}  loads ${fonts.toFixed(2)} kB of the brand faces' rules gzipped (budget ${BRAND_FONTS_CSS_KB} kB): a brand face's @font-face rules belong in brand-fonts.ts only. Never raise the number`)
   const css = all.filter((f) => f.endsWith('.css') && !isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
   // Signal S2-0: a shop page loads the shop's own sheet (src/app/shop.css), never the app's (globals.css: console classes).
   for (const f of all) if (f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')) failures.push(`${k}  loads the app's stylesheet (${f}); a shop page loads src/app/shop.css only`)
-  if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
+  if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB).${CSS_FIX}`)
   const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
   if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
@@ -133,7 +137,7 @@ for (const [k, files] of Object.entries(build)) {
   const ownKb = ownLimit ? ownFilesKb(all, rootMain, gz) : 0
   rows.push({ page: k, kb, limit, ...(ownLimit ? { own: { kb: ownKb, limit: ownLimit } } : {}) })
   if (process.env.SHOW_BUDGETS && ownLimit) console.log(`  ${k}: own files ${ownKb.toFixed(2)} kB JS (ceiling ${ownLimit})`)
-  if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
+  if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB). Run ${weighIt(k)} to see which files and components it loads, and split what the first paint does not need (next/dynamic, or the bag's idle loading: bag.tsx)`)
 }
 
 // …and every page that isn't a shop must load it (its classes live only there): the console, Admin, the partner
@@ -165,7 +169,7 @@ for (const p of appShellProblems(build)) failures.push(p)
 // shop page a few bytes of runtime, and checkout crossed 120 on Vercel that day.
 // 147.7 kB the same day once zod left (its forms read their caps from sections-facts.ts and site-facts.ts) and the shell
 // loads once (lane F, page weight): the ceiling came down from 177 to that + 2.
-const CUSTOMIZER_KB = 149.7
+const CUSTOMIZER_KB = 149.2 // 147.2 after the 8-character hashes and the theme faces' stylesheet (same day) + 2
 {
   const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
   if (!k) failures.push('the Look customizer page is missing from the build manifest')
@@ -175,7 +179,7 @@ const CUSTOMIZER_KB = 149.7
     const kb = [...new Set([...above.flatMap((l) => build[l] ?? []), ...build[k]])].filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
     if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS`)
     rows.push({ page: k, kb, limit: CUSTOMIZER_KB })
-    if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB) — load a form when it opens (next/dynamic)`)
+    if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB). Run ${weighIt(k)}; load a form when it opens (next/dynamic), as the story and design forms do`)
   }
 }
 

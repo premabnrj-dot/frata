@@ -4,7 +4,8 @@
 //
 // Fails: any source file importing Google's font loader. It fetched Google during every build and a bad answer
 // failed production deploys at random (Vercel, 2026-11-11); faces are self-hosted in src/components/fonts/ (OFL)
-// and loaded with next/font/local. Comment lines are skipped (a gate must not match its own documentation).
+// and loaded with next/font/local, or (a shop's eight theme faces) the generated store-fonts.css (build-store-fonts.mjs).
+// Comment lines are skipped (a gate must not match its own documentation).
 // =============================================================================
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'

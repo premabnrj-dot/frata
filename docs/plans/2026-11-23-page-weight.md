@@ -10,6 +10,7 @@ Status: active (points 1, 2 and 4 built; point 3's A and E built on the owner's 
 **Review:** security-reviewer SAFE (every action validates with the same schema; no client file ever ran zod; nothing server-only moved), 2026-11-23
 **Review:** design-system-reviewer PASS (nothing a person sees changed), 2026-11-23
 **Review:** speed-reviewer WITHIN BUDGET, approved on A and E (4 LOW, folded in), 2026-11-23; impact-reviewer FIX BEFORE COMMIT on A and E (3 MED: helpers and tests, stale ceilings, this paragraph), folded in, 2026-11-23
+**Review:** follow-ups: speed-reviewer WITHIN BUDGET (1 MED, npm run weight's encoded paths, fixed; LOWs fixed or listed under Later), impact-reviewer FIX BEFORE COMMIT (its HIGH on font names disproved: next/font 15 wrote the same plain names; MEDs fixed), design-system-reviewer PASS, 2026-11-23
 
 ## The problem
 On 2026-11-23 five production builds failed on Vercel, each on a different page a fraction of a kB over its first-load
@@ -185,6 +186,41 @@ every theme shop, so it is listed here, not built.
 **What was recommended, and what the owner chose:** A now; E for the owner; the theme faces' stylesheet after, since no
 option alone reached the 1.5 kB goal for About/FAQ at a 109.5 ceiling. The owner chose A and E (with a whole-page
 ceiling kept beside the own-files one), declined B for now and put the faces after this release: § Point 3 · built.
+
+## After the release (the orchestrator's follow-ups, 2026-11-23)
+- **The guard tells a developer what to do.** `npm run weight -- <page>` (a URL path or a manifest key) prints the page's
+  first-load files, heaviest first, by kind (framework, shell, layout, page, shared), the client components this page
+  renders that bring each (Next's client reference manifest, kept to components whose every file the page loads) and
+  the libraries in each (zod, tailwind-merge, lucide, the passkey client). Every budget failure names it for its page,
+  then the fix. `scripts/lib/page-weight.mjs`, tested.
+- **The theme faces' stylesheet (built: nothing a shopper sees changes).** The eight theme faces are
+  `src/components/shop-preview/store-fonts.css`, written by `scripts/build-store-fonts.mjs` with next/font's own local
+  loader and its own postcss plugin, so the output is next/font's to the character; `check:store-fonts` (gates) fails a
+  stale file. **Proved identical** on the built CSS against a baseline saved from the build before: all 18 `@font-face`
+  rules of these family names (the 17 store faces, and the console's own Devanagari face, which shares the name `deva`) (src aside: `font-display: swap`, weights, unicode-ranges, the fallback faces' `local()` and overrides) and all
+  10 `--font-store-*` values match (the family names were plain before too: next/font 15 doesn't hash them); none of the eight was or is preloaded; Inter and DM Sans (preloaded) stay on next/font.
+  e2e `shop-look`'s screenshot baselines match. Saves 0.32 kB of own script on About/FAQ, 0.26 on checkout, 0.32 on the
+  product page and 0.4 on Console › Brand; the shop's CSS 15.9 → 15.8 kB.
+- **The rest of the double loads.** Three more cache groups in `next.config.ts`, each limited to one surface's pages and
+  to modules its layout already loads: `partnerShell` (the passkey gate and its form parts), `adminShell` (Admin's passkey
+  gate), `signInToaster` (the Toaster on sign-in, start, join, handover and the partner application). Duplication left on
+  any page: at most 0.32 kB (Next's `next/navigation` re-export, 0.1 kB, the largest). Partner Team 145.7 → 142.8 kB,
+  Developer 142.4 → 139.5; 13 Admin pages 0.6–1.0 kB lighter, while 12 that never had the duplicate pay 0.1–0.17 kB for
+  the extra file (speed review).
+- **`npm run weight` after its review:** reads the client manifest's URL-encoded chunk paths (shop pages and every page
+  with a `[segment]` now name their components), takes a real URL (`/console/products/kurta`), labels a file a layout
+  loads as the layout's (lazy-loading a page's component saves nothing there) and names the surface shells' chunks.
+  Budget CSS failures now say what to do too.
+- **Later (not built; the owner's budget):** (a) the console's preview pages can fetch Noto Devanagari twice (the shell's
+  next/font copy and the store stylesheet's: the same 121 kB file under two names) on a Hindi preview; shoppers never
+  load the shell's sheet. Fix: point the store face at next/font's emitted file, or move the shell's `deva` to the
+  stylesheet. (b) The shop's CSS is the closest budget (15.81 of 15.9 kB) and the success line's three closest pages
+  count script only: add CSS rows to `closest`. (c) `partnerShell` doesn't catch the shell fonts' next/font objects
+  (5 × ~0.1 kB raw, still in two chunks). (d) `npm run weight` lists a module's chunks from one entry, so a component of
+  the `(shop)` layout (bag.tsx) isn't named on checkout.
+- **Ceilings lowered again** (measured + 0.5 own, + 1.5 whole; checkout's whole stays 120): About/FAQ 110.3 whole and
+  8.4 own (108.75 / 7.81 measured), checkout 120 and 17.9 (118.27 / 17.33). Console pins to measured + 2 again (0.1–0.8 kB
+  each), the customizer 149.2. The Studio pins stay lane D's.
 
 ## Regression net
 The flows the change touches, run on the branch before the release report: checkout, shop-look (its screenshot
