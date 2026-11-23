@@ -101,7 +101,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
       action={<StartSeat plan={v.seat!.plan} renews={dayMonthIN(nextPeriodEnd(now))} label={`Pay ${formatMoney(v.renewalFailed.total)}`} />} />}
     {state === 'ending' && v.seat?.cancelAt && <Banner tone="info" className="mt-3" title={`${planName} ends on ${dayMonthIN(v.seat.cancelAt)}. Your credits stay until their use-by dates.`}
       action={<KeepSeat plan={planName} />} />}
-    {v.balance < LOW_BANNER && !(v.balance === FREE_CREDITS && onlyFree(v)) && <Banner tone="warn" className="mt-3" title={`${v.balance} credits left. Turns that need more will wait.`} action={<BuyCredits />} />}
+    {v.balance < LOW_BANNER && !(v.balance === FREE_CREDITS && onlyFree(v)) && <Banner tone="warn" className="mt-3" title={`${v.balance} credits left. Turns that need more will wait.`} action={<BuyCredits detailsFirst={!v.hasDetails} />} />}
   </>
 
   return <>{header}{banners}{tabs}<div className="mt-4">{await body()}</div></>
@@ -111,7 +111,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
       const total = v.balance + v.held + v.used
       return <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="grid gap-4">
-          <Section title="Balance" action={<BuyCredits startOpen={q.buy === '1'} />}>
+          <Section title="Balance" action={<BuyCredits startOpen={q.buy === '1'} detailsFirst={!v.hasDetails} />}>
             <div className="grid gap-2">
               <b className="text-display font-semibold"><Numeric>{onlyFree(v) ? `${v.balance} free credits` : `${v.balance.toLocaleString('en-IN')} credits`}</Numeric></b>
               <div className="h-2 overflow-hidden rounded-full bg-sunk" aria-hidden="true"><i className="block h-full bg-primary" style={{ width: `${total ? Math.round((v.balance / total) * 100) : 0}%` }} /></div>
@@ -134,6 +134,8 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
               <dt className="text-muted-foreground"><Money paise={SEAT_PLANS[v.seat.plan].price} /> + GST a month</dt><dd className="font-num text-right">{SEAT_PLANS[v.seat.plan].credits} credits a month</dd>
               <dt className="text-muted-foreground">{state === 'ending' ? 'Ends' : 'Renews'}</dt><dd className="text-right">{dayMonthIN(state === 'ending' ? v.seat.cancelAt! : v.seat.periodEnd)}{state === 'ending' ? '' : ` · ${formatMoney(renewTotal)}`}</dd>
               <dt className="text-muted-foreground">Pays by</dt><dd className="text-right">{v.mandate?.method === 'card' ? 'Card' : 'UPI AutoPay'}</dd>
+              {v.seat.nextPlan && state === 'active' && <><dt className="text-muted-foreground">From {dayMonthIN(v.seat.periodEnd)}</dt><dd className="text-right">{SEAT_PLANS[v.seat.nextPlan].name}</dd>
+                <dd className="col-span-2"><ChangePlan to={v.seat.plan} from="" credits={0} label={`Stay on ${SEAT_PLANS[v.seat.plan].name}`} variant="ghost" /></dd></>}
             </dl> : <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm"><dt className="text-muted-foreground">Free</dt><dd className="text-right">{FREE_CREDITS} credits, once</dd></dl>}
           </Section>
           <Section title="Alerts"><Alerts low={v.alerts.low} budget={v.alerts.budget} /></Section>
@@ -150,15 +152,16 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
       const monthKey = (d: Date) => istDayKey(d).slice(0, 7)
       const rows = [
         ...u.uses.map((x) => ({ at: x.at, left: `${x.client} · ${USE_WORDS[x.what]}${x.who ? ` · ${x.who.split('@')[0]}` : ''}`,
-          right: x.returned ? `Returned ${x.reserved}` : x.closed ? `${x.estimate ? `≈ ${x.estimate} → ` : ''}${x.charged}` : `Held ${x.reserved}` })),
+          right: x.returned ? <Badge tone="neutral">Returned {x.reserved}</Badge> : x.closed ? `${x.estimate ? `≈ ${x.estimate} → ` : ''}${x.charged}` : `Held ${x.reserved}` })),
         ...u.added.map((a) => ({ at: a.at, left: a.kind === 'grant' ? 'Free credits' : a.kind === 'seat' ? `${monthLongIN(a.at)} seat` : `Bought ${dayMonthIN(a.at)}`, right: `+${a.credits}` })),
-        ...u.ended.map((e) => ({ at: e.at, left: `${e.kind === 'seat' ? 'Studio credits' : e.kind === 'grant' ? 'Free credits' : 'Credits'} · past their use-by date`, right: `−${e.credits}` })),
+        // A seat lot is named by its month, as drawn ("October seat"): it was given 12 months before it ended.
+        ...u.ended.map((e) => ({ at: e.at, left: `${e.kind === 'seat' ? `${monthLongIN(yearBefore(e.at))} seat` : e.kind === 'grant' ? 'Free credits' : 'Credits'} · past its use-by date`, right: `−${e.credits}` })),
       ].sort((a, b) => b.at.getTime() - a.at.getTime())
       return <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Link href={`/partner/credits?tab=usage&month=${monthKey(now)}`} aria-current={month.startsWith(monthKey(now)) ? 'page' : undefined} className={button({ variant: month.startsWith(monthKey(now)) ? 'primary' : 'secondary', size: 'sm' })}>{monthShortIN(now)}</Link>
           <Link href={`/partner/credits?tab=usage&month=${monthKey(prev)}`} aria-current={month.startsWith(monthKey(prev)) ? 'page' : undefined} className={button({ variant: month.startsWith(monthKey(prev)) ? 'primary' : 'secondary', size: 'sm' })}>{monthShortIN(prev)}</Link>
-          <a href={`/partner/credits/usage.csv?month=${month}`} className={`${button({ variant: 'ghost', size: 'sm' })} ml-auto`}>Download CSV</a>
+          <a href={`/partner/credits/usage.csv?month=${month}`} className={`${button({ variant: 'secondary', size: 'sm' })} ml-auto`}>Download CSV</a>
         </div>
         {rows.length === 0 ? <Empty title="No usage yet" /> : <Section><dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">{rows.map((x, i) => <div key={i} className="contents">
           <dt className="text-muted-foreground">{x.left}</dt><dd className="font-num text-right">{x.right}</dd></div>)}</dl></Section>}
@@ -182,7 +185,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
       const p = r.value
       const d = p.details
       return <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
-        <Section title="Payments and invoices" ariaLabel="Payments">
+        <Section ariaLabel="Payments and invoices">
           {p.purchases.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet.</p> :
             <ul className="grid gap-2 text-sm">{p.purchases.map((x) => { const w = purchaseWords(x); return <li key={x.id} className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">{dayMonthIN(x.at)} · {w.what}</span>
@@ -192,8 +195,8 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
         </Section>
         <div className="grid gap-4">
           <Section title="Invoices go to" action={<EditDetails d={{ legalName: d?.legalName ?? null, gstin: d?.gstin ?? null, stateName: stateName(d?.stateCode ?? null), address: d?.address ?? null }} />}>
-            {d?.legalName ? <div className="grid gap-0.5 text-sm"><span>{d.legalName}</span>{d.gstin && <span className="font-mono text-small">{d.gstin.slice(0, 7)}••••{d.gstin.slice(11)}</span>}
-              <span className="text-muted-foreground">{stateName(d.stateCode) ?? ''}</span></div> : <p className="text-sm text-muted-foreground">Add a name and a state.</p>}
+            {d?.legalName ? <div className="grid gap-0.5 text-sm"><span>{d.legalName}</span>{d.gstin ? <span className="font-mono text-small">{d.gstin.slice(0, 7)}••••{d.gstin.slice(12)}</span>
+              : <span className="text-muted-foreground">{stateName(d.stateCode) ?? ''}</span>}</div> : <p className="text-sm text-muted-foreground">Add a name and a state.</p>}
           </Section>
           {p.mandate && <Section title="Pays by"><dl className="grid grid-cols-[1fr_auto] gap-x-3 text-sm">
             <dt className="text-muted-foreground">{p.mandate.method === 'card' ? 'Card' : 'UPI AutoPay'}</dt><dd className="font-num text-right">Up to {formatMoney(p.mandate.max)} a debit</dd></dl></Section>}
@@ -229,6 +232,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
 }
 
 const formatMoney = (p: number) => formatInr(paise(p), { decimals: true })
+const yearBefore = (d: Date) => { const x = new Date(d.getTime()); x.setUTCFullYear(x.getUTCFullYear() - 1); return x }
 const onlyFree = (v: Overview) => !v.seat && !v.hasInvoices && v.lots.every((l) => l.kind === 'grant')
 
 function BudgetCard({ r, owner, ownerFirst }: { r: BudgetRow; owner: boolean; ownerFirst: string }) {
@@ -238,7 +242,7 @@ function BudgetCard({ r, owner, ownerFirst }: { r: BudgetRow; owner: boolean; ow
     <div className="grid gap-2">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 text-sm"><dt className="text-muted-foreground">{kind}</dt>
         <dd className="font-num text-right">{r.budget === null ? `${r.used} used · no budget` : `${r.used} of ${r.budget}`}</dd></dl>
-      {owner ? <div className="flex flex-wrap gap-2">{s === 'paused' && <RaiseBudget linkId={r.linkId} client={r.client} />}<SetBudget linkId={r.linkId} client={r.client} kind={kind} budget={r.budget} /></div>
+      {owner ? <div className="flex flex-wrap gap-2">{s === 'paused' && <RaiseBudget linkId={r.linkId} client={r.client} />}<SetBudget linkId={r.linkId} client={r.client} kind={kind} budget={r.budget} used={r.used} /></div>
         : s === 'paused' ? <p className="text-sm text-muted-foreground">Ask {ownerFirst} to raise it.</p> : null}
     </div>
   </Section>

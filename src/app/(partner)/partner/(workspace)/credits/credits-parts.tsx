@@ -16,6 +16,7 @@ import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { CREDIT_PRICE, PACK, SEAT_PLANS, TYPED_MAX, TYPED_MIN, typedCreditsValid, withGst, type SeatPlan } from '@/domains/studio/prices'
 import { STATES } from '@/domains/checkout/states'
+import { stateName } from '@/domains/tax/gstin'
 import { confirmBuyAction, raiseBudgetAction, seatAction, setAlertsAction, setBudgetAction, setDetailsAction, setSiteBudgetAction, startBuyAction, type Opened } from './actions'
 
 /** `freshly` (src/components/passkeys/fresh.ts) with the passkey code loaded only when the device must confirm: the
@@ -108,8 +109,12 @@ const payError = (pay: Pay, error: string | null) =>
 
 // ── Buy credits (22 Nov page; phone: a sheet) ───────────────────────────────────────────────────────────────────────
 
-export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'primary', startOpen = false }: { label?: string; size?: 'sm' | 'default'; variant?: 'primary' | 'secondary'; startOpen?: boolean }) {
-  const [open, setOpen] = useState(startOpen)
+export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'primary', startOpen = false, detailsFirst = false }: { label?: string; size?: 'sm' | 'default'; variant?: 'primary' | 'secondary'; startOpen?: boolean
+  /** No invoice details yet: Buy credits opens "Invoices go to" first, then the purchase (as drawn). */
+  detailsFirst?: boolean }) {
+  const [needDetails, setNeedDetails] = useState(detailsFirst)
+  const [asking, setAsking] = useState(false)
+  const [open, setOpen] = useState(startOpen && !detailsFirst)
   const [any, setAny] = useState(false)
   const [typed, setTyped] = useState('250')
   const [field, setField] = useState<string | null>(null)
@@ -125,11 +130,12 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
   }
   const waiting = pay.state === 'waiting' || pay.state === 'busy'
   return <>
-    <Button size={size} variant={variant} onClick={() => setOpen(true)}>{label}</Button>
+    <Button size={size} variant={variant} onClick={() => (needDetails ? setAsking(true) : setOpen(true))}>{label}</Button>
+    {asking && <DetailsDialog open d={NO_DETAILS} onClose={() => setAsking(false)} onSaved={() => { setAsking(false); setNeedDetails(false); setOpen(true) }} />}
     <Dialog open={open} onClose={close} title="Buy credits" error={payError(pay, error)}
       actions={pay.state === 'late' ? <Button variant="secondary" onClick={close} data-autofocus>Close</Button>
-        : <><Button variant="secondary" onClick={close} data-autofocus>Not now</Button>
-          <Button busy={waiting} onClick={go}>{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
+        : <><Button variant="secondary" onClick={close} data-autofocus className="max-md:hidden">Not now</Button>
+          <Button busy={waiting} onClick={go} className="max-md:w-full">{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
       {pay.state === 'waiting' || pay.state === 'late' ? <PayState pay={pay} amount={total} /> : <div className="grid gap-3">
         <RadioCards label="How many credits" value={any ? 'any' : 'pack'} onPick={(x) => setAny(x === 'any')}
           options={[{ v: 'pack', title: `${PACK.credits} credits`, sub: `${inr(PACK.price)} + GST` }, { v: 'any', title: 'Any amount', sub: `${inr(CREDIT_PRICE)} + GST a credit` }]} />
@@ -199,10 +205,10 @@ export function CancelSeat({ plan, ends }: { plan: string; ends: string }) {
   const s = useSeat()
   const close = () => { setOpen(false); s.clear() }
   return <>
-    <Button size="sm" variant="ghost" className="text-danger-text" onClick={() => setOpen(true)}>Cancel {plan}</Button>
+    <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>Cancel {plan}</Button>
     <Dialog open={open} onClose={close} title={`Cancel ${plan}?`} error={s.error}
       actions={<><Button variant="secondary" onClick={close} data-autofocus>Keep {plan}</Button>
-        <Button variant="destructive" busy={s.busy} onClick={() => void s.act({ action: 'cancel' }, `${plan} ends on ${ends}.`, close)}>Cancel {plan}</Button></>}>
+        <Button variant="secondary" className="text-danger-text" busy={s.busy} onClick={() => void s.act({ action: 'cancel' }, `${plan} ends on ${ends}.`, close)}>Cancel {plan}</Button></>}>
       <p className="text-sm text-muted-foreground">{plan} ends on {ends}. Your credits stay until their use-by dates.</p>
     </Dialog>
   </>
@@ -243,10 +249,12 @@ export function RaiseBudget({ linkId, client }: { linkId: string; client?: strin
   }} aria-label={client ? `Raise by 50 for ${client}` : undefined}>Raise by 50</Button>
 }
 
-function NumberDialog({ open, onClose, title, label, start, save, saveLabel, undo = false }: { open: boolean; onClose: () => void; title: string; label: string; start: number | null
+function NumberDialog({ open, onClose, title, label, start, save, saveLabel, undo = false, used }: { open: boolean; onClose: () => void; title: string; label: string; start: number | null
   save: (n: number) => Promise<{ ok: true; text: string } | { ok: false; error: string; fields?: Record<string, string> }>; saveLabel: string
   /** Offer Undo on the saved toast: saves `start` back (as drawn for a client's budget; none when nothing stood before). */
-  undo?: boolean }) {
+  undo?: boolean
+  /** A client's budget: what it has used, shown and checked first (as drawn). */
+  used?: { client: string; n: number } }) {
   const router = useRouter(), toast = useToast()
   const [v, setV] = useState(start === null ? '' : String(start))
   const [field, setField] = useState<string | null>(null)
@@ -256,6 +264,7 @@ function NumberDialog({ open, onClose, title, label, start, save, saveLabel, und
   const go = async () => {
     const n = Number(v.replace(/\D/g, ''))
     if (!n) { setField('Enter a number of credits.'); ref.current?.focus(); return }
+    if (used && n < used.n) { setField(`${used.client} has used ${used.n}. Set ${used.n} or more.`); ref.current?.focus(); return }
     setBusy(true); const r = await freshly(() => save(n)); setBusy(false)
     if (!r.ok) { const f = (r as { fields?: Record<string, string> }).fields?.credits; if (f) { setField(f); ref.current?.focus() } else setError(r.error); return }
     const before = start
@@ -267,17 +276,19 @@ function NumberDialog({ open, onClose, title, label, start, save, saveLabel, und
   }
   return <Dialog open={open} onClose={onClose} title={title} error={error}
     actions={<><Button variant="secondary" onClick={onClose} data-autofocus>Cancel</Button><Button busy={busy} onClick={go}>{saveLabel}</Button></>}>
+    {used && <dl className="mb-3 grid grid-cols-[1fr_auto] gap-x-3 text-sm"><dt className="text-muted-foreground">Used</dt><dd className="font-num text-right">{used.n}</dd></dl>}
     <label className="grid gap-1"><span className="text-label">{label}</span>
       <input ref={ref} className={`${FIELD} font-num`} inputMode="numeric" value={v} aria-invalid={!!field} onChange={(e) => { setV(e.target.value); setField(null) }} />
       <FieldError message={field} /></label>
   </Dialog>
 }
 
-export function SetBudget({ linkId, client, kind, budget }: { linkId: string; client: string; kind: string; budget: number | null }) {
+export function SetBudget({ linkId, client, kind, budget, used }: { linkId: string; client: string; kind: string; budget: number | null; used?: number }) {
   const [open, setOpen] = useState(false)
   return <>
     <Button size="sm" variant="secondary" onClick={() => setOpen(true)} aria-label={`Set budget for ${client}`}>Set budget</Button>
     {open && <NumberDialog open onClose={() => setOpen(false)} title={`${client}’s budget`} label={kind} start={budget} saveLabel="Save budget" undo
+      used={used === undefined ? undefined : { client, n: used }}
       save={(credits) => setBudgetAction({ linkId, credits, client })} />}
   </>
 }
@@ -315,9 +326,20 @@ export function Alerts({ low, budget }: { low: boolean; budget: boolean }) {
 
 // ── Invoices go to ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-export function EditDetails({ d, startOpen = false, label = 'Edit details' }: { d: { legalName: string | null; gstin: string | null; stateName: string | null; address: string | null }; startOpen?: boolean; label?: string }) {
-  const router = useRouter(), toast = useToast()
+type DetailsIn = { legalName: string | null; gstin: string | null; stateName: string | null; address: string | null }
+const NO_DETAILS: DetailsIn = { legalName: null, gstin: null, stateName: null, address: null }
+
+export function EditDetails({ d, startOpen = false, label = 'Edit details' }: { d: DetailsIn; startOpen?: boolean; label?: string }) {
   const [open, setOpen] = useState(startOpen)
+  return <>
+    <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{label}</Button>
+    {open && <DetailsDialog open d={d} onClose={() => setOpen(false)} />}
+  </>
+}
+
+/** "Invoices go to" (as drawn): a GSTIN decides the state, shown and fixed; without one the state is picked. */
+function DetailsDialog({ open, d, onClose, onSaved }: { open: boolean; d: DetailsIn; onClose: () => void; onSaved?: () => void }) {
+  const router = useRouter(), toast = useToast()
   const [v, setV] = useState({ legalName: d.legalName ?? '', gstin: d.gstin ?? '', state: d.stateName ?? '', address: d.address ?? '' })
   const [fields, setFields] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -325,7 +347,8 @@ export function EditDetails({ d, startOpen = false, label = 'Edit details' }: { 
   const form = useRef<HTMLDivElement>(null)
   const uid = useId()
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setV({ ...v, [k]: e.target.value }); setFields({ ...fields, [k]: '' }) }
-  const close = () => { setOpen(false); setError(null); setFields({}) }
+  const close = () => { setError(null); setFields({}); onClose() }
+  const fromGstin = /^[0-9]{2}/.test(v.gstin.trim()) ? stateName(v.gstin.trim().slice(0, 2)) : null
   const go = async () => {
     setBusy(true); const r = await freshly(() => setDetailsAction({ ...v, email: '' })); setBusy(false)
     if (!r.ok) {
@@ -335,23 +358,20 @@ export function EditDetails({ d, startOpen = false, label = 'Edit details' }: { 
       requestAnimationFrame(() => form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
       return
     }
-    close(); toast.ok(r.text); settle(router)
+    close(); toast.ok(r.text); settle(router); onSaved?.()
   }
-  return <>
-    <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>{label}</Button>
-    <Dialog open={open} onClose={close} title="Invoices go to" error={error}
-      actions={<><Button variant="secondary" onClick={close} data-autofocus>Cancel</Button><Button busy={busy} onClick={go}>Save details</Button></>}>
-      <div ref={form} className="grid gap-3">
-        <label className="grid gap-1"><span className="text-label">Legal name</span><input className={FIELD} value={v.legalName} onChange={set('legalName')} aria-invalid={!!fields.legalName} maxLength={120} /><FieldError message={fields.legalName} /></label>
-        {/* The (i) sits beside the label, never inside it: a label names its FIRST control, and that would be the tip's button. */}
-        <div className="grid gap-1"><span className="flex items-center gap-1 text-label"><label htmlFor={`${uid}-gstin`}>GSTIN (optional)</label><InfoTip about="GSTIN">Your 15-character GST number.</InfoTip></span>
-          <input id={`${uid}-gstin`} className={`${FIELD} font-mono uppercase`} value={v.gstin} onChange={set('gstin')} aria-invalid={!!fields.gstin} maxLength={15} /><FieldError message={fields.gstin} /></div>
-        {!v.gstin.trim() && <label className="grid gap-1"><span className="text-label">State</span>
-          <select className={FIELD} value={v.state} onChange={set('state')} aria-invalid={!!fields.state}><option value="">Pick the state</option>{STATES.map((s) => <option key={s}>{s}</option>)}</select>
-          <FieldError message={fields.state} /></label>}
-        <label className="grid gap-1"><span className="text-label">Address</span><input className={FIELD} value={v.address} onChange={set('address')} aria-invalid={!!fields.address} maxLength={300} /><FieldError message={fields.address} /></label>
-        <p className="text-sm text-muted-foreground">Invoices already issued don’t change.</p>
-      </div>
-    </Dialog>
-  </>
+  return <Dialog open={open} onClose={close} title="Invoices go to" error={error}
+    actions={<><Button variant="secondary" onClick={close} data-autofocus>Cancel</Button><Button busy={busy} onClick={go}>Save details</Button></>}>
+    <div ref={form} className="grid gap-3">
+      <label className="grid gap-1"><span className="text-label">Legal name</span><input className={FIELD} value={v.legalName} onChange={set('legalName')} aria-invalid={!!fields.legalName} maxLength={120} /><FieldError message={fields.legalName} /></label>
+      {/* The (i) sits beside the label, never inside it: a label names its FIRST control, and that would be the tip's button. */}
+      <div className="grid gap-1"><span className="flex items-center gap-1 text-label"><label htmlFor={`${uid}-gstin`}>GSTIN (optional)</label><InfoTip about="GSTIN">Your 15-character GST number</InfoTip></span>
+        <input id={`${uid}-gstin`} className={`${FIELD} font-mono uppercase`} value={v.gstin} onChange={set('gstin')} aria-invalid={!!fields.gstin} maxLength={15} /><FieldError message={fields.gstin} /></div>
+      <label className="grid gap-1"><span className="text-label">State</span>
+        <select className={FIELD} value={fromGstin ?? v.state} onChange={set('state')} disabled={!!fromGstin} aria-invalid={!!fields.state}><option value="">Pick the state</option>{STATES.map((x) => <option key={x}>{x}</option>)}</select>
+        <FieldError message={fields.state} /></label>
+      <label className="grid gap-1"><span className="text-label">Address</span><input className={FIELD} value={v.address} onChange={set('address')} aria-invalid={!!fields.address} maxLength={300} /><FieldError message={fields.address} /></label>
+      <p className="text-sm text-muted-foreground">Invoices already issued don’t change.</p>
+    </div>
+  </Dialog>
 }

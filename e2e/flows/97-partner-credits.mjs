@@ -53,11 +53,10 @@ export default {
 
       await t.step('buying asks for invoice details first; nothing is charged', async () => {
         await pia.getByRole('button', { name: 'Buy credits' }).first().click()
-        const d = pia.getByRole('dialog', { name: 'Buy credits' })
-        await d.getByText('₹2,358.82').first().waitFor()
-        await d.getByRole('button', { name: 'Pay ₹2,358.82' }).click()
-        await d.getByText('Add a name and a state.').waitFor()
-        await d.getByRole('button', { name: 'Not now' }).click()
+        const d = pia.getByRole('dialog', { name: 'Invoices go to' })
+        await d.getByLabel('Legal name').waitFor()
+        await d.getByRole('button', { name: 'Cancel' }).click()
+        assert.equal(await pia.getByRole('dialog', { name: 'Buy credits' }).count(), 0, 'no purchase before invoice details')
         assert.equal((await db`select count(*)::int n from partner_credit_purchases where partner_id = ${pid}`)[0].n, 0)
       })
 
