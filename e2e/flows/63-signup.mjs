@@ -107,6 +107,9 @@ export default {
           await a.waitForURL(/\/console$/)
           const [row] = await db`select t.id, s.pickup_pincode from tenants t join shop_settings s on s.tenant_id = t.id where t.slug = ${ANON_SLUG}`
           assert.ok(row, 'the store exists'); assert.equal(row.pickup_pincode, null)
+          // O1·10: "/start → created", from the first arrival in this tab to Create store, on the audit row only.
+          const [{ ms }] = await db`select (detail->>'signup_ms')::int ms from audit_events where tenant_id = ${row.id} and action = 'shop.created'`
+          assert.ok(ms > 0 && ms < 86_400_000, `signup_ms ${ms}`)
           assert.equal(await a.evaluate(() => sessionStorage.getItem('frrata:signup')), null, 'the answers are cleared after creation')
         })
       } finally { await anon.close() }
@@ -216,6 +219,7 @@ export default {
         assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${s.id}`)[0].pickup_pincode, null)
         const [created] = await db`select detail from audit_events where tenant_id = ${s.id} and action = 'shop.created'`
         assert.ok(created && !('pickup' in created.detail), 'the audit has no pickup')
+        assert.ok(Number(created.detail.signup_ms) > 0, 'the time from /start to created is kept (O1·10)')
         await p.screenshot({ path: t.out('new-shop'), fullPage: true })
       })
 

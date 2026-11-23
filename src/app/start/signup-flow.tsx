@@ -9,7 +9,7 @@ import { Wordmark } from '@/components/brand/wordmark'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { slugFor } from '@/domains/signup/slug'
-import { ADDRESS_WORDS, addressUsable, signupSteps, stepForRefusal, stepNumber, type AddressState, type Moment, type Step } from '@/domains/signup/steps'
+import { ADDRESS_WORDS, addressUsable, signupMs, signupSteps, stepForRefusal, stepNumber, type AddressState, type Moment, type Step } from '@/domains/signup/steps'
 import { STORE_KEY, readStoredSignup } from '@/domains/signup/stored'
 import { afterVerify } from '@/domains/access/email-code'
 import { createMyShop } from './actions'
@@ -107,7 +107,8 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
     const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let r: Awaited<ReturnType<typeof createMyShop>>
     try {
-      r = await createMyShop({ name, slug, sells, plan, codeId: verified ? codeId : null, signupMs: null })
+      // "/start → created" (plan § Measure): from the first arrival in this tab; the server and v3 clamp it again.
+      r = await createMyShop({ name, slug, sells, plan, codeId: verified ? codeId : null, signupMs: signupMs(arrivedAt.current, started) })
     } catch {
       setMoment('sells')
       toast.error('No connection. Try again.', { action: { label: 'Try again', run: () => { void create() } } })
