@@ -3,7 +3,7 @@
 // (paise and bps). The console form draws from the same definitions; the action parses with parseOffer(). Pure.
 // =============================================================================
 
-import { DISCOUNT_STYLES, type DiscountStyle } from './discounts'
+import { DISCOUNT_STYLES, type DiscountStyle } from './discount-styles'
 
 /**
  * "Start from" on New offer (O·4, plan review 8): a few common offers that pre-fill the form. Nothing is stored; the

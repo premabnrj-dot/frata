@@ -47,8 +47,8 @@ export type PackingSlip = {
   collect: number
 }
 
-/** The most a print page prints at once (a bulk print of a queue page). */
-export const MAX_DOCUMENTS = 50
+// The print cap lives in print-cap.ts, which the orders queue's browser code reads without this file (page weight).
+export { MAX_DOCUMENTS } from './print-cap'
 
 export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): PackingSlip {
   return {

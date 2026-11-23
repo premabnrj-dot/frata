@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic'
 import type { LibraryDesign } from './section-library'
 // The library loads the first time it opens and then stays mounted, so it keeps its exit motion (feedback F1, budget).
 const SectionLibrary = dynamic(() => import('./section-library').then((m) => m.SectionLibrary))
-import { sectionName, type SectionInstance, type SectionKey, MAX_CARDS } from '@/domains/themes/sections'
+import { sectionName, MAX_CARDS } from '@/domains/themes/sections-facts'
+import type { SectionInstance, SectionKey } from '@/domains/themes/sections'
 import { Icon } from '@/components/icons/icon'
 
 // The Sections tab (mockup "Customizer"): the Home's sections in order. Each row moves up or down (buttons: drag is

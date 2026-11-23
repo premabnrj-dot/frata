@@ -4,6 +4,10 @@ import { SHOP_PATH } from '../themes/sections'
 import { MENU_LIMITS, MenusSchema, type MenuItem } from '../themes/site'
 import { layerBytes } from '../themes/layer'
 import { plainText } from './plain-text'
+import { BAR_SCHEMES, BAR_TEXT_MAX, CONTACT_KEY, CONTACT_MAX, MAX_MENU_ITEMS, MENU_KEYS, type MenuKey } from './kinds-facts'
+
+// The kinds, keys, names and caps live in kinds-facts.ts, which a browser may load (no zod).
+export * from './kinds-facts'
 
 // =============================================================================
 // FILE: src/domains/content/kinds.ts — WHAT A STORE'S CONTENT IS (V1: plan docs/plans/2026-11-15-v1-content.md).
@@ -16,20 +20,8 @@ import { plainText } from './plain-text'
 // The schedule lives in the row's columns (schedule.ts), never inside a value. Placements join in V2. Pure.
 // =============================================================================
 
-export const CONTENT_KINDS = ['announcement', 'menu', 'contact'] as const
-export type ContentKind = (typeof CONTENT_KINDS)[number]
-export const MENU_KEYS = ['main', 'footer', 'tabs'] as const
-export type MenuKey = (typeof MENU_KEYS)[number]
-export const CONTACT_KEY = 'contact'
-/** How many bars a store keeps (live, scheduled or ended, not deleted). */
-export const MAX_BARS = 3
 /** A row's value in JSON bytes, below the database's 32 kB check with room for jsonb's spacing. */
 const MAX_VALUE_BYTES = 30_000
-/** A menu's items at every level together (Zod alone would allow 12 × 12 × 12). */
-export const MAX_MENU_ITEMS = 60
-export const BAR_SCHEMES = ['paper', 'tint', 'ink'] as const
-export const BAR_TEXT_MAX = 120
-export const CONTACT_MAX = 160
 
 const shopLink = z.string().regex(SHOP_PATH)
 
@@ -52,7 +44,6 @@ const MENU_SAVE: Record<MenuKey, z.ZodType<MenuItem[]>> = {
   footer: z.array(itemSave).max(MENU_LIMITS.items).refine((xs) => xs.every((x) => !x.children.length), 'One level only.'),
   tabs: z.array(itemSave).max(MENU_LIMITS.tabs).refine((xs) => xs.every((x) => !x.children.length && x.icon), 'Each tab needs an icon.'),
 }
-export const MENU_NAMES: Record<MenuKey, string> = { main: 'Main menu', footer: 'Footer menu', tabs: 'Phone tabs' }
 
 /** A menu as a person saves it, or why it can't be saved (in the brand's words). */
 export function menuForSave(key: MenuKey, raw: unknown): { ok: true; value: MenuItem[] } | { ok: false; why: string } {
