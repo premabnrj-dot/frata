@@ -438,12 +438,12 @@ the diff is taken against C1a's last commit, not `main`, so C1a's own reader edi
 Verify: `npx vitest run src/domains/catalogue/packs src/lib/catalogue/__tests__/add-a-pack.test.ts scripts/__tests__/check-packs.test.ts` passed.
 
 **C1c·2 · The recipe in the skill.** `reference/catalogue-and-content.md` § Category packs gains "Adding a category":
-1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, `as const satisfies Pack`;
+1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, `/*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)`;
 2. append it to `PACKS` in `packs/list.ts`; never reorder;
 3. `npm run db:generate`, which writes `01NN_*.sql` (DROP and ADD `shop_settings_sells`);
 4. apply that migration in production (`scripts/prod-migrate.mjs`, the Supabase API) before the push that adds the pack, because the widen comes first;
 5. `check:packs` clean;
-6. add the pack's row to `sells-today.test.ts` (new rows only) and its line to `registry.test.ts`;
+6. add the pack's rows to `sells-today.rows.ts` (new rows only) and its icon to `registry.test.ts`;
 7. date and source every fact the pack holds (HSN with a CA's read, legal lines), words-reviewer on its words, and `unit-economics-reviewer` when its order values are low (spec § C3).
 
 Version 3.11.0 → 3.12.0. Verify: `node scripts/check-skills.mjs` clean.

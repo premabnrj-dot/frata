@@ -72,6 +72,20 @@ Part of `frata-architecture` (SKILL.md holds the rules every change obeys: layer
   A new category fact is a pack field read through an accessor, never `sells.some(…)` in a reader.
 - **A refactor starts with a characterization test** of today's values, committed alone and unchanged after:
   `src/domains/catalogue/__tests__/sells-today.test.ts` (19 rows in `sells-today.rows.ts`; rows are only added).
+- **Adding a category** (C1c, proven by `src/lib/catalogue/__tests__/add-a-pack.test.ts`: a fixture pack appended to the real
+  list flows through every reader, and no reader file changes):
+  1. `src/domains/catalogue/packs/<key>.ts`, copied from the nearest pack, in its form:
+     `export const <key> = /*#__PURE__*/ pure(() => ({ … }) as const satisfies Pack)`;
+  2. append it to `PACKS` in `packs/list.ts`; never reorder;
+  3. `npm run db:generate`, which writes `01NN_*.sql` (DROP and ADD `shop_settings_sells`);
+  4. apply that migration in production (`scripts/prod-migrate.mjs`, the Supabase API) before the push that adds the pack,
+     because the widen comes first;
+  5. `check:packs` clean;
+  6. add the pack's rows to `sells-today.rows.ts` (new rows only) and its icon to `registry.test.ts`;
+  7. date and source every fact the pack holds (HSN with a CA's read, legal lines), `words-reviewer` on its words, and
+     `unit-economics-reviewer` when its order values are low (spec 2026-11-23-merchant-onboarding § C3).
+- **A registry proves it is modular with a fixture entry in a test, never one shipped**: mock its list, re-import the real
+  readers, and assert the entry reaches each while the existing rows stay equal.
 
 ## Writing products (PI·0, 2026-11-12; plan docs/plans/2026-11-12-product-import.md)
 
