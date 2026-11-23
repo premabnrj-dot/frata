@@ -245,7 +245,7 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
   <p>22 Nov 2026 · Draft for the owner. The pages you approved today, with the dialogs, emails and states they lead to. Nothing here is built.</p>
 </div>
 <nav aria-label="Sections">
-  <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#plan">Plan</a><a href="#budgets">Budgets</a><a href="#details">Invoices</a><a href="#buy">Buying</a><a href="#lead">A Lead</a><a href="#emails">Emails</a><a href="#calls">Your calls</a>
+  <a href="#in-short">In short</a><a href="#audit">Audit</a><a href="#plan">Plan</a><a href="#budgets">Budgets</a><a href="#details">Invoices</a><a href="#buy">Buying</a><a href="#lead">A Lead</a><a href="#emails">Emails</a><a href="#plus-now">Studio Plus now</a><a href="#calls">Your calls</a>
 </nav>
 
 <section id="in-short">
@@ -434,6 +434,52 @@ pre.code .d { color:var(--code-dim) } pre.code .a { color:var(--code-add) } pre.
     <tr><td>Alerts switched off</td><td>No low-balance or 80% email. The AutoPay notice, failures and receipts always go.</td></tr>
     <tr><td>The 80% email to a Lead</td><td>“Its turns wait at 300 credits. Ask Kabir to raise it.” No button.</td></tr>
     <tr><td>Each threshold</td><td>One email when it is crossed, not again until it is crossed again.</td></tr>
+  </table></div>
+</section>
+
+<section id="plus-now">
+  <h2>Move to Studio Plus now · your answer B, 23 Nov</h2>
+  <div class="answers">
+    <div class="card"><h3>What changes</h3><p>Studio Plus starts the day it is paid. That payment approves the new ₹12,000 limit. 500 credits arrive at once, and the month restarts that day.</p></div>
+    <div class="card"><h3>What stays</h3><p>Studio credits left keep their own use-by dates. The Studio fee already paid is not refunded. The old Studio AutoPay is cancelled only after Studio Plus is paid.</p></div>
+  </div>
+  <div class="screens">
+    <div class="screen"><div class="cap">Move to Studio Plus · from Studio</div><div class="in">
+      <div class="dlg"><h4>Move to Studio Plus</h4>
+        <div class="kv"><span>Studio Plus</span><span class="num">₹9,999.00</span><span>GST 18%</span><span class="num">₹1,799.82</span><span><b>Pay today</b></span><span class="num"><b>₹11,798.82</b></span></div>
+        <div class="kv"><span>Credits</span><span class="num">500 now, 500 each month</span><span>Renews</span><span>23 Dec</span><span>Studio credits left</span><span class="num">86 · kept</span></div>
+        <span class="lbl">Pays by</span>
+        <div class="radio"><div class="on"><b>UPI AutoPay</b><small class="num">Up to ₹12,000 a debit</small></div><div><b>Card</b><small class="num">Up to ₹12,000 a debit</small></div></div>
+        <div class="acts"><button class="btn sm">Not now</button><button class="btn pri sm">Pay ₹11,798.82</button></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">Waiting, declined, done</div><div class="in">
+      <div class="dlg"><h4>Waiting for your bank</h4><p><span class="num">₹11,798.82</span> · up to 5 minutes.</p></div>
+      <div class="dlg"><h4>Move to Studio Plus</h4><p class="err">The payment didn’t go through. Nothing was charged. Studio stays on.</p><div class="acts"><button class="btn sm">Not now</button><button class="btn pri sm">Try again</button></div></div>
+      <div class="toast"><span>Studio Plus started. 500 credits added.</span></div>
+    </div></div>
+    <div class="screen"><div class="cap">After · the old AutoPay still cancelling</div><div class="in">
+      <div class="sec"><h4>Plan <span class="tag">Studio Plus</span></h4><div class="kv"><span><span class="num">₹9,999</span> + GST a month</span><span class="num">500 credits a month</span><span>Renews</span><span>23 Dec · <span class="num">₹11,798.82</span></span></div></div>
+      <div class="sec"><h4>Pays by</h4><div class="kv"><span>UPI AutoPay</span><span class="num">Up to ₹12,000 a debit</span></div><div class="row"><span>Studio’s AutoPay</span><span class="chip warn">Cancelling</span></div></div>
+    </div></div>
+    <div class="screen"><div class="cap">A Studio renewal already started</div><div class="in">
+      <div class="dlg"><h4>Move to Studio Plus</h4>
+        <div class="kv"><span><b>Pay today</b></span><span class="num"><b>₹11,798.82</b></span><span>Studio’s 30 Nov payment</span><span>Not taken</span></div>
+        <div class="acts"><button class="btn sm">Not now</button><button class="btn pri sm">Pay ₹11,798.82</button></div></div>
+      <div class="dlg"><h4>Move to Studio Plus</h4><p>Studio’s <span class="num">₹3,538.82</span> payment is with your bank. Try again once it clears.</p><div class="acts"><button class="btn sm">Close</button></div></div>
+    </div></div>
+  </div>
+  <div class="tw"><table><tr><th>State</th><th>What shows</th></tr>
+    <tr><td>Studio Plus to Studio</td><td>As approved on 22 Nov: it starts at the next renewal, with Stay on Studio Plus.</td></tr>
+    <tr><td>A card</td><td>“Confirm with your bank” in place of the UPI wait.</td></tr>
+    <tr><td>Studio’s renewal email went, the debit isn’t taken</td><td>Paying for Studio Plus stops that debit. The row “Studio’s 30 Nov payment · Not taken” says so.</td></tr>
+    <tr><td>Studio’s renewal is with the bank</td><td>Move waits until it clears, so two months are never taken at once.</td></tr>
+    <tr><td>The old AutoPay won’t cancel</td><td>Frrata tries again each hour. It never takes a payment on it. The chip goes once it is cancelled.</td></tr>
+    <tr><td>Studio Plus paid, Studio credits left</td><td>They stay in Credits by use-by date with their own dates. Studio Plus’s 500 join them.</td></tr>
+  </table></div>
+  <div class="tw"><table><tr><th>#</th><th>Call</th><th>Recommendation</th></tr>
+    <tr><td>B1</td><td>Studio credits left carry over with their own use-by dates. The Studio fee already paid is not refunded or split by days.</td><td>Yes. The credits were paid for. A split fee would need a credit note and a part refund for a few hundred rupees.</td></tr>
+    <tr><td>B2</td><td>A Studio renewal whose email went is stopped when Studio Plus is paid. One already with the bank makes Move wait.</td><td>Yes. A partner is never charged for two months on one day.</td></tr>
+    <tr><td>B3</td><td>Change method stays unbuilt</td><td>Yes. B doesn’t give it for free. A new method still needs a first payment on that method.</td></tr>
   </table></div>
 </section>
 
