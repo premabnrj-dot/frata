@@ -8,7 +8,7 @@ import { paise } from '@/domains/money/paise'
 import { monthKey } from '@/domains/time/month'
 import { formatInr } from '@/lib/format'
 import { NeedsBand } from '../../_components/needs-band'
-import { amountText, dayText, inputOf, monthShortName, whenOf } from '../format'
+import { amountText, dayText, inputOf, monthLongName, monthShortName, whenOf } from '../format'
 import { MarkPaidButton, type PaidTarget } from './forms'
 
 /** What Mark paid opens with for a cost's next unpaid bill. */
@@ -32,7 +32,7 @@ export function Overview({ items, payments, today, rate }: { items: CostItem[]; 
   const prev = monthShortName(monthKey(today, -1))
   return (
     <>
-      {first && target ? <NeedsBand tone="warn" title={`${o.overdue} ${o.overdue === 1 ? 'cost is' : 'costs are'} overdue`} line={`${first.item.name} · ${first.row.overdueDays} ${first.row.overdueDays === 1 ? 'day' : 'days'}`}
+      {first && target ? <NeedsBand tone="warn" title={`${o.overdue} ${o.overdue === 1 ? 'cost is' : 'costs are'} overdue`} line={`· ${first.item.name} · ${first.row.overdueDays} ${first.row.overdueDays === 1 ? 'day' : 'days'}`}
         action={<MarkPaidButton t={target} small />} /> : null}
       <dl className="grid grid-cols-2 rounded-lg border border-line-soft lg:grid-cols-4">
         <Figure label={`Spent in ${monthShortName(o.month)}`} value={inr(o.spent.paise)} note={`${o.spent.count} ${o.spent.count === 1 ? 'payment' : 'payments'}`} />
@@ -50,9 +50,10 @@ export function Overview({ items, payments, today, rate }: { items: CostItem[]; 
                 return (
                   <DataTableRow key={item.id}>
                     <Td cell="a"><Link href={`/admin/costs?view=all&id=${item.id}`} data-row-link className="font-medium hover:underline">{item.name}</Link>
-                      <span className="hidden text-small text-muted-foreground md:block">{sub(item)}</span></Td>
-                    <Td cell="b"><Badge tone={w.tone}>{w.text}</Badge>{item.varies ? <> <Tag>varies</Tag></> : null}</Td>
-                    <Td cell="c">{dayText(row.next)}</Td>
+                      <span className="hidden text-small text-muted-foreground md:block">{sub(item)}</span>
+                      <span className="text-small text-muted-foreground md:hidden">{dayText(row.next)} · {w.text.toLowerCase()}</span></Td>
+                    <Td cell="hide"><Badge tone={w.tone}>{w.text}</Badge>{item.varies ? <> <Tag>varies</Tag></> : null}</Td>
+                    <Td cell="hide">{dayText(row.next)}</Td>
                     <Td cell="d" className="text-right"><Numeric>{item.varies ? 'about ' : ''}{amountText(item.amount, item.currency)}</Numeric></Td>
                     <Td cell="hide" className="text-right"><MarkPaidButton t={t} primary={row.tone === 'overdue'} small /></Td>
                   </DataTableRow>
@@ -63,7 +64,7 @@ export function Overview({ items, payments, today, rate }: { items: CostItem[]; 
         )}
       </Section>
       {o.categories.length > 0 ? (
-        <Section title={`${monthShortName(o.month)} by category`} action={<Tag>vs {prev}</Tag>} className="space-y-1">
+        <Section title={`${monthLongName(o.month)} by category`} action={<Tag>vs {prev}</Tag>} className="space-y-1 max-md:hidden">
           <ul className="divide-y divide-line-soft">
             {o.categories.map((c) => {
               const d = c.paise - c.before
@@ -85,6 +86,6 @@ export function Overview({ items, payments, today, rate }: { items: CostItem[]; 
 
 const Figure = ({ label, value, note }: { label: string; value: string; note: string }) => (
   <div className="grid gap-0.5 border-line-soft p-4 [&:not(:first-child)]:border-l max-lg:[&:nth-child(odd)]:border-l-0 max-lg:[&:nth-child(n+3)]:border-t">
-    <dt className="text-small font-medium text-muted-foreground">{label}</dt><dd className="font-num text-title font-semibold">{value}</dd><dd className="text-small text-muted-foreground">{note}</dd>
+    <dt className="text-small font-medium text-muted-foreground">{label}</dt><dd className="font-num text-title font-semibold">{value}</dd><dd className="text-small text-muted-foreground max-md:hidden">{note}</dd>
   </div>
 )

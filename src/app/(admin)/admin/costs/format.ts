@@ -1,6 +1,6 @@
 import { formatInr, formatUsd } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
-import { dayMonthIN, monthShortIN } from '@/lib/format-date'
+import { dayMonthIN, monthLongIN, monthShortIN } from '@/lib/format-date'
 import type { MicroUsd } from '@/domains/money/usd'
 import type { CostCurrency, DueState } from '@/domains/admin/costs'
 
@@ -30,6 +30,9 @@ export function whenOf(s: DueState): { tone: 'danger' | 'warn' | 'neutral'; text
   if (s.inDays === 0) return { tone: 'warn', text: 'Today' }
   return { tone: s.tone === 'soon' ? 'warn' : 'neutral', text: `In ${s.inDays} ${s.inDays === 1 ? 'day' : 'days'}` }
 }
+
+/** "November" from a "2026-11" month. */
+export const monthLongName = (ym: string) => monthLongIN(new Date(`${ym}-15T12:00:00+05:30`))
 
 /** "Nov" from a "2026-11" month. */
 export const monthShortName = (ym: string) => monthShortIN(new Date(`${ym}-15T12:00:00+05:30`))

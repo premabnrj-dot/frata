@@ -16,7 +16,7 @@ import type { CostFacts, PaidTarget } from './forms'
 // stay out of the page's first-load script (Admin's 150 kB budget).
 // =============================================================================
 
-const SYMBOL: Record<CostCurrency, string> = { INR: '₹', USD: '$' }
+const SYMBOL: Record<CostCurrency, string> = { INR: 'INR', USD: 'USD' } // as drawn: the currency in words
 // The mistake sits beside the label, never inside it: a field's name stays "Name", not "Name Add a name.".
 const Row = ({ label, name, children }: { label: string; name: string; children: React.ReactNode }) => (
   <div className="flex min-w-0 flex-col gap-1 text-sm"><label className="flex min-w-0 flex-col gap-1"><span className="font-medium">{label}</span>{children}</label><FieldMessage name={name} /></div>
@@ -31,8 +31,8 @@ function Day({ label, name, value, today, max }: { label: string; name: string; 
   )
 }
 
-function Money({ name, label, currency, defaultValue, autoFocus }: { name: string; label: string; currency: CostCurrency; defaultValue?: string; autoFocus?: boolean }) {
-  return <Row label={label} name={name}><UnitField unit={SYMBOL[currency]} name={name} inputMode="decimal" autoComplete="off" defaultValue={defaultValue} data-autofocus={autoFocus ? '' : undefined} /></Row>
+function Money({ name, label, currency, defaultValue, autoFocus, placeholder }: { name: string; label: string; currency: CostCurrency; defaultValue?: string; autoFocus?: boolean; placeholder?: string }) {
+  return <Row label={label} name={name}><UnitField unit={SYMBOL[currency]} name={name} inputMode="decimal" autoComplete="off" defaultValue={defaultValue} placeholder={placeholder} data-autofocus={autoFocus ? '' : undefined} /></Row>
 }
 
 function Varies({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -70,7 +70,7 @@ export function AddFields({ today, starter }: { today: string; starter: { name: 
       {kind === 'one_time' ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2"><AmountField currency={currency} onCurrency={setCurrency} /><Day label="Paid on" name="paidOn" value={today} today={today} max={today} /></div>
-          <div className="grid gap-3 sm:grid-cols-2">{currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" /> : null}<Money name="gst" label="GST included" currency="INR" /></div>
+          <div className="grid gap-3 sm:grid-cols-2">{currency === 'USD' ? <Money name="inr" label="Paid in rupees" currency="INR" /> : null}<Money name="gst" label="GST included" currency="INR" placeholder="Optional" /></div>
         </>
       ) : (
         <>
@@ -96,16 +96,16 @@ export function PaidFields({ t }: { t: PaidTarget }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <Day label="Paid on" name="paidOn" value={t.today} today={t.today} max={t.today} />
         {t.varies
-          ? (t.currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" defaultValue={t.inr} /> : <Money name="gst" label="GST included" currency="INR" />)
+          ? (t.currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" defaultValue={t.inr} /> : <Money name="gst" label="GST included" currency="INR" placeholder="Optional" />)
           : <div className="flex min-w-0 flex-col gap-1 text-sm"><span className="font-medium">For the bill due</span><div className={`${FIELD} flex items-center bg-sunk font-num`}>{t.periodText}</div></div>}
       </div>
       {t.varies ? null : (
         <div className="grid gap-3 sm:grid-cols-2">
           <Money name="amount" label="Billed" currency={t.currency} defaultValue={t.amount} />
-          {t.currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" defaultValue={t.inr} /> : <Money name="gst" label="GST included" currency="INR" />}
+          {t.currency === 'USD' ? <Money name="inr" label="Left your account" currency="INR" defaultValue={t.inr} /> : <Money name="gst" label="GST included" currency="INR" placeholder="Optional" />}
         </div>
       )}
-      {t.currency === 'USD' ? <Money name="gst" label="GST included" currency="INR" /> : null}
+      {t.currency === 'USD' ? <Money name="gst" label="GST included" currency="INR" placeholder="Optional" /> : null}
     </>
   )
 }

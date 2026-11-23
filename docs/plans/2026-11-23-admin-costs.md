@@ -54,3 +54,9 @@ Each task ends with `impact-reviewer` on its diff. Task 6 closes only after pari
 | "Overdue" in the list | "Overdue 3 days" | The mockup said both; the days are what a person acts on | Told in the build report, 2026-11-23 |
 | Error words "Enter an amount above ₹0." | "Enter an amount above zero." | The field takes dollars as well as rupees | Told in the build report, 2026-11-23 |
 | A cost icon on the empty state's tile | The payments pictogram | The pictogram set has no cost drawing | Told in the build report, 2026-11-23 |
+| The open cost's ⋯ beside its × in the title row | The ⋯ sits at the right of the chips row below the title | The shared quick look owns its title row | Told in the build report, 2026-11-23 |
+| The empty state with no frame, starter chips as pills | The shared dashed frame; starters are secondary buttons | The shared Empty primitive and the dialog button | Told in the build report, 2026-11-23 |
+| Phone tab "All" | "All costs" | One tab label in the shared tabs | Told in the build report, 2026-11-23 |
+| Payments period chips: two months and the year | Six months and the year | Six months are what a monthly cost is checked against | Told in the build report, 2026-11-23 |
+| Mark paid for a varying dollar cost without a GST row | A GST row | The CA's input credit needs it | Told in the build report, 2026-11-23 |
+| Search on the chips' row with the cost open | It wraps below the chips | The list narrows beside the quick look | Told in the build report, 2026-11-23 |

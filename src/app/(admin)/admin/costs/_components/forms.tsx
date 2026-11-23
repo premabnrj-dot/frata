@@ -24,7 +24,7 @@ import { addCostAction, editCostAction, endCostAction, markPaidAction, undoPayme
 
 /** The page's one primary. `starter` prefills the dialog from an empty-state chip. */
 export function AddCostButton({ today, starter = null, label = 'Add cost', variant = 'primary' }: { today: string; starter?: { name: string; category: CostCategory } | null; label?: string; variant?: 'primary' | 'secondary' }) {
-  return <DialogButton variant={variant} spec={{ label, icon: variant === 'primary' ? <Plus aria-hidden="true" className="size-4" /> : undefined, title: 'Add a cost', action: addCostAction, fields: <AddFields today={today} starter={starter} />, keep: 'Cancel', go: 'Add cost' }} />
+  return <DialogButton variant={variant} spec={{ label, ...(variant === 'primary' ? { short: 'Add' } : {}), icon: variant === 'primary' ? <Plus aria-hidden="true" className="size-4" /> : undefined, title: 'Add a cost', action: addCostAction, fields: <AddFields today={today} starter={starter} />, keep: 'Cancel', go: 'Add cost' }} />
 }
 
 // ── Mark paid, with a toast that undoes it ──────────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export function MarkPaidButton({ t, primary = false, small = false, label = 'Mar
     const r = await markPaidAction(form)
     if (r && r.paymentId && !r.error) {
       const paymentId = r.paymentId
-      toast.ok(`${t.name} paid${r.inrPaise ? ` · ${formatInr(paise(r.inrPaise))}` : ''}.`, { undo: () => undoWith(t.itemId, paymentId, router) })
+      toast.ok(r.inrPaise ? `${t.name} paid · ${formatInr(paise(r.inrPaise))}` : `${t.name} paid.`, { undo: () => undoWith(t.itemId, paymentId, router) })
       return {}
     }
     return r

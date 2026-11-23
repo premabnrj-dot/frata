@@ -6,7 +6,7 @@ import { SearchField } from '@/components/data/search-field'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge, Tag } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
-import { Empty, Locked, NoMatch } from '@/components/ui/empty'
+import { Empty, NoMatch } from '@/components/ui/empty'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { CADENCE_WORDS, CATEGORY_WORDS, dueState, fyStartOf, isLive, monthlyPaise, type CostCategory, type CostItem } from '@/domains/admin/costs'
@@ -45,7 +45,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) {
     return staff.reason === 'not_staff'
-      ? <Locked title="Only a master admin can open Costs" who={<Link href="/admin" className={button({ variant: 'secondary' })}>Back to Today</Link>} />
+      ? <><PageHeader title="Costs" /><Empty picto="shield" title="Only a master admin can open Costs"><Link href="/admin" className={button({ variant: 'secondary' })}>Back to Today</Link></Empty></>
       : <Panel title={staff.message} />
   }
   const sp = await searchParams

@@ -77,7 +77,7 @@ export default {
         const dlg = p.getByRole('dialog', { name: `Mark ${NAME} paid` })
         await dlg.locator('input[name="inr"]').fill('1,884')
         await dlg.getByRole('button', { name: 'Mark paid' }).click()
-        const toast = await expectToast(p, `${NAME} paid · ₹1,884.`, 'ok')
+        const toast = await expectToast(p, `${NAME} paid · ₹1,884`, 'ok')
         const [pay] = await db`select inr_paise::int p, amount::bigint::int a from cost_payments`
         assert.deepEqual([pay.p, pay.a], [188_400, 20_000_000])
         await toast.getByRole('button', { name: 'Undo' }).click()
@@ -89,7 +89,7 @@ export default {
         const again = p.getByRole('dialog', { name: `Mark ${NAME} paid` })
         await again.locator('input[name="inr"]').fill('1884')
         await again.getByRole('button', { name: 'Mark paid' }).click()
-        await expectToast(p, `${NAME} paid · ₹1,884.`, 'ok')
+        await expectToast(p, `${NAME} paid · ₹1,884`, 'ok')
         assert.equal((await db`select count(*)::int n from cost_payments`)[0].n, 1)
         await ctx.close()
       })
