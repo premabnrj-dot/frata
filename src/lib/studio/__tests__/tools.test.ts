@@ -36,6 +36,18 @@ describe('the tool runner', () => {
     await expect(outcomeOf(ctx, { name: 'store_facts', input: {} })).rejects.toBeInstanceOf(TurnUnbound) // asTurn answers `actor`
     reads.facts = async () => ({ products: { active: 1, first: [] } })
   })
+  it('Studio\'s database setting broken: the agent is told what to say, and the log names the rule, never the value', async () => {
+    const { DbUrlError } = await import('@/lib/db/url')
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    reads.facts = async () => { throw new DbUrlError('[db] DATABASE_URL_BUILDER must log in as frata_builder.<project-ref>, not another role') }
+    expect(await outcomeOf(ctx, { name: 'store_facts', input: {} })).toEqual({ answer: { error: TOOL_ERRORS.setup }, isError: true })
+    expect(TOOL_ERRORS.setup).toMatch(/word for word\. Studio can’t read your store yet\./)
+    expect(err).toHaveBeenCalledWith('[studio] tool', 'store_facts', 'DbUrlError', '[db] DATABASE_URL_BUILDER must log in as frata_builder.<project-ref>, not another role')
+    reads.facts = async () => { throw new Error('postgresql://frata_builder.ref:secret@host/db') }
+    await outcomeOf(ctx, { name: 'store_facts', input: {} })
+    expect(err).toHaveBeenLastCalledWith('[studio] tool', 'store_facts', 'Error', '')
+    err.mockRestore()
+  })
   it('a logo: outlines proposed, text refused in the person’s words', async () => {
     const ok = await outcomeOf(ctx, { name: 'logo_propose', input: { svg: SQUARE } })
     expect(ok).toMatchObject({ isError: false, proposal: { kind: 'logo' } })

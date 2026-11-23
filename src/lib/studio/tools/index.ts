@@ -2,7 +2,7 @@ import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { isToolName, parseToolInput, TOOL_ERRORS, type ToolName } from '@/domains/studio/tools'
 import { studioMessages, studioProposals, studioToolCalls } from '@/lib/db/schema-studio'
-import { TurnUnbound, type TurnContext } from '@/lib/studio/as-turn'
+import { setupProblem, TurnUnbound, type TurnContext } from '@/lib/studio/as-turn'
 import { storeFacts } from './store-facts'
 import { tokensPropose } from './tokens-propose'
 import { logoPropose } from './logo-propose'
@@ -44,8 +44,10 @@ export async function outcomeOf(ctx: TurnContext, call: Omit<StoredCall, 'id'>):
     out = isToolName(call.name) ? await execute(ctx, call.name, call.input) : BAD
   } catch (err) {
     if (err instanceof TurnUnbound) throw err
-    console.error('[studio] tool', isToolName(call.name) ? call.name : 'unknown', err instanceof Error ? err.name : 'error')
-    out = refused(TOOL_ERRORS.failed)
+    // urlProblem names the setting and the rule it broke, never its value (src/lib/db/url.ts).
+    const setup = setupProblem(err)
+    console.error('[studio] tool', isToolName(call.name) ? call.name : 'unknown', err instanceof Error ? err.name : 'error', setup)
+    out = refused(setup ? TOOL_ERRORS.setup : TOOL_ERRORS.failed)
   }
   return fits(out.answer) ? out : refused(TOOL_ERRORS.failed)
 }
