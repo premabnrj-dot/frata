@@ -21,23 +21,23 @@ import { STATE_CODE, STATES } from '@/domains/checkout/states'
 
 type Refusal = CreditError | 'not_configured' | 'test_keys' | 'seller' | 'gateway'
 const SAYS: Record<Refusal, string> = {
-  not_owner: 'Only the partner owner can do this.',
-  not_found: 'That client isn’t yours any more. Refresh and try again.',
-  bad_input: 'Check what you entered.',
+  not_owner: 'Ask the partner owner to do this.',
+  not_found: 'This client is no longer in your list. Refresh the page.',
+  bad_input: 'Check the marked field.',
   bad_gstin: 'A GSTIN has 15 characters. Check it, or leave it empty.',
-  too_many: 'Too many tries in an hour. Try again later.',
+  too_many: 'Too many tries. Try again in an hour.',
   confirm_first: CONFIRM_FIRST,
   confirm_again: CONFIRM_AGAIN,
   details_first: 'Add a name and a state.',
-  has_seat: 'Studio is already on.',
-  no_seat: 'There’s no plan to change.',
+  has_seat: 'You already have Studio.',
+  no_seat: 'You have no Studio plan to change.',
   below_used: 'A budget can’t go below what the client has used.',
-  gstin_locked: 'An invoice already carries this GSTIN. Ask Frrata to change it.',
-  rate: 'Studio can’t start a turn right now. Try again later.',
+  gstin_locked: 'An invoice already carries this GSTIN. Contact Frrata to change it.',
+  rate: 'Studio can’t start a turn right now. Try again in a few minutes.',
   platform_day: 'Studio is busy today. Try again tomorrow.',
   person_day: 'You’ve used 300 credits today. Try again tomorrow.',
   budget: 'This client’s budget is used up.',
-  balance: 'Not enough credits. Buy credits to go on.',
+  balance: 'Not enough credits. Buy credits to continue.',
   not_configured: 'Payments aren’t set up yet. Nothing was charged.',
   test_keys: 'Payments are in test mode. Nothing was charged.',
   seller: 'Frrata can’t take payments yet. Nothing was charged.',
@@ -162,7 +162,7 @@ export async function setDetailsAction(input: Record<string, unknown>): Promise<
   if (!p.success) {
     for (const i of p.error.issues) {
       const f = String(i.path[0])
-      fields[f] = f === 'legalName' ? 'Enter the legal name.' : f === 'address' ? 'Enter the address.' : f === 'gstin' ? SAYS.bad_gstin : 'Check this.'
+      fields[f] = f === 'legalName' ? 'Enter the legal name.' : f === 'address' ? 'Enter the address.' : f === 'gstin' ? SAYS.bad_gstin : f === 'email' ? 'Enter an email address.' : 'Pick the state.'
     }
     return { ok: false, error: SAYS.bad_input, fields }
   }
@@ -190,5 +190,5 @@ export async function seatAction(input: unknown): Promise<Done> {
   const r = await changeSeat(o.auth, p.data.action, p.data.action === 'plan' ? p.data.plan : null)
   if (!r.ok) return { ok: false, error: say(r.error) }
   refresh()
-  return { ok: true, text: p.data.action === 'cancel' ? 'Studio will end at the period’s end.' : p.data.action === 'keep' ? 'Studio continues.' : 'Your plan changes at the next renewal.' }
+  return { ok: true, text: 'Saved.' } // the dialog says it with its date (credits-parts useSeat)
 }

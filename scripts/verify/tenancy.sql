@@ -4037,14 +4037,15 @@ begin
   begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 0, 0, 35982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
     raise exception 'FAIL: bought before invoice details';
   exception when sqlstate 'P0001' then if sqlerrm <> 'details_first' then raise; end if; end;
-  -- billing details: the owner's; a second partner with the same PAN loses its free credits (owner 2026-11-22)
+  -- billing details: the owner's; a second partner with the same PAN loses its free credits (owner 2026-11-22), but only
+  -- once that PAN has been invoiced for real (security review 2026-11-23: typing another's GSTIN first voids nothing)
   perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'Nook Studio LLP', '27AAACP1234R1Z5', null, '12 Hill Road, Mumbai', 'bills@nook.test');
   begin perform app_partner_set_billing(E, proof.sess(E), proof.h(E), 'x', null, '27', 'x', null); raise exception 'FAIL: a Lead set billing details';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
   begin perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'x', '27AAACP1234R1Z', null, 'x', null); raise exception 'FAIL: a malformed GSTIN saved';
   exception when sqlstate 'P0001' then if sqlerrm <> 'bad_gstin' then raise; end if; end;
   perform app_partner_set_billing(Y, proof.sess(Y), proof.h(Y), 'Yarn', '29AAACP1234R1Z1', null, 'Bengaluru', null);
-  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 0 then raise exception 'FAIL: a shared PAN kept a second free 20'; end if;
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 20 then raise exception 'FAIL: a PAN never invoiced voided free credits'; end if;
   -- budgets: the owner sets; a Lead reads its assigned clients only; a Builder none; another partner can't name the link
   perform app_partner_set_budget(G, proof.sess(G), proof.h(G), l1, 30);
   begin perform app_partner_set_budget(E, proof.sess(E), proof.h(E), l1, 300); raise exception 'FAIL: a Lead raised a budget';
@@ -4158,6 +4159,13 @@ begin
                   where x->>'id' = p.id::text and x->>'invoice_number' like 'FRR/26-27/%') then raise exception 'FAIL: a real invoice on the real series'; end if;
   begin perform app_partner_set_billing(G, proof.sess(G), proof.h(G), 'Nook Studio LLP', '27AAACQ1234R1Z5', null, '12 Hill Road, Mumbai', null); raise exception 'FAIL: a GSTIN changed after a real invoice';
   exception when sqlstate 'P0001' then if sqlerrm <> 'gstin_locked' then raise; end if; end;
+  -- now the PAN has a real invoice: a second partner under it loses its free 20
+  perform app_partner_set_billing(Y, proof.sess(Y), proof.h(Y), 'Yarn', '29AAACP1234R1Z1', null, 'Bengaluru', null);
+  if (app_partner_credits_overview(Y, proof.sess(Y), proof.h(Y), true)->>'balance')::int <> 0 then raise exception 'FAIL: a shared PAN kept a second free 20'; end if;
+  -- heads that don't follow the place of supply are refused (Frrata in 08, G in 27: IGST only)
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'pack', 100, null, null, null, 199900, 17991, 17991, 0, false, false, 'Frrata Pvt Ltd', '08AAACF0000A1Z5', 'Jaipur', '998315', 'FRR/', '26-27');
+    raise exception 'FAIL: CGST + SGST across states';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
   -- more than the balance holds
   if l2 is not null then
     begin perform app_pc_reserve(G, proof.sess(G), proof.h(G), l2, 'turn', 'page', 120, true); raise exception 'FAIL: a reserve above the real balance';
@@ -4313,6 +4321,39 @@ do $$ begin
   if (select sum(-c.credits) from partner_credit_entries c where c.purchase_id = current_setting('proof.w4')::uuid and c.kind = 'clawback') <> 100
   then raise exception 'FAIL: a dispute''s clawback is not the whole purchase'; end if;
 end $$;
+-- a pre-debit email that failed for good closes its attempt (never a debit without its notice); an open use nobody
+-- closed is listed for the hourly return; the invoice's year is the day of issue (architecture review 2026-11-23)
+insert into partner_credit_notices (partner_id, kind, purchase_id, dedupe, tries)
+  values (current_setting('proof.g89p')::uuid, 'predebit', current_setting('proof.w6')::uuid, 'proof89-predebit-fail', 5);
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; u record; begin
+  select * into u from app_pc_reserve(G, proof.sess(G), proof.h(G), current_setting('proof.l1_89')::uuid, 'turn', 'edit', 2, false);
+  perform set_config('proof.stale', u.use_id::text, true);
+end $$;
+reset role;
+update partner_credit_uses set created_at = now() - interval '3 hours' where id = current_setting('proof.stale')::uuid;
+do $$ declare nid uuid; begin
+  select id into nid from partner_credit_notices where dedupe = 'proof89-predebit-fail';
+  perform set_config('proof.nfail', nid::text, true);
+end $$;
+set local role frata_app;
+do $$ begin
+  perform app_pc_notice_done(current_setting('proof.nfail')::uuid, false, 'suppressed');
+  if exists (select 1 from app_pc_unsettled(interval '-1 minute', 200) x where x.id = current_setting('proof.w6')::uuid) then
+    raise exception 'FAIL: an attempt whose notice failed for good stays open'; end if;
+  if not exists (select 1 from app_pc_stale_uses(interval '2 hours', 200) x where x.id = current_setting('proof.stale')::uuid)
+  then raise exception 'FAIL: an open use from 3 hours ago not listed for its return'; end if;
+end $$;
+reset role;
+do $$ declare fy text := to_char((now() at time zone 'Asia/Kolkata') - interval '3 months', 'YY') || '-' || to_char((now() at time zone 'Asia/Kolkata') + interval '9 months', 'YY');
+begin
+  if (select closed_at from partner_credit_purchases where id = current_setting('proof.w6')::uuid) is null then raise exception 'FAIL: the failed notice''s attempt not closed'; end if;
+  if exists (select 1 from partner_invoices i where i.partner_id = current_setting('proof.g89p')::uuid and i.number not like '%' || fy || '/%') then
+    raise exception 'FAIL: an invoice outside the year of its issue'; end if;
+  -- free credits never pay a debt
+  if exists (select 1 from partner_credit_entries c join partner_credit_entries l on l.id = c.lot_id where c.kind = 'clawback' and l.kind = 'grant') then
+    raise exception 'FAIL: a debt drawn from free credits'; end if;
+end $$;
 -- Frrata's GST export sees the real invoice and never a test one
 set local role frata_admin;
 do $$ begin
@@ -4388,7 +4429,8 @@ do $$ declare r text; f text; begin
   end loop;
   foreach f in array array['app_pc_owner(uuid, uuid, text, boolean, boolean)', 'app_pc_lots(uuid, boolean)', 'app_pc_balance(uuid, boolean)',
     'app_pc_charged(uuid)', 'app_pc_window(uuid)', 'app_pc_link_used(uuid, uuid)', 'app_pc_notice(uuid, text, text, uuid, uuid)',
-    'app_pc_on_partner_approved()', 'app_pc_issue(uuid)', 'app_pc_give_back(uuid, integer)'] loop
+    'app_pc_on_partner_approved()', 'app_pc_issue(uuid)', 'app_pc_give_back(uuid, integer)',
+    'app_pc_debt(uuid, boolean)', 'app_pc_debt_draw(uuid, boolean)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin', 'frata_app'] loop
       if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run the internal %', r, f; end if;
     end loop;

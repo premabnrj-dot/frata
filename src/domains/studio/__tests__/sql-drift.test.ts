@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { CREDIT_COST_PAISE, LIMITS, LOADING_BP, LOW_EMAIL, RATE_MAX_AGE_DAYS, WARN_PCT } from '../credits'
@@ -7,7 +7,17 @@ import { USE_WHAT } from '../ledger'
 
 // The ledger's definers (drizzle/0164) restate the pure rules in SQL; these pin that each number is the same one
 // (impact review, C1·2). A change to a rule in credits.ts or prices.ts fails here until the SQL follows.
-const sql = readFileSync(join(process.cwd(), 'drizzle/0164_studio_credits_access.sql'), 'utf8')
+// Each definer as it stands NOW: its latest `create or replace function` across every migration, so a later migration that
+// redefines one is checked too (architecture review 2026-11-23).
+const dir = join(process.cwd(), 'drizzle')
+const latest = new Map<string, string>()
+for (const f of readdirSync(dir).filter((x) => x.endsWith('.sql')).sort()) {
+  for (const part of readFileSync(join(dir, f), 'utf8').split(/(?=create or replace function )/i).slice(1)) {
+    const name = /^create or replace function (\w+)/i.exec(part)?.[1]
+    if (name && /^(app_pc_|app_partner_|app_fx_)/.test(name)) latest.set(name, part.split('--> statement-breakpoint')[0]!)
+  }
+}
+const sql = [...latest.values()].join('\n')
 const schema = readFileSync(join(process.cwd(), 'drizzle/0163_studio_credits.sql'), 'utf8')
 
 describe('the SQL keeps the engine’s numbers', () => {

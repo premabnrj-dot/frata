@@ -14,7 +14,8 @@ const gw = vi.hoisted(() => ({
   paymentRefunds: vi.fn(async () => ({ items: [] as { id: string; amount: number; status: string }[] })),
 }))
 vi.mock('@/lib/billing/gateway', () => ({ ...gw, isBillingGatewayConfigured: () => true, billingGatewayIsTest: () => true }))
-vi.mock('@/lib/billing/seller', () => ({ frrataSeller: () => ({ name: 'Frrata', gstin: null, address: 'Jaipur', sac: '998315', test: true, prefix: 'FRR/', fy: '26-27' }) }))
+const sellerGstin = vi.hoisted(() => ({ v: null as string | null }))
+vi.mock('@/lib/billing/seller', () => ({ frrataSeller: () => ({ name: 'Frrata', gstin: sellerGstin.v, address: 'Jaipur', sac: '998315', test: true, prefix: 'FRR/', fy: '26-27' }) }))
 const sent = vi.hoisted(() => [] as { to: string; subject: string; text: string }[])
 vi.mock('@/lib/email/ses', () => ({ sendEmail: vi.fn(async (m: { to: string; subject: string; text: string }) => { sent.push(m); return { ok: true } }) }))
 const sys = vi.hoisted(() => ({
@@ -22,6 +23,7 @@ const sys = vi.hoisted(() => ({
   renewals: vi.fn(async () => [] as unknown[]), renewalBegin: vi.fn(async () => 'r1'), seatEnd: vi.fn(async () => true),
   ctx: vi.fn(async () => ({ id: 'r1', orderId: 'order_ren0001', customerId: 'cust_1', tokenId: 'token_1', open: true, claimed: false, total: 353882, receipt: 'pc_r1', debitAfter: new Date(Date.now() - 1000) })),
   claim: vi.fn(async () => true), renewalsNotified: vi.fn(async () => [] as unknown[]), setOrder: vi.fn(async () => true),
+  staleUses: vi.fn(async () => [] as string[]), returnUse: vi.fn(async () => true),
   refundsDue: vi.fn(async () => [] as unknown[]), refundClaim: vi.fn(async () => true), refundDone: vi.fn(async () => undefined),
   tokenCancels: vi.fn(async () => [] as unknown[]), tokenCancelled: vi.fn(async () => undefined),
   noticesClaim: vi.fn(async () => [] as unknown[]), noticeDone: vi.fn(async () => undefined),
@@ -32,9 +34,9 @@ vi.mock('@/lib/db/platform', () => ({ billingUnapplied: vi.fn(async () => []), a
 const later = () => Date.now() + 60_000
 const seat = (o: Record<string, unknown> = {}) => ({ seatId: 's1', partnerId: 'p', plan: 'studio', nextPlan: null, method: 'upi', test: true, periodEnd: new Date('2026-12-01T03:30:00Z'),
   cancelAt: null, failedAt: null, attempts: 0, pending: 0, purchaseId: null, purchaseOpen: false, hasOrder: false, noticeQueuedAt: null, noticeSentAt: null, lastFailedAt: null,
-  mandate: true, mandateMax: 360000, partnerLive: true, ...o })
+  mandate: true, mandateMax: 360000, partnerLive: true, buyerState: '27', ...o })
 
-beforeEach(() => { vi.clearAllMocks(); sent.length = 0 })
+beforeEach(() => { vi.clearAllMocks(); sent.length = 0; sellerGstin.v = null })
 
 describe('the hourly run', async () => {
   const { runCredits } = await import('../run')
@@ -43,6 +45,22 @@ describe('the hourly run', async () => {
     const r = await runCredits(new Date('2026-11-30T03:00:00Z'), later())
     expect(r.notices).toBe(1)
     expect(sys.renewalBegin).toHaveBeenCalledWith(expect.objectContaining({ seatId: 's1', attempt: 1, plan: 'studio', credits: 150, taxable: 299900 }))
+  })
+  it('a renewal’s GST heads follow the buyer’s state: CGST + SGST in Frrata’s own, IGST otherwise', async () => {
+    sellerGstin.v = '08AAACF1234R1Z5'
+    sys.renewals.mockResolvedValueOnce([seat({ buyerState: '08' })])
+    await runCredits(new Date('2026-11-30T03:00:00Z'), later())
+    expect(sys.renewalBegin).toHaveBeenLastCalledWith(expect.objectContaining({ cgst: 26991, sgst: 26991, igst: 0 }))
+    sys.renewals.mockResolvedValueOnce([seat({ buyerState: '27' })])
+    await runCredits(new Date('2026-11-30T03:00:00Z'), later())
+    expect(sys.renewalBegin).toHaveBeenLastCalledWith(expect.objectContaining({ cgst: 0, sgst: 0, igst: 53982 }))
+  })
+  it('an open use nobody closed comes back whole after two hours', async () => {
+    sys.staleUses.mockResolvedValueOnce(['u1'])
+    const r = await runCredits(new Date('2026-11-30T03:00:00Z'), later())
+    expect(sys.staleUses).toHaveBeenCalledWith(120, 100)
+    expect(sys.returnUse).toHaveBeenCalledWith('u1', 'timeout')
+    expect(r.stale).toBe(1)
   })
   it('a plan change waits for the renewal; a mandate too small for it ends the seat at the period end', async () => {
     sys.renewals.mockResolvedValueOnce([seat({ nextPlan: 'plus' })])
@@ -77,6 +95,14 @@ describe('the hourly run', async () => {
     expect(gw.createRenewalOrder).toHaveBeenCalledWith({ amount: 353882, receipt: 'pc_r1', token: 'token_1', paymentAfter: after })
     expect(sys.setOrder).toHaveBeenCalledWith('r1', 'order_ren0001', true)
     expect(r.orders).toBe(1)
+  })
+  it('an order made later than its email still gives a full notice: a card waits 37 hours from the order', async () => {
+    const t = Date.now()
+    sys.renewalsNotified.mockResolvedValueOnce([{ id: 'r1', receipt: 'pc_r1', total: 353882, customerId: 'cust_1', tokenId: 'token_1', debitAfter: new Date(t), method: 'card' }])
+    await runCredits(new Date(t), later())
+    const at = (gw.createRenewalOrder.mock.calls[0] as unknown as [{ paymentAfter: Date }])[0].paymentAfter.getTime()
+    expect(at).toBeGreaterThanOrEqual(t + 37 * 3_600_000)
+    expect(at).toBeLessThan(t + 37 * 3_600_000 + 60_000)
   })
   it('stragglers: applied from the gateway, or closed after a day with nothing taken', async () => {
     sys.unsettled.mockResolvedValueOnce([{ id: 'a', receipt: 'pc_a', orderId: 'order_a000001', kind: 'pack', claimed: false, createdAt: new Date('2026-11-22T00:00:00Z') },

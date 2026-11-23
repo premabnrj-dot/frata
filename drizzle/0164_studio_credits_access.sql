@@ -44,18 +44,30 @@ $$;
 
 -- What a partner owes from disputes (security review 2026-11-23, M2): a disputed purchase's credits not yet clawed back
 -- (spent before the dispute, or held by a use). Derived: the purchase's credits less its clawback draws.
+-- Owed for one disputed purchase: what was spent from its lot (its non-clawback draws) less what other lots paid back.
+-- Credits that simply expired unspent are not owed (unit-economics review 2026-11-23).
+create or replace function app_pc_owed(p_purchase uuid) returns integer
+  language sql stable security definer set search_path = '' as $$
+  select greatest(0, -coalesce((select sum(d.credits) from public.partner_credit_entries d where d.lot_id = l.id and d.kind <> 'clawback'), 0)
+                     + coalesce((select sum(c.credits) from public.partner_credit_entries c
+                                  where c.purchase_id = p_purchase and c.kind = 'clawback' and c.lot_id <> l.id), 0))::integer
+  from public.partner_credit_entries l where l.purchase_id = p_purchase and l.kind in ('pack', 'credits', 'seat')
+$$;
+--> statement-breakpoint
+
 create or replace function app_pc_debt(p_partner uuid, p_real boolean) returns integer
   language sql stable security definer set search_path = '' as $$
-  select coalesce(sum(greatest(p.credits + coalesce((select sum(c.credits) from public.partner_credit_entries c
-                                                     where c.purchase_id = p.id and c.kind = 'clawback'), 0), 0)), 0)::integer
+  select coalesce(sum(coalesce(public.app_pc_owed(p.id), 0)), 0)::integer
   from public.partner_credit_purchases p where p.partner_id = p_partner and p.disputed_at is not null and (not p_real or not p.test)
 $$;
 --> statement-breakpoint
 
--- The balance is what the lots hold less what is owed (never below 0): a debt pauses Studio until bought credits cover it.
+-- The balance is the free credits plus the bought lots less what is owed (never below 0): a debt is paid from bought
+-- credits only, so it pauses Studio past the free ones until bought credits cover it.
 create or replace function app_pc_balance(p_partner uuid, p_real boolean) returns integer
   language sql stable security definer set search_path = '' as $$
-  select greatest(0, coalesce(sum(greatest(x.left_credits, 0)), 0) - public.app_pc_debt(p_partner, p_real))::integer
+  select (coalesce(sum(greatest(x.left_credits, 0)) filter (where x.kind = 'grant'), 0)
+        + greatest(0, coalesce(sum(greatest(x.left_credits, 0)) filter (where x.kind <> 'grant'), 0) - public.app_pc_debt(p_partner, p_real)))::integer
   from public.app_pc_lots(p_partner, p_real) x
 $$;
 --> statement-breakpoint
@@ -65,13 +77,12 @@ create or replace function app_pc_debt_draw(p_partner uuid, p_real boolean) retu
   language plpgsql volatile security definer set search_path = '' as $$
 declare d record; l record; v_need integer; v_take integer;
 begin
-  for d in select p.id, (p.credits + coalesce((select sum(c.credits) from public.partner_credit_entries c
-                                               where c.purchase_id = p.id and c.kind = 'clawback'), 0))::integer as owed
+  for d in select p.id, coalesce(public.app_pc_owed(p.id), 0) as owed
              from public.partner_credit_purchases p
             where p.partner_id = p_partner and p.disputed_at is not null and (not p_real or not p.test) order by p.disputed_at, p.id loop
     v_need := d.owed;
     continue when v_need <= 0;
-    for l in select x.lot_id, x.left_credits from public.app_pc_lots(p_partner, p_real) x where x.left_credits > 0 loop
+    for l in select x.lot_id, x.left_credits from public.app_pc_lots(p_partner, p_real) x where x.left_credits > 0 and x.kind <> 'grant' loop
       v_take := least(l.left_credits, v_need);
       insert into public.partner_credit_entries (partner_id, kind, credits, lot_id, purchase_id) values (p_partner, 'clawback', -v_take, l.lot_id, d.id);
       v_need := v_need - v_take;
@@ -401,8 +412,10 @@ begin
   if b.details_at is not null then
     perform public.app_pc_notice(o.partner_id, 'details_changed', 'details:' || o.partner_id || ':' || extract(epoch from now())::bigint);
   end if;
-  if v_pan is not null and exists (select 1 from public.partner_billing pb join public.partner_credit_entries g on g.partner_id = pb.partner_id and g.kind = 'grant'
-      where pb.pan = v_pan and pb.partner_id <> o.partner_id) then
+  -- Once per PAN: only a PAN another partner has been invoiced under for real (security review 2026-11-23: typing someone
+  -- else's public GSTIN first must not void their free credits).
+  if v_pan is not null and exists (select 1 from public.partner_invoices i
+      where i.partner_id <> o.partner_id and not i.test and substr(i.buyer_gstin, 3, 10) = v_pan) then
     select x.lot_id, x.left_credits into v_grant, v_left from public.app_pc_lots(o.partner_id, false) x where x.kind = 'grant';
     if v_left > 0 then
       insert into public.partner_credit_entries (partner_id, kind, credits, lot_id) values (o.partner_id, 'void', -v_left, v_grant);
@@ -434,6 +447,9 @@ begin
     if s.id is not null and s.next_plan is distinct from p_plan and s.failed_at is null then raise exception 'has_seat' using errcode = 'P0001'; end if;
   elsif p_plan is not null or p_method is not null or p_mandate_max is not null then raise exception 'bad_input' using errcode = 'P0001';
   end if;
+  -- The heads follow the place of supply, the buyer's state frozen here (architecture review 2026-11-23).
+  if (left(coalesce(p_seller_gstin, ''), 2) = b.state_code) <> (p_igst = 0 and p_cgst + p_sgst > 0) then
+    raise exception 'bad_input' using errcode = 'P0001'; end if;
   insert into public.partner_credit_purchases (id, partner_id, kind, credits, plan, method, mandate_max, taxable, cgst, sgst, igst, total,
     test, invoice_test, buyer_name, buyer_gstin, buyer_state, buyer_address, seller_name, seller_gstin, seller_address, sac, prefix, fy,
     receipt, created_by)
@@ -475,7 +491,9 @@ create or replace function app_pc_issue(p_purchase uuid) returns uuid
 declare p record; v_fy text; nxt bigint; v_id uuid;
 begin
   select * into p from public.partner_credit_purchases x where x.id = p_purchase;
-  v_fy := case when p.invoice_test then 'T' || p.fy else p.fy end;
+  -- The financial year (April to March, IST) of the day of issue: a payment on 1 April opens the new series.
+  v_fy := to_char((now() at time zone 'Asia/Kolkata') - interval '3 months', 'YY') || '-' || to_char((now() at time zone 'Asia/Kolkata') + interval '9 months', 'YY');
+  v_fy := case when p.invoice_test then 'T' || v_fy else v_fy end;
   set local lock_timeout = '2s';
   insert into public.platform_counters (kind, fy, next) values ('invoice', v_fy, 2)
     on conflict (kind, fy) do update set next = public.platform_counters.next + 1 returning next - 1 into nxt;
@@ -523,8 +541,12 @@ begin
   if exists (select 1 from public.frrata_payments f where f.gateway_order_id = p_order)
      or exists (select 1 from public.billing_mandate_setups m where m.gateway_order_id = p_order) then
     raise exception 'bad_input' using errcode = 'P0001'; end if;
+  -- A renewal's notice clock starts at its order: the debit waits a full lead from now (UPI 25 h, card 37 h; the run
+  -- passes the same as Razorpay's payment_after), never the time fixed an hour earlier (architecture review 2026-11-23).
   update public.partner_credit_purchases set gateway_order_id = p_order,
-    notice_sent_at = case when p_notified then now() else notice_sent_at end
+    notice_sent_at = case when p_notified then now() else notice_sent_at end,
+    debit_after = case when p_notified then greatest(debit_after, now() + case when method = 'card' then interval '37 hours' else interval '25 hours' end)
+                       else debit_after end
    where id = p_purchase and gateway_order_id is null and paid_at is null and failed_at is null and closed_at is null;
   get diagnostics n = row_count;
   return n = 1;
@@ -643,7 +665,7 @@ end $$;
 create or replace function app_pc_renewals(p_limit integer) returns table (
   seat_id uuid, partner_id uuid, plan text, next_plan text, method text, test boolean, period_end timestamptz, cancel_at timestamptz,
   failed_at timestamptz, attempts integer, pending integer, purchase_id uuid, purchase_open boolean, has_order boolean, notice_queued_at timestamptz,
-  notice_sent_at timestamptz, last_failed_at timestamptz, mandate boolean, mandate_max bigint, partner_live boolean)
+  notice_sent_at timestamptz, last_failed_at timestamptz, mandate boolean, mandate_max bigint, partner_live boolean, buyer_state text)
   language sql stable security definer set search_path = '' as $$
   select s.id, s.partner_id, s.plan, s.next_plan, s.method, s.test, s.period_end, s.cancel_at, s.failed_at,
     (select count(*)::integer from public.partner_credit_purchases p where p.seat_id = s.id and p.for_period_end = s.period_end and p.claimed_at is not null),
@@ -653,7 +675,8 @@ create or replace function app_pc_renewals(p_limit integer) returns table (
     l.notice_queued_at, l.notice_sent_at,
     (select max(p.failed_at) from public.partner_credit_purchases p where p.seat_id = s.id and p.for_period_end = s.period_end),
     b.token_id is not null and b.mandate_revoked_at is null, b.mandate_max,
-    exists (select 1 from public.partners pa where pa.id = s.partner_id and pa.approved_at is not null and pa.suspended_at is null and pa.declined_at is null)
+    exists (select 1 from public.partners pa where pa.id = s.partner_id and pa.approved_at is not null and pa.suspended_at is null and pa.declined_at is null),
+    b.state_code
   from public.partner_seats s
   left join public.partner_billing b on b.partner_id = s.partner_id
   left join lateral (select p.* from public.partner_credit_purchases p where p.seat_id = s.id and p.for_period_end = s.period_end
@@ -676,6 +699,10 @@ begin
   if exists (select 1 from public.partner_credit_purchases p where p.seat_id = s.id and p.paid_at is null and p.failed_at is null and p.closed_at is null) then return null; end if;
   select * into b from public.partner_billing x where x.partner_id = s.partner_id;
   if b.token_id is null or b.mandate_revoked_at is not null or p_taxable + p_cgst + p_sgst + p_igst > b.mandate_max then return null; end if;
+  -- The heads follow the place of supply, the buyer's state today (unit-economics review 2026-11-23): CGST + SGST in
+  -- Frrata's own state, IGST otherwise. Heads that don't match are refused, never stored.
+  if (left(coalesce(p_seller_gstin, ''), 2) = coalesce(b.state_code, '-')) <> (p_igst = 0 and p_cgst + p_sgst > 0) then
+    raise exception 'bad_input' using errcode = 'P0001'; end if;
   insert into public.partner_credit_purchases (id, partner_id, kind, credits, plan, seat_id, for_period_end, attempt, method, mandate_max,
     taxable, cgst, sgst, igst, total, test, invoice_test, buyer_name, buyer_gstin, buyer_state, buyer_address, seller_name, seller_gstin,
     seller_address, sac, prefix, fy, receipt, notice_queued_at, debit_after)
@@ -690,9 +717,9 @@ end $$;
 
 -- A renewal attempt whose pre-debit email went: ready for its order (with Razorpay's notification) — the ids the hourly run
 -- needs. Its notice clock starts only when the order is made (app_pc_purchase_order with p_notified).
-create or replace function app_pc_renewals_notified(p_limit integer) returns table (id uuid, receipt text, total bigint, customer_id text, token_id text, debit_after timestamptz)
+create or replace function app_pc_renewals_notified(p_limit integer) returns table (id uuid, receipt text, total bigint, customer_id text, token_id text, debit_after timestamptz, method text)
   language sql stable security definer set search_path = '' as $$
-  select p.id, p.receipt, p.total, b.customer_id, b.token_id, p.debit_after
+  select p.id, p.receipt, p.total, b.customer_id, b.token_id, p.debit_after, p.method
   from public.partner_credit_purchases p
   join public.partner_credit_notices n on n.purchase_id = p.id and n.partner_id = p.partner_id and n.kind = 'predebit' and n.sent_at is not null
   join public.partner_billing b on b.partner_id = p.partner_id and b.token_id is not null and b.mandate_revoked_at is null
@@ -841,11 +868,18 @@ begin
 end $$;
 --> statement-breakpoint
 create or replace function app_pc_notice_done(p_notice uuid, p_ok boolean, p_error text) returns void
-  language sql volatile security definer set search_path = '' as $$
+  language plpgsql volatile security definer set search_path = '' as $$
+declare n record;
+begin
   update public.partner_credit_notices set sent_at = case when p_ok then now() end,
     failed_at = case when not p_ok and tries >= 5 then now() end, error = case when p_ok then null else left(p_error, 40) end
-   where id = p_notice and sent_at is null
-$$;
+   where id = p_notice and sent_at is null returning kind, purchase_id, failed_at into n;
+  -- A renewal is never debited without its notice: an attempt whose email failed for good is a failed try, so the retry
+  -- days and the lapse still run (architecture review 2026-11-23).
+  if n.kind = 'predebit' and n.failed_at is not null and n.purchase_id is not null then
+    perform public.app_pc_close(n.purchase_id, 'The pre-debit email could not be sent');
+  end if;
+end $$;
 --> statement-breakpoint
 
 -- ── The day's USD/INR rate (owner 2026-11-22, 6; orchestrator 2026-11-22: FBIL's rate is licence- and fee-bound for
@@ -890,7 +924,11 @@ begin
   v_n := least(120, greatest(1, coalesce(p_estimate, 40)));
   select r.rate_e4 into v_rate from public.fx_rates r where r.day >= (now() at time zone 'Asia/Kolkata')::date - 4 order by r.day desc limit 1;
   if v_rate is null then raise exception 'rate' using errcode = 'P0001'; end if;
-  if (select coalesce(sum(u.list_micro * u.rate_e4), 0) / 100000000 from public.partner_credit_uses u where u.created_at >= v_day) >= 2500000 then
+  -- Settled list cost, plus what open uses hold (their credits back to list paise at their loading), so turns running at
+  -- once can't pass the day's limit by much (architecture review 2026-11-23).
+  if (select coalesce(sum(case when u.closed_at is null then u.reserved * 633 * 10000 / u.loading_bp
+                               else u.list_micro * u.rate_e4 / 100000000 end), 0)
+        from public.partner_credit_uses u where u.created_at >= v_day) >= 2500000 then
     raise exception 'platform_day' using errcode = 'P0001'; end if;
   set local lock_timeout = '2s';
   perform pg_advisory_xact_lock(hashtextextended(me.partner_id::text || ':credits', 0));
@@ -986,6 +1024,16 @@ begin
 end $$;
 --> statement-breakpoint
 
+-- ── Open uses nobody closed (a crashed turn, a lost preview): the hourly run returns them whole as a timeout, so credits
+--    are never held for good (architecture review 2026-11-23). SYSTEM, ids only. ──
+create or replace function app_pc_stale_uses(p_older interval, p_limit integer) returns table (id uuid)
+  language sql stable security definer set search_path = '' as $$
+  select u.id from public.partner_credit_uses u where u.closed_at is null and u.created_at < now() - greatest(p_older, interval '1 hour')
+   order by u.created_at limit least(p_limit, 200)
+$$;
+--> statement-breakpoint
+
+
 -- ═══ ADMIN (architecture B1): partner invoices in Frrata's GST export. Only GstRow's fields; never a test invoice. ═══
 create or replace function admin_partner_gst_rows(p_from timestamptz, p_to timestamptz) returns table (
   number text, issued_at timestamptz, buyer_name text, buyer_gstin text, place_of_supply text, taxable bigint, cgst bigint, sgst bigint, igst bigint, total bigint)
@@ -1014,7 +1062,7 @@ revoke all on function app_pc_owner(uuid, uuid, text, boolean, boolean), app_pc_
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
   app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_set(date, integer), app_fx_rate_latest(),
   app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_give_back(uuid, integer), app_pc_settle(uuid, bigint),
-  app_pc_return(uuid, text), admin_partner_gst_rows(timestamptz, timestamptz)
+  app_pc_return(uuid, text), app_pc_stale_uses(interval, integer), app_pc_owed(uuid), admin_partner_gst_rows(timestamptz, timestamptz)
   from public, anon, authenticated, service_role, frata_builder, frata_app, frata_admin;
 --> statement-breakpoint
 grant execute on function app_partner_credit_try(uuid, uuid, text, text),
@@ -1031,7 +1079,8 @@ grant execute on function app_partner_credit_try(uuid, uuid, text, text),
   app_pc_renewals_notified(integer), app_pc_seat_end(uuid, boolean), app_pc_token_cancels(integer), app_pc_token_cancelled(uuid, text),
   app_pc_token_event(text, text), app_pc_refunds_due(integer), app_pc_refund_claim(uuid), app_pc_refund_done(uuid, text), app_pc_dispute(text),
   app_pc_notices_claim(integer), app_pc_notice_done(uuid, boolean, text), app_fx_rate_latest(),
-  app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_settle(uuid, bigint), app_pc_return(uuid, text)
+  app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean), app_pc_settle(uuid, bigint), app_pc_return(uuid, text),
+  app_pc_stale_uses(interval, integer)
   to frata_app;
 --> statement-breakpoint
 grant execute on function admin_partner_gst_rows(timestamptz, timestamptz), app_fx_rate_set(date, integer) to frata_admin;

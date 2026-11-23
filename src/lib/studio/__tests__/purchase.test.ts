@@ -42,12 +42,14 @@ beforeEach(() => {
 
 describe('starting a purchase', async () => {
   const { startPurchase } = await import('../purchase')
-  it('refused before anything is written: no gateway, test keys on Production, live keys before a real seller', async () => {
+  it('refused before anything is written: no gateway, test keys on Production, live keys off Production, live keys before a real seller', async () => {
     gw.configured = false
     expect(await startPurchase(auth, { kind: 'pack' })).toEqual({ ok: false, error: 'not_configured' })
     gw.configured = true; env.VERCEL_ENV = 'production'
     expect(await startPurchase(auth, { kind: 'pack' })).toEqual({ ok: false, error: 'test_keys' })
     env.VERCEL_ENV = ''; gw.test = false
+    expect(await startPurchase(auth, { kind: 'pack' })).toEqual({ ok: false, error: 'not_configured' })
+    env.VERCEL_ENV = 'production'
     expect(await startPurchase(auth, { kind: 'pack' })).toEqual({ ok: false, error: 'seller' })
     expect(db.begin).not.toHaveBeenCalled()
   })

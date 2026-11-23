@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { Section } from '@/components/layout/section'
+import { Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
 import { budgetState, LOW_BANNER } from '@/domains/studio/credits'
@@ -27,18 +29,17 @@ export async function StudioCreditsPanel({ auth, linkId, client, needs }: { auth
   const ownerFirst = (auth.partner.name || 'the owner').split(' ')[0] ?? 'the owner'
   const owner = partnerCan(p.role, 'credits')
   return (
-    <section aria-label="Credits" className="grid gap-3 rounded-lg border border-border p-3.5">
-      <h4 className="flex items-center justify-between gap-2 text-section font-semibold">Credits
-        {used ? <Badge tone="danger">Budget used up</Badge> : p.balance !== null ? (low ? <Badge tone="warn">{p.balance}</Badge> : <span className="font-num">{p.balance}</span>) : null}
-      </h4>
+    <Section title="Credits" action={used ? <Badge tone="danger">Budget used up</Badge> : p.balance !== null ? (low ? <Badge tone="warn">{p.balance}</Badge> : <Numeric>{p.balance}</Numeric>) : null}>
+      <div className="grid gap-3">
       {owner && !used && low && needs ? <div className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">This page needs about {needs} credits</span><BuyCredits label={`Buy ${PACK.credits} credits`} /></div> : null}
       {owner && !used && !(low && needs) ? <>
         <div className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{PACK.credits} credits · {formatInr(PACK.price)} + GST</span><BuyCredits label={`Buy ${PACK.credits} credits`} /></div>
         <div className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">Any amount · {formatInr(CREDIT_PRICE)} + GST a credit</span><BuyCredits variant="secondary" /></div>
       </> : null}
-      {p.budget !== null && <div className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{client}’s budget</span><span className="font-num">{p.used} of {p.budget}</span></div>}
-      {used && (owner ? <div><RaiseBudget linkId={linkId} /></div> : <p className="text-sm text-muted-foreground">Ask {ownerFirst} to raise it.</p>)}
+      {p.budget !== null && <div className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{client}’s budget</span><Numeric>{p.used} of {p.budget}</Numeric></div>}
+      {used && (owner ? <div><RaiseBudget linkId={linkId} client={client} /></div> : <p className="text-sm text-muted-foreground">Ask {ownerFirst} to raise it.</p>)}
       {owner && !used && <div><Link href="/partner/credits" className={button({ variant: 'ghost', size: 'sm' })}>Open Credits and billing</Link></div>}
-    </section>
+      </div>
+    </Section>
   )
 }

@@ -20,10 +20,10 @@ export async function GET(request: Request) {
   if (!auth.ok) return text(403, auth.message)
   if (!partnerCan(auth.partner.memberRole, 'credits')) return text(403, 'Only the partner owner can download usage.')
   const month = new URL(request.url).searchParams.get('month') ?? ''
-  if (!/^20\d{2}-(0[1-9]|1[0-2])-01$/.test(month)) return text(404, 'Not found.')
+  if (!/^20\d{2}-(0[1-9]|1[0-2])-01$/.test(month)) return text(404, 'We couldn’t find that file.')
   try {
     const r = await usageForCsv(auth, month)
-    if (!r.ok) return r.error === 'too_many' ? text(429, 'Too many downloads in an hour. Try again later.') : text(404, 'Not found.')
+    if (!r.ok) return r.error === 'too_many' ? text(429, 'Too many downloads. Try again in an hour.') : text(404, 'We couldn’t find that file.')
     const rows = [['When', 'Client', 'What', 'Who', 'Estimate', 'Held', 'Charged', 'Status'].map(csvCell).join(','),
       ...r.value.uses.map((u) => [dateTimeIN(u.at), u.client, USE_WORDS[u.what], u.who ?? '', u.estimate ?? '', u.reserved, u.charged,
         u.returned ? 'Returned' : u.closed ? 'Charged' : 'Running'].map(csvCell).join(','))]

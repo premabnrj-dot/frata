@@ -54,13 +54,13 @@ const failedPanel = (href: string) => <Panel title="We couldn’t load billing" 
 
 const lotWords = (l: Overview['lots'][number]) =>
   l.kind === 'seat' ? `${monthLongIN(l.createdAt)} seat` : l.kind === 'pack' ? `Pack bought ${dayMonthIN(l.createdAt)}` : l.kind === 'credits' ? `Credits bought ${dayMonthIN(l.createdAt)}`
-    : l.kind === 'grant' ? 'Free credits' : 'Credits given back'
+    : l.kind === 'grant' ? 'Free credits' : 'Credits returned'
 
 function purchaseWords(p: PurchaseRow) {
   const what = p.kind === 'pack' || p.kind === 'credits' ? `${p.credits.toLocaleString('en-IN')} credits` : `${SEAT_PLANS[p.plan ?? 'studio'].name}, ${monthLongIN(p.at)}`
   const chip = p.refundedAt ? <Badge tone="neutral">Refunded</Badge> : p.refundDue ? <Badge tone="warn">Refund on its way</Badge>
     : p.paidAt ? (p.test ? <Badge tone="info">Test</Badge> : null) : p.failedAt ? <Badge tone="danger">Didn’t go through</Badge>
-    : p.closedAt ? <Badge tone="neutral">Not paid</Badge> : <Badge tone="warn">Waiting for the bank</Badge>
+    : p.closedAt ? <Badge tone="neutral">Not paid · nothing charged</Badge> : <Badge tone="warn">Waiting for the bank</Badge>
   return { what, chip }
 }
 
@@ -129,7 +129,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
           </Section>
         </div>
         <div className="grid gap-4">
-          <Section title={<span className="flex items-center gap-2">Plan <span className="rounded-sm border border-border px-1.5 text-small text-muted-foreground">{planName}</span></span>}>
+          <Section title={<span className="flex items-center gap-2">Plan <Badge tone="neutral">{planName}</Badge></span>}>
             {v.seat && state !== 'partner' ? <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
               <dt className="text-muted-foreground"><Money paise={SEAT_PLANS[v.seat.plan].price} /> + GST a month</dt><dd className="font-num text-right">{SEAT_PLANS[v.seat.plan].credits} credits a month</dd>
               <dt className="text-muted-foreground">{state === 'ending' ? 'Ends' : 'Renews'}</dt><dd className="text-right">{dayMonthIN(state === 'ending' ? v.seat.cancelAt! : v.seat.periodEnd)}{state === 'ending' ? '' : ` · ${formatMoney(renewTotal)}`}</dd>
@@ -152,12 +152,12 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
         ...u.uses.map((x) => ({ at: x.at, left: `${x.client} · ${USE_WORDS[x.what]}${x.who ? ` · ${x.who.split('@')[0]}` : ''}`,
           right: x.returned ? `Returned ${x.reserved}` : x.closed ? `${x.estimate ? `≈ ${x.estimate} → ` : ''}${x.charged}` : `Held ${x.reserved}` })),
         ...u.added.map((a) => ({ at: a.at, left: a.kind === 'grant' ? 'Free credits' : a.kind === 'seat' ? `${monthLongIN(a.at)} seat` : `Bought ${dayMonthIN(a.at)}`, right: `+${a.credits}` })),
-        ...u.ended.map((e) => ({ at: e.at, left: `${e.kind === 'seat' ? 'Seat' : e.kind === 'grant' ? 'Free credits' : 'Credits'} · past its use-by date`, right: `−${e.credits}` })),
+        ...u.ended.map((e) => ({ at: e.at, left: `${e.kind === 'seat' ? 'Studio credits' : e.kind === 'grant' ? 'Free credits' : 'Credits'} · past their use-by date`, right: `−${e.credits}` })),
       ].sort((a, b) => b.at.getTime() - a.at.getTime())
       return <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/partner/credits?tab=usage&month=${monthKey(now)}`} className={button({ variant: month.startsWith(monthKey(now)) ? 'primary' : 'secondary', size: 'sm' })}>{monthShortIN(now)}</Link>
-          <Link href={`/partner/credits?tab=usage&month=${monthKey(prev)}`} className={button({ variant: month.startsWith(monthKey(prev)) ? 'primary' : 'secondary', size: 'sm' })}>{monthShortIN(prev)}</Link>
+          <Link href={`/partner/credits?tab=usage&month=${monthKey(now)}`} aria-current={month.startsWith(monthKey(now)) ? 'page' : undefined} className={button({ variant: month.startsWith(monthKey(now)) ? 'primary' : 'secondary', size: 'sm' })}>{monthShortIN(now)}</Link>
+          <Link href={`/partner/credits?tab=usage&month=${monthKey(prev)}`} aria-current={month.startsWith(monthKey(prev)) ? 'page' : undefined} className={button({ variant: month.startsWith(monthKey(prev)) ? 'primary' : 'secondary', size: 'sm' })}>{monthShortIN(prev)}</Link>
           <a href={`/partner/credits/usage.csv?month=${month}`} className={`${button({ variant: 'ghost', size: 'sm' })} ml-auto`}>Download CSV</a>
         </div>
         {rows.length === 0 ? <Empty title="No usage yet" /> : <Section><dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">{rows.map((x, i) => <div key={i} className="contents">
@@ -187,12 +187,12 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
             <ul className="grid gap-2 text-sm">{p.purchases.map((x) => { const w = purchaseWords(x); return <li key={x.id} className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">{dayMonthIN(x.at)} · {w.what}</span>
               <span className="flex items-center gap-2"><Money paise={x.total} decimals />{w.chip}{x.invoiceId && x.invoiceNumber &&
-                <a href={`/partner/credits/invoice/${x.invoiceId}`} className="font-mono text-xs text-link underline-offset-2 hover:underline">{x.invoiceNumber}</a>}</span>
+                <a href={`/partner/credits/invoice/${x.invoiceId}`} className="font-mono text-small text-link underline-offset-2 hover:underline">{x.invoiceNumber}</a>}</span>
             </li> })}</ul>}
         </Section>
         <div className="grid gap-4">
           <Section title="Invoices go to" action={<EditDetails d={{ legalName: d?.legalName ?? null, gstin: d?.gstin ?? null, stateName: stateName(d?.stateCode ?? null), address: d?.address ?? null }} />}>
-            {d?.legalName ? <div className="grid gap-0.5 text-sm"><span>{d.legalName}</span>{d.gstin && <span className="font-mono text-xs">{d.gstin.slice(0, 7)}••••{d.gstin.slice(11)}</span>}
+            {d?.legalName ? <div className="grid gap-0.5 text-sm"><span>{d.legalName}</span>{d.gstin && <span className="font-mono text-small">{d.gstin.slice(0, 7)}••••{d.gstin.slice(11)}</span>}
               <span className="text-muted-foreground">{stateName(d.stateCode) ?? ''}</span></div> : <p className="text-sm text-muted-foreground">Add a name and a state.</p>}
           </Section>
           {p.mandate && <Section title="Pays by"><dl className="grid grid-cols-[1fr_auto] gap-x-3 text-sm">
@@ -238,7 +238,7 @@ function BudgetCard({ r, owner, ownerFirst }: { r: BudgetRow; owner: boolean; ow
     <div className="grid gap-2">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 text-sm"><dt className="text-muted-foreground">{kind}</dt>
         <dd className="font-num text-right">{r.budget === null ? `${r.used} used · no budget` : `${r.used} of ${r.budget}`}</dd></dl>
-      {owner ? <div className="flex flex-wrap gap-2">{s === 'paused' && <RaiseBudget linkId={r.linkId} />}<SetBudget linkId={r.linkId} client={r.client} kind={kind} budget={r.budget} /></div>
+      {owner ? <div className="flex flex-wrap gap-2">{s === 'paused' && <RaiseBudget linkId={r.linkId} client={r.client} />}<SetBudget linkId={r.linkId} client={r.client} kind={kind} budget={r.budget} /></div>
         : s === 'paused' ? <p className="text-sm text-muted-foreground">Ask {ownerFirst} to raise it.</p> : null}
     </div>
   </Section>

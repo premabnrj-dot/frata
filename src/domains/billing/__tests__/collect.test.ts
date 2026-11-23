@@ -47,3 +47,23 @@ describe('nextStep during a trial (trials A2)', () => {
     expect(nextStep(late, new Date('2026-12-27T00:00:00+05:30'), true).kind).toBe('acknowledge')
   })
 })
+
+// The three rules merchant bills and Studio seats share (C1; impact review 2026-11-23): their money-moving edges.
+describe('the shared notice rules', async () => {
+  const { needsFreshNotice, noticeStood, keysMatch, NOTICE_LEAD_MS } = await import('../collect')
+  const at = new Date('2026-11-30T03:00:00Z')
+  it('a notice is needed when none went, or the last went before a failure; a failure at the same moment needs none', () => {
+    expect(needsFreshNotice(null, null)).toBe(true)
+    expect(needsFreshNotice(at, null)).toBe(false)
+    expect(needsFreshNotice(at, new Date(at.getTime() + 1))).toBe(true)
+    expect(needsFreshNotice(at, at)).toBe(false)
+  })
+  it('a notice stands from exactly its lead, never a millisecond before', () => {
+    expect(noticeStood(at, new Date(at.getTime() + NOTICE_LEAD_MS - 1))).toBe(false)
+    expect(noticeStood(at, new Date(at.getTime() + NOTICE_LEAD_MS))).toBe(true)
+    expect(noticeStood(at, new Date(at.getTime() + 37 * 3_600_000 - 1), 37 * 3_600_000)).toBe(false)
+  })
+  it('test money only with test keys, real money only with live keys', () => {
+    expect([keysMatch(true, true), keysMatch(false, false), keysMatch(true, false), keysMatch(false, true)]).toEqual([true, true, false, false])
+  })
+})

@@ -4,7 +4,9 @@
 // 2026-11-22).
 //
 // Pure: no clock (every function takes `now`), no I/O. The ledger's definers hold the same rules in SQL and refuse
-// first; these decide what a page offers, what the door asks for and what the tests pin.
+// first; these decide what a page offers, what the door asks for and what the tests pin. Read today by the Credits and
+// billing page, the hourly run and sql-drift.test.ts; the reserve and settle rules (creditsFor, reserveFor, refuseReserve,
+// sessionBudgetMicro, drawPlan) wait for their callers, Studio's turns (V3a) and previews (V2a), as the plan sets.
 //   - 1 credit = ₹6.33 of LOADED cost; loaded = list cost (USD) × the day's USD/INR reference rate × 1.10 (decision 6).
 //     The rate is stored as rupees × 10,000 (FBIL quotes 4 decimals: 94.1997 → 941997). Arithmetic in bigint:
 //     micro-USD × rate × basis points passes 2^53 at well under a dollar (review finding).

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
@@ -36,6 +36,28 @@ async function freshly<R>(fn: () => Promise<R>): Promise<R | { ok: false; error:
 // =============================================================================
 
 const inr = (p: number) => formatInr(paise(p), { decimals: true })
+
+/** Two-line choice cards, as drawn (a title and its price; Segmented holds one short word each). A radiogroup with one
+ *  tab stop and the arrow keys, as Segmented (src/components/ui/segmented.tsx). */
+function RadioCards<T extends string>({ label, value, options, onPick }: { label: string; value: T; options: readonly { v: T; title: string; sub: string }[]; onPick: (v: T) => void }) {
+  const box = useRef<HTMLDivElement>(null)
+  const step = (by: number) => {
+    const at = options.findIndex((o) => o.v === value), next = (at + by + options.length) % options.length
+    onPick(options[next]!.v)
+    requestAnimationFrame(() => box.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus())
+  }
+  return <div ref={box} role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-2"
+    onKeyDown={(e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); step(1) }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); step(-1) }
+    }}>
+    {options.map((o) => (
+      <button key={o.v} type="button" role="radio" aria-checked={value === o.v} tabIndex={value === o.v ? 0 : -1} onClick={() => onPick(o.v)}
+        className={`grid gap-0.5 rounded-lg border p-2.5 text-left outline-none transition-colors duration-fast ease-standard focus-visible:ring-2 focus-visible:ring-ring ${value === o.v ? 'border-primary bg-select' : 'border-border'}`}>
+        <b className="font-semibold">{o.title}</b><small className="font-num text-small text-muted-foreground">{o.sub}</small>
+      </button>))}
+  </div>
+}
 const GST = (taxable: number) => withGst(paise(taxable)) - taxable
 
 type Pay = { state: 'idle' } | { state: 'busy' } | { state: 'waiting'; amount: number } | { state: 'late' } | { state: 'declined' } | { state: 'refunding' }
@@ -45,8 +67,9 @@ function usePay(done: (credits: string) => string) {
   const router = useRouter(), toast = useToast()
   const [pay, setPay] = useState<Pay>({ state: 'idle' })
   const [error, setError] = useState<string | null>(null)
+  const live = useRef(false)
   const run = async (input: object, close: () => void) => {
-    setError(null); setPay({ state: 'busy' })
+    setError(null); setPay({ state: 'busy' }); live.current = true
     const s: Opened = await freshly(() => startBuyAction(input)) as Opened
     if (!s.ok) { setPay({ state: 'idle' }); setError(s.error); return }
     if (!(await loadRazorpay()) || !window.Razorpay) { setPay({ state: 'idle' }); setError('The payment page couldn’t load. Check your connection.'); return }
@@ -57,6 +80,7 @@ function usePay(done: (credits: string) => string) {
         const r = await confirmBuyAction(s.purchaseId)
         if (!r.ok) { setPay({ state: 'idle' }); setError(r.error); return }
         if (r.state === 'added') { setPay({ state: 'idle' }); close(); toast.ok(done(''), {}); settle(router); return }
+        if (!live.current) { settle(router); return } // the dialog was closed: the page shows the credits once they land
         if (r.state === 'declined') { setPay({ state: 'declined' }); return }
         if (r.state === 'refunding') { setPay({ state: 'refunding' }); return }
         const late = Date.now() > until // clock-ok: the same wait, in the handler
@@ -69,13 +93,13 @@ function usePay(done: (credits: string) => string) {
       modal: { ondismiss: () => { void look() } } })
     rz.open()
   }
-  return { pay, error, run, reset: () => { setPay({ state: 'idle' }); setError(null) } }
+  return { pay, error, run, reset: () => { live.current = false; setPay({ state: 'idle' }); setError(null) } }
 }
 
 /** What the dialog shows while it waits, and after. */
 function PayState({ pay, amount }: { pay: Pay; amount: number }) {
-  if (pay.state === 'waiting') return <div className="grid gap-1"><b className="text-section">Approve {inr(amount)} in your UPI app</b><p className="text-sm text-muted-foreground">Waiting up to 5 minutes.</p></div>
-  if (pay.state === 'late') return <div className="grid gap-1"><b className="text-section">Still waiting for your bank</b><p className="text-sm text-muted-foreground">If you paid, the credits arrive here. You’re never charged twice.</p></div>
+  if (pay.state === 'waiting') return <div role="status" className="grid gap-1"><b className="text-section">Waiting for your bank</b><p className="text-sm text-muted-foreground"><span className="font-num">{inr(amount)}</span> · up to 5 minutes.</p></div>
+  if (pay.state === 'late') return <div role="status" className="grid gap-1"><b className="text-section">Still waiting for your bank</b><p className="text-sm text-muted-foreground">If you paid, the credits arrive here. You’re never charged twice.</p></div>
   return null
 }
 const payError = (pay: Pay, error: string | null) =>
@@ -89,13 +113,14 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
   const [any, setAny] = useState(false)
   const [typed, setTyped] = useState('250')
   const [field, setField] = useState<string | null>(null)
+  const typedRef = useRef<HTMLInputElement>(null)
   const n = any ? Number(typed.replace(/\D/g, '')) || 0 : PACK.credits
   const taxable = any ? n * CREDIT_PRICE : PACK.price
   const total = taxable + GST(taxable)
   const { pay, error, run, reset } = usePay(() => `${n.toLocaleString('en-IN')} credits added.`)
   const close = () => { setOpen(false); reset(); setField(null) }
   const go = () => {
-    if (any && !typedCreditsValid(n)) { setField(`Enter ${TYPED_MIN} to ${TYPED_MAX.toLocaleString('en-IN')} credits.`); return }
+    if (any && !typedCreditsValid(n)) { setField(`Enter ${TYPED_MIN} to ${TYPED_MAX.toLocaleString('en-IN')} credits.`); typedRef.current?.focus(); return }
     void run(any ? { kind: 'credits', credits: n } : { kind: 'pack' }, close)
   }
   const waiting = pay.state === 'waiting' || pay.state === 'busy'
@@ -106,15 +131,10 @@ export function BuyCredits({ label = 'Buy credits', size = 'sm', variant = 'prim
         : <><Button variant="secondary" onClick={close} data-autofocus>Not now</Button>
           <Button busy={waiting} onClick={go}>{pay.state === 'declined' ? 'Try again' : `Pay ${inr(total)}`}</Button></>}>
       {pay.state === 'waiting' || pay.state === 'late' ? <PayState pay={pay} amount={total} /> : <div className="grid gap-3">
-        <div role="radiogroup" aria-label="How many credits" className="grid grid-cols-2 gap-2">
-          {[{ on: !any, set: false, b: `${PACK.credits} credits`, s: `${inr(PACK.price)} + GST` }, { on: any, set: true, b: 'Any amount', s: `${inr(CREDIT_PRICE)} + GST a credit` }].map((o) => (
-            <button key={o.b} type="button" role="radio" aria-checked={o.on} onClick={() => setAny(o.set)}
-              className={`grid gap-0.5 rounded-lg border p-2.5 text-left ${o.on ? 'border-primary bg-select' : 'border-border'}`}>
-              <b className="font-semibold">{o.b}</b><small className="font-num text-small text-muted-foreground">{o.s}</small>
-            </button>))}
-        </div>
+        <RadioCards label="How many credits" value={any ? 'any' : 'pack'} onPick={(x) => setAny(x === 'any')}
+          options={[{ v: 'pack', title: `${PACK.credits} credits`, sub: `${inr(PACK.price)} + GST` }, { v: 'any', title: 'Any amount', sub: `${inr(CREDIT_PRICE)} + GST a credit` }]} />
         {any && <label className="grid gap-1"><span className="text-label">Credits</span>
-          <input className={FIELD} inputMode="numeric" value={typed} aria-invalid={!!field} onChange={(e) => { setTyped(e.target.value); setField(null) }} />
+          <input ref={typedRef} className={`${FIELD} font-num`} inputMode="numeric" value={typed} aria-invalid={!!field} onChange={(e) => { setTyped(e.target.value); setField(null) }} />
           <FieldError message={field} /></label>}
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
           <dt className="text-muted-foreground">{n.toLocaleString('en-IN')} credits</dt><dd className="font-num text-right">{inr(taxable)}</dd>
@@ -150,14 +170,9 @@ export function StartSeat({ plan, renews, label, primary = true }: { plan: SeatP
           <dt className="text-muted-foreground">Credits</dt><dd className="font-num text-right">{p.credits} now, {p.credits} each month</dd>
           <dt className="text-muted-foreground">Renews</dt><dd className="text-right">{renews}</dd>
         </dl>
-        <span className="text-label">Pays by</span>
-        <div role="radiogroup" aria-label="Pays by" className="grid grid-cols-2 gap-2">
-          {(['upi', 'card'] as const).map((m) => (
-            <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
-              className={`grid gap-0.5 rounded-lg border p-2.5 text-left ${method === m ? 'border-primary bg-select' : 'border-border'}`}>
-              <b className="font-semibold">{m === 'upi' ? 'UPI AutoPay' : 'Card'}</b><small className="font-num text-small text-muted-foreground">Up to {inr(p.mandateMax)} a debit</small>
-            </button>))}
-        </div>
+        <span className="text-label" aria-hidden>Pays by</span>
+        <RadioCards label="Pays by" value={method} onPick={setMethod}
+          options={(['upi', 'card'] as const).map((m) => ({ v: m, title: m === 'upi' ? 'UPI AutoPay' : 'Card', sub: `Up to ${inr(p.mandateMax)} a debit` }))} />
       </div>}
     </Dialog>
   </>
@@ -169,12 +184,12 @@ function useSeat() {
   const router = useRouter(), toast = useToast()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const act = async (input: object, after?: () => void) => {
+  const act = async (input: object, text: string, after?: () => void) => {
     setBusy(true); setError(null)
     const r = await freshly(() => seatAction(input))
     setBusy(false)
     if (!r.ok) { setError(r.error); return false }
-    after?.(); toast.ok(r.text); settle(router); return true
+    after?.(); toast.ok(text); settle(router); return true
   }
   return { busy, error, act, clear: () => setError(null) }
 }
@@ -187,7 +202,7 @@ export function CancelSeat({ plan, ends }: { plan: string; ends: string }) {
     <Button size="sm" variant="ghost" className="text-danger-text" onClick={() => setOpen(true)}>Cancel {plan}</Button>
     <Dialog open={open} onClose={close} title={`Cancel ${plan}?`} error={s.error}
       actions={<><Button variant="secondary" onClick={close} data-autofocus>Keep {plan}</Button>
-        <Button variant="destructive" busy={s.busy} onClick={() => void s.act({ action: 'cancel' }, close)}>Cancel {plan}</Button></>}>
+        <Button variant="destructive" busy={s.busy} onClick={() => void s.act({ action: 'cancel' }, `${plan} ends on ${ends}.`, close)}>Cancel {plan}</Button></>}>
       <p className="text-sm text-muted-foreground">{plan} ends on {ends}. Your credits stay until their use-by dates.</p>
     </Dialog>
   </>
@@ -195,7 +210,7 @@ export function CancelSeat({ plan, ends }: { plan: string; ends: string }) {
 
 export function KeepSeat({ plan }: { plan: string }) {
   const s = useSeat(), toast = useToast()
-  return <Button size="sm" variant="secondary" busy={s.busy} onClick={async () => { if (!(await s.act({ action: 'keep' }))) toast.error('We couldn’t save that. Nothing was changed.') }}>Keep {plan}</Button>
+  return <Button size="sm" variant="secondary" busy={s.busy} onClick={async () => { if (!(await s.act({ action: 'keep' }, `${plan} stays on.`))) toast.error('We couldn’t save that. Nothing was changed.') }}>Keep {plan}</Button>
 }
 
 /** A plan change waits for the next renewal (owner 2026-11-22, d). The new AutoPay limit is the owner's open call. */
@@ -204,11 +219,11 @@ export function ChangePlan({ to, from, credits, label, variant = 'primary' }: { 
   const s = useSeat()
   const p = SEAT_PLANS[to]
   const close = () => { setOpen(false); s.clear() }
-  if (variant === 'ghost') return <Button size="sm" variant="ghost" busy={s.busy} onClick={() => void s.act({ action: 'plan', plan: to })}>{label}</Button>
+  if (variant === 'ghost') return <Button size="sm" variant="ghost" busy={s.busy} onClick={() => void s.act({ action: 'plan', plan: to }, `${p.name} stays on.`)}>{label}</Button>
   return <>
     <Button size="sm" variant={variant} onClick={() => setOpen(true)}>{label}</Button>
     <Dialog open={open} onClose={close} title={label} error={s.error}
-      actions={<><Button variant="secondary" onClick={close} data-autofocus>Not now</Button><Button busy={s.busy} onClick={() => void s.act({ action: 'plan', plan: to }, close)}>{label}</Button></>}>
+      actions={<><Button variant="secondary" onClick={close} data-autofocus>Not now</Button><Button busy={s.busy} onClick={() => void s.act({ action: 'plan', plan: to }, `Your plan changes on ${from}.`, close)}>{label}</Button></>}>
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
         <dt className="text-muted-foreground">From {from}</dt><dd className="font-num text-right">{inr(p.price)} + GST a month</dd>
         <dt className="text-muted-foreground">Credits</dt><dd className="font-num text-right">{credits} a month</dd>
@@ -219,17 +234,19 @@ export function ChangePlan({ to, from, credits, label, variant = 'primary' }: { 
 
 // ── Client budgets ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-export function RaiseBudget({ linkId }: { linkId: string }) {
+export function RaiseBudget({ linkId, client }: { linkId: string; client?: string }) {
   const router = useRouter(), toast = useToast()
   const [busy, setBusy] = useState(false)
   return <Button size="sm" busy={busy} onClick={async () => {
     setBusy(true); const r = await freshly(() => raiseBudgetAction({ linkId })); setBusy(false)
     if (!r.ok) { toast.error(r.error); return } toast.ok(r.text); settle(router)
-  }}>Raise by 50</Button>
+  }} aria-label={client ? `Raise ${client}’s budget by 50` : undefined}>Raise by 50</Button>
 }
 
-function NumberDialog({ open, onClose, title, label, start, save, saveLabel }: { open: boolean; onClose: () => void; title: string; label: string; start: number | null
-  save: (n: number) => Promise<{ ok: true; text: string } | { ok: false; error: string; fields?: Record<string, string> }>; saveLabel: string }) {
+function NumberDialog({ open, onClose, title, label, start, save, saveLabel, undo = false }: { open: boolean; onClose: () => void; title: string; label: string; start: number | null
+  save: (n: number) => Promise<{ ok: true; text: string } | { ok: false; error: string; fields?: Record<string, string> }>; saveLabel: string
+  /** Offer Undo on the saved toast: saves `start` back (as drawn for a client's budget; none when nothing stood before). */
+  undo?: boolean }) {
   const router = useRouter(), toast = useToast()
   const [v, setV] = useState(start === null ? '' : String(start))
   const [field, setField] = useState<string | null>(null)
@@ -241,7 +258,12 @@ function NumberDialog({ open, onClose, title, label, start, save, saveLabel }: {
     if (!n) { setField('Enter a number of credits.'); ref.current?.focus(); return }
     setBusy(true); const r = await freshly(() => save(n)); setBusy(false)
     if (!r.ok) { const f = (r as { fields?: Record<string, string> }).fields?.credits; if (f) { setField(f); ref.current?.focus() } else setError(r.error); return }
-    onClose(); toast.ok(r.text); settle(router)
+    const before = start
+    onClose(); settle(router)
+    toast.ok(r.text, undo && before !== null && before !== n ? { undo: async () => {
+      const u = await freshly(() => save(before)); settle(router)
+      return u.ok ? { ok: true } : { ok: false, error: u.error }
+    } } : undefined)
   }
   return <Dialog open={open} onClose={onClose} title={title} error={error}
     actions={<><Button variant="secondary" onClick={onClose} data-autofocus>Cancel</Button><Button busy={busy} onClick={go}>{saveLabel}</Button></>}>
@@ -254,8 +276,8 @@ function NumberDialog({ open, onClose, title, label, start, save, saveLabel }: {
 export function SetBudget({ linkId, client, kind, budget }: { linkId: string; client: string; kind: string; budget: number | null }) {
   const [open, setOpen] = useState(false)
   return <>
-    <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>Set budget</Button>
-    {open && <NumberDialog open onClose={() => setOpen(false)} title={`${client}’s budget`} label={kind} start={budget} saveLabel="Save budget"
+    <Button size="sm" variant="secondary" onClick={() => setOpen(true)} aria-label={`Set ${client}’s budget`}>Set budget</Button>
+    {open && <NumberDialog open onClose={() => setOpen(false)} title={`${client}’s budget`} label={kind} start={budget} saveLabel="Save budget" undo
       save={(credits) => setBudgetAction({ linkId, credits, client })} />}
   </>
 }
@@ -273,16 +295,20 @@ export function SiteBudget({ credits }: { credits: number }) {
 export function Alerts({ low, budget }: { low: boolean; budget: boolean }) {
   const router = useRouter(), toast = useToast()
   const [v, setV] = useState({ low, budget })
+  const saving = useRef(false)
   const save = async (next: { low: boolean; budget: boolean }) => {
+    if (saving.current) return
+    saving.current = true
     const before = v; setV(next)
     const r = await setAlertsAction(next)
+    saving.current = false
     if (!r.ok) { setV(before); toast.error(r.error); return }
     settle(router)
   }
   return <div className="grid gap-1">
-    <div className="flex min-h-8 items-center justify-between gap-3 text-sm"><span id="al-low" className="text-muted-foreground">Email me below 50 credits</span>
+    <div className="flex min-h-8 items-center justify-between gap-3 text-sm"><span aria-hidden className="text-muted-foreground">Email me below 50 credits</span>
       <Switch on={v.low} label="Email me below 50 credits" onChange={(on) => void save({ ...v, low: on })} /></div>
-    <div className="flex min-h-8 items-center justify-between gap-3 text-sm"><span className="text-muted-foreground">Email me when a client reaches 80%</span>
+    <div className="flex min-h-8 items-center justify-between gap-3 text-sm"><span aria-hidden className="text-muted-foreground">Email me when a client reaches 80%</span>
       <Switch on={v.budget} label="Email me when a client reaches 80%" onChange={(on) => void save({ ...v, budget: on })} /></div>
   </div>
 }
@@ -296,21 +322,30 @@ export function EditDetails({ d, startOpen = false, label = 'Edit details' }: { 
   const [fields, setFields] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const form = useRef<HTMLDivElement>(null)
+  const uid = useId()
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setV({ ...v, [k]: e.target.value }); setFields({ ...fields, [k]: '' }) }
   const close = () => { setOpen(false); setError(null); setFields({}) }
   const go = async () => {
     setBusy(true); const r = await freshly(() => setDetailsAction({ ...v, email: '' })); setBusy(false)
-    if (!r.ok) { const f = (r as { fields?: Record<string, string> }).fields; if (f) setFields(f); else setError(r.error); return }
+    if (!r.ok) {
+      const f = (r as { fields?: Record<string, string> }).fields
+      if (!f) { setError(r.error); return }
+      setFields(f)
+      requestAnimationFrame(() => form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
+      return
+    }
     close(); toast.ok(r.text); settle(router)
   }
   return <>
     <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>{label}</Button>
     <Dialog open={open} onClose={close} title="Invoices go to" error={error}
       actions={<><Button variant="secondary" onClick={close} data-autofocus>Cancel</Button><Button busy={busy} onClick={go}>Save details</Button></>}>
-      <div className="grid gap-3">
+      <div ref={form} className="grid gap-3">
         <label className="grid gap-1"><span className="text-label">Legal name</span><input className={FIELD} value={v.legalName} onChange={set('legalName')} aria-invalid={!!fields.legalName} maxLength={120} /><FieldError message={fields.legalName} /></label>
-        <label className="grid gap-1"><span className="flex items-center gap-1 text-label">GSTIN (optional)<InfoTip about="GSTIN">Your 15-character GST number.</InfoTip></span>
-          <input className={`${FIELD} font-mono uppercase`} value={v.gstin} onChange={set('gstin')} aria-invalid={!!fields.gstin} maxLength={15} /><FieldError message={fields.gstin} /></label>
+        {/* The (i) sits beside the label, never inside it: a label names its FIRST control, and that would be the tip's button. */}
+        <div className="grid gap-1"><span className="flex items-center gap-1 text-label"><label htmlFor={`${uid}-gstin`}>GSTIN (optional)</label><InfoTip about="GSTIN">Your 15-character GST number.</InfoTip></span>
+          <input id={`${uid}-gstin`} className={`${FIELD} font-mono uppercase`} value={v.gstin} onChange={set('gstin')} aria-invalid={!!fields.gstin} maxLength={15} /><FieldError message={fields.gstin} /></div>
         {!v.gstin.trim() && <label className="grid gap-1"><span className="text-label">State</span>
           <select className={FIELD} value={v.state} onChange={set('state')} aria-invalid={!!fields.state}><option value="">Pick the state</option>{STATES.map((s) => <option key={s}>{s}</option>)}</select>
           <FieldError message={fields.state} /></label>}

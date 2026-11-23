@@ -24,10 +24,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!auth.ok) return text(403, auth.message)
   if (!partnerCan(auth.partner.memberRole, 'credits')) return text(403, 'Only the partner owner can open invoices.')
   const { id } = await params
-  if (!z.uuid().safeParse(id).success) return text(404, 'Not found.')
+  if (!z.uuid().safeParse(id).success) return text(404, 'We couldn’t find that invoice.')
   try {
     const r = await invoice(auth, id)
-    if (!r.ok) return r.error === 'too_many' ? text(429, 'Too many downloads in an hour. Try again later.') : text(404, 'Not found.')
+    if (!r.ok) return r.error === 'too_many' ? text(429, 'Too many downloads. Try again in an hour.') : text(404, 'We couldn’t find that invoice.')
     const i = r.value
     const what = i.plan ? `${SEAT_PLANS[i.plan].name}, one month · ${i.credits} credits` : `${WHAT[i.kind]} · ${i.credits} credits`
     const doc: FrrataDoc = {

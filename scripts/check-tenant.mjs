@@ -96,11 +96,16 @@ for (const file of walk('src')) {
     if (!onlyTypes) failures.push(`${file}  imports the raw db — read merchant rows through src/lib/queries/ (withTenant)`)
   }
   // Studio credits' SYSTEM definers (ids only: apply a payment, settle, refund, renew; C1, architecture B2) are called
-  // only by the code that measured or fetched what they record: src/lib/studio/** and the billing webhook.
-  if (/import\s*\{[^}]*\bsystem\b[^}]*\}\s*from\s*['"]@\/lib\/db\/partner-credits['"]/.test(text)
-      && !file.startsWith('src/lib/studio/') && file !== 'src/app/api/webhooks/billing/route.ts') {
-    failures.push(`${file}  imports Studio credits' system definers — only src/lib/studio/** and the billing webhook may (C1)`)
+  // only by the code that measured or fetched what they record: src/lib/studio/** (the billing webhook reaches them
+  // through app_apply_billing_event). A whole-module import or a re-export would carry `system` past this rule, and a
+  // definer named anywhere but the one TS layer would skip it (tenancy audit 2026-11-23).
+  const CREDITS_DB = `['"]@\\/lib\\/db\\/partner-credits['"]`
+  if ((new RegExp(`import\\s*\\{[^}]*\\bsystem\\b[^}]*\\}\\s*from\\s*${CREDITS_DB}`).test(text) || new RegExp(`import\\s*\\*\\s*as\\s+\\w+\\s+from\\s*${CREDITS_DB}`).test(text))
+      && !file.startsWith('src/lib/studio/')) {
+    failures.push(`${file}  imports Studio credits' system definers — only src/lib/studio/** may (C1)`)
   }
+  if (new RegExp(`export\\s*(\\*|\\{[^}]*\\})\\s*from\\s*${CREDITS_DB}`).test(text)) failures.push(`${file}  re-exports src/lib/db/partner-credits — import what you need where you need it (C1)`)
+  if (/\bapp_pc_\w+/.test(text) && file !== 'src/lib/db/partner-credits.ts') failures.push(`${file}  names a Studio credits definer (app_pc_*) — only src/lib/db/partner-credits.ts calls them (C1)`)
   if (ADMIN_DB.test(text) && !file.startsWith('src/lib/admin/') && file !== 'src/lib/db/admin.ts') {
     failures.push(`${file}  imports the admin connection — only src/lib/admin/** may (ADR-0007)`)
   }

@@ -1,6 +1,7 @@
 import 'server-only'
 import { randomUUID } from 'node:crypto'
-import { renewalPlan, renewalStep, RETRY_DAYS, LAPSE_DAYS, type Seat } from '@/domains/studio/credits'
+import { CARD_NOTICE_LEAD_MS, renewalPlan, renewalStep, RETRY_DAYS, LAPSE_DAYS, type Seat } from '@/domains/studio/credits'
+import { NOTICE_LEAD_MS } from '@/domains/billing/collect'
 import { quote, SEAT_PLANS } from '@/domains/studio/prices'
 import { creditMail, type MailFacts } from '@/domains/email/partner-credits'
 import { frrataEmail } from '@/domains/email/layouts'
@@ -15,6 +16,7 @@ import { CONSOLE_HOST } from '@/lib/public-env'
 import { formatInr } from '@/lib/format'
 import { dayMonthIN, monthLongIN, timeIN } from '@/lib/format-date'
 import { errName } from '@/lib/log'
+import { realMoney } from './purchase'
 
 // =============================================================================
 // FILE: src/lib/studio/run.ts — STUDIO CREDITS' HOURLY RUN (/api/cron/credits; C1·3, C1·6; speed H3: its own route, not
@@ -29,15 +31,22 @@ import { errName } from '@/lib/log'
 // =============================================================================
 
 const DAY = 86_400_000
-export type RunResult = { settled: number; notices: number; debits: number; ended: number; orders: number; refunds: number; cancels: number; emails: number }
+export type RunResult = { settled: number; notices: number; debits: number; ended: number; orders: number; refunds: number; cancels: number; emails: number; stale: number }
+/** An open use older than this is returned whole as a timeout (a crashed turn; a turn runs minutes, not hours). */
+const STALE_USE_MINUTES = 120
+/** The renewal's order is made on the run after its email, so the notice's debit time allows one more pass. */
+const ORDER_PASS_MS = 60 * 60_000
 
 export async function runCredits(now: Date, deadline: number): Promise<RunResult> {
-  const out: RunResult = { settled: 0, notices: 0, debits: 0, ended: 0, orders: 0, refunds: 0, cancels: 0, emails: 0 }
+  const out: RunResult = { settled: 0, notices: 0, debits: 0, ended: 0, orders: 0, refunds: 0, cancels: 0, emails: 0, stale: 0 }
   const live = () => Date.now() < deadline
   const configured = isBillingGatewayConfigured(), test = billingGatewayIsTest()
+  // Live keys move real money only on Production (security review 2026-11-23): anywhere else they touch nothing.
+  const money = configured && (test || realMoney())
   // Webhook events stored but not applied (a failed after(), a busy invoice counter): they may settle what follows.
   await step('events', async () => { for (const id of await billingUnapplied(5)) { if (!live()) break; await applyBillingEvent(id).catch((e) => console.error('[credits] apply event', errName(e))) } })
-  if (configured) {
+  await step('stale', async () => { for (const id of await system.staleUses(STALE_USE_MINUTES, 100)) { if (!live()) break; if (await system.returnUse(id, 'timeout')) out.stale++ } })
+  if (money) {
     await step('settle', async () => { out.settled = await settleStragglers(now, live) })
     await step('renewals', async () => { const r = await renewals(now, test, live); out.notices = r.notices; out.debits = r.debits; out.ended = r.ended })
     await step('orders', async () => { out.orders = await renewalOrders(live) })
@@ -84,15 +93,17 @@ async function renewals(now: Date, gatewayIsTest: boolean, live: () => boolean) 
   for (const r of await system.renewals(100)) {
     if (!live()) break
     try {
+      // Real money against a test invoice is never taken (security M2): a broken seller config waits.
+      if (seller.test && !gatewayIsTest) continue
       const plan = renewalPlan(seatOf(r))
-      const q = quote({ kind: 'seat', plan }, seller.gstin, null)!
+      // Place of supply: the buyer's state today (the definer refuses heads that don't match it).
+      const q = quote({ kind: 'seat', plan }, seller.gstin, r.buyerState)!
       // A mandate too small for the next plan can't renew it: the partner approves the new limit (Start Studio Plus).
       const mandate = r.mandate && r.mandateMax !== null && q.total <= r.mandateMax
       const s = renewalStep({ seat: seatOf(r), method: r.method, attempts: r.attempts, pending: r.pending, noticeQueuedAt: r.noticeQueuedAt,
         noticeSentAt: r.noticeSentAt, lastFailedAt: r.lastFailedAt, mandate, partnerLive: r.partnerLive, testMode: r.test }, now, gatewayIsTest)
       if (s.kind === 'notice') {
-        // The buyer's state is taken from today's details inside the definer; the heads follow the seller's state there.
-        const id = await system.renewalBegin({ seatId: r.seatId, periodEnd: r.periodEnd, attempt: r.attempts + 1, debitAfter: s.debitAt, plan, credits: SEAT_PLANS[plan].credits,
+        const id = await system.renewalBegin({ seatId: r.seatId, periodEnd: r.periodEnd, attempt: r.attempts + 1, debitAfter: new Date(s.debitAt.getTime() + ORDER_PASS_MS), plan, credits: SEAT_PLANS[plan].credits,
           taxable: q.taxable, cgst: q.cgst, sgst: q.sgst, igst: q.igst, invoiceTest: seller.test || r.test,
           seller: { name: seller.name, gstin: seller.gstin, address: seller.address, sac: seller.sac, prefix: seller.prefix, fy: seller.fy } })
         if (id) out.notices++
@@ -136,7 +147,10 @@ async function renewalOrders(live: () => boolean): Promise<number> {
   for (const r of await system.renewalsNotified(50)) {
     if (!live()) break
     try {
-      const order = (await orderByReceipt(r.receipt))?.id ?? (await createRenewalOrder({ amount: r.total, receipt: r.receipt, token: r.tokenId, paymentAfter: r.debitAfter })).id
+      // A full notice from now, never less (the definer stores the same as the debit's time when the order is recorded).
+      const lead = r.method === 'card' ? CARD_NOTICE_LEAD_MS : NOTICE_LEAD_MS
+      const paymentAfter = new Date(Math.max(r.debitAfter.getTime(), Date.now() + lead)) // clock-ok: the order's own moment
+      const order = (await orderByReceipt(r.receipt))?.id ?? (await createRenewalOrder({ amount: r.total, receipt: r.receipt, token: r.tokenId, paymentAfter })).id
       if (await system.setOrder(r.id, order, true)) n++
     } catch (e) { console.error('[credits] renewal order', r.id, errName(e)) }
   }

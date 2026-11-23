@@ -206,7 +206,9 @@ export type PurchaseCtx = { id: string; partnerId: string; kind: PurchaseKind; t
 export type ApplyResult = 'applied' | 'failed' | 'refund_due' | 'refund_pending' | 'duplicate' | 'ignored' | 'unknown'
 export type RenewalRow = { seatId: string; partnerId: string; plan: SeatPlan; nextPlan: SeatPlan | null; method: 'upi' | 'card'; test: boolean; periodEnd: Date
   cancelAt: Date | null; failedAt: Date | null; attempts: number; pending: number; purchaseId: string | null; purchaseOpen: boolean; hasOrder: boolean
-  noticeQueuedAt: Date | null; noticeSentAt: Date | null; lastFailedAt: Date | null; mandate: boolean; mandateMax: Paise | null; partnerLive: boolean }
+  noticeQueuedAt: Date | null; noticeSentAt: Date | null; lastFailedAt: Date | null; mandate: boolean; mandateMax: Paise | null; partnerLive: boolean
+  /** The buyer's state today: the renewal's place of supply. */
+  buyerState: string | null }
 export type NoticeRow = { id: string; kind: NoticeKind; partnerId: string; owners: string[]; leads: string[]; ownerName: string; data: Record<string, any> }
 
 export const system = {
@@ -249,7 +251,8 @@ export const system = {
       method: r.method as 'upi' | 'card', test: r.test === true, periodEnd: new Date(r.period_end as string), cancelAt: date(r.cancel_at), failedAt: date(r.failed_at),
       attempts: num(r.attempts), pending: num(r.pending), purchaseId: (r.purchase_id as string | null) ?? null, purchaseOpen: r.purchase_open === true,
       hasOrder: r.has_order === true, noticeQueuedAt: date(r.notice_queued_at), noticeSentAt: date(r.notice_sent_at), lastFailedAt: date(r.last_failed_at),
-      mandate: r.mandate === true, mandateMax: r.mandate_max == null ? null : paise(num(r.mandate_max)), partnerLive: r.partner_live === true }))
+      mandate: r.mandate === true, mandateMax: r.mandate_max == null ? null : paise(num(r.mandate_max)), partnerLive: r.partner_live === true,
+      buyerState: (r.buyer_state as string | null) ?? null }))
   },
   async renewalBegin(x: { seatId: string; periodEnd: Date; attempt: number; debitAfter: Date; plan: SeatPlan; credits: number; taxable: Paise; cgst: Paise; sgst: Paise; igst: Paise
     invoiceTest: boolean; seller: BuyRow['seller'] }): Promise<string | null> {
@@ -258,10 +261,10 @@ export const system = {
       ${x.seller.gstin ?? ''}, ${x.seller.address}, ${x.seller.sac}, ${x.seller.prefix}, ${x.seller.fy}) as id`)
     return r?.id ?? null
   },
-  async renewalsNotified(limit: number): Promise<{ id: string; receipt: string; total: Paise; customerId: string | null; tokenId: string; debitAfter: Date }[]> {
+  async renewalsNotified(limit: number): Promise<{ id: string; receipt: string; total: Paise; customerId: string | null; tokenId: string; debitAfter: Date; method: 'upi' | 'card' }[]> {
     const rows = await db().execute<Record<string, unknown>>(sql`select * from app_pc_renewals_notified(${limit})`)
     return rows.map((r) => ({ id: r.id as string, receipt: r.receipt as string, total: paise(num(r.total)), customerId: (r.customer_id as string | null) ?? null,
-      tokenId: r.token_id as string, debitAfter: new Date(r.debit_after as string) }))
+      tokenId: r.token_id as string, debitAfter: new Date(r.debit_after as string), method: r.method === 'card' ? 'card' : 'upi' }))
   },
   async seatEnd(seatId: string, lapsed: boolean): Promise<boolean> {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_seat_end(${seatId}::uuid, ${lapsed}) as ok`)
@@ -302,6 +305,10 @@ export const system = {
   async settle(useId: string, listMicro: bigint): Promise<number | null> {
     const [r] = await db().execute<{ n: number | null }>(sql`select app_pc_settle(${useId}::uuid, ${listMicro.toString()}::bigint) as n`)
     return r?.n == null ? null : num(r.n)
+  },
+  async staleUses(olderMinutes: number, limit: number): Promise<string[]> {
+    const rows = await db().execute<{ id: string }>(sql`select id from app_pc_stale_uses(${`${Math.max(60, Math.floor(olderMinutes))} minutes`}::interval, ${limit})`)
+    return rows.map((r) => r.id)
   },
   async returnUse(useId: string, reason: 'frrata' | 'timeout' | 'cancelled'): Promise<boolean> {
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_pc_return(${useId}::uuid, ${reason}) as ok`)

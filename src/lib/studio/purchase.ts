@@ -1,6 +1,5 @@
 import 'server-only'
-import { quote, SEAT_PLANS, type Buy, type SeatPlan } from '@/domains/studio/prices'
-import { paise } from '@/domains/money/paise'
+import { quote, SEAT_PLANS, type Buy } from '@/domains/studio/prices'
 import { billingGatewayIsTest, billingKeyId, createCustomer, createOrder, createSeatOrder, isBillingGatewayConfigured, orderByReceipt, orderPayments } from '@/lib/billing/gateway'
 import { frrataSeller } from '@/lib/billing/seller'
 import { beginPurchase, countConfirm, payments, system, type BuyRow, type CreditError } from '@/lib/db/partner-credits'
@@ -30,6 +29,8 @@ export type Started = { ok: true; key: string; order: string; purchaseId: string
 export function buyingRefused(): 'not_configured' | 'test_keys' | 'seller' | null {
   if (!isBillingGatewayConfigured()) return 'not_configured'
   if (realMoney() && billingGatewayIsTest()) return 'test_keys'
+  // Live keys take real money on Production only (security review 2026-11-23): a local or CI run with them buys nothing.
+  if (!realMoney() && !billingGatewayIsTest()) return 'not_configured'
   if (!billingGatewayIsTest() && frrataSeller().test) return 'seller'
   return null
 }
@@ -113,5 +114,3 @@ export async function confirmPurchase(c: Caller, purchaseId: string): Promise<Co
   }
 }
 
-/** The price a person reads before choosing, with GST (no buyer state needed: 18% whatever the heads). */
-export const seatPrice = (plan: SeatPlan) => paise(SEAT_PLANS[plan].price)
