@@ -63,6 +63,8 @@ const SHOP_OWN = { '/s/[host]/(shop)/pages/[handle]/page': 8.4, '/s/[host]/(chec
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
 const BLOCK_CSS_KB = 1.0
+/** What a CSS failure tells a developer to do. */
+const CSS_FIX = " The shop's sheet (src/app/shop.css with base.css) and the theme faces (store-fonts.css) load on every shop page and block its first paint: remove or narrow rules rather than add them, and never raise the number"
 // One-address P2·3: a code-site store's checkout, bag-link, order and policy pages draw the brand record's faces
 // (Mukta, Tiro Devanagari Hindi: src/components/shop-preview/brand-fonts.ts), so those routes carry their @font-face
 // rules (0.35 kB gzipped, measured 2026-11-22; the faces themselves download only where a record uses them). They have
@@ -122,12 +124,12 @@ for (const [k, files] of Object.entries(build)) {
   const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
   const all = [...new Set([...above.flatMap((l) => build[l] ?? []), ...files])]
   const fonts = all.filter((f) => f.endsWith('.css') && isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
-  if (css_total_over(all)) failures.push(`${k}  loads more than ${CSS_BUDGET_KB + BRAND_FONTS_CSS_KB} kB of CSS gzipped in all (the sheet and the brand faces)`)
-  if (fonts > BRAND_FONTS_CSS_KB) failures.push(`${k}  loads ${fonts.toFixed(2)} kB of the brand faces' rules gzipped (budget ${BRAND_FONTS_CSS_KB} kB)`)
+  if (css_total_over(all)) failures.push(`${k}  loads more than ${CSS_BUDGET_KB + BRAND_FONTS_CSS_KB} kB of CSS gzipped in all (the sheet and the brand faces).${CSS_FIX}`)
+  if (fonts > BRAND_FONTS_CSS_KB) failures.push(`${k}  loads ${fonts.toFixed(2)} kB of the brand faces' rules gzipped (budget ${BRAND_FONTS_CSS_KB} kB): a brand face's @font-face rules belong in brand-fonts.ts only. Never raise the number`)
   const css = all.filter((f) => f.endsWith('.css') && !isBrandFonts(f)).reduce((a, f) => a + gz(f), 0) / 1024
   // Signal S2-0: a shop page loads the shop's own sheet (src/app/shop.css), never the app's (globals.css: console classes).
   for (const f of all) if (f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')) failures.push(`${k}  loads the app's stylesheet (${f}); a shop page loads src/app/shop.css only`)
-  if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
+  if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB).${CSS_FIX}`)
   const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
   if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
