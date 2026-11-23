@@ -1,7 +1,7 @@
 # O2b · The plan chosen at "Open your store", billing from the first opening (task plan)
 Status: draft
-**Mockup:** https://claude.ai/artifact/PzNfST7bdFvLiQsxy11mQT (`docs/mockups/2026-11-23-merchant-onboarding.html` § 2 Setup, "Open your store?"); money states: addendum to be drawn (O2b·0)
-**Approved:** owner, 2026-11-23
+**Mockup:** https://claude.ai/artifact/PzNfST7bdFvLiQsxy11mQT (`docs/mockups/2026-11-23-merchant-onboarding.html` § 2 Setup, "Open your store?"); money states: addendum https://claude.ai/artifact/Wcm33KEmZJeCDUZSRrtNzq (`docs/mockups/2026-11-23-o2b-opening-money.html`)
+**Approved:** owner, 2026-11-23 (the roadmap mockup); the addendum and its three calls, owner 2026-11-23: "approved go with your recommendations"
 **Review:** architecture-reviewer findings from the O2 draft fixed, 2026-11-23
 **Review:** tenancy-auditor findings from the O2 draft fixed, 2026-11-23 (it stood in for security-reviewer)
 **Review:** speed-reviewer covered by architecture-reviewer, 2026-11-23
@@ -20,6 +20,15 @@ drafts removed); O1 holds 0166–0167; renumber with `npm run release:check` if 
    "pick Scale for the trial, then downgrade").
 3. **A store that never opens is deleted after 180 days with two notices to the owner** (mirrors trials rule 5): its own
    small task later (§ Out of scope); not built here.
+4. **A partner-built store's trial starts at its first opening**, as for a store its owner makes (addendum call 1). It no
+   longer runs while the partner builds. This changes `drizzle/0129:521` (trial started at creation) and the rule in the
+   tasks below that gave a partner-built store "its own date": the tasks, tests and § Words follow this decision; the
+   addendum's "Partner-built" state then reads like "With a trial".
+5. **A plan that starts after the 1st is billed on the next 1st, by days**; an upgrade made on IST days 1–3 moves with it
+   (addendum call 2).
+6. **Orders from before a store's opening day carry no Frrata fee** (addendum call 3).
+Production, 2026-11-23: no invoice or draft exists for a never-opened store (R1 = 0, 0); no credit note is needed.
+O2b·0 is done; every later task still waits for the re-review of this plan.
 
 ## The finding this plan fixes (confirmed in the SQL and code, 2026-11-23)
 - `app_shops_to_bill(p_before)` (`drizzle/0066_trial_partners.sql:84-89`) lists every owned tenant with a plan row
