@@ -296,3 +296,17 @@ const pieceCols = (tenantId: string) => ({
 })
 // bigint comes back as text: paise stay integers (ADR-0004), turned into a number here, as the list's prices are.
 const toPiece = <T extends { price: string | number | null }>(r: T) => ({ ...r, price: r.price === null ? null : Number(r.price) })
+
+export type FirstProductForm = { sells: string[]; defaultHsn: string; types: { id: string; name: string; chartSizes: string[] }[] }
+
+/** Home's first-product popup, read when it opens (O2a·6): what the store sells, its starting HSN, and its types with
+ *  their charts' sizes (firstProductShape reads them as the name is typed). One transaction, two reads by key. */
+export async function firstProductFormFor(tenantId: string): Promise<FirstProductForm> {
+  return withTenant(tenantId, async (tx) => {
+    const [[s], types] = await Promise.all([
+      tx.select({ sells: shopSettings.sells, hsn: shopSettings.defaultHsn }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+      tx.select({ id: productTypes.id, name: productTypes.name, chart: productTypes.sizeChart }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(asc(productTypes.name)),
+    ])
+    return { sells: s?.sells ?? [], defaultHsn: s?.hsn ?? '', types: types.map((t) => ({ id: t.id, name: t.name, chartSizes: (t.chart?.rows ?? []).map((r) => r.size) })) }
+  })
+}
