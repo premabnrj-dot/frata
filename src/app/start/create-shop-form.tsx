@@ -5,17 +5,17 @@ import { SELL_LABELS, type SellKey } from '@/domains/catalogue/sell-keys'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
-import { checkAddress, createMyShop, lookupPincode, sendSignupCode, verifySignupCode } from './actions'
+import { slugFor, slugProblem } from '@/domains/signup/slug'
+import { checkAddress, createMyShop, sendSignupCode, verifySignupCode } from './actions'
 import { ADDRESS_WORDS, addressUsable, type AddressCheck } from '@/domains/signup/steps'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 
-type Step = 'name' | 'pickup' | 'plan' | 'phone' | 'sells'
+type Step = 'name' | 'plan' | 'phone' | 'sells'
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
 export type SignupPlan = { code: string; name: string; price: string; fee: string }
 
-/** Shop name (address derived live) → pickup pincode → plan (trials TR1) → optional "what do you sell" → the console. */
+/** Store name (address derived live) → plan (trials TR1) → optional "what do you sell" → the console. Replaced in O1·8. */
 export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopDomain: string; plans: SignupPlan[]; trialDays: number; codeOn: boolean }) {
   const router = useRouter()
   const [step, setStep] = useState<Step>('name')
@@ -24,8 +24,6 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
   const [address, setAddress] = useState<AddressCheck | null>(null)
-  const [pickup, setPickup] = useState('')
-  const [place, setPlace] = useState<{ city: string; state: string } | null | 'unknown'>(null)
   const [sells, setSells] = useState<string[]>([])
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -40,11 +38,10 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
   const root = useRef<HTMLDivElement>(null)
   useErrorSummary(error?.field ? { [error.field]: error.text } : {}, { attempt, scope: root })
   const fail = (e: { field?: string; text: string }) => {
-    if (e.field && ['name', 'slug', 'pickup', 'phone', 'code'].includes(e.field)) { setError(e); setAttempt((a) => a + 1) }
+    if (e.field && ['name', 'slug', 'phone', 'code'].includes(e.field)) { setError(e); setAttempt((a) => a + 1) }
     else { setError(null); toast.error(e.text) }
   }
   const [pending, start] = useTransition()
-  const flashKey = useRef(0)
 
   // Address availability, a moment after typing stops.
   useEffect(() => {
@@ -55,31 +52,24 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
     return () => clearTimeout(t)
   }, [slug])
 
-  useEffect(() => {
-    if (!PINCODE_SHAPE.test(pickup)) { setPlace(null); return }
-    let live = true
-    lookupPincode(pickup).then((p) => { if (live) { flashKey.current++; setPlace(p ?? 'unknown') } })
-    return () => { live = false }
-  }, [pickup])
 
   const go = (s: Step, d: 'forward' | 'back' = 'forward') => { setDir(d); setError(null); setStep(s) }
 
   function submit() {
     setError(null)
     start(async () => {
-      const r = await createMyShop({ name, slug, pickup, sells, plan, codeId: verified ? codeId : null })
+      const r = await createMyShop({ name, slug, sells, plan, codeId: verified ? codeId : null })
       if (r.ok || r.hasShop) { router.replace('/console'); router.refresh(); return }
       fail({ field: r.field, text: r.error })
       if (r.field === 'slug' || r.field === 'name') go('name', 'back')
-      if (r.field === 'pickup') go('pickup', 'back')
       // A code verified too long ago: ask for a new one.
       if (r.field === 'phone') { setCodeId(null); setVerified(false); go('phone', 'back') }
     })
   }
 
   const anim = dir === 'forward' ? 'animate-step-forward' : 'animate-step-back'
-  const steps = codeOn ? 5 : 4
-  const stepNo = { name: 1, pickup: 2, plan: 3, phone: 4, sells: steps }[step]
+  const steps = codeOn ? 4 : 3
+  const stepNo = { name: 1, plan: 2, phone: 3, sells: steps }[step]
 
   return (
     <div ref={root} className="space-y-5">
@@ -93,7 +83,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
           e.preventDefault()
           if (!name.trim()) return fail({ field: 'name', text: 'Your shop needs a name. You can change it later.' })
           if (!address || !addressUsable(address.state)) return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
-          go('pickup')
+          go('plan')
         }}>
           <h1 className="text-2xl font-semibold tracking-tight">What is your shop called?</h1>
           <div className="space-y-1.5">
@@ -120,31 +110,6 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
         </form>
       )}
 
-      {step === 'pickup' && (
-        <form key="pickup" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
-          e.preventDefault()
-          if (!PINCODE_SHAPE.test(pickup)) return fail({ field: 'pickup', text: 'A pincode is 6 digits and starts with 1 to 9.' })
-          go('plan')
-        }}>
-          <h1 className="text-2xl font-semibold tracking-tight">Where do parcels leave from?</h1>
-          <p className="text-sm text-muted-foreground">Your pickup pincode. It sets delivery times now and courier rates later.</p>
-          <div className="space-y-1.5">
-            <label htmlFor="pickup" className="block text-sm font-medium">Pincode</label>
-            <input id="pickup" autoFocus inputMode="numeric" autoComplete="postal-code" maxLength={6} value={pickup}
-              aria-invalid={error?.field === 'pickup' || undefined} aria-describedby={error?.field === 'pickup' ? `pickup-place ${errorId('pickup')}` : 'pickup-place'}
-              onChange={(e) => { setPickup(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null) }}
-              className="h-11 w-40 rounded-md border border-input bg-card px-3 font-mono text-base aria-invalid:border-danger-text" />
-            <p id="pickup-place" aria-live="polite" key={flashKey.current} className={`min-h-5 rounded px-1 -mx-1 text-sm ${place && place !== 'unknown' ? 'animate-value-flash' : ''} ${place === 'unknown' ? 'text-warn-text' : 'text-muted-foreground'}`}>
-              {place === 'unknown' ? 'Not in our list yet. Continue, and add the city in Settings.' : place ? `${place.city}, ${place.state}` : ''}
-            </p>
-          </div>
-          {error?.field && <FieldError name={error.field} message={error.text} className="text-sm" />}
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" size="lg" onClick={() => go('name', 'back')}>Back</Button>
-            <Button type="submit" size="lg" className="flex-1">Continue</Button>
-          </div>
-        </form>
-      )}
 
       {step === 'plan' && (
         <form key="plan" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => { e.preventDefault(); go(codeOn ? 'phone' : 'sells') }}>
@@ -163,7 +128,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
             ))}
           </fieldset>
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" size="lg" onClick={() => go('pickup', 'back')}>Back</Button>
+            <Button type="button" variant="secondary" size="lg" onClick={() => go('name', 'back')}>Back</Button>
             <Button type="submit" size="lg" className="flex-1">Continue</Button>
           </div>
         </form>

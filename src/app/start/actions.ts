@@ -40,35 +40,35 @@ export async function lookupPincode(pincode: string): Promise<{ city: string; st
 const Shop = z.object({
   name: z.string().trim().min(1).max(60),
   slug: z.string(),
-  pickup: z.string().regex(PINCODE_SHAPE),
   sells: z.array(z.enum(SELLS)).max(SELLS.length),
   plan: z.enum(PLAN_CODES).default('growth'),
   codeId: z.uuid().nullable().default(null),
+  // "/start → created" (plan O1 § Measure): a bad value is dropped, never a reason to refuse a sign-up.
+  signupMs: z.number().int().min(0).max(86_400_000).nullable().catch(null),
 })
 
 const SENTENCES: Record<string, string> = {
-  email_unconfirmed: 'Confirm your email first: use the link or code we sent.',
-  has_shop: 'You already have a shop. Opening it now.',
-  bad_name: 'Your shop needs a name of up to 60 letters.',
-  bad_slug: 'That address cannot be used. Letters, digits and hyphens, at least 3.',
-  bad_pincode: 'A pincode is 6 digits and starts with 1 to 9.',
+  email_unconfirmed: 'Confirm your email first. Use the code we sent.',
+  has_shop: 'You already have a store. Opening it now.',
+  bad_name: 'Your store needs a name of up to 60 letters.',
+  bad_slug: 'That address cannot be used. Letters, numbers and hyphens, at least 3.',
   bad_plan: 'Choose a plan.',
   bad_code: 'That WhatsApp code has expired. Ask for a new one.',
   slug_taken: 'Someone just took that address. Try another.',
 }
 
-export async function createMyShop(input: unknown): Promise<{ ok: true; trial: boolean } | { ok: false; error: string; field?: 'name' | 'slug' | 'pickup' | 'phone'; hasShop?: boolean }> {
+export async function createMyShop(input: unknown): Promise<{ ok: true; trial: boolean } | { ok: false; error: string; code?: string; field?: 'name' | 'slug' | 'phone'; hasShop?: boolean }> {
   const auth = await requireUser()
   if (!auth.ok) return { ok: false, error: auth.message }
   const parsed = Shop.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Check the highlighted fields.' }
-  const { name, slug, pickup, sells, plan, codeId } = parsed.data
+  const { name, slug, sells, plan, codeId, signupMs } = parsed.data
   // Q4: with the WhatsApp code on, a verified code is required (its phone is claimed inside the definer, R3).
   if (signupCodeOn() && !codeId) return { ok: false, error: 'Verify your WhatsApp number first.' }
-  if (slugProblem(slug)) return { ok: false, field: 'slug', error: SENTENCES.bad_slug! }
-  if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many shops made from here in the last hour. Try again later.' }
+  if (slugProblem(slug)) return { ok: false, field: 'slug', code: 'bad_slug', error: SENTENCES.bad_slug! }
+  if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many stores made from here in the last hour. Try again later.' }
   // The email key is the VERIFIED email from getUser() (requireUser), never a form value (trials T1).
-  const r = await createShop({ uid: auth.userId, name, slug, pickup, sells, plan, email: claimKey('email', auth.email), codeId: signupCodeOn() ? codeId : null })
+  const r = await createShop({ uid: auth.userId, name, slug, sells, plan, email: claimKey('email', auth.email), codeId: signupCodeOn() ? codeId : null, signupMs })
   // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
   if (r.ok) {
     // A new product's starting HSN, from what the shop sells (plan 2026-11-09-gst-core-and-categories § 2): a prefill,
@@ -76,8 +76,8 @@ export async function createMyShop(input: unknown): Promise<{ ok: true; trial: b
     await setStartingHsn(r.tenantId, startingHsn(sells)).catch((e) => console.error('[createMyShop] starting hsn', errName(e)))
     refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial }
   }
-  const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : r.error === 'bad_code' ? 'phone' : undefined
-  return { ok: false, field, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your shop. Nothing was saved. Try again in a minute.' }
+  const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_code' ? 'phone' : undefined
+  return { ok: false, field, code: r.error, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your store. Nothing was saved.' }
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/

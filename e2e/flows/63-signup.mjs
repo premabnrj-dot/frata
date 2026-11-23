@@ -1,6 +1,6 @@
 // =============================================================================
 // FLOW: sign-up (trials TR1's regression net, written before app_create_shop changes — plan rule 5). A person with no
-// shop signs in, makes one through /start (name, address, pincode, what they sell) and lands in the console, owner of
+// shop signs in, makes one through /start (name, address, plan, WhatsApp code, what they sell) and lands in the console, owner of
 // a shop on the plan chosen (trials TR1: Growth preselected, a trial with frozen terms, the email claimed). Cleans up.
 // =============================================================================
 import assert from 'node:assert/strict'
@@ -34,8 +34,6 @@ export default {
         await p.getByLabel('Shop address').fill(SLUG)
         await p.getByText('Available', { exact: true }).waitFor() // the address check runs as you type
         await p.getByRole('button', { name: 'Continue' }).click()
-        await p.getByLabel('Pincode').fill('452009')
-        await p.getByRole('button', { name: 'Continue' }).click()
         // Trials TR1: the plan step — Growth is chosen; the trial length is Admin's setting.
         await p.getByRole('heading', { name: 'Choose your plan' }).waitFor()
         await p.getByText(/^\d+ days free from going live$/).waitFor()
@@ -65,6 +63,10 @@ export default {
         assert.equal((await db`select count(*)::int n from trial_claims where tenant_id = ${s.id} and kind in ('email', 'phone')`)[0].n, 2)
         assert.equal((await db`select count(*)::int n from signup_codes where user_id = ${F.id} and consumed_at is not null`)[0].n, 1)
         assert.equal((await db`select count(*)::int n from trial_claims where key_hmac = ${F.email}`)[0].n, 0)
+        // O1: no pickup PIN code at sign-up (Settings › Store asks for it), and none in the audit.
+        assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${s.id}`)[0].pickup_pincode, null)
+        const [created] = await db`select detail from audit_events where tenant_id = ${s.id} and action = 'shop.created'`
+        assert.ok(created && !('pickup' in created.detail), 'the audit has no pickup')
         await p.screenshot({ path: t.out('new-shop'), fullPage: true })
       })
 

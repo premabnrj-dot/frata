@@ -146,22 +146,23 @@ export async function allPincodes(): Promise<string[]> {
   return rows.map((r) => r.pincode)
 }
 
-export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'bad_slug' | 'bad_pincode' | 'slug_taken' | 'no_launch_plan' | 'bad_plan' | 'bad_code'
-const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
+export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'bad_slug' | 'slug_taken' | 'no_launch_plan' | 'bad_plan' | 'bad_code'
+const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
 
 /**
- * app_create_shop: `uid` must come from requireUser() (getUser), never from input.
+ * app_create_shop_v3 (0166): `uid` must come from requireUser() (getUser), never from input. No pickup PIN code (it is
+ * asked in Settings › Store); `signupMs` is the browser's "/start → created" time, kept by the definer only inside a day.
  * `sells` must already be checked against SELLS: it is sent as one array literal
  * (drizzle would expand a JS array into a list of parameters).
  */
-export async function createShop(p: { uid: string; name: string; slug: string; pickup: string; sells: string[]; plan: string; email: ClaimKey | null; codeId: string | null }):
+export async function createShop(p: { uid: string; name: string; slug: string; sells: string[]; plan: string; email: ClaimKey | null; codeId: string | null; signupMs: number | null }):
   Promise<{ ok: true; tenantId: string; trial: boolean } | { ok: false; error: CreateShopError | 'unknown' }> {
   try {
     // Trials TR1 (drizzle/0065): the chosen plan, and a trial when no verified key has had one. The email key is the
     // HMAC of getUser()'s email (src/lib/trials/claims.ts); the phone comes only from a code this person verified.
     const rows = await db().execute<{ tenant_id: string; trial: boolean }>(
-      sql`select * from app_create_shop_v2(${p.uid}::uuid, ${p.name}, ${p.slug}, ${p.pickup}, ${`{${p.sells.join(',')}}`}::text[], ${p.plan},
-        ${p.email?.hmac ?? null}, ${p.email?.version ?? 1}::smallint, ${p.codeId}::uuid)`,
+      sql`select * from app_create_shop_v3(${p.uid}::uuid, ${p.name}, ${p.slug}, ${`{${p.sells.join(',')}}`}::text[], ${p.plan},
+        ${p.email?.hmac ?? null}, ${p.email?.version ?? 1}::smallint, ${p.codeId}::uuid, ${p.signupMs}::integer)`,
     )
     return { ok: true, tenantId: rows[0]!.tenant_id, trial: !!rows[0]!.trial }
   } catch (err) {
