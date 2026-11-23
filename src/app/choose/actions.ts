@@ -13,7 +13,7 @@ import { currentStore, TENANT_COOKIE } from '@/lib/auth/require-member'
  * store never strands its person (security review M5).
  */
 /** Where Open store may land besides Home. */
-const OPEN_AT = ['/console/content', '/console/settings/website'] as const
+const OPEN_AT = ['/console/content', '/console/settings/website', '/partner/studio'] as const
 
 export async function switchStoreAction(form: FormData) {
   // The person's own stores, both lists (currentStore: the same read requireMember and requireCapability make).
