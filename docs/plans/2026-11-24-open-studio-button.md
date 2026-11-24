@@ -25,6 +25,8 @@ Clients › a store › Open store, then typing the address.
 
 ## Deviations
 
+Owner seen: the first two rows were put to the owner and approved on 2026-11-24 ("approved."); the third (no button on an ended client) follows the door's own rule and was told with the release.
+
 | Screen | Drawn | Built | Why |
 |---|---|---|---|
 | Clients list, a Lead | row actions drawn for the owner | the action cell also exists for a Lead, empty unless the button shows | the owner-only cell would hide the button from a Lead who Studio admits |
