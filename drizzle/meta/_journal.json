@@ -1247,6 +1247,13 @@
       "when": 1795494795214,
       "tag": "0177_studio_credits_turns",
       "breakpoints": true
+    },
+    {
+      "idx": 178,
+      "version": "7",
+      "when": 1795500182632,
+      "tag": "0178_admin_fx_rates",
+      "breakpoints": true
     }
   ]
 }

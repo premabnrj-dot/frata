@@ -7010,4 +7010,10 @@ begin
   if 'c1050000-0000-0000-0000-0000000000f3'::uuid not in (select id from app_pc_stale_uses(interval '1 hour', 200)) then raise exception 'FAIL: 105 the sweep left an untied use'; end if;
 end $$;
 rollback;
+-- § 105 (cont.) · K2 (drizzle/0178): the last days' rates are Frrata Admin's to read, never the app's or a builder's.
+do $$ begin
+  if has_function_privilege('frata_app', 'admin_fx_rates_recent(integer)', 'execute') then raise exception 'FAIL: 105 frata_app may read the rate list'; end if;
+  if has_function_privilege('frata_builder', 'admin_fx_rates_recent(integer)', 'execute') then raise exception 'FAIL: 105 frata_builder may read the rate list'; end if;
+  if not has_function_privilege('frata_admin', 'admin_fx_rates_recent(integer)', 'execute') then raise exception 'FAIL: 105 frata_admin can''t read the rate list'; end if;
+end $$;
 \echo 'tenancy proof — all checks passed (through § 105)'
