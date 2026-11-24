@@ -560,14 +560,17 @@ Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unbl
    Partner sites live there instead of `frrata-sites`. Turn on Settings › Authentication security › **Require two-factor
    authentication** (free). Upgrade to **Team** before V2a puts the first partner site in it: branch rulesets on private
    repositories need Team (about $4 a member a month). The fleet's own repository stays outside it (decision S8).
-5. **S22 · Vercel teams** — three new teams, so partner sites never share Frrata's own team or its secrets. In Vercel,
-   open the team switcher (top left) › **Create Team**, three times:
-   - `frrata-sites`: where partner websites are hosted. **Pro.** Then Settings › Deployment Protection › **Standard
-     Protection** on.
-   - `frrata-fleet`: Frrata's build service that deploys those sites. **Pro.**
-   - `frrata-sites-staging`: a copy of `frrata-sites` for testing the build service. Pro (no shopper ever reaches it).
-   Each Pro team is $20 a month plus its usage; nothing is hosted there until V2a. Then add this session's Vercel
-   access to each (the Vercel connector asks). Unblocks: V2a.
+5. **S22 · Vercel teams** — ONE new team now, so partner sites never share Frrata's own team or its secrets (owner,
+   2026-11-22: "keeping one vercel account for pilot/testing"; ADR-0017 "The decision as it stands" rule 3). The existing
+   `frata` team keeps hosting the pilot only. In Vercel, open the
+   team switcher (top left) › **Create Team**, once:
+   - `frrata-sites`: where partner websites AND Frrata's build service that deploys them are hosted; staging is
+     projects inside it. **Pro.** Then Settings › Deployment Protection › **Standard Protection** on.
+   - **Before outside partners' code is live** the team splits into three, as first drawn: `frrata-sites`,
+     `frrata-fleet` (the build service) and `frrata-sites-staging`, each Pro, with the P5·1 spike re-run across teams
+     and the pen test. Not now.
+   A Pro team is $20 a month plus its usage; nothing is hosted there until V2a. Then add this session's Vercel
+   access to it (the Vercel connector asks). Unblocks: V2a.
 6. **O4 · frrata.shop** — renew it to 3 years at Hostinger (about ₹9,150 with GST). Then the Public Suffix List
    submission (P4b) is opened from your GitHub account.
 7. **O6 · Preview domain** — buy one `.com`-priced domain for previews (about ₹3,200 for 3 years); tell me the name.
@@ -610,6 +613,7 @@ step is done, buying on Production refuses with "Payments aren't set up yet" or 
    enabled on the account (Dashboard → Subscriptions / Recurring, or ask Razorpay support).
 4. **Card types off.** Dashboard → Payment Methods: turn off Amex, Diners and international cards. The 2.99× price
    multiple holds only at the 2% domestic fee (unit-economics review 2026-11-23).
-5. **The day's dollar rate.** Studio's credits are priced from a rate Frrata staff type (owner, 2026-11-22). The writer
-   exists (`src/lib/admin/fx-rate.ts`, audited) but no Admin screen calls it yet (A1a); a rate older than 4 days stops
+5. **The day's dollar rate.** Studio's credits are priced from a rate Frrata staff type (owner, 2026-11-22; 2026-11-24:
+   "exchange rate, I'll enter quite often, i'll type": type it every day or two; the rule is `frata-unit-economics` § The
+   dollar rate). The writer exists (`src/lib/admin/fx-rate.ts`, audited) but no Admin screen calls it yet (A1a); a rate older than 4 days stops
    every Studio turn. Needed before V3 starts turns, not for buying.

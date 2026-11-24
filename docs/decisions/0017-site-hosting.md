@@ -29,8 +29,9 @@ amendments 4, 6, 7 and 8; `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1 Domains
    `unit-economics-reviewer`, 2026-11-22, puts the hosting saving under ₹6,000 a month at one to three sites, and the
    image saving on a guess two reviews disagree about. Move when § Switch when is met.
 5. **Hosting is priced on measured numbers** before any paid store is hosted (decision 18).
-6. Rates: the tables below use ₹88 a dollar (2026-11-15); `frata-unit-economics` uses ₹94 and ADR-0019 ₹103.40 with
-   its loading. Any figure reused from below is restated at the skill's rate with its date.
+6. Rates: the tables below use ₹88 a dollar (2026-11-15), a retired assumption. The one rule is `frata-unit-economics`
+   § The dollar rate (2026-11-24): ₹94 base, ₹103.40 loaded (₹94 × 1.10, not a third rate), and the rate staff type in
+   Admin for anything a turn charges. Any figure reused from below is restated at ₹94 with its date.
 
 ## Context
 - ADR-0014 amendment 4: shop websites run in a separate hosting account that Frrata owns, pays for and runs, never the
@@ -188,25 +189,24 @@ cost measured, "yes".
   (owner, 2026-11-15: "same with github for testing"), created from the starter, beside `frata`; a developer is added
   to that repository only. The Frrata organisation of ADR-0016 § 2 comes before partners build sites.
 
-## What the owner sets up
-- A Cloudflare account in the company's name; Workers Paid with Workers for Platforms ($25 a month); billing by the
-  company card; GST treatment of an imported service checked with the CA.
-- Staff sign in with passkeys and no shared logins; one API token for the fleet service, scoped to the two namespaces,
-  the router, R2 and Cloudflare for SaaS (kit spec § 7).
-- Two registrable domains bought (sites and previews), their zones on Cloudflare, Cloudflare for SaaS on the sites zone,
-  and both submitted to the Public Suffix List early (inclusion takes weeks).
-- A written answer from Cloudflare on the terms (integrated SaaS, overage billed to brands), and a quote for apex
-  proxying for later.
+## What the owner sets up (as it stands, 2026-11-24; the Cloudflare steps of the first proposal are history, not pending)
+- Vercel: one new Pro team for partner sites and the fleet (`docs/setup.md` S22). Three teams before outside partners' code is live.
+- GitHub organisation for partner sites and the starter (`docs/setup.md` S8).
+- The preview domain (O6) and the Public Suffix List request (P4b); see ADR-0019.
+- Nothing at Cloudflare is set up: no account, no Workers for Platforms, no zones. If § Switch when is met, the first
+  proposal's list (an account in the company's name, Workers Paid with Workers for Platforms at $25 a month, one scoped
+  API token, two zones, a written answer on the terms) is re-opened then.
 
-## Consequences
-- ADR-0005 gains a line: code sites are not served by the Vercel app; they run on Cloudflare Workers for Platforms
-  under this record. Its "Revisit when" line on Cloudflare is answered for code sites only.
-- The Studio spec's hosting row and `frata-unit-economics` get the new allowances once approved.
-- `unit-economics-reviewer`, `speed-reviewer` (router) and `tenancy-auditor` (`site_deployments`, the router config
-  rows) run on the V2 spec, as the kit spec already lists.
-- A second vendor holds Frrata's public face for code sites. Checkout and money stay in bom1.
+## Consequences (as it stands)
+- ADR-0005 stands: one Next.js app on Vercel serves the console, checkout and the stores; code sites run in a Vercel
+  project of the sites team, reached by the store's own host through Frrata's app (ADR-0019).
+- The Studio spec's hosting row and `frata-unit-economics` carry the allowances once P5·0's 30-day read prices them.
+- `unit-economics-reviewer`, `speed-reviewer` and `tenancy-auditor` run on the V2 spec, as the kit spec lists.
+- Nothing about Cloudflare changes: the second adapter stays drawn and unbuilt.
+- *First proposal's consequences (Cloudflare Workers for Platforms), kept as history:* ADR-0005 would gain a line that
+  code sites run on Workers for Platforms; a second vendor would hold Frrata's public face for code sites.
 
-## Owner decisions
+## Owner decisions (the first proposal's questions; answered 2026-11-16 "approve all", decision S1: Vercel only)
 1. Host for the first adapter: **Cloudflare Workers for Platforms** (recommended) or a separate Vercel team?
 2. Brand domains: **`www.` with the apex redirected** at the registrar (recommended), or pay for Cloudflare Enterprise
    apex proxying from the start?

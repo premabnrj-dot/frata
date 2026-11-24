@@ -1,5 +1,5 @@
 # Test orders before opening (T1)
-Status: draft (for the owner; three reviews folded in 2026-11-22, § Reviews; nothing built) · Date: 2026-11-22 · Mockup: https://claude.ai/artifact/XUp8WAwaCWwxJxnxyHoY9j
+Status: draft, **parked by the owner 2026-11-22 ("let all these finishup, we'll take up following in later"); resume only when the owner takes it up** (for the owner; three reviews folded in 2026-11-22, § Reviews; nothing built) · Date: 2026-11-22 · Mockup: https://claude.ai/artifact/XUp8WAwaCWwxJxnxyHoY9j
 (`docs/mockups/2026-11-22-test-orders.html`) · Approved: —
 Phase T1 of `docs/plans/2026-11-22-studio-workbench.md` (owner, 2026-11-22: "Yes, test orders before opening").
 

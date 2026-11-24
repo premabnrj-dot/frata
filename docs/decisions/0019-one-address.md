@@ -50,7 +50,7 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
   each.
 - A site page costs Frrata one more edge request and its document's bytes again, plus every RSC navigation and prefetch,
   on the `frata` team's bill: about ₹0.21 per 1,000 views on Vercel's Flat Rate CDN, ₹1.26–4.57 metered (₹103.40 a
-  dollar). The router counts in ADR-0017 rule 11's kill line; hosting is priced only on measured numbers (the billing read
+  dollar: ₹94 × 1.10, `frata-unit-economics` § The dollar rate). The router counts in ADR-0017 rule 11's kill line; hosting is priced only on measured numbers (the billing read
   and the pilot's request counts first). One address is parity with Shopify, not a gain; its gain is the checkout lift it
   must earn (H-1).
 - EkCode's shop session moves to the secure host; current shoppers sign in once more.

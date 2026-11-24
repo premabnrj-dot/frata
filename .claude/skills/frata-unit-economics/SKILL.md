@@ -2,9 +2,9 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.21.0
+  version: 2.22.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-24
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -226,6 +226,18 @@ higher caps, review of big sends, export/API.
 | A ₹ nudge converts better than a feature list | assumption · 2026-11-11 | a 50% holdout if the owner approves; until then `billing.plan.source` upgrades per eligible shop, 30 days |
 | An upgrade from the card is not undone within 60 days | pricing-ladder spec · 2026-11-11 | downgrades within 60 days of a `source: featured` change |
 | Frrata gives up ₹500–₹26,500 a month per shop that moves up from the card | review · 2026-11-11 | invoices before and after, per moved shop |
+
+## The dollar rate: one rule (owner, 2026-11-24; fixes three rates in the records)
+The rate is the one **staff type in Admin** (the owner, often: "exchange rate, I'll enter quite often, i'll type",
+2026-11-24), kept as a dated row by `src/lib/admin/fx-rate.ts` (`app_fx_rate_set`, audited). It is the **only** rate
+the running product uses: a rupee figure a turn charges is that day's typed rate × 1.10; with no rate typed in the last
+4 days (`RATE_MAX_AGE_DAYS`) every Studio turn is refused.
+- **Plans, ADRs and reviews** (anything not charged to a person) use **₹94 a dollar** (₹93.93, x-rates.com, 2026-11-16)
+  as the *base*, and **₹103.40** (₹94 × 1.10) as the *loaded* figure for a vendor's list price. ₹103.40 is the base with
+  the loading, not a third rate.
+- **₹88** (the 2026-11-15 assumption in ADR-0017's tables, the V1 plan and older research) is retired; a figure
+  reused from there is restated at ₹94 base with the date it was restated. When the typed rate moves more than 3% from
+  ₹94, this line is updated in the same commit with its date.
 
 ## Studio credits and code-site hosting (owner-approved 2026-11-16; `docs/specs/2026-11-16-studio-agent.md` § 8; hypotheses)
 

@@ -1,7 +1,7 @@
 # Studio workbench, the road to one address, apps for websites: the build
-Status: active (owner approved 2026-11-22; all seven plan reviews dated and folded in; T1 and AP2 still wait on their own mockups)
+Status: active (owner approved 2026-11-22; all seven plan reviews dated and folded in; AP2 still waits on its mockup; **T1 is parked by the owner, 2026-11-22: "let all these finishup, we'll take up following in later"**, so nothing waits on its mockup now)
 · Date: 2026-11-22 · Spec: `docs/specs/2026-11-22-studio-workbench.md` (active)
-**Mockup:** https://claude.ai/artifact/7nJMbpWCz2z4EBXmNeyj2n (`docs/mockups/2026-11-22-studio-workbench.html`); T1 and AP2's two blocks still to draw
+**Mockup:** https://claude.ai/artifact/7nJMbpWCz2z4EBXmNeyj2n (`docs/mockups/2026-11-22-studio-workbench.html`); AP2's two blocks still to draw; T1's mockup is drawn but not approved and T1 is parked
 **Approved:** owner, 2026-11-22 ("go with your recommendation"; "Yes, test orders before opening")
 **Review:** architecture-reviewer CHANGES NEEDED (4 blockers, 6 majors), all folded in, 2026-11-22
 **Review:** security-reviewer FIX BEFORE MERGE (3 high, 4 medium, 3 low), all folded in, 2026-11-22
@@ -21,7 +21,7 @@ the diff, `mockup-parity-reviewer` on a screen phase, one lane released at a tim
 | 0 | W0 stale text · T1's spec and mockup · the three pending reviews | — | nothing |
 | 2 | P2, then **P3 straight after** (P3·1 spike starts with P2) | E | two test phones for P3·1 |
 | 2 | G·1–G·4 · **D0** | B | — |
-| 2 | P5·0 · P4b | A | O4 (the `frrata.shop` renewal) for P4b only |
+| 2 | P5·0 · P4b | A | O4 (the store domain: `frrata.store` since 2026-11-24) for P4b only |
 | 3 | V2a · P5·1 · **T1** | A, E | the hosting decision (below); O6; T1's mockup approved |
 | 3 | **AP1** | B | G·2 |
 | 3 | C1 · V3a·1 | C, D | C1's mockup; Razorpay live confirmed (below) |
@@ -56,7 +56,8 @@ Rules as `docs/plans/2026-11-15-parallel-lanes.md` § The rules every worker fol
 | D0·4 | The key dialog's line (a Test key reads products not yet published); the docs' Start guide: read on the server on a preview address | `npm run check:words`; `npx vitest run src/domains/storefront-api` (docs test) |
 - **Reviews:** `security-reviewer`, `design-system-reviewer`, `words-reviewer`, `mockup-parity-reviewer`, `impact-reviewer` per task.
 
-## T1 · Test orders before opening (lane E; its own spec and mockup first)
+## T1 · Test orders before opening (lane E; its own spec and mockup first) — PARKED (owner, 2026-11-22: "let all these finishup, we'll take up following in later")
+The spec (`docs/specs/2026-11-22-test-orders.md`) stays draft and its mockup unapproved until the owner takes it up; no wave waits on it. Resume: the owner says so, then the spec's reviews and mockup approval below run as written.
 Nothing is built before `docs/specs/<date>-test-orders.md` and its mockup are approved. The spec answers every
 constraint in the workbench spec § 3 (who may place one; test status derived, no column; `rzp_test_` only; no stock,
 invoice serial, outbox row or analytics; erased at opening; no EkCode), and is reviewed by `security-reviewer`,
@@ -113,7 +114,7 @@ invoice serial, outbox row or analytics; erased at opening; no EkCode), and is r
 | Hosting on Cloudflare saves ₹19–1,046 a site a month against Vercel Flat Rate, ₹272–9,435 against metered; the router on Vercel (ADR-0019) stays either way | the hosting row below | No second host at 1–3 pilot sites: the saving is under ₹6,000 a month against a base fee, an unproven OpenNext spike and a second adapter. Decided on measurement |
 | Images: no optimiser is billed today (photos are resized once in the browser and served from Vercel Blob; `next/image` is used nowhere). Blob transfer is the cost; R2 has no egress charge. Guessed saving ₹860–1,810 a store, in conflict with the themes review's ₹6–211 | the hosting row below | Not moved on a guess |
 | One read settles hosting and images | P5·0 | P5·0 gains: 30 days of the `frata` team's Vercel usage (Blob transfer GB, Fast Data Transfer GB, requests a page view) and whether Flat Rate is on (decision 23) |
-| Three exchange rates in the records (₹88, ₹94, ₹103.40) | W0 | W0·1 restates ADR-0017's tables at the skill's rate, dated |
+| Three exchange rates in the records (₹88, ₹94, ₹103.40) | W0 | **One rule, 2026-11-24:** `frata-unit-economics` § The dollar rate: ₹94 base, ₹103.40 = ₹94 × 1.10 loaded, ₹88 retired; the typed Admin rate prices turns. ADR-0017's tables stay at ₹88 as history, labelled |
 
 ## Speed review, folded in (2026-11-22; these override the task text and the two tables above where they differ)
 | Finding | Task | What is built |
@@ -133,8 +134,9 @@ Measured: the delivery check's 10 reads take 0.02–0.32 ms each as `frata_app` 
 |---|---|---|
 | **Where partner websites are hosted** | **Decided: Vercel teams** (owner, 2026-11-22: "vercel teams it is for now"), as ADR-0017 stands. Cloudflare for hosting and R2 for images are revisited on P5·0's 30-day usage read (§ Unit economics) | — |
 | S22 Vercel teams | **Decided (owner, 2026-11-22: "keeping one vercel account for pilot/testing"), with `security-reviewer`'s conditions:** the existing team hosts **the pilot only**, deployed by Vercel's Git integration as today (ADR-0017:157-160 already rules it); **no fleet or build-service token ever lives in the `frata` team** (a team token there is a production token: it can deploy `frata`, change its firewall and repoint any store host). When V2a·5 builds the fleet, **one** new Pro team holds partner websites and the fleet (kit spec § 6 asks only that the fleet be "inside the hosting account"); staging is projects inside it. Split to three before outside partners' code is live. Forced, not remembered: `sites` records its host team and the create-site definer refuses a second site, or any store with a partner, while that team is `frata`'s (proved in `verify:tenancy`); the preflight refuses a host token of `frata`'s team; an accepted-findings row. Before the split: review S1's owner steps (Blob token rotation, old previews, MFA; `docs/setup.md:262-268`), P5·1 re-run across teams, the pen test | V2a·5 (the fleet), not before |
-| O6 preview domain | Open | V2a previews |
-| O4 `frrata.shop` to 3 years | Open | P4b only |
+| **Open question (e): a routing token in the `frata` team** | **Two rules conflict; no owner decision settles it; not picked here.** Side 1, this plan (S22 row above): no fleet or build-service token in the `frata` team, because a team token there "can deploy `frata`, change its firewall and repoint any store host". Side 2, `docs/plans/2026-11-16-one-address-checkout.md` P5·4 (and V2a·5: the fleet writes no routing): Frrata's own app holds a Vercel token, Production only, to publish the project-level routing rules that send each store host to its site; that token lives in the `frata` team and can repoint store hosts by design. Not the same holder (the fleet versus the app), but the same token power, so side 1's reason applies to side 2. Options: (A) accept the routing token as the one named exception, scoped as narrowly as Vercel allows (P5·1 spike finds whether a token scopes to routing rules or a project), with the preflight allow-listing it by name; (B) put routing in a project or team of its own so no `frata`-team token repoints hosts. **Who rules: the owner**, after `security-reviewer` reads P5·1's result. | P5·4, V2a·5 |
+| O6 preview domain | **Decided 2026-11-24: `frratapreview.store`** (owner: "preview domain can be: frratapreview.store (can buy for 3 years)"); to buy. | V2a previews |
+| O4 the Public Suffix List domain | **Changed 2026-11-24:** the store domain becomes `frrata.store` (owner: "We need to replace frrata.shop with frrata.store (I can renew this for 3 years)"); `frrata.shop` becomes the public site. P4b waits on `frrata.store`, not `frrata.shop`. | P4b only |
 | Frrata's Razorpay, live | Owner, 2026-11-22: "razorpay is live". Seen in Vercel (names and dates only, never values): `RAZORPAY_BILLING_KEY_ID` and `_SECRET` replaced 2026-11-20; `FRRATA_GSTIN`, `_LEGAL_NAME`, `_ADDRESS`, `_SAC` added the same day; `RAZORPAY_BILLING_WEBHOOK_SECRET` unchanged since 2026-11-15. Production: 5 invoices, all test mode; no billing webhook ever stored | C1 taking real money: the live webhook must be confirmed first |
 | A merchant's own Razorpay keys | Built and live: Settings › Online payments, owner only, `rzp_live_` or `rzp_test_`, checked with Razorpay before saving | nothing |
 
@@ -303,8 +305,8 @@ own notice and its never-resent rule; its own fix before the first real monthly 
   0156–0160 applied and their twelve functions verified by md5), lane E's P2 (fc97a5f; 0161 applied and verified), the
   Brand book (8804a30), and three stale e2e flows brought in step with main's new controls (39979c5).
 - **Building:** lane B (G·3's page), lane C (C1), lane D (the agent runtime, R0–R7). **Not yet handed out:** lane E's
-  review card on Brand › Checkout. **Open with the owner:** the exchange-rate source (recommended: a rate typed in
-  Admin from the bank's actual rate, monthly); merchant billing's missing notification object (its own fix).
+  review card on Brand › Checkout. **Open with the owner:** the exchange-rate source (**decided, owner, 2026-11-24: a rate typed in Admin, "quite often"**;
+  the code stops turns when the newest rate is older than 4 days); merchant billing's missing notification object (its own fix).
 - **Resume:** the owner's usage limit resets at 05:45 IST on 23 Nov; one-shot scheduled tasks wake lanes B, C and D at
   05:48 and the orchestrator at 05:50 to check each lane, release what is ready and report.
 

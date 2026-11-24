@@ -28,7 +28,9 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
    host) stays drawn as a second implementation behind it and is not built until a switch signal (point 7). The client
    is made with a 30-second timeout and 1 retry for control calls and 15 seconds for the event fetch after a webhook.
 3. **Frrata's own Claude account.** One Anthropic Console organisation in the company's name, billed to the company,
-   with workspaces `studio` (partners' sessions) and `studio-eval` (the proof and model upgrades). The app reaches
+   with workspaces `studio-eval` (the proof, model upgrades and, until a partner uses Studio, staff turns; **the only
+   one that exists and holds the live key, 2026-11-23**) and `studio` (partners' sessions; made, with its own spend limit
+   and key, before any partner uses Studio: `docs/setup.md` V3a step 1). The app reaches
    Anthropic through Vercel's OIDC token if the spike proves it, else one Production-only API key through `secret()`;
    no key in a sandbox, a repository or a browser. **Never a partner's Claude sign-in** (the Agent SDK's terms):
    every model call is Frrata's, billed to Frrata and then to the partner as credits. The agent is "Frrata agent",
