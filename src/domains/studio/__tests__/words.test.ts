@@ -9,6 +9,8 @@ describe('Studio words', () => {
     expect(refusedWords('person_day')).toBe('Studio reached today’s limit. Ask again from 12:00 am.')
     expect(refusedWords('platform_day')).toBe(refusedWords('person_day'))
     for (const w of ['turn_open', 'limit', 'busy', 'input', 'closed']) expect(refusedWords(w)).toMatch(/\.$/)
+    // V3b K3: each credit refusal has its words (Credits and billing's own), never a silent Send.
+    for (const w of ['rate', 'studio_day', 'credits_day', 'client_budget', 'balance']) expect(refusedWords(w)).toMatch(/\.$/)
     for (const w of ['start', 'send', 'budget', 'error']) expect(refusedWords(w)).toBeNull()
   })
   it('every tool has its done and running line', () => {

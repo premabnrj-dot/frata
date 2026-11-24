@@ -194,8 +194,10 @@ export const studioSpendTurns = pgTable('studio_spend_turns', {
   reservedMicro: bigint('reserved_micro', { mode: 'number' }).notNull(),
   measuredMicro: bigint('measured_micro', { mode: 'number' }),
   settledAt: at('settled_at'),
-  /** The staff test (V3a): never billed; C1 starts an empty ledger (unit economics F9). */
+  /** The staff test (V3a): never billed; C1 starts an empty ledger (unit economics F9). False once a credit use pays it. */
   test: boolean('test').notNull().default(true),
+  /** V3b K3: the partner's credit use this turn holds (app_studio_turn_use); app_studio_settle settles or returns it. */
+  creditUseId: uuid('credit_use_id').unique('studio_spend_turns_use'),
 })
 
 /** One row per India day (a key with no nulls: unit economics F4, security M2). */

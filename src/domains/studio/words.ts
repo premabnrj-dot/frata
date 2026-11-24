@@ -40,6 +40,13 @@ export function refusedWords(why: string): string | null {
     case 'busy': return 'That didn’t go through. Try again.'
     case 'input': return 'Type a request.'
     case 'closed': return 'Studio isn’t open yet.'
+    // Credits (V3b K3): the Credits and billing page's own words (its actions' SAYS); a Lead's variants and the buttons
+    // come with the 2026-11-24 page's § 3.
+    case 'rate': return 'Studio can’t start a turn right now. Try again in a few minutes.'
+    case 'studio_day': return 'Studio is busy today. Try again tomorrow.'
+    case 'credits_day': return 'You’ve used 300 credits today. Try again tomorrow.'
+    case 'client_budget': return 'This client’s budget is used up.'
+    case 'balance': return 'Not enough credits. Buy credits to continue.'
     default: return null // start, send, budget, error: the turn's own card (state 5)
   }
 }
