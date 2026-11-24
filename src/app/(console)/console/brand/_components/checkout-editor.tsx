@@ -23,7 +23,9 @@ import type { BrandRecord } from '@/domains/brand/record'
 import { cn } from '@/lib/utils'
 import { announce } from '@/components/shell/announce'
 import { saveCheckoutAction, undoCheckoutAction } from '../actions'
-import { previewed, ReviewCard, VersionSwitch, type Version } from './review-card'
+import { previewed, VersionSwitch, type Version } from './version-switch'
+// Only while a partner's change waits: its script loads when it is drawn (O2a·9 kept these pages under 150 kB).
+const ReviewCard = dynamic(() => import('./review-card').then((m) => m.ReviewCard))
 
 // =============================================================================
 // Console › Brand › Checkout (one-address plan P2·6; owner-approved mockup docs/mockups/2026-11-16-p2-checkout.html,

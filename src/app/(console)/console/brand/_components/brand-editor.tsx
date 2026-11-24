@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
@@ -21,7 +22,9 @@ import { formatInr } from '@/lib/format'
 import type { Paise } from '@/domains/money/paise'
 import { saveBrandAction, undoBrandAction, uploadSvgLogoAction } from '../actions'
 import { ColoursCard, LogoCard, ShapeCard, TypeCard, type SlotState } from './brand-cards'
-import { previewed, ReviewCard, VersionSwitch, type Version } from './review-card'
+import { previewed, VersionSwitch, type Version } from './version-switch'
+// Only while a partner's change waits: its script loads when it is drawn (O2a·9 kept these pages under 150 kB).
+const ReviewCard = dynamic(() => import('./review-card').then((m) => m.ReviewCard))
 
 // =============================================================================
 // Console › Brand (one-address plan P1·8; owner-approved mockup docs/mockups/2026-11-16-p1-brand.html, screens 1–6).

@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { Panel } from '@/components/ui/panel'
 import { Badge } from '@/components/ui/badge'
 import { CAN_BUILD, CONSOLE_ROLES } from '@/domains/tenancy/roles'
@@ -14,6 +13,7 @@ import { AppHome } from '../_components/app-home'
 import { ZonesTab } from './zones'
 import { RulesTab } from './rules'
 import { DatesTab } from './dates'
+import { PickupPin } from './pickup-pin'
 
 export const metadata = { title: 'Delivery Zones' }
 export const dynamic = 'force-dynamic'
@@ -46,10 +46,10 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
   const q = /^[0-9]{1,6}$/.test(sp.q ?? '') ? sp.q! : ''
   const page = Math.max(1, Math.min(50, Number(sp.page) || 1))
   const d = tab === 'billing' ? null : await deliveryConsole(auth.membership.tenantId, q, page).catch((err) => { console.error('[zones]', errName(err)); return undefined })
-  // The pickup PIN code is a Store details field (O1·6): who may edit it gets a link there; the drawn popup is O2's.
+  // The pickup PIN code is a Store details field (O1·5): who may edit it opens its popup from here (O2a·9).
   const pickup = d?.settings ? d.settings.pickup : undefined
   const meta = canEdit && d?.settings
-    ? <Link href="/console/settings/store#f-pickupPincode" className="text-link underline underline-offset-2">{pickup ? <>From <span className="font-mono">{pickup}</span></> : 'Add pickup PIN code'}</Link>
+    ? <PickupPin pickup={pickup ?? null} />
     : pickup ? <>From <span className="font-mono">{pickup}</span></> : undefined
   const home = (body?: React.ReactNode) => (
     <AppHome k="delivery_zones" tab={tab} first="Zones" tabs={TABS} offer={about.offer} worksWith={about.worksWith} billing

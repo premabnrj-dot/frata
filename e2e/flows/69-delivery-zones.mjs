@@ -152,8 +152,9 @@ export default {
           await oc.close()
         }
       })
-      await t.step('O1·6: the header names the pickup PIN code and opens its field in Settings; staff see it plain', async () => {
+      await t.step('O2a·9: the header opens the Pickup PIN code popup; 302003 is Jaipur, saved, the header says so; staff see it plain', async () => {
         const [{ pickup_pincode: pickup }] = await db`select pickup_pincode from shop_settings where tenant_id = ${KESAR}`
+        await db`insert into pincodes (pincode, city, district, state) values ('302003', 'Jaipur', 'Jaipur', 'Rajasthan') on conflict do nothing`
         await db`insert into auth.users (id, email, email_confirmed_at) values (${USERS.staff.id}, ${USERS.staff.email}, now()) on conflict (id) do nothing`
         await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${USERS.staff.id}, 'staff') on conflict do nothing`
         const oc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
@@ -161,18 +162,28 @@ export default {
         try {
           const o = await oc.newPage(); o.setDefaultTimeout(15_000); o.on('pageerror', (e) => t.errors.push(e.message))
           await o.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })
-          await o.getByRole('link', { name: `From ${pickup}` }).click()
-          await o.waitForURL(/\/console\/settings\/store#f-pickupPincode$/)
-          await until(async () => (await o.evaluate(() => document.activeElement?.id)) === 'f-pickupPincode', 10_000)
+          const opener = o.getByRole('button', { name: `From ${pickup}` })
+          await opener.click()
+          const d = o.getByRole('dialog', { name: 'Pickup PIN code' }); await d.waitFor()
+          await d.getByRole('button', { name: 'Close' }).waitFor()
+          assert.equal(await o.evaluate(() => document.activeElement?.closest('label')?.textContent), 'PIN code', 'the PIN code takes focus')
+          await d.getByLabel('PIN code').fill('302003')
+          await d.getByText('Jaipur, Rajasthan').waitFor()
+          await o.screenshot({ path: t.out('pickup-1280') })
+          await o.setViewportSize({ width: 390, height: 844 }); await o.screenshot({ path: t.out('pickup-390') }); await o.setViewportSize({ width: 1280, height: 900 })
+          await d.getByRole('button', { name: 'Save PIN code' }).click()
+          await o.locator('[data-toast]').filter({ hasText: 'Saved your pickup PIN code.' }).waitFor()
+          await o.getByRole('button', { name: 'From 302003' }).waitFor()
+          assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${KESAR}`)[0].pickup_pincode, '302003')
           await db`update shop_settings set pickup_pincode = null where tenant_id = ${KESAR}`
           await o.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })
-          await o.getByRole('link', { name: 'Add pickup PIN code' }).waitFor()
+          await o.getByRole('button', { name: 'Add pickup PIN code' }).waitFor()
           await o.screenshot({ path: t.out('header-no-pickup') })
           await db`update shop_settings set pickup_pincode = ${pickup} where tenant_id = ${KESAR}`
           const s = await sc.newPage(); s.setDefaultTimeout(15_000); s.on('pageerror', (e) => t.errors.push(e.message))
           await s.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })
           await s.getByText(`From ${pickup}`).waitFor()
-          assert.equal(await s.getByRole('link', { name: `From ${pickup}` }).count(), 0, 'staff see no link')
+          assert.equal(await s.getByRole('button', { name: `From ${pickup}` }).count(), 0, 'staff see no button')
         } finally {
           await db`update shop_settings set pickup_pincode = ${pickup} where tenant_id = ${KESAR}`
           await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}`
