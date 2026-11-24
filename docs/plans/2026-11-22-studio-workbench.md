@@ -337,3 +337,25 @@ Proposed for `docs/decisions/accepted-findings.md` (the owner's words go in its 
 | A device code's network is kept as an unkeyed sha256 of its /64 or /24, so a reader of the row recovers the /24 (security review LOW-2, G·3 page) | Accepted while `build_key_device_codes` has no reader but its definers (no role's grant, proof § 81) and a row is gone at the first daily run after its 10 minutes; a keyed hash (a server secret) if the row ever lives longer than a day or gains a reader (orchestrator, 2026-11-22, for the owner) | security-reviewer, 2026-11-22 |
 
 Security review MED-1, built (owner, 2026-11-22: "yes, this is my computer"): see the Deviations row above.
+
+## Resume here (state on 2026-11-24, when the owner closed the build sessions)
+
+Live on `main`: Studio for Frrata staff (`STUDIO_OPEN=staff`), the Open Studio button, Apply on an owned or open store through
+the owner's review (K1), turns paid in partner credits (K3), Admin › Money › Dollar rate (K2), Settings › People, the passkeys
+switch (passkeys are off). Production migrations are applied through 0178.
+
+Parked by the owner, 2026-11-24 ("park these"), none built:
+- the stranded-credits fix (reserve what is left from 4 credits up) and a 300-credit test lot (`2026-11-24-v3b-first.md`);
+- Buy and Raise buttons and the Lead's words beside a credit refusal in Studio's chat (that plan's Deviations, § 3);
+- two wordings: the no-rate refusal's "Try again in a few minutes", and "This client's budget is used up." with no next step;
+- opening Studio to partners who are not Frrata staff: the list of what must be true is K4 in that plan.
+
+Waiting for the owner's answers, nothing spent: `2026-11-24-v2a-builds-and-previews.md` (draft: go-ahead for phases 0 and 1,
+the pilot partner and store, one preview key per site, the routing question (e)); `2026-11-24-domains.md` (draft). Owner-side:
+`frratapreview.online`, `frrata.online` nameservers, FrrataGit on Team, the `frrata-sites` Vercel team, the Razorpay billing
+webhook in live mode. GitHub Apps exist in FrrataGit: Frrata session (App ID 5899215), Frrata fleet (App ID 5899250), both
+installed on `FrrataGit/spike-fixture`, no private key made.
+
+Earlier parks that still stand: T1 test orders (above); the passkeys rework (branch `claude/lane-g-passkeys`, approved, not
+built, resume from P0). Small jobs: `frata_builder` has no statement or idle timeouts in production; delete the `frrata-echo`
+Vercel project and `tools/echo`; e2e test isolation; `cash.int.test.ts` fails 3 tests on `main` (Admin Cashflow, another session).
