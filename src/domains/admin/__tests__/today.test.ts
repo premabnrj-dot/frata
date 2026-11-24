@@ -6,7 +6,7 @@ const item = (kind: TodayItem['kind'], since: string | null, key: string = kind)
 describe('Today sources by role (security review H3)', () => {
   it('support never sees money, trials read through billing, or passkey requests', () => {
     const kinds = sourcesFor('support').map((s) => s.kind)
-    for (const k of ['overpaid', 'issue_run', 'trial_ending', 'partner_passkey', 'staff_passkey', 'cost_due'] as const) expect(kinds).not.toContain(k)
+    for (const k of ['overpaid', 'issue_run', 'trial_ending', 'partner_passkey', 'staff_passkey', 'cost_due', 'cash_low'] as const) expect(kinds).not.toContain(k)
     expect(kinds).toEqual(expect.arrayContaining(['partner_review', 'address_claim', 'owner_waiting', 'theme_new']))
   })
   it('a master admin sees every source', () => {

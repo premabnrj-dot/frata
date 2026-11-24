@@ -5,6 +5,7 @@ import {
   anchorMayMove, daysBetween, fyRange, isDueDate, LOOKBACK_MONTHS, MAX_LIVE_COSTS, type Cadence, type CostCategory, type CostCurrency,
   type CostItem, type CostItemInput, type PaidInput, type PaymentRow, dueRows,
 } from '@/domains/admin/costs'
+import { dueCostsByMonth, unpaidCostsToMonthEnd } from '@/domains/admin/cash'
 import { FX_RATE_BAND_E4 } from '@/domains/studio/credits'
 import type { TodayItem } from '@/domains/admin/today'
 import { addMonths, monthKey } from '@/domains/time/month'
@@ -289,6 +290,17 @@ export async function dueCostItems(staff: StaffOk, today: string): Promise<Today
       href: `/admin/costs?view=all&id=${row.id}`, since: new Date(`${row.next}T00:00:00+05:30`),
     }
   })
+}
+
+/** What Cashflow's forecast needs from the due set: each month's repeating costs from the next month on, and what is still unpaid to the end of this month. */
+export async function costForecastInputs(staff: StaffOk, today: string, months: number): Promise<{ dueByMonth: Record<string, number>; unpaidToMonthEnd: number; unrated: number }> {
+  adminOnly(staff)
+  const { items, payments, rate } = await loadCosts(today)
+  const paidBy = new Map<string, Set<string>>()
+  for (const p of payments) { const s = paidBy.get(p.itemId) ?? new Set<string>(); s.add(p.periodFor); paidBy.set(p.itemId, s) }
+  const r = rate ? rate.rateE4 : null
+  const { byMonth, unrated } = dueCostsByMonth(items, r, monthKey(today, 1), months)
+  return { dueByMonth: byMonth, unpaidToMonthEnd: unpaidCostsToMonthEnd(items, paidBy, r, today), unrated }
 }
 
 // ── Admin › Cashflow reads Costs only through these exports (check:tenant § 10: no other file names the cost tables) ────────────────

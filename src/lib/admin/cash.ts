@@ -2,18 +2,19 @@ import 'server-only'
 import { cache } from 'react'
 import { and, asc, desc, eq, gte, isNull, lt, or } from 'drizzle-orm'
 import {
-  averageNet, booksFigure, cashToday, differenceOf, latestBalances, monthRow, signed,
+  averageNet, booksFigure, cashToday, differenceOf, firstBelow, forecast, FORECAST_MONTHS, latestBalances, monthRow, openingOf, runwayEnd, signed,
   type Balance, type CashKind, type CashModel, type Entry, type MonthRow, type Window,
 } from '@/domains/admin/cash'
 import { addMonths, monthKey, monthRange } from '@/domains/time/month'
 import { ADMIN_ONLY, confirmedRecently, type StaffOk } from '@/lib/auth/require-staff'
+import type { TodayItem } from '@/domains/admin/today'
 import { GST_BPS } from '@/domains/billing/gst-rate'
 import { adminDb } from '@/lib/db/admin'
 import { cashAccounts, cashBalances, cashEntries, cashSettings } from '@/lib/db/schema-cash'
 import { errName } from '@/lib/log'
 import { auditStaff } from './audit'
 import { billingIn } from './billing'
-import { costOut, costPaymentsBetween, UNDO_FREE_MS } from './costs'
+import { costForecastInputs, costOut, costPaymentsBetween, UNDO_FREE_MS } from './costs'
 
 // =============================================================================
 // FILE: src/lib/admin/cash.ts — ADMIN › CASHFLOW'S reads and writes (spec docs/specs/2026-11-23-admin-cashflow.md; plan
@@ -37,6 +38,7 @@ const failed = (e: unknown): { ok: false; error: CashError } => {
 }
 
 const SIX = 6
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const dayAfter = (day: string) => new Date(new Date(`${day}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10)
 const addYears = (day: string, n: number) => `${Number(day.slice(0, 4)) + n}${day.slice(4)}`
 
@@ -51,6 +53,10 @@ export type CashData = {
   settings: { floor: number | null; mainAccountId: string | null }
   billingByMonth: Record<string, number>
   costsByMonth: Record<string, number>
+  /** The repeating costs due in each coming month, what is still unpaid to this month's end, and dollar costs with no rate typed yet. */
+  dueCosts: Record<string, number>
+  unpaidToMonthEnd: number
+  unrated: number
   /** What came in and went out since the main account's last balance, through today (for the books' roll-forward). */
   window: Window
 }
@@ -64,12 +70,13 @@ const toEntry = (r: typeof cashEntries.$inferSelect): EntryRow => ({
 const loadCash = cache(async (staff: StaffOk, today: string): Promise<CashData> => {
   const db = adminDb()
   const from = `${monthKey(today, -SIX)}-01`, to = `${monthKey(today, 1)}-01`
-  const [accounts, balances, [settings], billing, costs] = await Promise.all([
+  const [accounts, balances, [settings], billing, costs, ahead] = await Promise.all([
     db.select().from(cashAccounts).orderBy(asc(cashAccounts.createdAt), asc(cashAccounts.id)),
     db.select().from(cashBalances).orderBy(desc(cashBalances.asOf), desc(cashBalances.createdAt), desc(cashBalances.id)).limit(400),
     db.select().from(cashSettings).where(eq(cashSettings.id, 1)),
     billingIn(staff, from, to, 'month'),
     costOut(staff, from, to, 'month'),
+    costForecastInputs(staff, today, FORECAST_MONTHS),
   ])
   const bals = balances.map(toBalance)
   const main = latestBalances(bals).find((b) => b.accountId === settings?.mainAccountId) ?? null
@@ -82,7 +89,7 @@ const loadCash = cache(async (staff: StaffOk, today: string): Promise<CashData> 
   return {
     accounts: accounts.map((a) => ({ id: a.id, name: a.name })), balances: bals, entries: entries.map(toEntry),
     settings: { floor: settings?.floorPaise ?? null, mainAccountId: settings?.mainAccountId ?? null },
-    billingByMonth: billing, costsByMonth: costs, window,
+    billingByMonth: billing, costsByMonth: costs, dueCosts: ahead.dueByMonth, unpaidToMonthEnd: ahead.unpaidToMonthEnd, unrated: ahead.unrated, window,
   }
 })
 
@@ -101,10 +108,15 @@ export type CashOverview = {
   net: number | null
   /** The six full months before this one, and this month so far. */
   rows: MonthRow[]
+  /** The coming 36 months (empty with no balance yet), the first month closing below zero, the first closing under the floor, and dollar costs left out for want of a rate. */
+  ahead: MonthRow[]
+  runwayEnd: string | null
+  belowFloor: string | null
+  unrated: number
 }
 
 const modelOf = (d: CashData, today: string): CashModel => ({
-  today, billingByMonth: d.billingByMonth, costsByMonth: d.costsByMonth, dueCosts: {}, entries: d.entries, gstActual: { thisMonth: null, nextMonth: null }, gstBps: GST_BPS,
+  today, billingByMonth: d.billingByMonth, costsByMonth: d.costsByMonth, dueCosts: d.dueCosts, entries: d.entries, gstActual: { thisMonth: null, nextMonth: null }, gstBps: GST_BPS,
 })
 
 export async function cashOverview(staff: StaffOk, today: string): Promise<CashOverview> {
@@ -124,10 +136,25 @@ export async function cashOverview(staff: StaffOk, today: string): Promise<CashO
   // This month so far is shown as actuals: the engine calls a month "actual" when it is before the month of its `today`, so that row is read with today one month on.
   const thisMonthAsPast = addMonths(new Date(`${today}T00:00:00Z`), 1).toISOString().slice(0, 10)
   for (let i = SIX; i >= 0; i--) { const r = monthRow(monthKey(today, -i), bal, { ...m, today: i === 0 ? thisMonthAsPast : today }); rows.push(r); bal = r.closing }
+  const cash = latest.length ? cashToday(latest, d.settings.mainAccountId, d.window, d.entries, today) : null
+  const ahead = cash === null ? [] : forecast(openingOf(cash, d.unpaidToMonthEnd, m), m)
   return {
-    today, accounts, cash: latest.length ? cashToday(latest, d.settings.mainAccountId, d.window, d.entries, today) : null,
+    today, accounts, cash,
     asOf: latest.length ? latest.map((b) => b.asOf).sort()[0]! : null, floor: d.settings.floor, net: averageNet(m), rows,
+    ahead, runwayEnd: runwayEnd(ahead), belowFloor: firstBelow(ahead, d.settings.floor), unrated: d.unrated,
   }
+}
+
+/** Admin › Today's source (R2): one item when a coming month closes under the minimum cash. The words hold no balance or closing figure. */
+export async function cashLowItems(staff: StaffOk, today: string): Promise<TodayItem[]> {
+  adminOnly(staff)
+  const [settings] = await adminDb().select({ floor: cashSettings.floorPaise }).from(cashSettings).where(eq(cashSettings.id, 1))
+  if (settings?.floor == null) return []
+  const o = await cashOverview(staff, today)
+  if (!o.belowFloor) return []
+  const [y, mo] = o.belowFloor.split('-')
+  const month = `${MONTHS[Number(mo) - 1]} ${y}`
+  return [{ kind: 'cash_low', key: o.belowFloor, title: `Cash falls below the minimum in ${month}`, line: o.runwayEnd ? `Runs out in ${MONTHS[Number(o.runwayEnd.split('-')[1]) - 1]} ${o.runwayEnd.split('-')[0]}` : 'Still above zero', action: 'See forecast', href: '/admin/cashflow', since: null }]
 }
 
 export type Line = { key: string; date: string; name: string; sub: string | null; source: 'Billing' | 'Costs' | 'Entered' | 'Planned'; amount: number; href: string | null; entryId: string | null; done: boolean }

@@ -1,7 +1,9 @@
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Section } from '@/components/layout/section'
 import { Empty } from '@/components/ui/empty'
 import type { CashOverview } from '@/lib/admin/cash'
-import { dayText, inrText, monthShortName } from '../format'
+import { NeedsBand } from '../../_components/needs-band'
+import { dayText, inrText, monthLongName, monthShortName } from '../format'
 import { UpdateBalanceButton } from './forms'
 
 /** The Overview (mockup § Overview, R1): cash now, net each month, the floor, and the six months behind. The forecast, runway and floor band arrive with R2. */
@@ -20,9 +22,11 @@ export function Overview({ o }: { o: CashOverview }) {
   const avg = o.rows.length >= 7 ? `average of ${monthShortName(o.rows[3]!.month)} to ${monthShortName(o.rows[5]!.month)}` : 'average of the last three months'
   return (
     <>
-      <dl className="grid grid-cols-1 rounded-lg border border-line-soft sm:grid-cols-3">
+      {o.belowFloor ? <NeedsBand tone="warn" title={`Cash falls below your minimum in ${monthLongName(o.belowFloor)}`} line={o.runwayEnd ? `· it runs out in ${monthLongName(o.runwayEnd)}` : undefined} action={<span className="text-small text-muted-foreground">See the forecast below</span>} /> : null}
+      <dl className="grid grid-cols-1 rounded-lg border border-line-soft sm:grid-cols-2 lg:grid-cols-4">
         <Figure label="Cash in bank" value={inrText(o.cash)} note={`${o.accounts.length} ${o.accounts.length === 1 ? 'account' : 'accounts'} · ${o.asOf ? dayText(o.asOf) : ''}`} />
         <Figure label="Net each month" value={o.net === null ? '—' : inrText(o.net)} note={avg} tone={o.net !== null && o.net < 0 ? 'bad' : undefined} />
+        <Figure label="Cash lasts until" value={o.runwayEnd ? monthLongName(o.runwayEnd) : o.ahead.length ? 'Beyond three years' : '—'} note="at the current pace" tone={o.runwayEnd ? 'bad' : undefined} />
         <Figure label="Keep at least" value={o.floor === null ? 'Not set' : inrText(o.floor)} note="set it in Update balance" />
       </dl>
       <Section title="Last six months" action={<span className="text-small text-muted-foreground">* this month so far</span>} className="space-y-3">
@@ -42,6 +46,24 @@ export function Overview({ o }: { o: CashOverview }) {
         </div>
         <p className="flex gap-4 text-small text-muted-foreground"><span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-chart" />Money in</span><span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-warn-mark" />Money out</span></p>
       </Section>
+      {o.ahead.length ? (
+        <Section title="Next six months" flush className="space-y-0">
+          <DataTable label="Forecast">
+            <DataTableHead><th>Month</th><th className="text-right">Money in</th><th className="text-right">Money out</th><th className="text-right">Cash at month end</th></DataTableHead>
+            <DataTableBody>
+              {o.ahead.slice(0, 6).map((r) => (
+                <DataTableRow key={r.month}>
+                  <Td cell="a"><span className="font-medium">{monthLongName(r.month)}</span></Td>
+                  <Td cell="b" className="text-right font-num">{inrText(r.billing + r.otherIn)}</Td>
+                  <Td cell="c" className="text-right font-num">{inrText(r.costs + r.gst + r.otherOut)}</Td>
+                  <Td cell="d" className={`text-right font-num ${r.closing < 0 || (o.floor !== null && r.closing < o.floor) ? 'text-danger-text' : ''}`}>{inrText(r.closing)}</Td>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+          {o.unrated ? <p className="px-4 py-3 text-small text-muted-foreground">{o.unrated} {o.unrated === 1 ? 'cost in dollars is' : 'costs in dollars are'} left out until a rate is typed on Costs.</p> : null}
+        </Section>
+      ) : null}
     </>
   )
 }

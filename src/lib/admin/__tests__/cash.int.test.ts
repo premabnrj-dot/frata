@@ -41,6 +41,7 @@ describe.skipIf(!host)('Admin › Cashflow', () => {
     await expect(cash.cashOverview(support, TODAY)).rejects.toThrow('ADMIN_ONLY')
     await expect(cash.movementsOf(support, '2026-11')).rejects.toThrow('ADMIN_ONLY')
     await expect(cash.booksFor(support, 1, TODAY, TODAY)).rejects.toThrow('ADMIN_ONLY')
+    await expect(cash.cashLowItems(support, TODAY)).rejects.toThrow('ADMIN_ONLY')
     await expect(cash.setBalance(support, { accountId: none, asOf: TODAY, paise: 1 }, TODAY)).rejects.toThrow('ADMIN_ONLY')
     await expect(cash.undoBalance(support, none, none, new Date())).rejects.toThrow('ADMIN_ONLY')
     await expect(cash.addEntry(support, { kind: 'funding', amount: 1, happenedOn: TODAY }, TODAY)).rejects.toThrow('ADMIN_ONLY')
@@ -73,6 +74,13 @@ describe.skipIf(!host)('Admin › Cashflow', () => {
     expect(audit.filter((r) => r.action === 'cash.balance.set').every((r) => r.d.includes(main) && r.d.includes('2026-11-20') && !r.d.includes('10000000'))).toBe(true)
     expect(audit.filter((r) => r.action === 'cash.settings.set' && r.d.includes('floorPaise')).length).toBeGreaterThanOrEqual(1)
     expect((await cash.cashData(staff, TODAY)).settings.floor).toBe(250_000 * R)
+  })
+
+  it('Today: the low-cash item holds no figure, and the overview carries a forecast', async () => {
+    const items = await cash.cashLowItems(master(), TODAY)
+    for (const i of items) expect(`${i.title} ${i.line}`).not.toMatch(/₹|\d{5,}/)
+    const o = await cash.cashOverview(master(), TODAY)
+    expect(o.ahead.length === 0 || o.ahead.length === 36).toBe(true)
   })
 
   it('Undo of a balance is free for ten minutes, then needs a fresh passkey check', async () => {

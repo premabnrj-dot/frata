@@ -7,8 +7,8 @@
 
 export type StaffRoleName = 'admin' | 'support'
 
-export type TodayKind = 'partner_passkey' | 'staff_passkey' | 'partner_review' | 'address_claim' | 'overpaid' | 'issue_run' | 'trial_ending' | 'owner_waiting' | 'theme_new' | 'site_no_reads' | 'cost_due'
-export type TodayArea = 'today' | 'merchants' | 'trials' | 'names' | 'partners' | 'staff' | 'billing' | 'costs' | 'themes' | 'storefront_api'
+export type TodayKind = 'partner_passkey' | 'staff_passkey' | 'partner_review' | 'address_claim' | 'overpaid' | 'issue_run' | 'trial_ending' | 'owner_waiting' | 'theme_new' | 'site_no_reads' | 'cost_due' | 'cash_low'
+export type TodayArea = 'today' | 'merchants' | 'trials' | 'names' | 'partners' | 'staff' | 'billing' | 'costs' | 'cash' | 'themes' | 'storefront_api'
 export type TodayTone = 'warn' | 'bad' | 'info'
 
 export type TodaySource = { kind: TodayKind; area: Exclude<TodayArea, 'today'>; roles: readonly StaffRoleName[]; chip: string; tone: TodayTone }
@@ -24,6 +24,8 @@ export const TODAY_SOURCES: readonly TodaySource[] = [
   { kind: 'issue_run', area: 'billing', roles: MASTER, chip: 'Billing', tone: 'info' },
   // Admin › Costs (plan 2026-11-23-admin-costs.md C2): a repeating cost overdue or due within a week. Money: master admins only.
   { kind: 'cost_due', area: 'costs', roles: MASTER, chip: 'Cost', tone: 'warn' },
+  // Admin › Cashflow (plan 2026-11-23-admin-cashflow.md R2): a coming month closes below the minimum cash. Money: master admins only.
+  { kind: 'cash_low', area: 'cash', roles: MASTER, chip: 'Cash', tone: 'warn' },
   { kind: 'address_claim', area: 'names', roles: ALL, chip: 'Address', tone: 'warn' },
   { kind: 'partner_review', area: 'partners', roles: ALL, chip: 'Partner', tone: 'info' },
   { kind: 'trial_ending', area: 'trials', roles: MASTER, chip: 'Trial', tone: 'warn' },
