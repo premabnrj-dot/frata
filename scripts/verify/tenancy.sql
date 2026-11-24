@@ -3489,7 +3489,7 @@ do $$ declare r text; f text; begin
      or to_regprocedure('app_partner_invite(uuid,text,text,uuid[])') is not null or to_regprocedure('app_partner_assign(uuid,uuid,uuid,boolean)') is not null
      or to_regprocedure('app_partner_remove_member(uuid,uuid)') is not null or to_regprocedure('app_partner_create_shop(uuid,text,text,text,integer,integer,integer,integer)') is not null then
     raise exception 'FAIL: an old partner signature survives'; end if;
-  -- O1 (drizzle/0179): sign-up's v1 and v2 and the partner's PIN-code signature are gone; only v3 and partner v2 remain.
+  -- O1 (drizzle/0180): sign-up's v1 and v2 and the partner's PIN-code signature are gone; only v3 and partner v2 remain.
   if to_regprocedure('app_create_shop(uuid,text,text,text,text[])') is not null
      or to_regprocedure('app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)') is not null
      or to_regprocedure('app_partner_create_shop(uuid,uuid,text,text,text,text,integer,integer,integer,integer)') is not null then
@@ -4663,7 +4663,7 @@ do $$ declare r text; f text; begin
 end $$;
 rollback;
 
--- § 106 · Sign-up without a PIN code (O1, drizzle/0178; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
+-- § 106 · Sign-up without a PIN code (O1, drizzle/0179; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
 -- refusal of v1 (§ 17, § 30's retired name) and v2 (§ 49): confirmed email, one shop a person, taken, bad and retired
 -- addresses, another person's code, a code twice, a claimed email gets no trial, frozen terms; the new store has no
 -- pickup PIN code, its audit no 'pickup', and 'signup_ms' only inside 0..86,400,000. The partner's v2 keeps § 28's
@@ -7139,4 +7139,10 @@ begin
   if 'c1050000-0000-0000-0000-0000000000f3'::uuid not in (select id from app_pc_stale_uses(interval '1 hour', 200)) then raise exception 'FAIL: 105 the sweep left an untied use'; end if;
 end $$;
 rollback;
+-- § 105 (cont.) · K2 (drizzle/0178): the last days' rates are Frrata Admin's to read, never the app's or a builder's.
+do $$ begin
+  if has_function_privilege('frata_app', 'admin_fx_rates_recent(integer)', 'execute') then raise exception 'FAIL: 105 frata_app may read the rate list'; end if;
+  if has_function_privilege('frata_builder', 'admin_fx_rates_recent(integer)', 'execute') then raise exception 'FAIL: 105 frata_builder may read the rate list'; end if;
+  if not has_function_privilege('frata_admin', 'admin_fx_rates_recent(integer)', 'execute') then raise exception 'FAIL: 105 frata_admin can''t read the rate list'; end if;
+end $$;
 \echo 'tenancy proof — all checks passed (through § 106)'

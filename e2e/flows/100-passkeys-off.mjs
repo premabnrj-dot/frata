@@ -45,6 +45,8 @@ export default {
     const { db } = t
     const M = USERS.frata, S = USERS.staff, P = USERS.partner
     await db`delete from platform_switches where key = 'passkeys_off'`
+    // A fresh dollar rate: with none, Studio's stopped banner is the one Admin shows (V3b K2, one banner at a time).
+    await db`insert into fx_rates (day, rate_e4, source) values ((now() at time zone 'Asia/Kolkata')::date, 941997, 'manual') on conflict (day) do nothing`
     await db`insert into platform_staff (user_id, email, role) values (${M.id}, ${M.email}, 'admin') on conflict (user_id) do update set role = 'admin'`
     await db`insert into auth.users (id, email, email_confirmed_at) values (${P.id}, ${P.email}, now()), (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
     await db`insert into tenants (id, slug, name) values (${T}, ${SLUG}, ${STORE}) on conflict (id) do nothing`
@@ -145,6 +147,8 @@ export default {
       })
     } finally {
       await db`delete from platform_switches where key = 'passkeys_off'`
+    // A fresh dollar rate: with none, Studio's stopped banner is the one Admin shows (V3b K2, one banner at a time).
+    await db`insert into fx_rates (day, rate_e4, source) values ((now() at time zone 'Asia/Kolkata')::date, 941997, 'manual') on conflict (day) do nothing`
       await db`delete from platform_staff where user_id = ${S.id}`
       // Pia is the shared partner of 97-developer and 99-studio-agent: leave her no key, no code and no extra store.
       await db`delete from storefront_keys where tenant_id = ${T}`

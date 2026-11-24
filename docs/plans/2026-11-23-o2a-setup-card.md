@@ -209,12 +209,12 @@ mock order check).
 - `page.tsx:52-59`: before opening, header "Home" + `Badge` warn "Opening soon", no meta line; the card replaces
   `Checklist`. `setup/page.tsx:17-18`: the same card + `OpenShop`'s close half (closing stays there, ux rule 30).
   `checklist.tsx` is deleted.
-- Flow `e2e/flows/101-setup.mjs` (next free number at build): a store made through `/start` (cleanup as `63-signup`), Home
+- Flow `e2e/flows/102-setup.mjs` (next free number at build): a store made through `/start` (cleanup as `63-signup`), Home
   at 1280 and 390, each popup as drawn; Esc, ✕, the backdrop and Back close and keep typed values; focus returns to the
   opener; a saved product goes Active (DB); a photo-less one stays a draft with its needs; details leave `address` and
   `supportEmail` as they were (DB); payments with Delivery Zones on; Staff sees one actionable row; axe clean;
   screenshots also under reduced motion.
-**Test first:** `101-setup.mjs` written against the mockup, red.
+**Test first:** `102-setup.mjs` written against the mockup, red.
 **Verify:** `npm run e2e -- --only setup,ux,neel`; § Performance's commands; `npm test` (check:words, check:motion,
 check:feedback, check:client-bundle on build).
 
@@ -239,9 +239,9 @@ check:feedback, check:client-bundle on build).
 - `open-shop.tsx`: the open half (`:65-70`) goes; the close half stays for `/console/setup`.
 - `e2e/lib.mjs`: `openStore(page)` (opens from the card, presses "Open store", waits for the moment, "Go to Home");
   `90-ux.mjs:362-380` and `91-storefront-api.mjs:209-234` call it (D0·3's refusal path keeps its own assertions).
-  `101-setup.mjs` gains: open from the card, the moment over the sidebar, focus on "Go to Home", the open card, "Hide this
+  `102-setup.mjs` gains: open from the card, the moment over the sidebar, focus on "Go to Home", the open card, "Hide this
   card" → Today, reload → Today.
-**Test first:** those `101-setup` steps red.
+**Test first:** those `102-setup` steps red.
 **Verify:** `npm run e2e -- --only setup,ux,storefront-api`; `npm test`.
 
 ### O2a·9 · Pickup PIN code popup from Delivery Zones (handed over by O1·6)
@@ -347,7 +347,7 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
 ## Repetitive work → agents and scripts
 | Chore | Done by hand | Becomes |
 |---|---|---|
-| Moving flows from "Open my store" / "Open it" to the popup | 90-ux, 91-storefront-api, 101-setup | `openStore(page)` in `e2e/lib.mjs` (O2a·8); O2b adds `{ plan }` |
+| Moving flows from "Open my store" / "Open it" to the popup | 90-ux, 91-storefront-api, 102-setup | `openStore(page)` in `e2e/lib.mjs` (O2a·8); O2b adds `{ plan }` |
 | Checking a popup sends only server-named fields | each popup review | no gate: `security-reviewer` judges it; `check:actions` already sees the chokepoint |
 | Pinning a page's JS after a change | each UI phase | the existing `APP_PINNED` |
 
@@ -360,7 +360,7 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
 | 4 The next step slides 16 px over 200 ms; the tick 320 ms; the moment's children rise over 320 ms | `animate-step-forward` (16 px, 320 ms, `base.css:331`); `animate-draw-tick` (200 ms after 320 ms, `:352`); `animate-rise` (200 ms, `:335`) with the drawn 80 ms stagger | no new duration (rule 22): the approved utilities | no |
 | 5 Toast leaves after 3.2 s | 8 s, paused on hover | Feedback rule 2 | no |
 | 6 Payments pictogram drawn as a card with a haldi chip | the existing `payments` pictogram | one pictogram per meaning (`pictogram.tsx:91`) | no |
-| 7 A done row's value in `--text-3`, 13 px | the value in text 2 (`muted-foreground`), 13 px | a law: axe finds text 3 at 13 px below 4.5:1 on white (WCAG 1.4.3; e2e `101-setup`) | no |
+| 7 A done row's value in `--text-3`, 13 px | the value in text 2 (`muted-foreground`), 13 px | a law: axe finds text 3 at 13 px below 4.5:1 on white (WCAG 1.4.3; e2e `102-setup`) | no |
 | 8 On a phone the popup sheet has a grab handle and its two buttons share the width | the `Dialog` primitive's sheet: no handle, buttons at the end of the row | one sheet for every dialog (Neel primitives); a handle that does not drag would promise a gesture the sheet lacks. Changing the primitive changes every sheet: an owner call | no |
 | 9 "Open your store?", the moment and the open card draw their own store (a box with a haldi door) | the existing `store` pictogram (a shopfront with a haldi awning) on its tile | one pictogram per meaning (`pictogram.tsx`): Home's empty state and the website already draw the store this way | no |
 | 10 Price and the Pay on delivery limit show "₹2,490" / "₹3,000" as typed values | a ₹ drawn inside the field before the digits; the value is digits and commas | the parser takes whole rupees (`sections.ts` rupees, `addFirstProduct`); a typed ₹ would be one more thing to strip | no |

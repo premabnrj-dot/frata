@@ -19,7 +19,7 @@ well." This plan holds three goals: (a) a new category is one pack file, one lin
 generated migration, with no edit to any reader; (b) a store's owner or Manager changes what it sells in Settings › Store
 details; (c) a fashion store sees no change when C1 ships.
 
-Lanes: O1 and O2 own migrations 0178–0181 and change `src/app/start/*` first. **C1 needs no migration.** The one exception
+Lanes: O1 and O2 own migrations 0179–0182 and change `src/app/start/*` first. **C1 needs no migration.** The one exception
 is open question 1: if the owner wants Ask the owner on Store details, that is `0170_ask_owner_store.sql`. C1a·6 changes
 `src/app/start/*` only to take the tiles from the registry, and it rebases onto O1. C1b·2 edits the Store details section after O1 adds the PIN code field there.
 

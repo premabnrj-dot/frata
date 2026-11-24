@@ -5,7 +5,7 @@
 // product without a photo stays a draft with what it needs; with one it goes Active (database). Business details leave
 // the address and customer care as they were; payments save. Staff see one actionable row. Axe clean; both widths,
 // and under reduced motion. The store is made in the database for the founder (the sign-up itself is 63-signup's).
-// Screenshots: e2e/.out/101-setup-<state>-<width>.png, which the parity check pairs with the mockup's.
+// Screenshots: e2e/.out/102-setup-<state>-<width>.png, which the parity check pairs with the mockup's.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'

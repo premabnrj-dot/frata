@@ -3,7 +3,7 @@
 //
 // A SHOP'S ADDRESS FROM ITS NAME, and the small judgements sign-up makes. Pure.
 // The database holds the same SHAPE as a CHECK in app_create_shop_v3
-// (drizzle/0178); the reserved words live only here.
+// (drizzle/0179); the reserved words live only here.
 // =============================================================================
 
 /** Lower-case letters, digits and single hyphens; 3–30 long; no hyphen at either end. */

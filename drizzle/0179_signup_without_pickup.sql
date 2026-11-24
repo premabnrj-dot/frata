@@ -1,6 +1,6 @@
 -- O1 sign-up (plan docs/plans/2026-11-23-o1-signup.md O1·2), EXPAND: sign-up and the partner's New client store
 -- without a pickup PIN code (it moves to Settings › Store; shop_settings.pickup_pincode is already nullable). Two new
--- definers beside the old ones: v1, v2 and the 10-argument partner function stay until 0179, applied only after the
+-- definers beside the old ones: v1, v2 and the 10-argument partner function stay until 0180, applied only after the
 -- build that calls these is live (§ Deploy order). Apply this one BEFORE the push.
 
 -- ── app_create_shop_v3: v2 (0065) line for line, minus the PIN code; plus the sign-up's elapsed time in the audit ──

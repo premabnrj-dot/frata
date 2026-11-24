@@ -160,22 +160,22 @@ it drops what the old build still calls, so it is applied only once the new buil
 out. `npm run release:check` lists every one (`scripts/lib/after-live.mjs`); `scripts/prod-migrate.mjs` prints one only when
 named with `--after-live`, so a release that prints migrations in order never applies one early.
 
-### Sign-up definers: 0178 before the push, 0179 after the build is live (O1, plan `docs/plans/2026-11-23-o1-signup.md` § Deploy order)
+### Sign-up definers: 0179 before the push, 0180 after the build is live (O1, plan `docs/plans/2026-11-23-o1-signup.md` § Deploy order)
 
-Expand, then contract. Previews share this database (step 6): before 0179, rebase or close every open preview branch
+Expand, then contract. Previews share this database (step 6): before 0180, rebase or close every open preview branch
 that still calls `app_create_shop`, `app_create_shop_v2` or the 10-argument `app_partner_create_shop`.
-1. **Before the push:** apply `drizzle/0178_signup_without_pickup.sql` (`node scripts/prod-migrate.mjs` prints its SQL and
+1. **Before the push:** apply `drizzle/0179_signup_without_pickup.sql` (`node scripts/prod-migrate.mjs` prints its SQL and
    its `drizzle.__drizzle_migrations` row). Old and new builds both work: it only adds `app_create_shop_v3` and
    `app_partner_create_shop_v2`.
 2. **Push;** wait until the production deployment is Ready and the old deployment's functions have run past their max
    duration (`vercel.json`).
-3. **Then** apply `drizzle/0179_signup_drop_old_definers.sql` (first line `-- apply: after-live`: never with the rest) and
-   its journal row: `node scripts/prod-migrate.mjs --after-live drizzle/0179_signup_drop_old_definers.sql` (without the
+3. **Then** apply `drizzle/0180_signup_drop_old_definers.sql` (first line `-- apply: after-live`: never with the rest) and
+   its journal row: `node scripts/prod-migrate.mjs --after-live drizzle/0180_signup_drop_old_definers.sql` (without the
    flag the script refuses an after-live migration; `npm run release:check` names every one); end with
    `select to_regprocedure('app_create_shop(uuid,text,text,text,text[])'), to_regprocedure('app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)'), to_regprocedure('app_partner_create_shop(uuid,uuid,text,text,text,text,integer,integer,integer,integer)')`
    — all three null.
-- **O2's 0180 never reaches production before 0179's journal row:** drizzle applies only files whose `when` is later
-  than the newest row, so a 0180 row first would make 0179 skipped for good.
+- **O2's 0181 never reaches production before 0180's journal row:** drizzle applies only files whose `when` is later
+  than the newest row, so a 0181 row first would make 0180 skipped for good.
 - **Rollback past step 3** (a Vercel rollback to a build before O1) breaks `/start` and New client store until BOTH old
   functions are re-created: v2 from `drizzle/0065_trial_signup.sql:52-107` and the 10-argument partner function from
   `drizzle/0129_partner_passkeys_access.sql:486-529` with its grants `:741-753`. **Re-run the revoke/grant** with them: a

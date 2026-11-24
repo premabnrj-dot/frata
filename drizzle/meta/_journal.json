@@ -1251,15 +1251,22 @@
     {
       "idx": 178,
       "version": "7",
-      "when": 1795500650629,
-      "tag": "0178_signup_without_pickup",
+      "when": 1795500182632,
+      "tag": "0178_admin_fx_rates",
       "breakpoints": true
     },
     {
       "idx": 179,
       "version": "7",
-      "when": 1795500654172,
-      "tag": "0179_signup_drop_old_definers",
+      "when": 1795502682292,
+      "tag": "0179_signup_without_pickup",
+      "breakpoints": true
+    },
+    {
+      "idx": 180,
+      "version": "7",
+      "when": 1795502685324,
+      "tag": "0180_signup_drop_old_definers",
       "breakpoints": true
     }
   ]
