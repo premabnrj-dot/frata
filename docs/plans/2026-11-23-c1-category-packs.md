@@ -517,3 +517,5 @@ The questions as first asked:
    `sellsSized` for it now, or leave it to C1d?
 5. **C1d** (words and photo shape by pack) is proposed as its own phase with its own mockup. Approve the name and the order (after C1b)?
 6. **Re-adding a pack** brings back a starting chart the merchant renamed (insert by name). Recommendation: accept, and say so in the added state.
+
+**Released 2026-11-24** (main `16cc20c0`, deployment Ready 08:32 UTC). Production: 0180 applied before the push, 0181 applied after the build was live; the three old sign-up functions are gone (`to_regprocedure` null), v3 and partner v2 present, both journal rows recorded. No runtime errors in the first 30 minutes. Still open: the owner's word on the Deviations rows marked "owner seen: no"; the production-errors check the next day (planning step 8b).

@@ -377,3 +377,5 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
 3. The 80 ms stagger needs one `animate-rise-stagger` utility (a delay, no new duration). Accept, or a Deviations row?
 4. "Change payments" is drawn only for a done step; when Pay on delivery is off and Razorpay is not connected, keep
    "Change payments" or say "Choose payments"?
+
+**Released 2026-11-24** (main `16cc20c0`, deployment Ready 08:32 UTC). Production: 0180 applied before the push, 0181 applied after the build was live; the three old sign-up functions are gone (`to_regprocedure` null), v3 and partner v2 present, both journal rows recorded. No runtime errors in the first 30 minutes. Still open: the owner's word on the Deviations rows marked "owner seen: no"; the production-errors check the next day (planning step 8b).
