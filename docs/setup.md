@@ -556,7 +556,9 @@ Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unbl
    the agent spike starts (V3a·1), this session sends a secure form for a `studio-eval` API key; never paste a key in chat.
    Later (V3a) the Managed Agents webhook is registered in the Console and its signing secret goes into Vercel
    (Production, Sensitive): the session gives the exact steps then.
-4. **S8 · GitHub — done 2026-11-16: the organisation is `frrata`** (https://github.com/frrata), Free plan, Actions off.
+4. **S8 · GitHub — done 2026-11-16 as `frrata` (https://github.com/frrata); changed 2026-11-24 (owner: "A new GitHub
+   organisation named FrrataGit in the same account"): the organisation is now `FrrataGit`**, Free plan, Actions off. Make it,
+   then move the starter into it; `frrata` stays only until nothing points at it.
    Partner sites live there instead of `frrata-sites`. Turn on Settings › Authentication security › **Require two-factor
    authentication** (free). Upgrade to **Team** before V2a puts the first partner site in it: branch rulesets on private
    repositories need Team (about $4 a member a month). The fleet's own repository stays outside it (decision S8).
@@ -571,9 +573,13 @@ Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unbl
      and the pen test. Not now.
    A Pro team is $20 a month plus its usage; nothing is hosted there until V2a. Then add this session's Vercel
    access to it (the Vercel connector asks). Unblocks: V2a.
-6. **O4 · frrata.shop** — renew it to 3 years at Hostinger (about ₹9,150 with GST). Then the Public Suffix List
-   submission (P4b) is opened from your GitHub account.
-7. **O6 · Preview domain** — buy one `.com`-priced domain for previews (about ₹3,200 for 3 years); tell me the name.
+6. **O4 · the store domain** — changed 2026-11-24 (owner: "We need to replace frrata.shop with frrata.store (I can renew
+   this for 3 years)"): renew **`frrata.store`** to 3 years; `frrata.shop` becomes Frrata's public site ("public domain
+   can be frrata.shop"). The earlier figure (about ₹9,150 with GST at Hostinger) was for `frrata.shop`; the price of
+   `frrata.store` is not in the repo. Then the Public Suffix List submission (P4b) is opened from your GitHub account.
+7. **O6 · Preview domain** — decided 2026-11-24 (owner: "preview domain can be: frratapreview.store (can buy for 3
+   years)"): buy **`frratapreview.store`** for 3 years (the earlier estimate, about ₹3,200, was for a `.com`; the price of a
+   `.store` name is not in the repo).
 
 ### Studio's agent on one test store, Frrata staff only (V3a; plan `docs/plans/2026-11-22-v3a-runtime.md`, ADR-0020)
 What is built: Studio at `/partner/studio`, its Managed Agents runtime behind `src/lib/studio/runtime.ts`, the per-minute

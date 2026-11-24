@@ -16,7 +16,8 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
   on Frrata's host. Amendment 7 put code sites on their own registrable domain to keep them away from checkout's origin.
 
 ## Decision
-1. **One address per store:** the brand's domain, or `<store>.frrata.shop`. `frrata.com` is never a store or site host.
+1. **One address per store:** the brand's domain, or `<store>.frrata.store` (amended 2026-11-24, § Amendment; was
+   `<store>.frrata.shop`). Frrata's public site is `frrata.shop`, and neither it nor `frrata.com` is a store or site host.
    No sites domain is bought; one separate preview domain is (point 8).
 2. **Frrata at the door.** Frrata's app holds the store's host. Reserved paths (one list, `src/domains/tenancy/reserved.ts`:
    `^/(cart|checkout|orders|account|policies|api|_next|_frrata|_vercel|\.well-known|og|icon|email|s|secure)(/|$)` and
@@ -40,8 +41,9 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
    change on an open store by anyone but the owner or a Manager waits for the owner's yes.
 7. **ADR-0018:** a public key answers for a store whose predicate is `one_address` as it does for a proved Website today;
    `siteOrigin` and `checkoutOrigin` then hold the same origin. Test keys before a domain are unchanged.
-8. **Previews** live on one separate registrable domain where Frrata's app serves nothing (no fourth tenant source).
-9. **`frrata.shop` goes to the Public Suffix List.** No security property depends on the listing: `__Host-` cookies only,
+8. **Previews** live on one separate registrable domain where Frrata's app serves nothing (no fourth tenant source):
+   **`frratapreview.store`** (owner, 2026-11-24; § Amendment).
+9. **`frrata.store` goes to the Public Suffix List** (was `frrata.shop`; § Amendment).** No security property depends on the listing: `__Host-` cookies only,
    no `Domain` cookie, and fetch metadata on every personal or state-changing route hold before it.
 
 ## Consequences
@@ -58,3 +60,16 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
 
 ## Owner decisions
 The spec's § Owner decisions, 1–25.
+
+## Amendment (owner, 2026-11-24: the three domains; plan `docs/plans/2026-11-24-domains.md`)
+The history above is left as written; this section and the marked points 1, 8 and 9 are the rule from today.
+- **The store domain is `frrata.store`.** The owner: "We need to replace frrata.shop with frrata.store (I can renew this
+  for 3 years)". A store's Frrata address is `<store>.frrata.store`; the Storefront API host is `api.frrata.store`
+  (ADR-0018 amendment); the secure host is `secure.<store>.frrata.store`.
+- **The preview domain is `frratapreview.store`** (O6). The owner: "preview domain can be: frratapreview.store (can buy for
+  3 years)". It is the separate registrable preview domain of point 8; Frrata's app serves nothing on it.
+- **Frrata's public site is `frrata.shop`.** The owner: "public domain can be frrata.shop". This reverses the context line
+  above ("frrata.com will be the public domain. .shop will remain the subdomain"): `.shop` is no longer a store
+  domain, and `frrata.com` is not named as public. `frrata.shop` is therefore **no longer** the Public Suffix List
+  candidate: `frrata.store` is (point 9).
+- Not decided: whether `frrata.com` is kept, redirected or dropped (the domains plan lists it as an open question).

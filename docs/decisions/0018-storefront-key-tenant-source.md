@@ -9,7 +9,7 @@ Status: **accepted** (owner, 2026-11-15: "all others approved": decisions 1–6 
   (`tenantForHost`, `src/lib/db/platform.ts`). CLAUDE.md and `frata-architecture` § Tenancy say "only two sources".
   The one form-supplied exception is starting a support session (ADR-0007).
 - ADR-0014 makes a shop's website code on the Storefront API. A site holds one read-only public key and no database
-  access. The API answers on `api.frrata.shop`, under `/2026-12/k/<key>/…`, whatever host the site runs on, so neither
+  access. The API answers on `api.frrata.shop` (from 2026-11-24 `api.frrata.store`; § Amendment, host), under `/2026-12/k/<key>/…`, whatever host the site runs on, so neither
   of today's sources can name the shop. ADR-0014's Consequences already say ADR-0002 gains a third source, as SA0
   drafts it.
 - The content-layer spec's tenancy review (2026-11-15) recorded two findings this record must carry: **SA0 lands
@@ -222,3 +222,11 @@ Proposed:
 > A key reads only what the shop's public pages show; a build key (ADR-0018) also reads the shop's drafts, from a
 > server only, and after the shop opens only while the partner person who made it is live, still a member of the shop
 > and, for a Lead or a Builder, assigned to it.
+
+## Amendment (the API host, owner 2026-11-24)
+The owner: "We need to replace frrata.shop with frrata.store (I can renew this for 3 years)". **The Storefront API host is
+`api.frrata.store`** (it was `api.frrata.shop`), under the same `/2026-12/k/<key>/…` paths. Nothing else in this record
+changes: the key still names the shop (§ 4), never the host. The move keeps `api.frrata.shop` answering for a while so a
+released site is not cut off; how long, and the order, is `docs/plans/2026-11-24-domains.md`. Released versions never
+change what they answer, so a site that wrote `api.frrata.shop` into its code keeps working until that host is retired
+with notice.
