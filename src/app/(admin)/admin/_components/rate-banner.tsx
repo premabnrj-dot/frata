@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Banner } from '@/components/ui/banner'
+import { button } from '@/components/ui/button'
 import type { RateState } from '@/domains/studio/rate-state'
 import { dayMonthIN } from '@/lib/format-date'
 
@@ -13,5 +14,5 @@ export function RateBanner({ state, admin }: { state: Exclude<RateState, { kind:
   const stopped = state.kind === 'none' || state.kind === 'lapsed'
   const title = stopped ? 'Studio is stopped' : state.kind === 'last' ? 'Studio stops tomorrow' : `Studio stops after ${day(state.lastDay)}`
   const line = !admin ? ASK : state.kind === 'none' ? 'No dollar rate yet' : state.kind === 'lapsed' ? `The newest dollar rate is from ${day(state.newest)}` : 'Enter today’s dollar rate'
-  return <Banner tone={stopped ? 'bad' : 'warn'} title={title} action={admin ? <Link href="/admin/rate" className="inline-flex min-h-6 items-center">Enter rate</Link> : undefined}>{line}</Banner>
+  return <Banner tone={stopped ? 'bad' : 'warn'} title={title} action={admin ? <Link href="/admin/rate" className={`${button({ variant: 'secondary', size: 'sm' })} !text-foreground !no-underline`}>Enter rate</Link> : undefined}>{line}</Banner>
 }

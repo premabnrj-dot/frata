@@ -19,12 +19,13 @@ async function save(form: FormData): Promise<ActionResult> {
   return r
 }
 
-export function RateForm({ label }: { label: string }) {
+/** `value`: today's rate when one is saved (as drawn), so a second save today starts from it. */
+export function RateForm({ label, value }: { label: string; value: string }) {
   return (
     <ActionForm action={save} className="flex flex-wrap items-end gap-2.5">
       <div className="grid w-full max-w-80 gap-1.5">
         <label htmlFor="rate" className="text-label">{label}</label>
-        <input id="rate" name="rate" inputMode="decimal" autoComplete="off" required maxLength={12} pattern="\d{2,3}(\.\d{1,4})?"
+        <input id="rate" name="rate" defaultValue={value} key={value} inputMode="decimal" autoComplete="off" required maxLength={12} pattern="\d{2,3}(\.\d{1,4})?"
           data-error="Type rupees with up to 4 decimals, like 94.1997." className={`${FIELD} font-num`} />
         <FieldMessage name="rate" />
       </div>

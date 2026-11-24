@@ -36,7 +36,7 @@ export default async function RatePage() {
       <PageHeader title="Dollar rate" />
       <div className="grid max-w-3xl gap-4">
         <Section ariaLabel="Today’s rate" id="rate-today">
-          <RateForm label={`Rupees per dollar · ${dayMonthIN(dayOf(today))}`} />
+          <RateForm label={`Rupees per dollar · ${dayMonthIN(dayOf(today))}`} value={rows.find((r) => r.day === today) ? rupees(rows.find((r) => r.day === today)!.rateE4) : ''} />
         </Section>
         {rows.length === 0
           ? <p className="text-sm text-muted-foreground">No rates yet</p>
@@ -48,8 +48,8 @@ export default async function RatePage() {
                     <DataTableRow key={r.day}>
                       <Td cell="a">{dayMonthIN(dayOf(r.day))}</Td>
                       <Td cell="b" className="text-right"><Numeric>{rupees(r.rateE4)}</Numeric></Td>
-                      <Td cell="c">{r.by ?? 'Frrata'}</Td>
-                      <Td cell="d"><time dateTime={r.setAt.toISOString()}>{timeIN(r.setAt)}</time></Td>
+                      <Td cell="c">{r.by ?? 'Frrata'}<span className="md:hidden"> · {timeIN(r.setAt)}</span></Td>
+                      <Td cell="hide"><time dateTime={r.setAt.toISOString()}>{timeIN(r.setAt)}</time></Td>
                     </DataTableRow>
                   ))}
                 </DataTableBody>
