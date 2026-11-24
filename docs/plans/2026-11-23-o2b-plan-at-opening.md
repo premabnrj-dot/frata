@@ -1,5 +1,5 @@
 # O2b · The plan chosen at "Open your store", billing from the first opening (task plan)
-Status: draft
+Status: active (built after the release of O1, C1a and O2a; first task: merge main and take the next free migration numbers)
 **Mockup:** https://claude.ai/artifact/PzNfST7bdFvLiQsxy11mQT (`docs/mockups/2026-11-23-merchant-onboarding.html` § 2 Setup, "Open your store?"); money states: addendum https://claude.ai/artifact/Wcm33KEmZJeCDUZSRrtNzq (`docs/mockups/2026-11-23-o2b-opening-money.html`)
 **Approved:** owner, 2026-11-23 (the roadmap mockup); the addendum and its three calls, owner 2026-11-23: "approved go with your recommendations"
 **Review:** architecture-reviewer findings from the O2 draft fixed, 2026-11-23
@@ -7,12 +7,12 @@ Status: draft
 **Review:** speed-reviewer covered by architecture-reviewer, 2026-11-23
 **Review:** unit-economics-reviewer 6 findings fixed, 2026-11-23
 **Review:** architecture-reviewer re-review: 3 blockers, 7 major, 4 minor fixed, 2026-11-23
-**Review:** tenancy-auditor re-audit pending on the revised plan
+**Review:** tenancy-auditor re-audit: 2 high, 3 medium, 6 low fixed, 2026-11-24
 Spec: `docs/specs/2026-11-23-merchant-onboarding.md` § O2, § Stress test, owner call 2; `docs/specs/2026-11-08-trials.md` rules
 1, 3, 4, 5 (amended in O2b·13). Built after O2a (`docs/plans/2026-11-23-o2a-setup-card.md`); replaces, with it, `2026-11-23-o2-setup.md`.
-**Migrations (PROVISIONAL numbers):** 0168 (a partner-built store's trial at its first opening), 0169 (`app_open_plan_state`,
-`app_open_plan`), 0170 (billing from the first opening). O1 holds 0166–0167 and Lane C (Studio credits) holds unreleased
-0168–0169 on its branch; see § Migration numbers.
+**Migrations (named, numbered at build):** `<partner-trial>` (a partner-built store's trial at its first opening),
+`<open-plan>` (`app_open_plan_state`, `app_open_plan`, `app_change_plan` refusing before opening), `<billing-from-opening>`.
+Each takes the next free number after main is merged and O1's two are renumbered (O2b·0b; § Migration numbers).
 
 **Owner decisions, 2026-11-23 (binding here):**
 1. **"Split it"**: O2a ships the Home card and popups with no billing change, and the plan step STAYS in sign-up; O2b is
@@ -22,13 +22,14 @@ Spec: `docs/specs/2026-11-23-merchant-onboarding.md` § O2, § Stress test, owne
 3. **A store that never opens is deleted after 180 days with two notices to the owner** (mirrors trials rule 5): its own
    small task later (§ Out of scope); not built here.
 4. **A partner-built store's trial starts at its first opening**, as for a store its owner makes (addendum call 1). It no
-   longer runs while the partner builds. Built in O2b·2 (pure) and O2b·3 (migration 0168); the addendum's "Partner-built"
+   longer runs while the partner builds. Built in O2b·2 (pure) and O2b·3 (migration `<partner-trial>`); the addendum's "Partner-built"
    state reads exactly like "With a trial" (merged in § States and § Words).
 5. **A plan that starts after the 1st is billed on the next 1st, by days**; an upgrade made on IST days 1–3 moves with it
    (addendum call 2). Built in O2b·5.
 6. **Orders from before a store's opening day carry no Frrata fee** (addendum call 3). Built in O2b·6 (`planRowsIn`).
 Production, 2026-11-23: no invoice or draft exists for a never-opened store (R1 = 0, 0); no credit note is needed.
-O2b·0 is done; every later task waits for the tenancy-auditor re-audit of this revised plan.
+O2b·0 is done. The tenancy-auditor re-audit (2026-11-24: FIX THE PLAN FIRST, 2 high, 3 medium, 6 low, no reachable leak)
+is folded in below, each finding marked **(audit H1…L11)** where it lands; O2b·0b is the first task to build.
 
 ## The finding this plan fixes (confirmed in the SQL and code, 2026-11-23)
 - `app_shops_to_bill(p_before)` (`drizzle/0066_trial_partners.sql:84-89`) lists every owned tenant with a plan row
@@ -56,7 +57,8 @@ O2b·0 is done; every later task waits for the tenancy-auditor re-audit of this 
   (`shop_trials.started_at`, set by the first publish, `0063:94-104`, the same update that sets `tenants.first_opened_at`,
   `drizzle/0068_addresses_access.sql:79-88`). The cap is `signed_up_at + open_window_days + days`, and `signed_up_at` is
   **the moment the store got its owner**: sign-up for a store its owner makes, the handover for a partner-built one (the
-  handover writes it, O2b·3). A store that opens after its cap opens with no trial and its 7-day grace starts at the
+  first owner's `members` row writes it through a trigger, O2b·3, so the handover and the sign-in claim of an owner
+  invite to a store whose partner link was removed, `app_claim_invites`, anchor it alike). A store that opens after its cap opens with no trial and its 7-day grace starts at the
   opening, never before it (O2b·2).
 
 ## Regression net (O2b·1; on the tree O2a left)
@@ -74,24 +76,31 @@ flipped in the fixing commit):
 | A never-opened trial store pauses | `src/domains/plans/__tests__/trial.test.ts` `never opened, past the cap: paused (flipped in O2b·2)` | `trialState` → `paused`, `pauseWindow` non-null |
 | A late opener pauses days after opening | same file, `opened past the cap: paused 3 days after opening (flipped in O2b·2)` | signed up day 0, 15 + 30 cap, opened day 50: `trialState(day 53)` → `paused` |
 | The handover's automatic extension | same file, the case at `:82-85` renamed `handover with under 7 days left extends automatically (flipped in O2b·2)` | `extendsAtHandover` true with 5 days left |
-| Partner trial starts at creation | `scripts/verify/tenancy.sql` block 50 (`:2192-2194`), comment renamed `partner trial starts at creation (flipped in O2b·3)`; plus a new assert in the same block: a partner shop handed over with 5 days left gets `extended_at` (`0124:254`) `(flipped in O2b·3)` | `started_at` set before going live; the extension written |
+| Partner trial starts at creation | `scripts/verify/tenancy.sql` block 50 (`:2193-2195`), comment renamed `partner trial starts at creation (flipped in O2b·3)`; plus a new assert in the same block: a partner shop handed over with 5 days left gets `extended_at` (`0124:254`) `(flipped in O2b·3)` | `started_at` set before going live; the extension written |
 | Trial order at the trial plan's rate | `src/domains/plans/__tests__/entitlements.test.ts` `trial order at the shipping plan's rate (flipped in O2b·4)` | Scale trial, downgrade to Launch on the 1st: an order shipped in the trial pays 0.5% |
 | Billed from creation | `src/domains/billing/__tests__/bill.test.ts` `bills from creation (flipped in O2b·5)` | a row from the 10th, no trial: the 10th–30th by days on that month's invoice |
 | Opening-month days lost | `src/lib/billing/__tests__/draft.int.test.ts` `opening month read as billed from a draft (flipped in O2b·6)` | `planBilledIn` (`draft.ts:50-54`) returns the plan lines of last month's UNISSUED draft → no make-up (not a `bill.test.ts` case: `computeBill` takes the number, `bill.ts:69`) |
 | A never-opened shop is listed for billing | `scripts/verify/tenancy.sql` block 50, `app_shops_to_bill lists a never-opened shop (flipped in O2b·8)` | an owned shop with `first_opened_at` null and a 40-day-old plan is in `app_shops_to_bill(now())` |
 | The stale-draft refusal | `draft.int.test.ts` (new case) | a draft with `drafted_at` before the 1st → the issue refuses the month (`0139:31-32`) |
 | Opening's handover refusal | `src/app/(console)/console/__tests__/open-shop.int.test.ts` (new) | a partner-built store before handover → "The store opens once its owner accepts the handover." (`shop-actions.ts:71`) |
-| Proof blocks 44 and 50 | `scripts/verify/tenancy.sql` "-- 44." (`:1993-2050`) and "-- 50." (`:2178-2197`) | as above; block 50 gains `if (select first_opened_at from tenants where id = '1111…') is null then raise exception 'FAIL: proof shop A is not open'` so 0170 cannot pass by emptying the list |
+| Proof blocks 44 and 50 | `scripts/verify/tenancy.sql` "-- 44." (`:1994-2052`) and "-- 50." (`:2179-2198`), checked on this branch 2026-11-24 and unchanged by the merge of main in progress in the working tree (O1's section, § 102 at `:4462` on the branch, renumbered there) **(audit L11)** | as above; block 50 gains `if (select first_opened_at from tenants where id = '1111…') is null then raise exception 'FAIL: proof shop A is not open'` so `<billing-from-opening>` cannot pass by emptying the list |
+| A claimed owner leaves the cap at creation | block 50, new: a partner shop whose link is removed, its owner invite claimed by `app_claim_invites` (`drizzle/0023_partners_access.sql:203-220`; main's `0174_people_access.sql:180`) → `signed_up_at` still the creation `(flipped in O2b·3)` | the claim path writes no anchor **(audit L6)** |
+| `app_change_plan` before opening | § 44, new: on a never-opened store `app_change_plan('growth', owner)` succeeds `(flipped in O2b·7)` | only the action refuses today **(audit H1)** |
 | e2e plan pick | `63-signup.mjs` (as O1 left it) | the plan step, Growth preselected; flipped in O2b·11 |
 
 ## Tasks
 Each task: the test first (watch it fail for the right reason), the change, its verify command run and read, `npm test`
 and `npm run typecheck`, then **impact-reviewer on the diff**, then its commit. The tree is green after each: a task
-that changes a signature changes every caller in the same commit. **Every task after O2b·1 waits for the tenancy-auditor
-re-audit of this plan.** Migrations reach production by hand (CLAUDE.md § Migrations) in O2b·14's order, right before
-the one push that uses them; the app works on production before and after each (0168 changes what a never-opened
-partner store's trial facts say, which old code reads as "building"; 0169 adds functions nothing old calls; 0170 narrows a
-list old code tolerates and deletes drafts the new rule never writes).
+that changes a signature changes every caller in the same commit. Migrations reach production by hand (CLAUDE.md
+§ Migrations) in O2b·14's order, right before the one push that uses them; the app works on production before and after
+each. `<partner-trial>` nulls a never-opened partner store's `started_at`: old code reads that as `building` only inside
+the open window (`src/domains/plans/trial.ts:96`); past it, old code reads the cap (`trialEndsAt`, `:58-64`) as the trial's
+end, so between the migration and the push such a store can show a trial, grace or paused banner in the console while it
+is closed (no shopper reaches a closed store, so nothing a shopper sees changes); the push ends it **(audit L10)**.
+`<open-plan>` adds functions nothing old calls and makes `app_change_plan` refuse before opening (old code's `changePlan`
+maps any `plan: …` message to its sentence, `src/app/(console)/console/settings/billing/actions.ts:209-212`, so a
+never-opened store reads "Choose your plan when you open your store." until the push). `<billing-from-opening>`
+narrows a list old code tolerates and deletes drafts the new rule never writes.
 
 ### O2b·0 · Mockup addendum (done; owner-approved 2026-11-23)
 **What:** `docs/mockups/2026-11-23-o2b-opening-money.html`, drawn at 1280 and 390: "Open your store?" in six states
@@ -100,6 +109,18 @@ Plan and billing before opening (the "Opening soon" chip, the plan as a `Facts` 
 plan starts when your store opens.", the trial line; no estimate, no invoices, no Change plan).
 **Verify:** `node scripts/check-mockup.mjs docs/mockups/2026-11-23-o2b-opening-money.html` clean; the owner's approval
 in writing (above); the spec's § O2 names the addendum (O2b·13).
+
+### O2b·0b · Merge main and take the next free migration numbers (first task to build) **(audit H2)**
+**What:** once O1, C1a and O2a are released: `git fetch origin main`, merge main into the branch (`scripts/merge-main.mjs`),
+and confirm O1's two migrations are on main under their renumbered names (they collide on this branch today with main's
+`0166_studio.sql`, `0167_studio_access.sql`; fixed at O1's release, not here). Then `git ls-tree --name-only origin/main
+drizzle/ | tail -15` gives the next free number: this plan's three are generated in O2b·3, O2b·7 and O2b·8 as the next
+free numbers, in that order, and the names `<partner-trial>`, `<open-plan>`, `<billing-from-opening>` in this plan read
+as those files. Re-run the main check of § Migration numbers on the merged tree (no later migration redefines a
+function this plan redefines). No schema split is needed first: no task here adds to `src/lib/db/schema.ts` or
+`src/lib/db/platform.ts` (§ Open questions 3).
+**Verify:** `npm run release:check` (no collision); `node scripts/merge-main.mjs --journal` clean; `npm test`; the
+re-check's `grep` (§ Migration numbers) prints nothing.
 
 ### O2b·1 · Regression net
 **What:** § Regression net. **Verify:** every command green; each pinned case red when its bug is planted.
@@ -144,37 +165,71 @@ after the handover → no trial (`trialDaysIfOpened` 0), grace from the opening;
 **Verify:** `npx vitest run src/domains/billing src/domains/plans`; `node scripts/check-layers.mjs` clean;
 `INT_DB_HOST=localhost:54330 INT_DB_NAME=frata_proof npx vitest run src/lib/queries/__tests__/billing.int.test.ts`.
 
-### O2b·3 · Migration 0168: a partner-built store's trial starts at its first opening (owner decision 4)
-**What:** `npm run db:generate -- --custom --name=partner_trial_at_opening` → `drizzle/0168_partner_trial_at_opening.sql`
-(PROVISIONAL number), `set search_path = ''`:
-1. `create or replace function app_partner_create_shop_v2(…)`: `0166:67-109` as O1 leaves it, with `shop_trials`
-   inserted WITHOUT `started_at` (`0166:101` → `(tenant_id, days, open_window_days, signed_up_at)`, as the owner store's
-   `0166:46`); the first publish starts the clock (`0063:94-104`). Same grants (`0166:111-114`). If O1 changes `0166`
-   before this merges, the body is copied again from O1's final file.
-2. `create or replace function app_accept_handover_v2(…)`: `0124:227-261` with two changes: inside `if s.tenant_id is not
-   null and s.ended_at is null`, the claimed branch writes `update public.shop_trials set signed_up_at = now() where
-   tenant_id = v_tenant and started_at is null` (**the cap counts from the handover**), and `0124:253-254` (`e := …;
-   if s.extended_at is null and e - now() < interval '7 days' then … extended_at = now()`) are removed: the handover never
-   extends. `app_trial_recompute` (`:256`) stays. Same grants.
+### O2b·3 · Migration `<partner-trial>`: a partner-built store's trial starts at its first opening (owner decision 4)
+**What:** `npm run db:generate -- --custom --name=partner_trial_at_opening` → `drizzle/<next free>_partner_trial_at_opening.sql`
+(the number from O2b·0b; 0178 is only an example, if O1's two take 0176–0177), `set search_path = ''`:
+1. `create or replace function app_partner_create_shop_v2(…)`: `0166:67-109` as O1 leaves it (copied again from O1's
+   renumbered file on main), with `shop_trials` inserted WITHOUT `started_at` (`0166:101` → `(tenant_id, days,
+   open_window_days, signed_up_at)`, as the owner store's `0166:46`); the first publish starts the clock (`0063:94-104`).
+   Grants re-run in full, never "same grants" **(audit M3)**: `revoke all … from public, anon, authenticated,
+   service_role, frata_admin, frata_builder; grant execute … to frata_app` (`0166:111-114` already lists `frata_builder`;
+   the list is re-run anyway so each redefinition stands alone).
+2. `create or replace function app_accept_handover_v2(…)`: `0124:227-261` with one change: `0124:253-254` (`e := …; if
+   s.extended_at is null and e - now() < interval '7 days' then … extended_at = now()`) are removed: the handover never
+   extends. It writes no anchor itself: its owner insert (`0124:245`) fires the trigger of step 4 before the trial is read
+   (`:246`), and `app_trial_recompute` (`:256`) stays. Grants re-run in full **(audit M3)**: `0066:91` (the last revoke on
+   this function; 0124 re-ran none) never lists `frata_builder`; `revoke all … from public, anon, authenticated,
+   service_role, frata_admin, frata_builder; grant execute … to frata_app`.
 3. `create or replace function app_trial_extend(p_by uuid)`: `0063:108-138` with the building check (`:123-124`) as
    `s.started_at is null` (refused: "trial: more days can be taken once the website is live"), the twin of
-   `mayExtend` after O2b·2.
-4. Between `-- reset:begin` and `-- reset:end`, for every store with `shop_trials.started_at is not null` and
-   `tenants.first_opened_at is null` (exactly the partner-built stores `0166:101` started early; an owner store's
-   `started_at` is null until it opens): `started_at = null`, and `signed_up_at = ` the owner's `members.created_at`
-   (`role = 'owner'`; the handover's insert, `0124:245`) when the store has an owner, else unchanged (the handover will
-   write it); then `perform public.app_trial_recompute(tenant_id)` for each (a `do` block; `tenant_plans.trial_ends_at`
-   follows, `0063:66-80`). Comment blocks `-- read-before:` / `-- read-after:` hold read **R5** (below): before n, after 0.
-`tenancy.sql` block 50: the O2b·1 pins flipped: "a partner shop's trial waits for its first opening" (`started_at` null
-after `app_partner_create_shop_v2`); after `app_accept_handover_v2`: `signed_up_at` ≈ `now()`, `extended_at` null with
-any days left, and `trial_ends_at` on its plan row = `app_ist_day_end_after(signed_up_at, window + days)`; the first
-publish then sets `started_at` and `trial_ends_at` = opening + days. § 47: `app_trial_extend` on a never-opened store
-past its window → refused. The reset block, run on a seeded never-opened partner store with `started_at` set, leaves it
-null and its `signed_up_at` at the owner's row.
+   `mayExtend` after O2b·2. Grants re-run in full **(audit M3)**: `0063:293-297` revokes from `frata_app` and
+   `frata_admin` but never `frata_builder`, then `:301` grants `frata_app`; here `revoke all … from public, anon,
+   authenticated, service_role, frata_admin, frata_builder; grant execute … to frata_app`.
+4. **The cap anchor, on every path that gives a store its owner (audit L6).** `app_owner_anchors_cap()`, a `security
+   definer` trigger function, `after insert on public.members for each row when (new.role = 'owner')`: `update
+   public.shop_trials set signed_up_at = now() where tenant_id = new.tenant_id and started_at is null and not exists
+   (select 1 from public.members m where m.tenant_id = new.tenant_id and m.role = 'owner' and m.user_id <> new.user_id)`;
+   if a row changed, `perform public.app_trial_recompute(new.tenant_id)`. It covers the handover (`0124:245`) and the
+   sign-in claim of an owner invite, which inserts an owner with no handover once the store's partner link is removed
+   (`drizzle/0023_partners_access.sql:203-220`, skip at `:212`; main's redefinition `0174_people_access.sql:180-211`,
+   skip at `:191-192`, insert at `:200`), without a third copy of `app_claim_invites`. An owner's own sign-up inserts its
+   `members` row (`0166:42`) before its `shop_trials` row (`0166:46`), so the trigger finds nothing and the anchor stays
+   the sign-up; a second owner row never moves it; an opened store's never moves. `revoke all on function
+   app_owner_anchors_cap() from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder`.
+   Rejected: copying main's `app_claim_invites` with a `signed_up_at` write (a definer main changed a week ago, and
+   any later path would need the same line).
+5. **The reset (audit M4),** between `-- reset:begin` and `-- reset:end`, in a `do` block: the stores reset are those with
+   `shop_trials.started_at is not null`, `tenants.first_opened_at is null`, **a live `partner_links` row** (`removed_at
+   is null`), **`shop_settings.published_at` null** and **no `audit_events` row with `action = 'shop.open'`** (the
+   opening's audit, `src/app/(console)/console/shop-actions.ts:59`). So the reset never rests on `0068`'s
+   `first_opened_at` backfill (`drizzle/0068_addresses_access.sql:16-21`) being complete. For each: `started_at = null`,
+   and `signed_up_at = ` the owner's `members.created_at` (`role = 'owner'`) when the store has an owner, else
+   unchanged (the trigger of step 4 writes it at the handover); then `perform public.app_trial_recompute(tenant_id)`
+   (`tenant_plans.trial_ends_at` follows, `0063:66-80`). Before any update the block counts, over all stores with
+   `started_at` set and `first_opened_at` null, those that **have in fact opened** (`published_at` set or a `shop.open`
+   row): **non-zero → `raise exception` and the migration stops** (the backfill missed a store; the orchestrator brings
+   it to the owner). After the updates it asserts that no store is left with `started_at` set and `first_opened_at` null
+   (O2b·2's "opened is `startedAt !== null`" holds): so a non-zero R5 `no_live_link` share stops the migration too, and
+   is settled at O2b·14 step 2 before apply (recommendation to the owner: add those, partner-built stores whose link was
+   removed, to the reset). Comment blocks `-- read-before:` / `-- read-after:` hold read **R5** (below), split by those
+   conditions: before `reset` n, `no_live_link` 0, `opened_in_fact` 0; after, every share 0.
+`tenancy.sql` block 50 (`:2179`): the O2b·1 pins flipped: "a partner shop's trial waits for its first opening"
+(`started_at` null after `app_partner_create_shop_v2`); after `app_accept_handover_v2`: `signed_up_at` ≈ `now()`,
+`extended_at` null with any days left, and `trial_ends_at` on its plan row = `app_ist_day_end_after(signed_up_at, window +
+days)`; the first publish then sets `started_at` and `trial_ends_at` = opening + days. **The claim path (audit L6):** a
+partner shop with its link removed, its owner invite claimed by `app_claim_invites` → `signed_up_at` ≈ `now()` and
+`trial_ends_at` recomputed; an owner store's sign-up row keeps its `signed_up_at`; a second owner row (seeded) does not
+move it. **Grants (audit M3):** `has_function_privilege` for `app_partner_create_shop_v2(…)`,
+`app_accept_handover_v2(uuid,uuid,text,smallint)`, `app_trial_extend(uuid)`: false for anon, authenticated,
+service_role, frata_admin, frata_builder; true for frata_app; `app_owner_anchors_cap()` false for every app role; the
+existing list at `:2185` gains `frata_builder`. § 47 (`:2095`): `app_trial_extend` on a never-opened store past its
+window → refused. The reset block, run on seeded stores: a never-opened partner store with `started_at` set → null and
+its `signed_up_at` at the owner's row; a seeded store with `started_at` set, `first_opened_at` null and a `shop.open`
+audit row → the block raises (run inside `begin … exception` in the proof, then the row removed).
 **Test first:** those `tenancy.sql` asserts, red. **Verify:** `npm run verify:tenancy`; `INT_DB_HOST=localhost:54330
 INT_DB_NAME=frata_proof npx vitest run src/lib/billing/__tests__/trial-billing.int.test.ts src/lib/billing/__tests__/trial-parity.int.test.ts`;
 `npm run e2e -- --only partners,partner-clients`; `npm run release:check`; `node scripts/prod-migrate.mjs
-drizzle/0168_partner_trial_at_opening.sql` prints the SQL, R5 and the drizzle row.
+drizzle/<partner-trial>.sql` prints the SQL, R5 and the drizzle row.
 
 ### O2b·4 · The trial-fee rule, frozen at billing (pure, and its SQL twin)
 **What:** the rate moment of an order is decided once and never moves after the order is billed:
@@ -266,67 +321,100 @@ draft is not billed"). `billing.int.test.ts`: a never-opened store's overview ha
 **Verify:** `INT_DB_HOST=localhost:54330 INT_DB_NAME=frata_proof npx vitest run src/lib/billing src/lib/queries`; `npm
 run e2e -- --only billing`. **unit-economics-reviewer** on the diff (the built engine).
 
-### O2b·7 · Migration 0169: `app_open_plan_state()` and `app_open_plan(code, by)`
-**What:** `npm run db:generate -- --custom --name=open_plan` → `drizzle/0169_open_plan.sql` (PROVISIONAL), `set
-search_path = ''`, `security definer`:
+### O2b·7 · Migration `<open-plan>`: `app_open_plan_state()`, `app_open_plan(code, by)`, `app_change_plan` after opening
+**What:** `npm run db:generate -- --custom --name=open_plan` → `drizzle/<next free>_open_plan.sql` (number from O2b·0b),
+`set search_path = ''`, `security definer`:
 - `app_open_plan_state() returns text`, `stable`: the reason the plan cannot be chosen at opening, or null. `t :=
   app_current_tenant()`, null → `'no_shop'`; `first_opened_at is not null` → `'opened'`; no row in force → `'no_plan'`;
   the row in force has `custom_monthly_price` → `'custom'`; **set by Frrata staff, keyed on who wrote the row, never on
-  who calls**: `exists (select 1 from public.platform_staff s where s.user_id = cur.created_by) and not exists (select 1
-  from public.members m where m.tenant_id = t and m.user_id = cur.created_by)` → `'staff'` (Admin writes such rows,
-  `src/lib/admin/merchants.ts:143-145`, `src/lib/admin/plans.ts:74-77`; a staff member who signed up their own store
-  wrote its row as its owner, `0166:51`, and keeps the choice); any row `starts_at > now() and not by_shop` →
-  `'scheduled'`; any issued invoice line of kind `plan` → `'billed'`.
+  who calls (audit M5)**: `exists (select 1 from public.platform_staff s where s.user_id = cur.created_by) and not exists
+  (select 1 from public.members m where m.tenant_id = t and m.user_id = cur.created_by and m.role in ('owner',
+  'admin'))` → `'staff'`. "Chosen by the store" is the writer's own `members` row as owner or Manager: a staffer who is
+  also the store's Staff, Accountant or partner member and sets its plan in Admin (`src/lib/admin/merchants.ts:143-145`,
+  `src/lib/admin/plans.ts:74-77`) wrote a Frrata row and gets `'staff'`; a staffer who signed up their own store wrote
+  its row as its owner (`0166:51`) and keeps the choice. Any row `starts_at > now() and not by_shop` → `'scheduled'`;
+  **any issued invoice of the store** (`exists (select 1 from public.frrata_invoices i where i.tenant_id = t and
+  i.issued_at is not null)`, not only plan lines: a fee-only invoice counts) → `'billed'` **(audit L8)**.
 - `app_open_plan(p_code text, p_by uuid) returns table (from_code text, to_code text)`, plpgsql: `t` null →
   `insufficient_privilege` "plan: no_shop"; the caller's own `members` row (`tenant_id = t and user_id = p_by and role in
-  ('owner','admin')`, never the role a support visit reports) else `insufficient_privilege` "plan: role"; `perform 1 from
-  public.tenants where id = t for update` (as `app_change_plan`, `0063:228`); `r := app_open_plan_state()`, non-null →
-  `check_violation` "plan: " || r; target = newest version of `p_code`, unknown → `invalid_parameter_value` "plan:
-  unknown"; delete `by_shop` rows still to start; update the row in force in place: `plan_version_id = target, by_shop =
-  true, reason = 'Chosen at opening', created_by = p_by`, same `starts_at` and `trial_ends_at` (the publish trigger
-  recomputes the trial, `0063:94-104`); same code: no update; audit `billing.plan.open`, target `p_code`, detail
-  `{from, to}` always.
-- Both: `revoke all … from public, anon, authenticated, service_role, frata_admin, frata_builder; grant execute … to
-  frata_app;` (the 0157/0158 pattern, `0158_d0_opening_check.sql:30`).
-- `scripts/verify/tenancy.sql`, new § after the last (O1's § 102 → § 103), as `frata_app`: no tenant → refused; **B's
-  OWNER with A's tenant set** → refused; A's Staff and Accountant → refused; **A's partner member before and after
-  handover** → refused; a support session (staff user, no members row) → refused; **`frata_builder`**: no EXECUTE on
-  either (assert, `has_function_privilege`); A's owner Launch→Growth: one row changed, same `starts_at` and
+  ('owner','admin')`, never the role a support visit reports; a `builder`, `partner`, `staff` or `accountant` row is
+  refused) else `insufficient_privilege` "plan: role"; `perform 1 from public.tenants where id = t for update` (as
+  `app_change_plan`, `0063:229`); `r := app_open_plan_state()`, non-null → `check_violation` "plan: " || r; `cur` = the
+  row in force; target = newest version of `p_code`, unknown → `invalid_parameter_value` "plan: unknown"; delete
+  `by_shop` rows still to start; update the row in force in place, **`update public.tenant_plans tp set … where
+  tp.tenant_id = t and tp.id = cur.id` (audit L8)**: `plan_version_id = target, by_shop = true, reason = 'Chosen at
+  opening', created_by = p_by`, same `starts_at` and `trial_ends_at` (the publish trigger recomputes the trial,
+  `0063:94-104`); same code: no update; audit `billing.plan.open`, target `p_code`, detail `{from, to}` always.
+- **`create or replace function app_change_plan(p_code text, p_by uuid)` (orchestrator ruling 1; audit H1):** `0063:221-256`
+  copied whole (the last definition on this branch and on main: `0058:14` is older, and main's 0166–0175 do not touch it,
+  § Migration numbers), with one line added right after the lock (`0063:229`): `if (select first_opened_at from
+  public.tenants where id = t) is null then raise exception 'plan: choose your plan when you open your store' using errcode
+  = 'check_violation'; end if;`. The refusal is after the role check and the lock, so a non-member still reads
+  `insufficient_privilege` first. `changePlan` maps `plan: …` to its sentence (`settings/billing/actions.ts:209-212`):
+  "Choose your plan when you open your store." (§ Words), the same words O2b·10's action check gives.
+- Grants on all three, re-run in full: `revoke all … from public, anon, authenticated, service_role, frata_admin,
+  frata_builder; grant execute … to frata_app;` (the 0157/0158 pattern, `0158_d0_opening_check.sql:30`; for
+  `app_change_plan` this widens `0058:76`, which never listed `frata_admin` or `frata_builder`).
+- `scripts/verify/tenancy.sql` § 44 (`:1994`) opens proof shop A at its top (`update tenants set first_opened_at =
+  coalesce(first_opened_at, now()) where id = '1111…'`, as `:766` does for B): A is first published only at § 46
+  (`:2083`), so § 44's `app_change_plan` calls (`:2007`, `:2009`) would otherwise meet the new refusal, and its
+  `check_violation` asserts (`:2035`, `:2044`) would pass for the wrong reason. § 45–47 rerun green after it.
+- `scripts/verify/tenancy.sql`, a new section numbered the next free § after main is merged (**§ `<open-plan>`** below; main's People section already takes § 103 and the in-progress merge renumbers O1's to § 105, so § 106 at the time of writing, an example only), as `frata_app`: no tenant →
+  refused; **B's OWNER with A's tenant set** → refused; A's Staff and Accountant → refused; **a `builder` members row of
+  A** → refused (audit L8); **A's partner member before and after handover** → refused; a support session (staff user, no
+  members row) → refused; **`frata_builder`**: no EXECUTE on any of the three (assert, `has_function_privilege`); A's
+  owner Launch→Growth: one row changed (`cur.id`'s, the others' `plan_version_id` unchanged), same `starts_at` and
   `trial_ends_at`, one audit row; **then the publish (`published_at = now()`): `trial_ends_at` equals the recompute from
   the opening**; **future `by_shop` rows deleted**; same code: no change, audited; after `first_opened_at` set → state
   `'opened'`, refused; custom price → `'custom'`; **a row created by a `platform_staff` user who is not a member →
-  `'staff'`, refused; a store whose owner is a `platform_staff` user, on its sign-up row → null (choosable)**; a
-  Frrata-scheduled row → `'scheduled'`; an issued plan line → `'billed'`; B's rows untouched; no EXECUTE for anon,
-  authenticated, service_role, frata_admin, frata_builder; EXECUTE for frata_app. The last line reads `tenancy proof —
-  all checks passed (through § 103)`. `plan-change.int.test.ts` gains "open plan, then `app_change_plan` after the
-  opening" (only the latter works).
+  `'staff'`; by a `platform_staff` user who is the store's Staff → `'staff'`; by one who is its Accountant → `'staff'`;
+  by one who is its partner member → `'staff'` (audit M5); a store whose owner is a `platform_staff` user, on its
+  sign-up row → null (choosable)**; a Frrata-scheduled row → `'scheduled'`; **an issued invoice with fee lines and no plan
+  line → `'billed'`**; B's rows untouched. **`app_change_plan` (audit H1):** on a never-opened store as its owner →
+  `check_violation`, nothing inserted, no `billing.plan.change` audit; the same store after `published_at = now()` →
+  the change written. No EXECUTE for anon, authenticated, service_role, frata_admin, frata_builder on
+  `app_open_plan_state()`, `app_open_plan(text,uuid)`, `app_change_plan(text,uuid)`; EXECUTE for frata_app. The last
+  line reads `tenancy proof — all checks passed (through § <that number>)` (on the branch today `:6111`, "through § 102").
+- `plan-change.int.test.ts` and every int test that calls `app_change_plan` (`grep -rln app_change_plan src`) seed an
+  opened store (`first_opened_at` set) in the same commit; gains "open plan, then `app_change_plan` after the opening"
+  (only the latter works) and "`app_change_plan` before the opening → refused".
 **Verify:** `npm run verify:tenancy` fails before the migration (function missing), passes after; plant "any member"
-in the role check and watch § 103 fail; plant "the caller is staff" for `'staff'` and watch the staff-owner case fail;
-`npm run release:check` (no collision); `node scripts/prod-migrate.mjs drizzle/0169_open_plan.sql` prints the SQL and
-its drizzle row.
+in the role check and watch § `<open-plan>` fail; plant "any members row of the writer" for `'staff'` and watch the staffer-Staff
+case fail; plant "plan lines only" for `'billed'` and watch the fee-only case fail; remove the `app_change_plan` line
+and watch its § `<open-plan>` row fail; `npm run release:check` (no collision); `node scripts/prod-migrate.mjs
+drizzle/<open-plan>.sql` prints the SQL and its drizzle row.
 
-### O2b·8 · Migration 0170: billing from the first opening; drafts the new rule never writes removed
-**What:** `drizzle/0170_bill_from_opening.sql` (`--custom`, PROVISIONAL):
+### O2b·8 · Migration `<billing-from-opening>`: billing from the first opening; drafts the new rule never writes removed
+**What:** `drizzle/<next free>_bill_from_opening.sql` (`--custom`, number from O2b·0b):
 1. `create or replace function app_shops_to_bill(p_before timestamptz)` as `0066:84-89` joined to `public.tenants t` with
    `t.first_opened_at is not null and t.first_opened_at < p_before`; `revoke all … from public, anon, authenticated,
    service_role, frata_admin, frata_builder; grant execute … to frata_app` (re-run of `0048:113-115`, widened).
-2. Between `-- cleanup:begin` and `-- cleanup:end`, idempotent and run AGAIN after the push (O2b·14 step 6): delete every
-   unissued (`issued_at is null`) invoice the new rule never writes, that is, of a tenant with `first_opened_at is null`
-   (every period, next month's included) **or** whose opening's IST day start is after the invoice's `period_start`
-   (a month the store opened after the 1st of), first its `frrata_fee_credits`, `frrata_invoice_fees`,
+2. Between `-- cleanup:begin` and `-- cleanup:end`, idempotent and run AGAIN after the push (O2b·14 step 6), **as ONE
+   transaction (audit L9)**: the block is `begin; … commit;` and is sent as one request, so a failure on any statement
+   (a restrict foreign key) rolls every delete back. It deletes every unissued (`issued_at is null`) invoice the new rule
+   never writes, that is, of a tenant with `first_opened_at is null` (every period, next month's included) **or** whose
+   opening's IST day start is after the invoice's `period_start` (a month the store opened after the 1st of), first its
+   `frrata_fee_credits` (whose fee foreign key is `restrict`, `drizzle/0047_billing.sql:98`), `frrata_invoice_fees`,
    `frrata_invoice_lines`, then the `frrata_invoices` rows. Issued rows are never touched. It runs as `postgres` through
    the Supabase API; `frata_app` keeps no delete on `frrata_invoices`.
-3. Comment blocks `-- read-before:` and `-- read-after:` holding R1 and R3 (below); `scripts/prod-migrate.mjs` prints
-   them, and prints the cleanup block on its own with `--cleanup` (§ Repetitive work).
+3. Comment blocks `-- read-before:` and `-- read-after:` holding R1, R3 and **R6** (below); `scripts/prod-migrate.mjs`
+   prints them, and prints the cleanup block on its own with `--cleanup` (§ Repetitive work). R6 counts, over the drafts
+   the cleanup targets, their lines, fees and credits, and the targeted drafts or fees still referenced by a `restrict`
+   key the block does not delete: `frrata_credit_notes` and `frrata_payments` (`drizzle/0054_billing_issue.sql:44-45`),
+   `billing_notices` (`drizzle/0056_billing_autopay.sql:39`), and a `frrata_fee_credits` row on another invoice that
+   points at a targeted fee (`0047:98`). Before: those `restrict` counts must be 0 (else stop: the transaction would roll
+   back; the orchestrator asks the owner); after: every R6 count 0.
 `tenancy.sql` block 50: the O2b·1 pin flipped: an owned never-opened shop with a 40-day-old plan is not listed; A (open)
 is; after the change `has_function_privilege` on `app_shops_to_bill(timestamptz)`: frata_app true, anon, authenticated,
-service_role, frata_admin, frata_builder false (extend `:1861`'s list with frata_builder); `frata_app` still has no
+service_role, frata_admin, frata_builder false (extend `:1862`'s list with frata_builder); `frata_app` still has no
 DELETE on `frrata_invoices` (`has_table_privilege`).
 **Test first:** `bill-from-opening.int.test.ts` gains: a never-opened store with a December draft drafted 20 Nov; the
 month refuses to issue (stale, `0139:31-32`); the test runs the file's cleanup block; the draft and its lines, fees and
 credits are gone; `issueMonthAuto(1 Dec)` issues the month for the rest; a store opened 10 Dec holding a December draft
-→ removed by the block; a store opened 1 Dec holding its December draft → kept; running the block twice changes nothing.
-**Verify:** `npm run verify:tenancy`; that int test; `node scripts/prod-migrate.mjs drizzle/0170_bill_from_opening.sql`
+→ removed by the block; a store opened 1 Dec holding its December draft → kept; running the block twice changes nothing;
+**a targeted draft with a `billing_notices` row → the block fails and NOTHING is deleted (the other targeted drafts
+included): one transaction**; R6 before and after match the rows seeded.
+**Verify:** `npm run verify:tenancy`; that int test; `node scripts/prod-migrate.mjs drizzle/<billing-from-opening>.sql`
 prints the SQL, the reads, the cleanup block and the drizzle row.
 
 ### O2b·9 · Opening with the plan
@@ -345,8 +433,14 @@ prints the SQL, the reads, the cleanup block and the drizzle row.
 - The catch (`:69-74`): a message (as `createShop` reads it, `src/lib/db/platform.ts:169`) starting `plan:` → its
   reason's sentence; the handover's `23514` (the publish trigger, `0066:120`, message `shop:`) keeps its own sentence;
   `pgCode` (`:32-35`) alone never decides.
-- `loadOpening()` (`requireMember(CAN_MANAGE)`, a support visit → `{ step: false }`) → `openingFor(m, now)` in a new
-  `src/lib/queries/opening.ts` (not `billing.ts`, so `check:billing-read` holds): one `withTenant`:
+- `loadOpening()`: `requireMember(CAN_MANAGE)`; **not ok (Staff, Accountant, a Builder or any role outside owner and
+  Manager) or a support visit → `{ step: false }` with no read at all (audit L7)**; else `openingFor(m, now)` in a new
+  `src/lib/queries/opening.ts` (not `billing.ts`; it returns a custom price, so it is a money read): `openingFor`
+  refuses itself any membership outside owner and admin or with a support session (as `billing.ts`'s exports do), and
+  **`scripts/check-billing-read.mjs` gains it**: a second import pattern, `@/lib/queries/opening`, allowed only in
+  `src/app/(console)/console/shop-actions.ts` (the popup's action) and `__tests__/` (audit L7); the gate's header comment
+  says so, and the gate is run against that comment (CLAUDE.md: a gate must not match its own documentation). One
+  `withTenant`:
   `app_open_plan_state()`, the row in force (code, name, custom price), `shop_trials` by key, `tenants.first_opened_at`;
   plus `publicPlans()` (`platform.ts:181`). Returns `{ step: boolean, choosable: boolean, current: { code, name,
   monthlyPrice, feeBps }, plans: [{ code, name, monthlyPrice, feeBps }], freeUntil: Date | null }`: `step` false once
@@ -357,7 +451,9 @@ trial started; Manager may; a support visit opens a no-trial store, plan unchang
 `{ plan: 'scale' }` opens the store, plan unchanged, no `billing.plan.open` audit**; `app_open_plan` refused (a Frrata
 change scheduled between the read and the call) → nothing published, the reason's sentence; the handover refusal keeps
 its sentence; `{ plan: 'gold' }` refused before any read; a partner-built store after handover opens with a trial from
-the opening (decision 4).
+the opening (decision 4); **`loadOpening()` as Staff, as an Accountant and on a support visit → `{ step: false }`, and
+no statement runs (a spy on `withTenant`)**. `scripts/__tests__/` (or the gate's own fixture run): a file outside
+`shop-actions.ts` importing `@/lib/queries/opening` fails `check:billing-read`; the gate's own file passes.
 **Verify:** that test green; `npm run verify:tenancy`; `npm test` (check:actions, check:billing-read);
 `npm run e2e -- --only setup,ux,storefront-api` (O2a's popup still sends no plan).
 
@@ -417,20 +513,28 @@ decision 2's sentence and O2b·4's freeze. § Practices recorded in skills with 
 addendum and both plans. **Verify:** `npm test` (check:skills, check:docs, check:plans).
 
 ### O2b·14 · Production, in order (the orchestrator runs reads and applies; aggregate counts only)
-1. O1's 0167 has its `__drizzle_migrations` row (O1 § Deploy order); § Migration numbers settled after the last merge.
-2. Reads R1–R5 (below), answered: R1 `issued` > 0 and R2 `billed` > 0 go to the owner before the release.
-3. **Never on IST days 1–3 before that month's auto issue has run** (Admin › Billing, an audit row `billing.issue`), and
+1. O1's two migrations, under their renumbered names, have their `__drizzle_migrations` rows (O1 § Deploy order); this
+   plan's three are numbered after main's last (O2b·0b, § Migration numbers).
+2. Reads R1–R6 (below), answered: R1 `issued` > 0 and R2 `billed` > 0 go to the owner before the release; **R5
+   `opened_in_fact` > 0 or `no_live_link` > 0, or any R6 `restrict` count > 0, go to the owner before the release: the
+   migrations stop on them (audit M4, L9).**
+3. **Previews share the production database (`docs/setup.md:163`; audit L9):** before applying, rebase every open preview
+   branch onto this one or close it. An old preview's "Run drafts" (Admin › Billing) after the cleanup writes old-rule
+   drafts again; step 6 removes any that slip through.
+4. **Never on IST days 1–3 before that month's auto issue has run** (Admin › Billing, an audit row `billing.issue`), and
    **right before the push** (the old build drafts a store that opens mid-month onto that month's own invoice for as long
-   as it runs): apply 0168, then its row; apply 0169, then its row; apply 0170, then its row (`node scripts/prod-migrate.mjs
-   …`, through the Supabase API).
-4. R5 again: 0. R1 again: `drafts` 0, `next_month_drafts` 0; `select count(*) from app_shops_to_bill(now() + interval
-   '40 days')` equals the count of opened owned stores.
-5. Push O2b·2–O2b·13 together; wait until the deployment is Ready.
-6. Run 0170's cleanup block again (`node scripts/prod-migrate.mjs drizzle/0170_bill_from_opening.sql --cleanup`): it
-   removes any draft the old build wrote between step 3 and step 5. Then R1 and R3: 0.
-7. Within the hour and the next day: R1 and R3 still 0; `get_runtime_errors` for Home, Plan and billing, `/start`, the cron.
-8. On the next 1st–3rd: the month issued (audit `billing.issue`), never skipped `stale`; the run's `failed` 0.
-9. `unit-economics-reviewer` on the built engine and the first real invoice after an opening.
+   as it runs): apply `<partner-trial>`, then its row; apply `<open-plan>`, then its row; apply
+   `<billing-from-opening>` (its cleanup is one transaction), then its row (`node scripts/prod-migrate.mjs …`, through
+   the Supabase API).
+5. R5 again: every share 0. R1 again: `drafts` 0, `next_month_drafts` 0; R6: 0; `select count(*) from
+   app_shops_to_bill(now() + interval '40 days')` equals the count of opened owned stores.
+6. Push O2b·2–O2b·13 together; wait until the deployment is Ready.
+7. Run `<billing-from-opening>`'s cleanup block again (`node scripts/prod-migrate.mjs drizzle/<billing-from-opening>.sql
+   --cleanup`, one transaction): it removes any draft the old build, or an old preview, wrote between step 4 and step 6.
+   Then R1, R3 and R6: 0.
+8. Within the hour and the next day: R1 and R3 still 0; `get_runtime_errors` for Home, Plan and billing, `/start`, the cron.
+9. On the next 1st–3rd: the month issued (audit `billing.issue`), never skipped `stale`; the run's `failed` 0.
+10. `unit-economics-reviewer` on the built engine and the first real invoice after an opening.
 
 **Production reads (read only):**
 - **R1** never-opened stores' invoices: `select count(*) filter (where i.issued_at is not null) issued, count(*) filter
@@ -445,25 +549,57 @@ addendum and both plans. **Verify:** `npm test` (check:skills, check:docs, check
   on t.id = i.tenant_id where i.issued_at is null and date_trunc('day', t.first_opened_at at time zone 'Asia/Kolkata') at
   time zone 'Asia/Kolkata' > i.period_start`.
 - **R4** never-opened stores whose plan in force was set by Frrata staff (they see the `Facts` row).
-- **R5** never-opened stores whose trial has started: `select count(*) from shop_trials s join tenants t on t.id =
-  s.tenant_id where s.started_at is not null and t.first_opened_at is null` (and, of those, how many have an owner).
+- **R5** never-opened stores whose trial has started, split as the reset reads them (audit M4): `select count(*) filter
+  (where live_link and not opened) reset, count(*) filter (where live_link and not opened and has_owner) reset_with_owner,
+  count(*) filter (where live_link and not opened and has_owner and owned_at < now() - interval '45 days')
+  reset_handed_over_45d, count(*) filter (where not live_link and not opened) no_live_link, count(*) filter (where opened)
+  opened_in_fact from (select exists (select 1 from partner_links l where l.tenant_id = s.tenant_id and l.removed_at is
+  null) live_link, (exists (select 1 from shop_settings ss where ss.tenant_id = s.tenant_id and ss.published_at is not
+  null) or exists (select 1 from audit_events a where a.tenant_id = s.tenant_id and a.action = 'shop.open')) opened,
+  (select min(m.created_at) from members m where m.tenant_id = s.tenant_id and m.role = 'owner') owned_at,
+  exists (select 1 from members m where m.tenant_id = s.tenant_id and m.role = 'owner') has_owner from shop_trials s join
+  tenants t on t.id = s.tenant_id where s.started_at is not null and t.first_opened_at is null) x`. `opened_in_fact` must
+  be 0 and `no_live_link` 0 (or settled by the owner) before apply; after, every share 0.
+- **R6** the cleanup's reach (audit L9), over the unissued drafts the cleanup block targets (`d`): `count(d)`, their
+  `frrata_invoice_lines`, `frrata_invoice_fees`, `frrata_fee_credits`; and, each of which must be 0 before apply, the
+  targeted drafts referenced by `frrata_credit_notes` or `frrata_payments` (`0054:44-45`) or `billing_notices`
+  (`0056:39`), and the targeted fees referenced by a `frrata_fee_credits` row on an invoice not targeted (`0047:98`).
 
 ## The draft never deletes an invoice (blocker 2)
 `frata_app` holds select, insert and update on `frrata_invoices` and no delete (`0048:40-48`); deletes are granted only
-on its lines, fees and credits (`0048:50`). Chosen: **the draft path never deletes an invoice row; 0170's cleanup removes
+on its lines, fees and credits (`0048:50`). Chosen: **the draft path never deletes an invoice row; `<billing-from-opening>`'s cleanup removes
 the drafts the new rule never writes, at the migration and once more after the push.** Rejected: granting `delete` with a
 `tenant_undraft` policy (`issued_at is null`) and a `tenancy.sql` row. Why: the new build never writes a draft for a month
 the store's plan did not start by (O2b·6), so the only such drafts are the old build's, written in the bounded window
-between applying 0170 and the push; a permanent delete right on a money table for `frata_app`, kept forever to tidy one
+between applying `<billing-from-opening>` and the push (and by an old preview, which shares the database: O2b·14 step 3); a permanent delete right on a money table for `frata_app`, kept forever to tidy one
 transition, is the larger grant. A leftover draft cannot block an issue meanwhile: it is for a month that began before it
 was drafted (not `stale`, `0139:31`), the run counts it `unopened` (not `failed`, so `route.ts:47` still issues), and
 `planBilledIn` ignores it (unissued).
 
-## Migration numbers (PROVISIONAL)
-O1 holds 0166–0167 (0166 is in this checkout; 0167 is not yet); Lane C (Studio credits) holds unreleased 0168–0169 on its
-branch. Whichever merges second regenerates its files: delete its `.sql` and snapshots, take main's journal, `npm run
-db:generate` again so `idx` and `when` follow main's last (`scripts/merge-main.mjs:9-11`), and recompute the sha256 and
-the journal row with `scripts/prod-migrate.mjs`. Nothing here is applied to production before that.
+## Migration numbers (named here, numbered at build; audit H2)
+**Checked 2026-11-24** (`git fetch origin main`; `git ls-tree --name-only origin/main drizzle/ | tail -15`): `origin/main`
+already holds `0166_studio.sql` through `0175_admin_cash.sql` (Lane C's Studio credits among them), so the numbers this
+plan used to carry (0168–0170) are taken, and O1's `0166_signup_without_pickup.sql` and `0167_signup_drop_old_definers.sql`
+on this branch collide with main's 0166 and 0167 (fixed at O1's release, when O1 renumbers its two; not here). A merge of main
+is in progress in the working tree as this is written, with O1's two as `0176_signup_without_pickup.sql` and
+`0177_signup_drop_old_definers.sql` (only their header comments changed: every `0166:<line>` cited in this plan holds in
+`0176` at the same line). Proof sections are numbered the same way: the new one takes the next free § after the merge.
+**The rule:** this plan's three migrations are generated in O2b·3, O2b·7 and O2b·8, AFTER the branch has merged main and
+O1's two are on main renumbered (O2b·0b), as the next free numbers in that order: `<partner-trial>`, `<open-plan>`,
+`<billing-from-opening>`. At the time of writing main's next free number is 0176; with O1's two taking 0176–0177 this
+plan's would be 0178–0180 (an example, never hard-coded: whatever main holds at O2b·0b wins). Every name in this plan
+(`drizzle/<partner-trial>.sql` and the rest) reads as the file `npm run db:generate` writes then. If another branch merges
+first, regenerate: delete this plan's `.sql` and snapshots, take main's journal, `npm run db:generate` again so `idx` and
+`when` follow main's last (`scripts/merge-main.mjs:9-11`), and recompute the sha256 and the journal row with
+`scripts/prod-migrate.mjs`. Nothing here is applied to production before that.
+**Main redefines none of this plan's functions** (checked on `origin/main` 2026-11-24 by grepping 0166–0175 for every
+`function app_…`): not `app_partner_create_shop_v2`, `app_accept_handover_v2`, `app_trial_extend`, `app_change_plan`,
+`app_shops_to_bill`, `app_trial_recompute`, `app_trial_clock_starts` or any `shop_trials` or `tenant_plans` writer. Main does
+redefine `app_claim_invites` (`0174_people_access.sql:180`), which this plan no longer copies (O2b·3 step 4's trigger),
+and `app_handover_invite` (`0171_passkeys_off_access.sql:83`), which it never touches. O2b·0b re-runs the check on the
+merged tree: `for f in $(git diff --name-only <merge-base> HEAD -- drizzle/*.sql); do grep -nE
+"function (public\.)?app_(partner_create_shop_v2|accept_handover_v2|trial_extend|change_plan|shops_to_bill|trial_recompute|claim_invites)\b" $f; done`;
+a hit means the body this plan copies is taken from that newer file instead.
 
 ## Performance
 - **Home and the popup:** Home unchanged (O2a). `loadOpening`, on the popup's open only: one `withTenant` with
@@ -476,7 +612,8 @@ the journal row with `scripts/prod-migrate.mjs`. Nothing here is applied to prod
 - **The billing run:** per shop per month, the plan read moves before the `Promise.all` (`draft.ts:78`): one more round
   trip; never-opened stores leave the list, so fewer drafts. 10×: 500 stores × 2 months × 1 run a day, unchanged batch
   (`run.ts:27`, 4 at a time).
-- **0168's reset** recomputes one trial per never-opened partner store (R5, a handful): one statement each, once.
+- **`<partner-trial>`'s reset** recomputes one trial per never-opened partner store (R5 `reset`, a handful): one statement
+  each, once. Its trigger on `members` runs one indexed update per owner row inserted (rare: sign-up and handover).
 - **First-load JS:** Home's pin from O2a holds (the radios are in the `next/dynamic` popup); `/start` drops the plan step,
   ≤ O1's pin. `npm run build && SHOW_BUDGETS=1 node scripts/check-storefront-build.mjs | grep -E "/\(console\)/console/page:|/start/page:"`.
 
@@ -525,16 +662,16 @@ the journal row with `scripts/prod-migrate.mjs`. Nothing here is applied to prod
 |---|---|---|
 | A store's plan starts at the start of its first opening's IST day (`fromOpening`); `planRowsIn` is the one reader for money (billing, fees, profit, the featured nudge, Admin's counts); features read rows as stored | `frata-architecture/reference/money-and-gst.md` § Trials | architecture minor |
 | Month M bills only plan rows started by its 1st; the next 1st makes up by days from ISSUED invoices; an unissued draft is never "billed"; the draft never deletes an invoice | same, § Billing | same |
-| Every trial starts at the first opening; `signed_up_at` is when the store got its owner (sign-up, or the handover); a late opener's grace starts at its opening | same, § Trials | same |
+| Every trial starts at the first opening; `signed_up_at` is when the store got its owner (sign-up, or its first owner row on any path, written by one trigger on `members`); a late opener's grace starts at its opening | same, § Trials | same |
 | A definer's refusals come back as a reason: a `_state()` function both the read and the write use, and a `plan:` message prefix the action maps; "who set this row" is keyed on the row's writer, never the caller | `frata-architecture` SKILL.md § Definers and platform reads | same |
 | An order shipped during a trial takes the rate of the plan in force when the trial ends, frozen at its billing 1st if that is earlier (decision 2); never-opened stores pay nothing; deletion after 180 days is pending (decision 3) | `frata-unit-economics` SKILL.md (fee rules) | unit-economics minor |
-| A known hazard is pinned as a test named "(flipped in <task>)" and flipped in the fixing commit; a billing migration runs its read-before and read-after, right before the push, never on IST days 1–3 before the month's issue, and its cleanup again after the push | `frata-verify` SKILL.md | verify minor |
+| A known hazard is pinned as a test named "(flipped in <task>)" and flipped in the fixing commit; a billing migration runs its read-before and read-after, right before the push, never on IST days 1–3 before the month's issue, its cleanup as one transaction again after the push, previews rebased or closed first (they share the database); a redefined definer re-runs its full revoke list (`frata_builder` included) | `frata-verify` SKILL.md | verify minor |
 
 ## Repetitive work → agents and scripts
 | Chore | Done by hand | Becomes |
 |---|---|---|
 | Production reads before and after a billing migration, and a cleanup re-run after the push | the O2 draft, here | `-- read-before:` / `-- read-after:` / `-- cleanup:` blocks in the migration, printed by `scripts/prod-migrate.mjs` (`--cleanup` prints the block alone; O2b·8) |
-| Proving a definer's refusals per role in `tenancy.sql` | 0058, 0063, here | the `proof.*` helpers O1·11 adds take a role list; § 103 uses them |
+| Proving a definer's refusals per role in `tenancy.sql` | 0058, 0063, here | the `proof.*` helpers O1·11 adds take a role list; § `<open-plan>` uses them |
 | A fee rule's TS and SQL twins | O2b·4 | `fee-bucket-trial.int.test.ts` parity, beside the trial parity test |
 
 ## Deviations
@@ -544,7 +681,7 @@ the journal row with `scripts/prod-migrate.mjs`. Nothing here is applied to prod
 | Plan and billing before opening: "Your 30 days start when you open your store." on every store | the number from `trialDaysIfOpened`, and the line left out for a store with no trial to come | a fixed "30" is false for a shop with Admin's other length or a cap that cuts days; the line is false for a store refused a trial or past its cap (not drawn) | no: shown with O2b·10's parity screenshots |
 
 The "billed already" reason is not drawn on its own: it is folded into "Plan set with Frrata", whose words fit (after
-0170 no never-opened store can be billed, R1 = 0, so only a bill Frrata made could put it there).
+`<billing-from-opening>` no never-opened store can be billed, R1 = 0, so only a bill Frrata made could put it there).
 
 ## Out of scope (and the signal that brings each back)
 - **Deleting a store that never opens after 180 days, with two notices to the owner** (owner decision 3; mirrors trials
@@ -558,13 +695,16 @@ The "billed already" reason is not drawn on its own: it is folded into "Plan set
 ## Open questions for the orchestrator
 Closed: the upgrade on IST days 1–3 moving to the next 1st (decision 5); credit notes for never-opened stores (none
 exist, R1 = 0); fees on orders before the opening day (decision 6); partner-built trials spent during the build (decision 4).
-1. `app_change_plan` before opening: only the action refuses here; should 0169 also redefine `app_change_plan` to refuse
-   (a third copy of that definer)?
-2. Existing never-opened partner stores already handed over: 0168 anchors their cap at the handover (the rule), so one
-   handed over more than 45 days ago opens with no trial (R5 counts them). Or anchor these few at the migration, giving
-   each a fresh window? Recommendation: the handover, as the rule; ask the owner only if R5 shows such a store.
-3. **Split before O2b adds to either** (impact review of O1/O2a, 2026-11-24): `src/lib/db/schema.ts` is 393 lines and
-   `src/lib/db/platform.ts` 380, against `check:size`'s 400. O2b's columns and definer wrappers land in those files, so
-   split each (by area, re-exported from the old path) in its own task before the first O2b task that adds to it.
+1. Closed by ruling 1 below: `<open-plan>` redefines `app_change_plan` (O2b·7, § `<open-plan>`).
+2. Closed by ruling 2 below: the cap counts from the handover (R5 `reset_handed_over_45d` counts the stores that then open
+   with no trial; reported to the owner, not a stop). Still open, for the owner at O2b·14 step 2 only if R5 shows any: a
+   never-opened store whose partner link was removed but whose trial started at creation (`no_live_link`): reset it as
+   partner-built (recommended) or leave it; the migration stops until it is settled.
+3. **Split before O2b adds to either** (the build's impact review, 2026-11-24): `src/lib/db/schema.ts` (393 lines) and
+   `src/lib/db/platform.ts` (380) on the branch (396 and 394 in the merge of main now in the working tree) are near the 400-line `check:size` gate; split before this plan adds to either (by area,
+   re-exported from the old path, its own task). Checked against the tasks: none adds to them (no new table or column;
+   no definer wrapper goes into `platform.ts`: `app_open_plan` is called from `shop-actions.ts`, `opening.ts` is a new
+   file, and O2b·11 only shrinks `createShop`, `platform.ts:158`), so no split task is in this plan. If a task's diff
+   adds a line to either, it stops and a split task goes in before it (O2b·0b's place, second).
 
-**Orchestrator rulings, 2026-11-23:** (1) yes: 0169 also redefines `app_change_plan` to refuse a change before a store first opens, so the rule holds in the database and not only in the action; its proof row joins § 103. (2) Never-opened partner stores already handed over: the cap counts from the handover, the rule; no fresh window.
+**Orchestrator rulings, 2026-11-23** (built: (1) in O2b·7, (2) in O2b·3): (1) yes: `<open-plan>` also redefines `app_change_plan` to refuse a change before a store first opens, so the rule holds in the database and not only in the action; its proof row joins § `<open-plan>` (the next free §, O2b·7). (2) Never-opened partner stores already handed over: the cap counts from the handover, the rule; no fresh window.
