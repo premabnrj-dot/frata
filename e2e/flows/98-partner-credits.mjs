@@ -132,6 +132,13 @@ export default {
         const csv = await pia.context().request.get(CONSOLE + `/partner/credits/usage.csv?month=${month}-01`)
         assert.equal(csv.status(), 200); assert.match(csv.headers()['content-type'] ?? '', /text\/csv/)
         assert.match(await csv.text(), /^"When","Client"/)
+        // V3b K3: a Studio request is a 'turn' use labelled "Small edit" (Send reserves it; its end settles it). One settled
+        // here as the turn's settle leaves it reads in Usage like any other.
+        await db`insert into partner_credit_uses (partner_id, link_id, member_id, kind, what, reserved, real_money, rate_e4, list_micro, closed_at)
+          select ${pid}, ${link.id}, pm.id, 'turn', 'edit', 9, false, 941997, 120000, now() from partner_members pm where pm.partner_id = ${pid} and pm.user_id = ${P.id}`
+        await pia.reload()
+        await pia.getByText('Small edit').first().waitFor()
+        await db`delete from partner_credit_uses where partner_id = ${pid} and kind = 'turn' and what = 'edit' and list_micro = 120000` // the Lead's step reads 0 used
       })
 
       await t.step('Studio, then Studio Plus at once: its credits stay, the old AutoPay is cancelled (C1·B)', async () => {

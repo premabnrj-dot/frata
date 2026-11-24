@@ -24,6 +24,11 @@ export async function makeStudioStore(su: Sql, stamp: string): Promise<StudioFix
   const [ps] = await su<[{ id: string }]>`insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at) values (${pm.id}, ${u.u}, ${u.b}, ${pk.id}, ${'ph-' + stamp}, now() + interval '1 hour') returning id`
   const [prod] = await su<[{ id: string }]>`insert into products (tenant_id, handle, title, options, status, hsn) values (${t.id}, ${'kurta-' + stamp}, 'Indigo kurta', '{Size}', 'active', '6109') returning id`
   await su`insert into variants (tenant_id, product_id, option_values, price, stock) values (${t.id}, ${prod.id}, '{M}', 149900, 7)`
+  // Turns are paid in credits (V3b K3): the partner's free lot, and a fresh dollar rate for today.
+  // (an approved partner's 20 free credits are granted by the database; the fixture's lot is larger, for many turns)
+  await su`insert into partner_credit_entries (partner_id, kind, credits, expires_at) values (${p.id}, 'grant', 1000, now() + interval '1 year')
+    on conflict (partner_id) where kind = 'grant' do update set credits = 1000`
+  await su`insert into fx_rates (day, rate_e4, source) values ((now() at time zone 'Asia/Kolkata')::date, 941997, 'manual') on conflict (day) do nothing`
   return {
     tenant: t.id, partner: p.id, member: pm.id, user: u.u, browser: u.b, staffStepup: ss.id, partnerStepup: ps.id,
     auth: { ok: true, userId: u.u, email, tenantId: t.id, tenantName: 'Int Studio', authSession: u.b, staffHash: 'sh-' + stamp, partnerHash: 'ph-' + stamp },

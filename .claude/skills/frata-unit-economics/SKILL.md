@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.22.0
+  version: 2.23.0
   owner: owner
   verified: 2026-11-24
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
@@ -266,7 +266,8 @@ the running product uses: a rupee figure a turn charges is that day's typed rate
 - **A typical 8-page site:** $14.97 list → ₹1,548 loaded → **251 credits** → ₹5,017 + GST (₹5,921); Frrata keeps ₹3,469
   before overheads. Without a logo ≈ 249; on Sonnet 5.5 ≈ 137. Sensitivity: 40k output a page 307; every pause re-writes
   80k 331; both 387; 1-hour writes 279. So the target median is ≤ 280, and the proof includes real pauses.
-- **Budgets:** 40 credits a turn (120 at most), 300 a person a day, a monthly cap per person set by the partner owner, the
+- **Budgets:** a Studio turn reserves its USD ceiling at the day's rate × 1.10 (V3b K3: $0.50 → 9 credits at ₹94.20;
+  the definer's default 40, 120 at most, when no estimate is given), 300 a person a day, a monthly cap per person set by the partner owner, the
   partner's client budget (warn 80%, pause 100%), ₹25,000 list cost a day platform-wide for the first three months.
 - **Hosting is not priced:** at ADR-0017's guess (0.3 MB and 5 requests a view, bom1 $0.20 a GB, $2.20 a million) Launch
   ₹294, Growth ₹2,937, Scale ₹9,764 a month, 7.6–19.1% of Frrata's revenue on the illustrative shapes: all three cross

@@ -7,6 +7,11 @@ import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { STUDIO_OPEN } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { buildKeyLimitOk, buildKeyUncount, mintBuildKey } from '@/lib/storefront-api/build-keys'
+import { withTenant } from '@/lib/db/tenant'
+import { partnerLinks } from '@/lib/db/schema-partners'
+import { system } from '@/lib/db/partner-credits'
+import { creditsFor, rateUsable } from '@/domains/studio/credits'
+import { reserveCredits, returnCredits, type ReserveRefusal } from './credits'
 import { advance } from './advance'
 import { listCostOf, measuredOf, spendOf } from './measure'
 import { managedRuntime } from './runtime-managed'
@@ -25,8 +30,11 @@ import { StudioUnbound, withStudio, type StudioOk } from './with-studio'
 // is held across a runtime call (check:studio). The cron ends, cleans and deletes sessions from ids only (app_studio_due).
 // =============================================================================
 
-/** `busy`: a lock wait or a Send at the same moment (try again); `limit`: too many Sends this hour (slow down). */
+/** `busy`: a lock wait or a Send at the same moment (try again); `limit`: too many Sends this hour (slow down).
+ *  The credit refusals (V3b K3), in the reserve's order: `rate` no fresh dollar rate, `studio_day` Studio's day across
+ *  Frrata, `credits_day` the person's 300 a day, `client_budget` the client's budget, `balance` the partner's credits. */
 export type SendWhy = 'closed' | 'input' | 'busy' | 'limit' | 'person_day' | 'platform_day' | 'sessions' | 'turn_open' | 'start' | 'send' | 'budget' | 'error'
+  | 'rate' | 'studio_day' | 'credits_day' | 'client_budget' | 'balance'
 export type SendResult = { ok: true; sessionId: string; turnId: string } | { ok: false; why: SendWhy }
 export type Deps = { runtime: StudioRuntime; starter: () => { bytes: Uint8Array; sha256: string }; follow: boolean }
 const DEFAULT: Deps = { runtime: managedRuntime, starter: starterArchive, follow: true }
@@ -49,6 +57,28 @@ function refusalOf(err: unknown): SendWhy {
 }
 
 const one = <T>(rows: unknown) => (rows as T[])[0]
+
+/** A reserve's refusal as a Send's (V3b K3). `not_found`: the store's link is gone or a Lead isn't assigned to it. */
+const CREDIT_WHY: Record<ReserveRefusal, SendWhy> = {
+  rate: 'rate', platform_day: 'studio_day', person_day: 'credits_day', budget: 'client_budget', balance: 'balance', not_found: 'closed',
+}
+const creditWhy = (e: string): SendWhy => CREDIT_WHY[e as ReserveRefusal] ?? (e === 'confirm_first' || e === 'not_owner' ? 'closed' : 'error')
+
+/** The credits a turn holds (V3b K3; frata-unit-economics § The dollar rate): the turn's USD ceiling at the day's rate and
+ *  the 1.10 loading, in whole credits. The turn can't cost more: Anthropic pauses the session at that ceiling. */
+export const turnEstimate = (ceilingMicroUsd: number, rateE4: number) => creditsFor(BigInt(ceilingMicroUsd), rateE4)
+
+/** Holds the turn's credits before anything opens (the person's own call: their partner, step-up and store's link). */
+async function holdCredits(auth: StudioOk, ceiling: number): Promise<{ ok: true; useId: string } | { ok: false; why: SendWhy }> {
+  const rate = await system.rateLatest().catch((e) => { console.error('[studio] rate', errName(e)); return null })
+  if (!rate || !rateUsable(rate.day, new Date())) return { ok: false, why: 'rate' }
+  const [link] = await withTenant(auth.tenantId, (tx) => tx.select({ id: partnerLinks.id }).from(partnerLinks)
+    .where(and(eq(partnerLinks.tenantId, auth.tenantId), isNull(partnerLinks.removedAt)))).catch((e) => { console.error('[studio] link', errName(e)); return [] })
+  if (!link) return { ok: false, why: 'closed' }
+  const r = await reserveCredits({ userId: auth.userId, sessionId: auth.authSession, stepup: auth.partnerHash },
+    { linkId: link.id, kind: 'turn', what: 'edit', estimate: turnEstimate(ceiling, rate.rateE4) })
+  return r.ok ? { ok: true, useId: r.value.useId } : { ok: false, why: creditWhy(r.error) }
+}
 
 
 /** Whether the agent and environment at Anthropic are the ones this code was built for (the drift check,
@@ -79,6 +109,11 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
   if (!text) return { ok: false, why: 'input' }
   if (!caps || STUDIO_OPEN !== 'staff') return { ok: false, why: 'closed' }
   if (!(await withinLimit(LIMITS.studioSendUser, auth.userId, new Date(), true))) return { ok: false, why: 'limit' }
+  // Credits first (V3b K3): held for the partner and this store, then tied to the turn in the transaction that opens it.
+  // Any refusal or failure before the turn opens gives every credit back; after, the turn's end settles or returns them
+  // in the database (app_studio_settle). The USD caps below stay the outer guard.
+  const held = await holdCredits(auth, caps.turnCeiling)
+  if (!held.ok) return { ok: false, why: held.why }
   let opened: Opened
   try {
     opened = await withStudio(auth, async (tx, partnerId) => {
@@ -102,13 +137,19 @@ export async function send(auth: StudioOk, raw: string, deps: Deps = DEFAULT): P
       if (!sessionId) sessionId = one<{ id: string }>(await tx.execute(sql`select app_studio_new_session() as id`))!.id
       const turnId = one<{ id: string }>(await tx.execute(sql`select app_studio_open_turn(${sessionId}::uuid, ${caps.turnCeiling}::bigint,
         ${caps.personDay}::bigint, ${caps.platformDay}::bigint, ${caps.openSessions}::integer) as id`))!.id
+      const tied = one<{ ok: boolean }>(await tx.execute(sql`select app_studio_turn_use(${turnId}::uuid, ${held.useId}::uuid) as ok`))?.ok === true
+      if (!tied) throw new Error('studio: credits not tied')
       await tx.insert(studioMessages).values({ tenantId: auth.tenantId, partnerId, sessionId, kind: 'person', text })
       const s = await spendOf(tx, sessionId)
       const b = budgetFor({ ...s, ceiling: caps.turnCeiling, floor: caps.floor })
       return { sessionId, turnId, runtimeId, budgetCents: b.ok ? b.cents : 0, pausedBefore, fresh }
     })
   } catch (err) {
-    return { ok: false, why: refusalOf(err) }
+    // Nothing opened (the transaction rolled back): every credit back. A refusal at the person's own limit (a turn still
+    // open, a Send at the same moment, their day, three sessions) is a cancel; anything else is ours.
+    const why = refusalOf(err)
+    await returnCredits(held.useId, why === 'turn_open' || why === 'busy' || why === 'person_day' || why === 'sessions' ? 'cancelled' : 'frrata').catch((e) => console.error('[studio] credits back', errName(e)))
+    return { ok: false, why }
   }
   const rt = deps.runtime
   let runtimeId = opened.runtimeId

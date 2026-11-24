@@ -66,7 +66,7 @@ export async function applyAsPartner(uid: string, a: Application): Promise<{ ok:
   }
 }
 
-/** app_partner_create_shop_v2 (0176): no pickup PIN code (it is asked in Settings › Store). */
+/** app_partner_create_shop_v2 (0178): no pickup PIN code (it is asked in Settings › Store). */
 export async function createClientStore(c: Caller, p: { name: string; slug: string }):
   Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
   try {

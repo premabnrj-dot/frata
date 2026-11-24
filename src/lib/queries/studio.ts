@@ -1,5 +1,7 @@
 import 'server-only'
-import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, or } from 'drizzle-orm'
+import { cardState, type CardState } from '@/domains/studio/proposals'
+import { brandProposals } from '@/lib/db/schema-brand'
 import { turnState, type TurnState } from '@/domains/studio/turn'
 import { isToolName } from '@/domains/studio/tools'
 import { WORK_WORDS } from '@/domains/studio/words'
@@ -17,7 +19,7 @@ import { withStudio, type StudioOk } from '@/lib/studio/with-studio'
 const PAGE = 200
 
 export type ChatLine = { seq: number; id: string; kind: 'person' | 'agent' | 'card' | 'status'; text: string | null; proposalId: string | null }
-export type ChatCard = { id: string; kind: 'tokens' | 'logo'; value: unknown; state: 'open' | 'applied' | 'refused' | 'dismissed'; reason: string | null }
+export type ChatCard = { id: string; kind: 'tokens' | 'logo'; value: unknown; state: CardState; reason: string | null }
 export type ChatTurn = { id: string; state: TurnState; failedReason: string | null; work: { words: string; done: boolean }[] }
 export type Chat = { sessionId: string | null; open: boolean; lines: ChatLine[]; cards: ChatCard[]; turn: ChatTurn | null }
 
@@ -40,9 +42,16 @@ export function studioChat(auth: StudioOk, after: number | null): Promise<Chat> 
     ])
     const ids = lines.map((l) => l.proposalId).filter((x): x is string => !!x)
     const [props, calls] = await Promise.all([
-      ids.length ? tx.select({ id: studioProposals.id, kind: studioProposals.kind, value: studioProposals.value, appliedAt: studioProposals.appliedAt, refusedAt: studioProposals.refusedAt,
-        refusedReason: studioProposals.refusedReason, dismissedAt: studioProposals.dismissedAt }).from(studioProposals)
-        .where(and(eq(studioProposals.tenantId, t), eq(studioProposals.sessionId, s.id), inArray(studioProposals.id, ids))) : Promise.resolve([]),
+      // The lines' cards, and every card of the session sent to the owner (its decision can arrive after its line: the
+      // poll carries it, so "Sent to the owner" turns to the outcome without a reload).
+      tx.select({ id: studioProposals.id, kind: studioProposals.kind, value: studioProposals.value, appliedAt: studioProposals.appliedAt, refusedAt: studioProposals.refusedAt,
+        refusedReason: studioProposals.refusedReason, dismissedAt: studioProposals.dismissedAt, brandProposalId: studioProposals.brandProposalId, decision: brandProposals.decision })
+        .from(studioProposals)
+        // The waiting change a card became (K1): its decision is the card's state after Apply, read where it lives.
+        .leftJoin(brandProposals, and(eq(brandProposals.tenantId, studioProposals.tenantId), eq(brandProposals.id, studioProposals.brandProposalId)))
+        .where(and(eq(studioProposals.tenantId, t), eq(studioProposals.sessionId, s.id),
+          ids.length ? or(inArray(studioProposals.id, ids), and(isNotNull(studioProposals.brandProposalId), isNull(studioProposals.appliedAt))) : isNotNull(studioProposals.brandProposalId)))
+        .limit(100),
       turn ? tx.select({ name: studioToolCalls.name, executedAt: studioToolCalls.executedAt }).from(studioToolCalls)
         .where(and(eq(studioToolCalls.tenantId, t), eq(studioToolCalls.turnId, turn.id))).orderBy(asc(studioToolCalls.seenAt)) : Promise.resolve([]),
     ])
@@ -53,7 +62,7 @@ export function studioChat(auth: StudioOk, after: number | null): Promise<Chat> 
       lines: lines.map((l) => ({ ...l, kind: l.kind as ChatLine['kind'] })),
       cards: props.map((p) => ({
         id: p.id, kind: p.kind as ChatCard['kind'], value: p.value, reason: p.refusedReason,
-        state: p.appliedAt ? 'applied' : p.dismissedAt ? 'dismissed' : p.refusedAt ? 'refused' : 'open',
+        state: cardState({ ...p, sent: !!p.brandProposalId }),
       })),
       turn: turn && state ? {
         id: turn.id, state, failedReason: turn.failedReason,

@@ -1237,15 +1237,29 @@
     {
       "idx": 176,
       "version": "7",
-      "when": 1795498782545,
-      "tag": "0176_signup_without_pickup",
+      "when": 1795494459589,
+      "tag": "0176_studio_sent",
       "breakpoints": true
     },
     {
       "idx": 177,
       "version": "7",
-      "when": 1795498786109,
-      "tag": "0177_signup_drop_old_definers",
+      "when": 1795494795214,
+      "tag": "0177_studio_credits_turns",
+      "breakpoints": true
+    },
+    {
+      "idx": 178,
+      "version": "7",
+      "when": 1795500650629,
+      "tag": "0178_signup_without_pickup",
+      "breakpoints": true
+    },
+    {
+      "idx": 179,
+      "version": "7",
+      "when": 1795500654172,
+      "tag": "0179_signup_drop_old_definers",
       "breakpoints": true
     }
   ]

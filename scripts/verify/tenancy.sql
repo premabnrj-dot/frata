@@ -3489,7 +3489,7 @@ do $$ declare r text; f text; begin
      or to_regprocedure('app_partner_invite(uuid,text,text,uuid[])') is not null or to_regprocedure('app_partner_assign(uuid,uuid,uuid,boolean)') is not null
      or to_regprocedure('app_partner_remove_member(uuid,uuid)') is not null or to_regprocedure('app_partner_create_shop(uuid,text,text,text,integer,integer,integer,integer)') is not null then
     raise exception 'FAIL: an old partner signature survives'; end if;
-  -- O1 (drizzle/0177): sign-up's v1 and v2 and the partner's PIN-code signature are gone; only v3 and partner v2 remain.
+  -- O1 (drizzle/0179): sign-up's v1 and v2 and the partner's PIN-code signature are gone; only v3 and partner v2 remain.
   if to_regprocedure('app_create_shop(uuid,text,text,text,text[])') is not null
      or to_regprocedure('app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)') is not null
      or to_regprocedure('app_partner_create_shop(uuid,uuid,text,text,text,text,integer,integer,integer,integer)') is not null then
@@ -4663,7 +4663,7 @@ do $$ declare r text; f text; begin
 end $$;
 rollback;
 
--- § 105 · Sign-up without a PIN code (O1, drizzle/0176; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
+-- § 106 · Sign-up without a PIN code (O1, drizzle/0178; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
 -- refusal of v1 (§ 17, § 30's retired name) and v2 (§ 49): confirmed email, one shop a person, taken, bad and retired
 -- addresses, another person's code, a code twice, a claimed email gets no trial, frozen terms; the new store has no
 -- pickup PIN code, its audit no 'pickup', and 'signup_ms' only inside 0..86,400,000. The partner's v2 keeps § 28's
@@ -4679,40 +4679,40 @@ update shop_settings set published_at = now() where tenant_id = '22222222-2222-2
 update shop_settings set published_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
 set local role frata_app;
 do $$ declare t uuid; r record; c uuid; d jsonb; A uuid := 'aaaaaaaa-0000-0000-0000-000000000201'; B uuid := 'aaaaaaaa-0000-0000-0000-000000000202'; begin
-  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000003', 'Squat', 'squat-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 105 unconfirmed email made a shop';
+  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000003', 'Squat', 'squat-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 106 unconfirmed email made a shop';
   exception when raise_exception then if sqlerrm <> 'email_unconfirmed' then raise; end if; end;
-  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000002', 'Second', 'second-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 105 an owner made a second shop';
+  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000002', 'Second', 'second-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 106 an owner made a second shop';
   exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
-  begin perform app_create_shop_v3(A, 'Taken', 'proof-a', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 a taken address was accepted';
+  begin perform app_create_shop_v3(A, 'Taken', 'proof-a', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 106 a taken address was accepted';
   exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
-  begin perform app_create_shop_v3(A, 'Bad', '-bad-', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 a bad address was accepted';
+  begin perform app_create_shop_v3(A, 'Bad', '-bad-', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 106 a bad address was accepted';
   exception when raise_exception then if sqlerrm <> 'bad_slug' then raise; end if; end;
   perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b102-new');
-  if app_name_check('proof-b') <> 'taken' then raise exception 'FAIL: 105 the retired name looked free'; end if;
-  begin perform app_create_shop_v3(A, 'Squatter', 'proof-b', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 sign-up took a retired name';
+  if app_name_check('proof-b') <> 'taken' then raise exception 'FAIL: 106 the retired name looked free'; end if;
+  begin perform app_create_shop_v3(A, 'Squatter', 'proof-b', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 106 sign-up took a retired name';
   exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
-  begin perform app_create_shop_v3(A, 'Plan', 'proof-102-plan', '{}', 'gold', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 an unknown plan';
+  begin perform app_create_shop_v3(A, 'Plan', 'proof-102-plan', '{}', 'gold', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 106 an unknown plan';
   exception when raise_exception then if sqlerrm <> 'bad_plan' then raise; end if; end;
-  begin perform app_create_shop_v3(A, '   ', 'proof-102-blank', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 a blank name';
+  begin perform app_create_shop_v3(A, '   ', 'proof-102-blank', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 106 a blank name';
   exception when raise_exception then if sqlerrm <> 'bad_name' then raise; end if; end;
   -- a code: another person cannot spend it; it is spent once
   c := app_signup_code_issue(A, 'phone-hmac-102', 'code-hmac-102', 1::smallint);
-  if not app_signup_code_verify(A, c, 'code-hmac-102') then raise exception 'FAIL: 105 the right code did not verify'; end if;
-  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 105 a code spent by another person';
+  if not app_signup_code_verify(A, c, 'code-hmac-102') then raise exception 'FAIL: 106 the right code did not verify'; end if;
+  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 106 a code spent by another person';
   exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
   select * into r from app_create_shop_v3(A, '  Proof A102  ', 'proof-a102', array['women','ethnic'], 'growth', 'h-102-a', 1::smallint, c, 41500);
-  if not r.trial then raise exception 'FAIL: 105 a first sign-up got no trial'; end if;
-  begin perform app_create_shop_v3(A, 'Again', 'proof-a102-again', '{}', 'growth', 'h-102-x', 1::smallint, null, null); raise exception 'FAIL: 105 one person made two shops';
+  if not r.trial then raise exception 'FAIL: 106 a first sign-up got no trial'; end if;
+  begin perform app_create_shop_v3(A, 'Again', 'proof-a102-again', '{}', 'growth', 'h-102-x', 1::smallint, null, null); raise exception 'FAIL: 106 one person made two shops';
   exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
-  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 105 a code used twice';
+  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 106 a code used twice';
   exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
   perform set_config('app.tenant_id', r.tenant_id::text, true);
-  if (select name from tenants) <> 'Proof A102' then raise exception 'FAIL: 105 new shop name'; end if;
-  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 105 the new store has a pickup PIN code'; end if;
-  if (select sells from shop_settings) <> array['women','ethnic'] then raise exception 'FAIL: 105 what the store sells'; end if;
-  if (select count(*) from tenant_plans) <> 1 then raise exception 'FAIL: 105 new shop plan'; end if;
+  if (select name from tenants) <> 'Proof A102' then raise exception 'FAIL: 106 new shop name'; end if;
+  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 106 the new store has a pickup PIN code'; end if;
+  if (select sells from shop_settings) <> array['women','ethnic'] then raise exception 'FAIL: 106 what the store sells'; end if;
+  if (select count(*) from tenant_plans) <> 1 then raise exception 'FAIL: 106 new shop plan'; end if;
   select detail into d from audit_events where action = 'shop.created';
-  if d ? 'pickup' or (d->>'signup_ms')::int is distinct from 41500 or d->>'plan' <> 'growth' or (d->>'trial')::boolean is not true then raise exception 'FAIL: 105 the audit detail (%)', d; end if;
+  if d ? 'pickup' or (d->>'signup_ms')::int is distinct from 41500 or d->>'plan' <> 'growth' or (d->>'trial')::boolean is not true then raise exception 'FAIL: 106 the audit detail (%)', d; end if;
 end $$;
 rollback;
 begin;
@@ -4720,25 +4720,25 @@ do $$ declare r record; d jsonb; begin
   -- As the definer runs it (superuser here, to check the rows): a claimed email, frozen terms, the clamp.
   insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'h-102-taken', 1, '11111111-1111-1111-1111-111111111111');
   select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000203', 'Proof C102', 'proof-c102', '{}', 'launch', 'h-102-taken', 1::smallint, null, -1);
-  if r.trial or exists (select 1 from shop_trials where tenant_id = r.tenant_id) then raise exception 'FAIL: 105 a claimed email got a trial'; end if;
+  if r.trial or exists (select 1 from shop_trials where tenant_id = r.tenant_id) then raise exception 'FAIL: 106 a claimed email got a trial'; end if;
   select detail into d from audit_events where tenant_id = r.tenant_id and action = 'shop.created';
-  if d ? 'signup_ms' then raise exception 'FAIL: 105 a negative time was kept'; end if;
+  if d ? 'signup_ms' then raise exception 'FAIL: 106 a negative time was kept'; end if;
   select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000204', 'Proof D102', 'proof-d102', '{}', 'growth', 'h-102-new', 1::smallint, null, null);
-  if not r.trial or (select days from shop_trials where tenant_id = r.tenant_id) <> (select days from trial_settings) then raise exception 'FAIL: 105 the trial terms were not frozen'; end if;
-  if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: 105 the new shop''s plan row has no trial end'; end if;
-  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 105 a null time was kept'; end if;
-  if (select pickup_pincode from shop_settings where tenant_id = r.tenant_id) is not null then raise exception 'FAIL: 105 pickup'; end if;
+  if not r.trial or (select days from shop_trials where tenant_id = r.tenant_id) <> (select days from trial_settings) then raise exception 'FAIL: 106 the trial terms were not frozen'; end if;
+  if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: 106 the new shop''s plan row has no trial end'; end if;
+  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 106 a null time was kept'; end if;
+  if (select pickup_pincode from shop_settings where tenant_id = r.tenant_id) is not null then raise exception 'FAIL: 106 pickup'; end if;
   -- the clamp's top edge
   delete from members where user_id = 'aaaaaaaa-0000-0000-0000-000000000204';
   select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000204', 'Proof E102', 'proof-e102', '{}', 'growth', 'h-102-e', 1::smallint, null, 86400001);
-  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 105 a time over a day was kept'; end if;
+  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 106 a time over a day was kept'; end if;
   -- privileges: frata_app only
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) ro,
              unnest(array['app_create_shop_v3(uuid,text,text,text[],text,text,smallint,uuid,integer)', 'app_partner_create_shop_v2(uuid,uuid,text,text,text,integer,integer,integer,integer)']) f
-             where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: 105 another role may create a store'; end if;
+             where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: 106 another role may create a store'; end if;
   if not has_function_privilege('frata_app', 'app_create_shop_v3(uuid,text,text,text[],text,text,smallint,uuid,integer)', 'execute')
      or not has_function_privilege('frata_app', 'app_partner_create_shop_v2(uuid,uuid,text,text,text,integer,integer,integer,integer)', 'execute') then
-    raise exception 'FAIL: 105 the app cannot create a store'; end if;
+    raise exception 'FAIL: 106 the app cannot create a store'; end if;
 end $$;
 rollback;
 -- the partner's v2: P approved (owner), Q an applicant, R declined, D a Builder on P's first store
@@ -4754,25 +4754,25 @@ select proof.check('aaaaaaaa-0000-0000-0000-000000000205');
 do $$ declare P uuid := 'aaaaaaaa-0000-0000-0000-000000000205'; Q uuid := 'aaaaaaaa-0000-0000-0000-000000000206'; R uuid := 'aaaaaaaa-0000-0000-0000-000000000207';
   D uuid := 'aaaaaaaa-0000-0000-0000-000000000208'; t uuid; inv uuid;
 begin
-  begin perform app_partner_create_shop_v2(Q, proof.sess(Q), proof.h(Q), 'Q102', 'proof-q102', 2000, 24, 90, 10); raise exception 'FAIL: 105 an applicant made a store';
+  begin perform app_partner_create_shop_v2(Q, proof.sess(Q), proof.h(Q), 'Q102', 'proof-q102', 2000, 24, 90, 10); raise exception 'FAIL: 106 an applicant made a store';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
-  begin perform app_partner_create_shop_v2(R, proof.sess(R), proof.h(R), 'R102', 'proof-r102', 2000, 24, 90, 10); raise exception 'FAIL: 105 a declined partner made a store';
+  begin perform app_partner_create_shop_v2(R, proof.sess(R), proof.h(R), 'R102', 'proof-r102', 2000, 24, 90, 10); raise exception 'FAIL: 106 a declined partner made a store';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
-  begin perform app_partner_create_shop_v2(P, proof.sess(P), 'not-a-check', 'P102 X', 'proof-p102-x', 2000, 24, 90, 10); raise exception 'FAIL: 105 a partner store without a check';
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), 'not-a-check', 'P102 X', 'proof-p102-x', 2000, 24, 90, 10); raise exception 'FAIL: 106 a partner store without a check';
   exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
   t := app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102', 'proof-p102', 2000, 24, 90, 1);
-  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102 two', 'proof-p102-two', 2000, 24, 90, 1); raise exception 'FAIL: 105 past the cap of unopened stores';
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102 two', 'proof-p102-two', 2000, 24, 90, 1); raise exception 'FAIL: 106 past the cap of unopened stores';
   exception when sqlstate 'P0001' then if sqlerrm <> 'too_many' then raise; end if; end;
-  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Taken', 'proof-a', 2000, 24, 90, 10); raise exception 'FAIL: 105 a partner took a taken address';
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Taken', 'proof-a', 2000, 24, 90, 10); raise exception 'FAIL: 106 a partner took a taken address';
   exception when sqlstate 'P0001' then if sqlerrm <> 'slug_taken' then raise; end if; end;
   inv := app_partner_invite(P, proof.sess(P), proof.h(P), 'b102@kiln.test', 'builder', array[t]);
   perform app_partner_accept(D, inv);
   perform proof.check(D);
-  begin perform app_partner_create_shop_v2(D, proof.sess(D), proof.h(D), 'D102', 'proof-d102-x', 2000, 24, 90, 10); raise exception 'FAIL: 105 a Builder made a store';
+  begin perform app_partner_create_shop_v2(D, proof.sess(D), proof.h(D), 'D102', 'proof-d102-x', 2000, 24, 90, 10); raise exception 'FAIL: 106 a Builder made a store';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
   perform set_config('app.tenant_id', t::text, true);
-  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 105 the partner''s store has a pickup PIN code'; end if;
-  if (select count(*) from partner_links) <> 1 then raise exception 'FAIL: 105 the partner''s link'; end if;
+  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 106 the partner''s store has a pickup PIN code'; end if;
+  if (select count(*) from partner_links) <> 1 then raise exception 'FAIL: 106 the partner''s link'; end if;
   perform set_config('app.tenant_id', '', true);
 end $$;
 rollback;
@@ -4782,7 +4782,7 @@ select proof.check('aaaaaaaa-0000-0000-0000-000000000205');
 select app_partner_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000205', proof.sess('aaaaaaaa-0000-0000-0000-000000000205'), proof.h('aaaaaaaa-0000-0000-0000-000000000205'), 'Proof P102', 'proof-p102', 2000, 24, 90, 10);
 reset role;
 do $$ declare d jsonb := (select detail from audit_events a join tenants t on t.id = a.tenant_id where t.slug = 'proof-p102' and a.action = 'shop.created'); begin
-  if d is null or d ? 'pickup' or d->>'by' <> 'partner' then raise exception 'FAIL: 105 the partner''s audit detail (%)', d; end if;
+  if d is null or d ? 'pickup' or d->>'by' <> 'partner' then raise exception 'FAIL: 106 the partner''s audit detail (%)', d; end if;
 end $$;
 rollback;
 
@@ -7021,4 +7021,122 @@ do $$ declare bad text; begin
   end loop;
 end $$;
 rollback;
-\echo 'tenancy proof — all checks passed (through § 105)'
+-- § 105 · V3b K1/K3 (drizzle/0176–0177; docs/plans/2026-11-24-v3b-first.md). app_studio_turn_use ties a credit use only to
+-- the bound person's own open turn, on the bound store, with that person's own turn use, once; a card names only its
+-- own store's waiting change (the composite key). Tenancy audit 2026-11-24: its probe, kept here.
+begin;
+do $$
+declare p uuid := 'e8100000-0000-0000-0000-0000000000a1'; q uuid;
+  pm1 uuid; pu1 uuid; pm2 uuid; pu2 uuid; pl1 uuid; pt1 uuid; pl2 uuid; pt2 uuid; qm1 uuid; qu1 uuid; ql1 uuid; qt1 uuid; ok boolean;
+  bp uuid; sp uuid;
+begin
+  select id, user_id into pm1, pu1 from partner_members where partner_id = p and role = 'owner' and user_id is not null limit 1;
+  select id, user_id into pm2, pu2 from partner_members where partner_id = p and id <> pm1 and user_id is not null limit 1;
+  select id, tenant_id into pl1, pt1 from partner_links where partner_id = p and removed_at is null order by tenant_id limit 1;
+  select id, tenant_id into pl2, pt2 from partner_links where partner_id = p and removed_at is null order by tenant_id offset 1 limit 1;
+  select m.partner_id into q from partner_members m join partner_links l on l.partner_id = m.partner_id and l.removed_at is null
+   where m.partner_id <> p and m.user_id is not null and l.tenant_id not in (select tenant_id from partner_links where partner_id = p) limit 1;
+  select id, user_id into qm1, qu1 from partner_members where partner_id = q and user_id is not null limit 1;
+  select id, tenant_id into ql1, qt1 from partner_links where partner_id = q and removed_at is null limit 1;
+  if pm2 is null or pl2 is null or ql1 is null then raise exception 'FAIL: 105 the seed lacks two people, two stores or a second partner'; end if;
+  insert into studio_sessions (id, tenant_id, partner_id, partner_member_id, user_id) values
+   ('a1050000-0000-0000-0000-000000000001', pt1, p, pm1, pu1), ('a1050000-0000-0000-0000-000000000002', pt1, p, pm2, pu2),
+   ('a1050000-0000-0000-0000-000000000003', qt1, q, qm1, qu1), ('a1050000-0000-0000-0000-000000000005', pt2, p, pm1, pu1);
+  insert into studio_sessions (id, tenant_id, partner_id, partner_member_id, user_id, ended_at, end_reason) values ('a1050000-0000-0000-0000-000000000004', pt1, p, pm1, pu1, now(), 'idle');
+  insert into studio_turns (id, tenant_id, partner_id, session_id) values
+   ('b1050000-0000-0000-0000-000000000001', pt1, p, 'a1050000-0000-0000-0000-000000000001'), ('b1050000-0000-0000-0000-000000000002', pt1, p, 'a1050000-0000-0000-0000-000000000002'),
+   ('b1050000-0000-0000-0000-000000000003', qt1, q, 'a1050000-0000-0000-0000-000000000003'), ('b1050000-0000-0000-0000-000000000004', pt1, p, 'a1050000-0000-0000-0000-000000000004'),
+   ('b1050000-0000-0000-0000-000000000005', pt2, p, 'a1050000-0000-0000-0000-000000000005');
+  insert into studio_spend_turns (turn_id, day, user_id, reserved_micro) select t, '2099-01-01', u, 500000 from (values
+   ('b1050000-0000-0000-0000-000000000001'::uuid, pu1), ('b1050000-0000-0000-0000-000000000002'::uuid, pu2), ('b1050000-0000-0000-0000-000000000003'::uuid, qu1),
+   ('b1050000-0000-0000-0000-000000000004'::uuid, pu1), ('b1050000-0000-0000-0000-000000000005'::uuid, pu1)) v(t, u);
+  insert into partner_credit_uses (id, partner_id, link_id, member_id, kind, what, reserved, real_money, rate_e4) values
+   ('c1050000-0000-0000-0000-000000000001', p, pl1, pm1, 'turn', 'edit', 9, false, 941997), ('c1050000-0000-0000-0000-000000000002', p, pl1, pm2, 'turn', 'edit', 9, false, 941997),
+   ('c1050000-0000-0000-0000-000000000003', p, pl1, pm1, 'preview', 'edit', 9, false, 941997), ('c1050000-0000-0000-0000-000000000004', q, ql1, qm1, 'turn', 'edit', 9, false, 941997),
+   ('c1050000-0000-0000-0000-000000000005', p, pl2, pm1, 'turn', 'edit', 9, false, 941997);
+  insert into studio_binds (token, xact, tenant_id, partner_id, user_id, member_id) values ('tok105', pg_current_xact_id()::text, pt1, p, pu1, pm1);
+  -- Another store's waiting change, for the card's key.
+  insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by) values (qt1, 'brand', '{}', '1 colour.', 1, qu1) returning id into bp;
+  insert into studio_tool_calls (id, tenant_id, partner_id, session_id, turn_id, tool_use_id, name, input)
+    values ('d1050000-0000-0000-0000-000000000001', pt1, p, 'a1050000-0000-0000-0000-000000000001', 'b1050000-0000-0000-0000-000000000001', 'sevt_105', 'tokens_propose', '{}');
+  insert into studio_proposals (tenant_id, partner_id, session_id, tool_call_id, kind, value)
+    values (pt1, p, 'a1050000-0000-0000-0000-000000000001', 'd1050000-0000-0000-0000-000000000001', 'tokens', '{}') returning id into sp;
+  perform set_config('app.tenant_id', pt1::text, true), set_config('app.studio_bind', 'tok105', true);
+  set local role frata_app;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000001', 'c1050000-0000-0000-0000-000000000002') then raise exception 'FAIL: 105 own turn tied to another member''s use'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000002', 'c1050000-0000-0000-0000-000000000001') then raise exception 'FAIL: 105 another member''s turn tied'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000001', 'c1050000-0000-0000-0000-000000000003') then raise exception 'FAIL: 105 a preview use tied to a turn'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000001', 'c1050000-0000-0000-0000-000000000004') then raise exception 'FAIL: 105 another partner''s use tied'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000003', 'c1050000-0000-0000-0000-000000000001') then raise exception 'FAIL: 105 another partner''s turn tied'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000001', 'c1050000-0000-0000-0000-000000000005') then raise exception 'FAIL: 105 a use of another store tied'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000005', 'c1050000-0000-0000-0000-000000000005') then raise exception 'FAIL: 105 a turn of another store tied'; end if;
+  if not app_studio_turn_use('b1050000-0000-0000-0000-000000000001', 'c1050000-0000-0000-0000-000000000001') then raise exception 'FAIL: 105 the person''s own turn and use not tied'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000004', 'c1050000-0000-0000-0000-000000000001') then raise exception 'FAIL: 105 one use tied twice'; end if;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000001', 'c1050000-0000-0000-0000-000000000001') then raise exception 'FAIL: 105 a tied turn tied again'; end if;
+  begin perform 1 from studio_spend_turns; raise exception 'FAIL: 105 frata_app read studio_spend_turns'; exception when insufficient_privilege then null; end;
+  begin update studio_proposals set brand_proposal_id = bp where id = sp;
+    if found then raise exception 'FAIL: 105 a card named another store''s waiting change'; end if;
+    raise exception 'FAIL: 105 the card was not visible to its own bound person';
+  exception when foreign_key_violation then null; end;
+  reset role;
+  if (select count(*) from studio_spend_turns where credit_use_id is not null and turn_id::text like 'b1050000%') <> 1 then raise exception 'FAIL: 105 more than the one tie'; end if;
+  perform set_config('app.tenant_id', qt1::text, true);
+  set local role frata_app;
+  if app_studio_turn_use('b1050000-0000-0000-0000-000000000003', 'c1050000-0000-0000-0000-000000000004') then raise exception 'FAIL: 105 a bind used on another store'; end if;
+  reset role;
+end $$;
+rollback;
+-- § 105 (cont.) · How each end of a turn settles its credits (app_studio_settle, 0177; impact review 2026-11-24): charged
+-- for an end, a pause, a Stop, a store switch or a person removed; every credit back for a failure of ours ('frrata') or an
+-- expiry ('timeout'), at once even before the cost is known; a second settle changes nothing. The credits run's stale
+-- sweep never takes a use whose turn is still running.
+begin;
+do $$
+declare p uuid := 'e8100000-0000-0000-0000-0000000000a1'; pm uuid; pu uuid; pl uuid; pt uuid; c record; s uuid; t uuid; u uuid; got record;
+begin
+  select id, user_id into pm, pu from partner_members where partner_id = p and role = 'owner' and user_id is not null limit 1;
+  select id, tenant_id into pl, pt from partner_links where partner_id = p and removed_at is null order by tenant_id limit 1;
+  for c in select * from (values
+      ('ended', null::text, null::text, 100000::bigint, null::text, false),
+      ('paused', null, null, 100000, null, false),
+      ('stopped', 'runtime', 'stopped', 100000, null, false),
+      ('switch', 'switch', 'switch', 100000, null, false),
+      ('actor', 'actor', 'actor', 100000, null, false),
+      ('idle', 'expired', 'idle', 100000, 'timeout', true),
+      ('runtime', 'runtime', null, 100000, 'frrata', true),
+      ('start', 'start', null, null, 'frrata', true)) v(name, failed, ended, measured, back, returned) loop
+    s := gen_random_uuid(); t := gen_random_uuid(); u := gen_random_uuid(); pu := gen_random_uuid(); -- one open session a person
+    insert into studio_sessions (id, tenant_id, partner_id, partner_member_id, user_id, ended_at, end_reason)
+      values (s, pt, p, pm, pu, case when c.ended is not null then now() end, c.ended);
+    insert into studio_turns (id, tenant_id, partner_id, session_id, failed_at, failed_reason, ended_at, paused_at)
+      values (t, pt, p, s, case when c.failed is not null then now() end, c.failed, case when c.name = 'ended' then now() end, case when c.name = 'paused' then now() end);
+    insert into partner_credit_uses (id, partner_id, link_id, member_id, kind, what, reserved, real_money, rate_e4) values (u, p, pl, pm, 'turn', 'edit', 9, false, 941997);
+    insert into studio_spend_turns (turn_id, day, user_id, reserved_micro, credit_use_id, test) values (t, '2099-01-01', pu, 500000, u, false);
+    perform app_studio_settle(t, s, c.measured, null, false);
+    select closed_at is not null as closed, return_reason, list_micro into got from partner_credit_uses where id = u;
+    if not got.closed then raise exception 'FAIL: 105 % left the use open', c.name; end if;
+    if got.return_reason is distinct from c.back then raise exception 'FAIL: 105 % closed the use as %, not %', c.name, got.return_reason, c.back; end if;
+    if not c.returned and got.list_micro is distinct from c.measured then raise exception 'FAIL: 105 % recorded % of list cost, not %', c.name, got.list_micro, c.measured; end if;
+    perform app_studio_settle(t, s, 200000, null, false); -- a second settle: nothing changes
+    if (select list_micro is distinct from got.list_micro or return_reason is distinct from got.return_reason from partner_credit_uses where id = u) then
+      raise exception 'FAIL: 105 % settled twice', c.name; end if;
+  end loop;
+  -- The stale sweep: an old use tied to a running turn stays; one tied to an ended, unsettled turn and one untied go.
+  s := gen_random_uuid(); t := gen_random_uuid(); pu := gen_random_uuid();
+  insert into studio_sessions (id, tenant_id, partner_id, partner_member_id, user_id) values (s, pt, p, pm, pu);
+  insert into studio_turns (id, tenant_id, partner_id, session_id) values (t, pt, p, s);
+  insert into partner_credit_uses (id, partner_id, link_id, member_id, kind, what, reserved, real_money, rate_e4, created_at) values
+    ('c1050000-0000-0000-0000-0000000000f1', p, pl, pm, 'turn', 'edit', 9, false, 941997, now() - interval '3 hours'),
+    ('c1050000-0000-0000-0000-0000000000f2', p, pl, pm, 'turn', 'edit', 9, false, 941997, now() - interval '3 hours'),
+    ('c1050000-0000-0000-0000-0000000000f3', p, pl, pm, 'turn', 'edit', 9, false, 941997, now() - interval '3 hours');
+  insert into studio_spend_turns (turn_id, day, user_id, reserved_micro, credit_use_id, test) values (t, '2099-01-01', pu, 500000, 'c1050000-0000-0000-0000-0000000000f1', false);
+  s := gen_random_uuid(); t := gen_random_uuid();
+  insert into studio_sessions (id, tenant_id, partner_id, partner_member_id, user_id, ended_at, end_reason) values (s, pt, p, pm, pu, now(), 'idle');
+  insert into studio_turns (id, tenant_id, partner_id, session_id, failed_at, failed_reason) values (t, pt, p, s, now(), 'expired');
+  insert into studio_spend_turns (turn_id, day, user_id, reserved_micro, credit_use_id, test) values (t, '2099-01-01', pu, 500000, 'c1050000-0000-0000-0000-0000000000f2', false);
+  if 'c1050000-0000-0000-0000-0000000000f1'::uuid in (select id from app_pc_stale_uses(interval '1 hour', 200)) then raise exception 'FAIL: 105 the sweep took a running turn''s use'; end if;
+  if 'c1050000-0000-0000-0000-0000000000f2'::uuid not in (select id from app_pc_stale_uses(interval '1 hour', 200)) then raise exception 'FAIL: 105 the sweep left an ended turn''s use'; end if;
+  if 'c1050000-0000-0000-0000-0000000000f3'::uuid not in (select id from app_pc_stale_uses(interval '1 hour', 200)) then raise exception 'FAIL: 105 the sweep left an untied use'; end if;
+end $$;
+rollback;
+\echo 'tenancy proof — all checks passed (through § 106)'

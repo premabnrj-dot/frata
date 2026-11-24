@@ -2,6 +2,7 @@ import 'server-only'
 import type { UseWhat } from '@/domains/studio/ledger'
 import type { PartnerOk } from '@/lib/auth/require-partner'
 import { panel, reserve, system, type CreditError, type Panel, type Result } from '@/lib/db/partner-credits'
+import type { Caller } from '@/lib/db/partners'
 import { realMoney } from './purchase'
 
 // =============================================================================
@@ -17,13 +18,15 @@ import { realMoney } from './purchase'
 //   - creditsOf: what a card or the Studio panel shows, read at render (no figure in a tenant row). A Lead or a Builder
 //     gets the client's used and budget only.
 // Settle and return are never server actions: they run in the code that measured the work, once per use.
-// The turn- and site-keyed entries (a webhook's tool run, a developer's push preview) come with V3a and V2a.
+// Studio's turns (V3b K3): sessions.ts reserves at Send and ties the use to the turn (app_studio_turn_use); the turn's
+// settle in the database settles or returns it (drizzle/0177 app_studio_settle), so a turn's end calls neither
+// settleCredits nor returnCredits; they stay for V2a's previews (and returnCredits for a Send refused before its turn).
 // =============================================================================
 
 export type Reserved = Result<{ useId: string; reserved: number }>
 
 /** A person starts a preview or a turn: credits held now, charged after. */
-export function reserveCredits(auth: PartnerOk, x: { linkId: string; kind: 'preview' | 'turn'; what: UseWhat; estimate: number | null }): Promise<Reserved> {
+export function reserveCredits(auth: Caller, x: { linkId: string; kind: 'preview' | 'turn'; what: UseWhat; estimate: number | null }): Promise<Reserved> {
   return reserve(auth, { ...x, realMoney: realMoney() })
 }
 

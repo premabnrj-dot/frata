@@ -9,6 +9,8 @@
 // limit (state 4) and Continue request; a Send refused at today's limit (state 6); a request that failed on Frrata's
 // side (state 5). axe finds nothing serious at 1280 and 390. Screenshots e2e/.out/99-studio-agent-*.png are what
 // mockup-parity-reviewer compares with the states mockup.
+// V3b K1/K3 (docs/plans/2026-11-24-v3b-first.md): each request holds 9 credits and settles; not enough credits refuses the
+// Send; on an open store with an owner, Apply sends the change to the owner ("Sent to the owner", then "Declined by the owner").
 // Guards: a person who is not staff in Studio; an Apply that skips the console's save or its version; a key or a cost
 // on screen.
 // =============================================================================
@@ -43,6 +45,11 @@ export default {
     const day = (await db`select to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD') as d`)[0].d
     await db`update studio_spend_days set measured_micro = 0, reserved_micro = 0 where day = ${day}`
     await db`delete from studio_spend_people where day = ${day} and user_id = ${P.id}`
+    // Turns are paid in credits (V3b K3, docs/plans/2026-11-24-v3b-first.md): the partner's free lot, and today's rate.
+    const [{ id: PID }] = await db`select id from partners where user_id = ${P.id}`
+    await db`insert into partner_credit_entries (partner_id, kind, credits, expires_at) values (${PID}, 'grant', 500, now() + interval '90 days')
+      on conflict (partner_id) where kind = 'grant' do update set credits = 500, expires_at = now() + interval '90 days'`
+    await db`insert into fx_rates (day, rate_e4, source) values ((now() at time zone 'Asia/Kolkata')::date, 941997, 'manual') on conflict (day) do nothing`
 
     const open = async (viewport) => {
       const ctx = await signedIn(t.browser, 'partner', { viewport, reducedMotion: 'reduce' })
@@ -258,6 +265,46 @@ export default {
       await p.screenshot({ path: 'e2e/.out/99-studio-agent-5-failed.png' })
       assert.deepEqual(await audit(p), [], 'axe at 1280')
     })
+    await t.step('K3: each request holds and settles credits; not enough credits refuses the Send in Credits and billing’s words', async () => {
+      const [u] = await db`select reserved, closed_at is not null as closed from partner_credit_uses where partner_id = ${PID} and kind = 'turn' order by created_at limit 1`
+      assert.equal(u.reserved, 9, 'a request holds its ceiling in credits')
+      assert.equal(u.closed, true, 'and is settled once it ends')
+      const [{ n: left }] = await db`select coalesce(sum(credits), 0)::int as n from partner_credit_entries where partner_id = ${PID}`
+      await db`update partner_credit_entries set credits = credits - ${left - 3} where partner_id = ${PID} and kind = 'grant'`
+      try {
+        await say('Add a size chart to Product')
+        await chat.getByText('Not enough credits. Buy credits to continue.').waitFor()
+        assert.equal(await ask.inputValue(), 'Add a size chart to Product', 'what was typed stays')
+        await p.screenshot({ path: 'e2e/.out/99-studio-agent-k3-balance.png' })
+      } finally { await db`update partner_credit_entries set credits = credits + ${left - 3} where partner_id = ${PID} and kind = 'grant'` }
+    })
+
+    await t.step('K1: on an open store with an owner, Apply sends the change to the owner; Declined follows the owner', async () => {
+      await db`insert into members (tenant_id, user_id, role) values (${S}, ${USERS.owner.id}, 'owner') on conflict do nothing`
+      await db`update shop_settings set published_at = now() where tenant_id = ${S}`
+      // The fake proposes #7A2A1E, live since the first Apply: an accent the store already has makes no card.
+      await db`update brand_tokens set color_accent = '#1F3A5F' where tenant_id = ${S}`
+      try {
+        await p.reload()
+        await say('Make the accent warmer')
+        const card = chat.getByRole('region', { name: 'Colours for Brand' }).last()
+        await until(async () => { if (!(await card.getByRole('button', { name: 'Apply' }).isVisible())) { await cron(); return false } return true }, 30_000)
+        const before = (await db`select version from brand_tokens where tenant_id = ${S}`)[0].version
+        await card.getByRole('button', { name: 'Apply' }).click()
+        await card.getByText('Sent to the owner').waitFor()
+        assert.equal((await db`select version from brand_tokens where tenant_id = ${S}`)[0].version, before, 'nothing live before the owner says so')
+        const [w] = await db`select id from brand_proposals where tenant_id = ${S} and decided_at is null`
+        assert.ok(w, 'the store’s one waiting change, as a partner’s own Brand save makes')
+        await p.screenshot({ path: 'e2e/.out/99-studio-agent-k1-sent.png' })
+        await db`update brand_proposals set decided_at = now(), decision = 'declined', decided_by = ${USERS.owner.id} where id = ${w.id}`
+        await p.reload()
+        await chat.getByRole('region', { name: 'Colours for Brand' }).last().getByText('Declined by the owner').waitFor()
+      } finally {
+        await db`update shop_settings set published_at = null where tenant_id = ${S}`.catch(() => {})
+        await db`delete from members where tenant_id = ${S} and user_id = ${USERS.owner.id}`.catch(() => {})
+      }
+    })
+
     await t.step('state 3: a slow step: what was done, what is running, Stop', async () => {
       // A turn caught mid-run, written as the advance would leave it (the fake answers too fast to see one).
       await db`update studio_sessions set ended_at = now(), end_reason = 'stopped' where tenant_id = ${S} and ended_at is null`

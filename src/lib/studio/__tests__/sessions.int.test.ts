@@ -1,3 +1,4 @@
+// V3b K3 adds turns paid in credits (the last tests): the fixture holds a free lot and today's dollar rate.
 // Send, start, Stop and the cron on a real Postgres and the fake Anthropic server (plan docs/plans/2026-11-22-v3a-runtime.md
 // R6; never the live API). Skipped unless INT_DB_HOST is set, as in CI. Every failure step leaves no live key, no vault
 // and no uncounted reserve once the cron has cleaned up; two first Sends at once make one session and one day row; a
@@ -302,5 +303,111 @@ describe.skipIf(!host)('Studio sessions: Send, start, Stop, the cron', () => {
     const [t] = await su`select x.settled_at is not null as settled, t.failed_reason from studio_spend_turns x join studio_turns t on t.id = x.turn_id where t.session_id = ${s.id}`
     expect(t).toEqual({ settled: true, failed_reason: 'start' })
     expect(await reserved()).toBe(held)
+  })
+
+  // ── V3b K3 (docs/plans/2026-11-24-v3b-first.md): turns paid in credits. Send holds the turn's credits, tied to the turn;
+  //    each end settles, or gives them back with its reason; every refusal holds nothing. ──
+  const balance = async () => Number((await su`select coalesce(sum(credits), 0)::int as n from partner_credit_entries where partner_id = ${f.partner}`)[0]!.n)
+  const lastUse = async () => (await su`select u.id, u.reserved, u.closed_at is not null as closed, u.return_reason, u.list_micro, x.credit_use_id = u.id as tied, x.test
+    from partner_credit_uses u left join studio_spend_turns x on x.credit_use_id = u.id where u.partner_id = ${f.partner} order by u.created_at desc limit 1`)[0]
+  const openUses = async () => Number((await su`select count(*)::int as n from partner_credit_uses where partner_id = ${f.partner} and closed_at is null`)[0]!.n)
+  const endAll = () => su`update studio_sessions set ended_at = now(), end_reason = 'stopped' where tenant_id = ${f.tenant} and ended_at is null`
+
+
+  it('the estimate: the turn’s $0.50 ceiling at ₹94.1997 and 1.10 is ₹51.81, so 9 credits', () => {
+    expect(S.turnEstimate(500_000, 941997)).toBe(9)
+    expect(S.turnEstimate(500_000, 1_200_000)).toBe(11)
+  })
+
+  it('a Send holds 9 credits tied to its turn (no longer a staff test); the turn’s end charges what it measured, the rest back', async () => {
+    const before = await balance()
+    expect((await S.send(f.auth, 'hello there', deps())).ok).toBe(true)
+    expect(await lastUse()).toMatchObject({ reserved: 9, closed: false, tied: true, test: false })
+    expect(await balance()).toBe(before - 9)
+    await cron() // the fake ends the turn: settled from the runtime's measured cost
+    const u = (await lastUse())!
+    expect(u).toMatchObject({ closed: true, return_reason: null })
+    const [m] = await su`select x.measured_micro from studio_spend_turns x where x.credit_use_id = ${u.id}`
+    expect(BigInt(u.list_micro)).toBe(BigInt(m!.measured_micro)) // one measured figure, read by both ledgers
+    const charged = before - (await balance())
+    expect(charged).toBeGreaterThanOrEqual(0)
+    expect(charged).toBeLessThanOrEqual(9)
+  })
+
+  it('Stop during a turn: charged what it measured (the person’s choice), never above the reserve', async () => {
+    const before = await balance()
+    expect((await S.send(f.auth, 'facts please', deps())).ok).toBe(true)
+    expect((await S.stop(f.auth, rt)).ok).toBe(true)
+    const u = (await lastUse())!
+    expect(u).toMatchObject({ closed: true, return_reason: null })
+    expect(Number(u.list_micro)).toBeGreaterThan(0)
+    const charged = before - (await balance())
+    expect(charged).toBeGreaterThan(0)
+    expect(charged).toBeLessThanOrEqual(9)
+    await cron()
+  })
+
+  it('a start that fails at Anthropic: every credit back as ours (frrata)', async () => {
+    const before = await balance()
+    fake.state.failNext['POST /v1/sessions'] = 1
+    expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'start' })
+    expect(await lastUse()).toMatchObject({ closed: true, return_reason: 'frrata' })
+    expect(await balance()).toBe(before)
+    await cron()
+  })
+
+  it('a sessions refusal after the reserve (three open): the credits come straight back, as a cancel', async () => {
+    await endAll()
+    const before = await balance()
+    const others = await su<{ id: string }[]>`insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id)
+      select ${f.tenant}, ${f.partner}, ${f.member}, gen_random_uuid() from generate_series(1, 3) returning id`
+    try { expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'sessions' }) }
+    finally { for (const o of others) await su`update studio_sessions set ended_at = now(), end_reason = 'stopped' where id = ${o.id}` }
+    expect(await lastUse()).toMatchObject({ closed: true, return_reason: 'cancelled' }) // a limit of the person's own, not a failure of ours
+    expect(await balance()).toBe(before)
+  })
+
+  it('refusals in the reserve’s order: no fresh rate, the client’s budget, the person’s 300, the balance; nothing held, nothing sent', async () => {
+    await endAll()
+    const n = fake.state.requests.length
+    // No fresh rate: every rate older than 4 days.
+    const rates = await su`select day, rate_e4 from fx_rates where day >= (now() at time zone 'Asia/Kolkata')::date - 4`
+    await su`delete from fx_rates where day >= (now() at time zone 'Asia/Kolkata')::date - 4`
+    try { expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'rate' }) }
+    finally { for (const r of rates) await su`insert into fx_rates (day, rate_e4, source) values (${r.day}, ${r.rate_e4}, 'manual') on conflict do nothing` }
+    // The client's budget used up.
+    const [link] = await su`select id from partner_links where tenant_id = ${f.tenant} and removed_at is null`
+    await su`insert into partner_client_budgets (partner_id, link_id, credits, set_by) values (${f.partner}, ${link!.id}, 1, ${f.member})`
+    try { expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'client_budget' }) }
+    finally { await su`delete from partner_client_budgets where partner_id = ${f.partner} and link_id = ${link!.id}` }
+    // The person's 300 a day: uses of 295 today already (a use holds 120 at most).
+    const big = await su<{ id: string }[]>`insert into partner_credit_uses (partner_id, link_id, member_id, kind, what, reserved, real_money, rate_e4, closed_at)
+      select ${f.partner}, ${link!.id}, ${f.member}, 'turn', 'edit', n, false, 941997, now() from unnest(array[120, 120, 55]) n returning id`
+    try { expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'credits_day' }) }
+    finally { for (const b of big) await su`delete from partner_credit_uses where id = ${b.id}` }
+    // Not enough credits: the free lot made smaller, 3 left.
+    const left = await balance()
+    await su`update partner_credit_entries set credits = credits - ${left - 3} where partner_id = ${f.partner} and kind = 'grant'`
+    try { expect(await S.send(f.auth, 'hello', deps())).toEqual({ ok: false, why: 'balance' }) }
+    finally { await su`update partner_credit_entries set credits = credits + ${left - 3} where partner_id = ${f.partner} and kind = 'grant'` }
+    expect(await openUses()).toBe(0)
+    expect(fake.state.requests.length).toBe(n)
+    expect((await su`select count(*)::int as n from studio_sessions where tenant_id = ${f.tenant} and ended_at is null`)[0]!.n).toBe(0)
+  })
+
+  it('a use can be tied only to the bound person’s own open turn, once', async () => {
+    const r = await S.send(f.auth, 'hello', deps())
+    expect(r.ok).toBe(true)
+    const u = (await lastUse())!
+    // As the app with no bind: refused (no person bound in this transaction).
+    const app = (await import('postgres')).default(`postgresql://frata_app:${pass}@${host}/${dbName}`, { max: 1 })
+    try {
+      const [x] = await app.begin(async (tx) => {
+        await tx`select set_config('app.tenant_id', ${f.tenant}, true)`
+        return tx`select app_studio_turn_use(${(r as { turnId: string }).turnId}::uuid, ${u.id}::uuid) as ok`
+      })
+      expect(x!.ok).toBe(false)
+    } finally { await app.end() }
+    await cron()
   })
 }, 120_000)

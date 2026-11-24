@@ -59,3 +59,13 @@ export function checkLogo(svg: string): LogoCheck {
 
 /** The slot an agent logo fills: the main logo only, in V3a. */
 export const LOGO_SLOT = 'main' as const satisfies LogoSlot
+
+/** A chat card's state, derived (V3b K1, docs/plans/2026-11-24-v3b-first.md): applied, set aside, refused, or — once Apply
+ *  sent it to the owner — the store's waiting change's decision (`decision` null while it waits). Never stored twice. */
+export type CardState = 'open' | 'applied' | 'refused' | 'dismissed' | 'sent' | 'approved' | 'declined' | 'replaced'
+export function cardState(p: { appliedAt: Date | null; dismissedAt: Date | null; refusedAt: Date | null; sent: boolean; decision: string | null }): CardState {
+  if (p.appliedAt) return 'applied'
+  if (p.dismissedAt) return 'dismissed'
+  if (p.sent) return p.decision === 'approved' ? 'approved' : p.decision === 'declined' ? 'declined' : p.decision === 'replaced' ? 'replaced' : 'sent'
+  return p.refusedAt ? 'refused' : 'open'
+}
