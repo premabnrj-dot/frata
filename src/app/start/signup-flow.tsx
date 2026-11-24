@@ -167,8 +167,8 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
               </div>
               <div id="su-addr" className="su-addr">
                 <code>{slug || 'your-brand'}.{shopDomain}</code>
-                {/* Only whether the address is free is spoken, not the address on every keystroke. */}
-                <span role="status" className="contents">{check && ADDRESS_WORDS[check.state] ? <Badge tone={TONE[check.state]}>{ADDRESS_WORDS[check.state]}</Badge> : null}</span>
+                {/* Only whether the address is free is spoken, not the address on every keystroke. The pill is Neel's (data-neel). */}
+                <span role="status" data-neel="" className="contents">{check && ADDRESS_WORDS[check.state] ? <Badge tone={TONE[check.state]}>{ADDRESS_WORDS[check.state]}</Badge> : null}</span>
                 <button ref={changeRef} type="button" className="su-link" onClick={() => { setPopupLoaded(true); setPopup(true) }}>Change web address</button>
               </div>
               <FieldError name="slug" message={error?.field === 'slug' ? error.text : null} className="text-sm" />
@@ -192,7 +192,7 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
                 {plans.map((p) => (
                   <label key={p.code} className="su-radio">
                     <input type="radio" name="plan" value={p.code} checked={plan === p.code} onChange={() => setPlan(p.code)} />
-                    <span><b className="font-medium">{p.name}</b><small><span className="font-mono">{p.price}</span>/mo + GST · {p.fee} per delivered order</small></span>
+                    <span><b className="font-medium">{p.name}</b><small><span className="font-num">{p.price}</span>/mo + GST · {p.fee} per delivered order</small></span>
                   </label>
                 ))}
               </fieldset>

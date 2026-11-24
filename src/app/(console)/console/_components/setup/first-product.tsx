@@ -73,7 +73,7 @@ export function FirstProduct({ open, draft, setDraft, onClose, onSaved, tenantId
       <div className="grid gap-3">
         <div className="flex items-start gap-3">
           <button type="button" onClick={() => file.current?.click()} aria-label={draft.photo ? 'Photo added. Change photo' : 'Add a photo'} aria-busy={busy === 'photo' || undefined}
-            className={cn('grid aspect-square w-23 shrink-0 place-items-center overflow-hidden rounded-[10px] border-[1.5px] text-text-3', draft.photo ? 'border-solid border-edge' : 'border-dashed border-edge bg-sunk')}>
+            className={cn('grid aspect-square w-23 shrink-0 place-items-center overflow-hidden rounded-mid border-[1.5px] text-text-3', draft.photo ? 'border-solid border-edge' : 'border-dashed border-edge bg-sunk')}>
             {draft.photo ? <img src={urlFor(draft.photo.base, 400)} alt="" className="size-full object-cover" />
               : <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>}
           </button>

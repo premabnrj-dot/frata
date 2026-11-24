@@ -38,8 +38,8 @@ export function WhatsappStep({ codeId, verified, onCode, onVerified, onNext }: {
       <div className="su-f">
         <label htmlFor="phone">Mobile number</label>
         <div className="flex gap-2">
-          <span className="su-inp flex w-auto items-center bg-muted font-mono text-sm">+91</span>
-          <input id="phone" className="su-inp font-mono" inputMode="tel" autoComplete="tel-national" maxLength={10} value={phone} disabled={!!codeId}
+          <span className="su-inp flex w-auto items-center bg-muted font-num text-sm">+91</span>
+          <input id="phone" className="su-inp font-num" inputMode="tel" autoComplete="tel-national" maxLength={10} value={phone} disabled={!!codeId}
             aria-invalid={error?.field === 'phone' || undefined} aria-describedby={error?.field === 'phone' ? errorId('phone') : undefined}
             onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null) }} />
         </div>

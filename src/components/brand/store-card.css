@@ -5,7 +5,7 @@
    category paints it with (`data-sell`) are the mockup's LOOK table.
    ============================================================================= */
 [data-store-card] {
-  --sc-bg: #FAF6EF; --sc-ink: #2B1B14; --sc-soft: #EADFCF; --sc-url: #FFFFFF; --sc-url-ink: #57534E; --sc-live: #2F9E62;
+  --sc-bg: #FAF6EF; --sc-ink: #2B1B14; --sc-soft: #EADFCF; --sc-url: #FFFFFF; --sc-url-ink: #57534E; --sc-live: #237F52; /* 4.97:1 under white 11 px "Open" (was #2F9E62, 3.39:1) */
   --sc-e3: 0 24px 48px -12px color-mix(in srgb, var(--foreground) 28%, transparent);
   --a1: #D9A441; --a2: #B5542B; --a3: #7A2A1E; --ar: 4 / 5;
   width: min(280px, 100%); background: var(--sc-bg); color: var(--sc-ink); border-radius: 14px; border: 1px solid var(--sc-soft);

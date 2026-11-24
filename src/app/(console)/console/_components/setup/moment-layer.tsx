@@ -30,7 +30,7 @@ export function MomentLayer({ name, address, whatsapp, onClose }: { name: string
           <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
           <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
         </svg>
-        <h2 id="open-moment-h" {...rise(1)} className="animate-rise-stagger font-display text-2xl leading-8 font-semibold tracking-tight">{name} is open</h2>
+        <h2 id="open-moment-h" {...rise(1)} className="animate-rise-stagger font-display text-display font-semibold">{name} is open</h2>
         <div {...rise(2)} className="animate-rise-stagger"><CopyLink address={address} /></div>
         <div {...rise(3)} className="flex animate-rise-stagger flex-wrap justify-center gap-2">
           <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={button({ variant: 'primary' })}>Share on WhatsApp</a>

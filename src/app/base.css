@@ -181,6 +181,8 @@
   --color-neutral: var(--neutral);
   --color-neutral-text: var(--neutral-text);
   --color-ok-mark: var(--ok-mark);
+  /* What is drawn ON an ok mark (the setup card's done tick): Neel's token, the card outside it. */
+  --color-on-ok-mark: var(--on-ok-mark, var(--card));
   --color-warn-mark: var(--warn-mark);
   --color-danger-mark: var(--danger-mark);
   --color-info-mark: var(--info-mark);

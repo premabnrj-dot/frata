@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { FIELD } from '@/components/ui/field'
 import { Dialog } from '@/components/ui/dialog'
 import { addressLine, addressUsable } from '@/domains/signup/steps'
 import { useAddressCheck } from './use-address-check'
@@ -27,7 +28,7 @@ export function AddressDialog({ open, current, shopDomain, onKeep, onUse }: {
       <div className="grid gap-1.5">
         <label htmlFor="su-slug" className="text-sm font-medium">Web address</label>
         <div className="su-slug">
-          <input id="su-slug" className="h-10 w-full min-w-0 rounded-md border border-input bg-card px-2.5 font-mono text-base md:text-sm" value={draft} maxLength={30} autoComplete="off" spellCheck={false}
+          <input id="su-slug" className={`${FIELD} w-full font-mono`} value={draft} maxLength={30} autoComplete="off" spellCheck={false}
             aria-describedby="su-slug-line" onChange={(e) => setDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30))} />
           <span>.{shopDomain}</span>
         </div>

@@ -93,7 +93,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
         {isOpen ? (
           // The open state (mockup § 2 "Open"), in the session that opened the store, until it is hidden.
           <div className="grid min-w-0 gap-2.5">
-            <h2 className="text-base leading-6 font-semibold">Your store is open</h2>
+            <h2 className="text-section font-semibold">Your store is open</h2>
             <div className="flex flex-wrap gap-2">
               <a ref={(el) => { target.current = el }} data-setup-next="" href={`https://${address}`} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary' })}>See your store</a>
               {hideable && <Button variant="ghost" onClick={() => moment?.hide()}>Hide this card</Button>}
@@ -109,7 +109,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
             <span aria-hidden="true" className="font-num text-label text-muted-foreground">{done} of {steps.length} done</span>
           </div>
           {step ? <>
-            <h2 className="text-base leading-6 font-semibold">{step.title}</h2>
+            <h2 className="text-section font-semibold">{step.title}</h2>
             <div className="flex flex-wrap gap-2"><Button ref={(el) => { target.current = el }} data-setup-next="" onClick={() => show(step.key)}>{step.action}</Button></div>
           </> : null}
         </div>
@@ -120,7 +120,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
           const cur = s.key === next
           const inner = <>
             <span className={cn('grid size-5 shrink-0 place-items-center rounded-full border-[1.5px]', s.done ? 'border-ok-mark bg-ok-mark' : 'border-edge')} aria-hidden="true">
-              {s.done && <svg viewBox="0 0 12 12" className="size-3" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6.5l2.5 2.5 4.5-5.5" pathLength={1} className="animate-draw-tick" /></svg>}
+              {s.done && <svg viewBox="0 0 12 12" className="size-3 stroke-current text-on-ok-mark" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6.5l2.5 2.5 4.5-5.5" pathLength={1} className="animate-draw-tick" /></svg>}
             </span>
             <span className={cn('max-w-[72%] flex-none truncate', s.done && 'text-muted-foreground', cur && 'font-medium')}>{s.title}<span className="sr-only">{s.done ? ', done' : ''}</span></span>
             <span className="min-w-0 flex-1 truncate text-right text-label text-muted-foreground">{s.done ? s.value : ''}</span>

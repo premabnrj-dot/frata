@@ -9,6 +9,8 @@
 [data-signup] {
   --su-display: var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
   background: var(--background); color: var(--foreground);
+  /* The radii by role, as Neel's (neel.css): this page is outside [data-neel], whose base values are smaller. */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-mid: 10px; --r-lg: 12px; --r-xl: 16px;
 }
 .su { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: max(560px, 100vh); }
 .su-q { padding: 20px 28px 28px; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 20px; min-width: 0; }
@@ -16,17 +18,17 @@
 .su-wm { display: inline-flex; border-bottom: 2px solid var(--thread); padding-bottom: 1px; }
 .su-bar-end { display: flex; align-items: center; gap: 16px; }
 .su-dots { display: flex; gap: 6px; }
-.su-dots i { width: 22px; height: 4px; border-radius: 2px; background: var(--border); transition: background-color var(--duration-slow) var(--ease-standard); }
+.su-dots i { width: 22px; height: 4px; border-radius: var(--r-xs); background: var(--border); }
 .su-dots i[data-on] { background: var(--foreground); }
 .su-back { border: 0; background: none; color: var(--muted-foreground); min-height: 44px; padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; justify-self: start; cursor: pointer; }
 .su-st { display: grid; gap: 16px; align-content: start; max-width: 400px; }
 .su-st h1 { font-family: var(--su-display); font-weight: 600; font-size: 26px; line-height: 32px; letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
 .su-f { display: grid; gap: 5px; min-width: 0; }
 .su-f > label, .su-f > .su-l { font-weight: 500; font-size: 13px; line-height: 18px; }
-.su-inp { min-height: 48px; font-size: 16px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; width: 100%; min-width: 0; background: var(--card); color: var(--foreground); }
-.su-inp:focus { outline: none; border-color: var(--foreground); box-shadow: 0 0 0 3px var(--border); }
+.su-inp { min-height: 48px; font-size: 16px; border: 1px solid var(--border); border-radius: var(--r-md); padding: 0 10px; width: 100%; min-width: 0; background: var(--card); color: var(--foreground); }
+.su-inp:focus { outline: none; border-color: var(--foreground); box-shadow: 0 0 0 3px var(--ring); }
 .su-inp[aria-invalid="true"] { border-color: var(--danger-text); }
-.su-go { min-height: 48px; border-radius: 8px; border: 0; background: var(--ink); color: var(--ink-foreground); font-weight: 600; font-size: 15px; box-shadow: 0 2px 0 var(--thread); padding: 0 18px; cursor: pointer; display: grid; place-items: center; text-decoration: none; }
+.su-go { min-height: 48px; border-radius: var(--r-md); border: 0; background: var(--ink); color: var(--ink-foreground); font-weight: 600; font-size: 15px; box-shadow: 0 2px 0 var(--thread); padding: 0 18px; cursor: pointer; display: grid; place-items: center; text-decoration: none; }
 .su-go:disabled { opacity: .45; cursor: default; }
 .su-go[aria-busy="true"] { grid-auto-flow: column; gap: 8px; cursor: progress; }
 .su-go:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -34,16 +36,13 @@
 .su-addr code { font: 500 13px var(--font-mono, monospace); color: var(--foreground); overflow-wrap: anywhere; }
 .su-link { border: 0; background: none; text-decoration: underline; text-underline-offset: 3px; color: var(--foreground); min-height: 28px; padding: 0 2px; cursor: pointer; font-size: 13px; }
 .su-link:disabled { color: var(--muted-foreground); text-decoration: none; cursor: default; }
-[data-signup] .badge { height: 22px; gap: 6px; padding: 0 9px; border-radius: 999px; font-size: 12px; line-height: 18px; }
-[data-signup] .badge::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--badge-dot, var(--neutral-mark)); }
 .su-code { display: flex; gap: 8px; }
 .su-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
-.su-tile { display: flex; align-items: center; gap: 8px; min-height: 52px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--foreground); padding: 0 10px; font-size: 13.5px; font-weight: 500; text-align: left; cursor: pointer;
-  transition: box-shadow var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+.su-tile { display: flex; align-items: center; gap: 8px; min-height: 52px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); color: var(--foreground); padding: 0 10px; font-size: var(--t-label); font-weight: 500; text-align: left; cursor: pointer; }
 .su-tile svg { width: 22px; height: 22px; fill: none; stroke: var(--muted-foreground); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .su-tile[aria-pressed="true"] { border-color: var(--foreground); box-shadow: inset 0 0 0 1px var(--foreground); }
 .su-tile[aria-pressed="true"] svg { stroke: var(--foreground); }
-.su-radio { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.su-radio { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--r-mid); padding: 10px 12px; cursor: pointer; }
 .su-radio:has(input:checked) { border-color: var(--foreground); box-shadow: inset 0 0 0 1px var(--foreground); }
 .su-radio input { accent-color: var(--foreground); margin-top: 3px; }
 .su-radio > span { display: grid; } .su-radio small { color: var(--muted-foreground); font-size: 13px; }
@@ -60,7 +59,7 @@
 
 /* Change web address: the popup's address row */
 .su-slug { display: flex; gap: 6px; align-items: center; }
-.su-slug span { font: 500 12.5px var(--font-mono, monospace); color: var(--muted-foreground); }
+.su-slug span { font: 500 var(--t-small) var(--font-mono, monospace); color: var(--muted-foreground); }
 .su-line { font-size: 13px; min-height: 18px; }
 
 @media (max-width: 767.98px) {
@@ -79,4 +78,4 @@
 @keyframes su-fade { from { opacity: 0; } }
 .su[data-step="making"] .su-sweep { animation: going-live 1300ms var(--ease-standard) forwards; }
 /* The code's six boxes as drawn (mockup `.code input`): the page's line colour, 44 × 52, 600 weight. */
-.su-codebox input { width: 44px; height: 52px; border-color: var(--border); border-radius: 8px; font-weight: 600; font-size: 20px; }
+.su-codebox input { width: 44px; height: 52px; border-color: var(--border); border-radius: var(--r-md); font-weight: 600; font-size: 20px; }

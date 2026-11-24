@@ -8,12 +8,17 @@ import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { Switch } from '@/components/ui/switch'
+import { fromRupees } from '@/domains/money/paise'
+import { formatInr } from '@/lib/format'
 import { loadSetupPopup, saveSetupFields } from '../../settings/setup-actions'
 import type { FieldsDraft, PopupProps } from './drafts'
 
 // "How shoppers pay" (mockup § 2 `#ov-pay`, O2a·7): Pay on delivery and its limit, saved through the setup popups'
 // field-subset save (only codOn and codMax); UPI and cards is Razorpay's own page, where keys are tested before saving.
 // While Delivery Zones is usable the limit is its own (held): shown as text with a link there.
+
+/** The held limit as the stored rupees read ("3,000"), shown through formatInr like every other amount. */
+const heldMax = (x: unknown) => { const r = String(x ?? '').replace(/\D/g, ''); return r ? formatInr(fromRupees(Number(r))) : '' }
 
 export function Payments({ open, draft, setDraft, onClose, onSaved, connected }: PopupProps<FieldsDraft> & { connected?: boolean }) {
   const [busy, setBusy] = useState(false)
@@ -49,7 +54,7 @@ export function Payments({ open, draft, setDraft, onClose, onSaved, connected }:
         </div>
         {draft?.held ? (
           <p className="grid gap-1 text-sm"><span className="text-label font-medium">Pay on delivery up to</span>
-            <span><span className="font-num">₹{String(v.codMax ?? '')}</span> · <Link href="/console/apps/delivery_zones" className="text-link underline-offset-2 hover:underline">Set in Delivery Zones</Link></span></p>
+            <span><span className="font-num">{heldMax(v.codMax)}</span> · <Link href="/console/apps/delivery_zones" className="text-link underline-offset-2 hover:underline">Set in Delivery Zones</Link></span></p>
         ) : (
           <label className="grid gap-1.5"><span className="text-label font-medium">Pay on delivery up to</span>
             <span className="relative block max-w-40"><span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-muted-foreground">₹</span>

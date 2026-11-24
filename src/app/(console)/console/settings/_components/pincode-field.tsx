@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { FieldError, errorId } from '@/components/ui/field-error'
+import { FIELD } from '@/components/ui/field'
 import { PINCODE_SHAPE } from '@/domains/signup/slug'
 import type { Field, Values } from '@/domains/settings/sections'
 import { placeFor } from '../actions'
@@ -34,7 +35,7 @@ export function PincodeField({ f, value, error, onChange, saved, savedPlace }: {
           <label htmlFor={id} className="block text-sm font-medium">{f.label}<span className="font-normal text-muted-foreground"> (optional)</span></label>
           <input id={id} value={v} inputMode="numeric" maxLength={6} autoComplete="postal-code" aria-invalid={!!error || undefined}
             aria-describedby={error ? errorId(id) : `${id}-place`} onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            className="h-11 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text md:h-9" />
+            className={`${FIELD} w-full font-num`} />
         </div>
         <div className="min-w-0 space-y-1">
           <span className="block text-sm font-medium">City and state</span>

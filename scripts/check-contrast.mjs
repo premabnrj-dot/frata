@@ -69,6 +69,7 @@ export function pairs() {
     ['thread', 'ink', NONTEXT], ['thread', 'card', NONTEXT], ['thread', 'background', NONTEXT], ['thread', 'accent', NONTEXT] /* the current view tab */, ['brand-on-ink', 'ink', NONTEXT])
   // The support banner's ring and its End now button (white on amber) are support-foreground/support, a text pair above.
   for (const s of ['ok', 'warn', 'danger', 'info']) p.push([`${s}-mark`, 'card', NONTEXT], [`${s}-mark`, 'background', NONTEXT])
+  p.push(['on-ok-mark', 'ok-mark', NONTEXT]) // the setup card's done tick, drawn on the ok mark
   // Neel only (each pair is checked where both tokens exist, so in the Neel theme).
   p.push(['primary-foreground', 'primary-hover', TEXT], ['link', 'background', TEXT], ['link', 'card', TEXT], ['link', 'sunk', TEXT],
     ['select-foreground', 'select', TEXT], ['foreground', 'select', TEXT], ['foreground', 'sunk', TEXT], ['muted-foreground', 'sunk', TEXT],

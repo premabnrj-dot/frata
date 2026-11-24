@@ -39,6 +39,7 @@
   --support: #22201E;            /* g900: a support visit's strip and banner (Neel § Banners) */
   --support-foreground: #FFFFFF;
   --ok-mark: #2F9E62; --warn-mark: #C98318; --danger-mark: #DC3B3B; --info-mark: #3B82E0;
+  --on-ok-mark: #FFFFFF;          /* what is drawn on an ok mark (the setup card's done tick) */
   /* ── Neel only ── */
   --primary-hover: #2F37A3;       /* neel 700 */
   --link: #2F37A3;                /* neel 700 */
