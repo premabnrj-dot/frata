@@ -563,5 +563,8 @@ exist, R1 = 0); fees on orders before the opening day (decision 6); partner-buil
 2. Existing never-opened partner stores already handed over: 0168 anchors their cap at the handover (the rule), so one
    handed over more than 45 days ago opens with no trial (R5 counts them). Or anchor these few at the migration, giving
    each a fresh window? Recommendation: the handover, as the rule; ask the owner only if R5 shows such a store.
+3. **Split before O2b adds to either** (impact review of O1/O2a, 2026-11-24): `src/lib/db/schema.ts` is 393 lines and
+   `src/lib/db/platform.ts` 380, against `check:size`'s 400. O2b's columns and definer wrappers land in those files, so
+   split each (by area, re-exported from the old path) in its own task before the first O2b task that adds to it.
 
 **Orchestrator rulings, 2026-11-23:** (1) yes: 0169 also redefines `app_change_plan` to refuse a change before a store first opens, so the rule holds in the database and not only in the action; its proof row joins § 103. (2) Never-opened partner stores already handed over: the cap counts from the handover, the rule; no fresh window.

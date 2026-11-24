@@ -13,7 +13,7 @@ import { useOpenMoment } from '../open-moment'
 // before. A refusal stays in the popup's error slot. D0·3's refusal (the website still on a Test key) closes this and
 // opens its own dialog, never two at once. Opening hands over to the open moment (OpenMoment).
 
-export function OpenStore({ open, onClose }: { open: boolean; onClose: () => void; address: string }) {
+export function OpenStore({ open, onClose }: { open: boolean; onClose: () => void }) {
   const moment = useOpenMoment()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -55,13 +55,13 @@ leaves. Each step: `title` and `action` (the focus button) as drawn, `value` (th
 `who: Capability` (`product` → `shop.work`, `details` and `payments` → `shop.build`, `publish` → `shop.manage`;
 `src/domains/tenancy/roles.ts:33,39,41`). `detail` and `href` go, and with them `BuiltPages`, `BUILT_PAGES` (`:38-42`)
 and the fashion line at `:52` ("sizes and colours" no longer reaches a beauty store: the first product's words come
-from `firstProductShape`, O2a·3). New `nextStep(steps, can)`: the first step not done that `can(step.who)`, `publish`
+from `firstProductShape`, O2a·3). New `nextSetupStep(steps, can)`: the first step not done that `can(step.who)`, `publish`
 only once every other step is done; null when nothing is left for this person. `SetupFacts` gains nothing (values come
 from `productCount`, `legalName`, `codOn`, `paymentsConnected`). Callers: `shop-actions.ts:52-54` (drops `BUILT_PAGES`,
 `String`), `src/lib/queries/settings.ts:51-55` (drops them), `console/_components/checklist.tsx` (renders `title` and
 `value` until O2a·7 deletes it), `today.tsx:117-120` (reads `left[].title`: unchanged).
 **Test first:** `checklist.test.ts`: a new store → `[product ✗, details ✗, payments ✓, publish ✗]`, done 1 of 4;
-`nextStep` for an owner: product, then details, then publish; for Staff: product, then null; for a partner: product,
+`nextSetupStep` for an owner: product, then details, then publish; for Staff: product, then null; for a partner: product,
 then details, never publish; `publish` never next while another step is open; values "1 product", "3 products", the
 legal name, "Pay on delivery" / "UPI, cards and Pay on delivery" / "UPI and cards", "Open".
 **Verify:** `npx vitest run src/domains/setup` (D0·3's case still passes); `node scripts/check-layers.mjs` clean;
@@ -269,7 +269,7 @@ test` (check:skills, check:docs, check:plans).
 ## Performance
 - **Home before opening:** `requireCapability` + `requireMember` ×2 (one `app_access_for`, React-cached); `setupFor`
   (`queries/settings.ts:47-60`): `Promise.all` of `shopWithSettings`, `activeProductCount`, `paymentStatusFor`, then
-  `mainHostFor`. **After: the same statements.** `who` and `nextStep` are computed from the role in hand.
+  `mainHostFor`. **After: the same statements.** `who` and `nextSetupStep` are computed from the role in hand.
 - **A popup's one read**, on first open only, one `withTenant` each: first product (`shop_settings` by key, `product_types`
   by `tenant_id` with chart sizes); details, payments, pickup (`shop_settings` by key, `members` for `hasOwnerHeldIn`,
   `tenant_modules` for payments). No read of `orders`, `order_lines` or `variants`; EXPLAIN each in the 10× seed

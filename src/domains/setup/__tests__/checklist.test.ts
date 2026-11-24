@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { holds, type Capability } from '../../tenancy/roles'
-import { nextStep, notYet, readyToOpen, setupSteps, type SetupFacts } from '../checklist'
+import { holds, MEMBER_ROLES, type Capability } from '../../tenancy/roles'
+import { editorsOf, type SectionKey } from '../../settings/sections'
+import { SETUP_FIELDS } from '../../settings/fields'
+import { nextSetupStep, notYet, readyToOpen, setupSteps, type SetupFacts } from '../checklist'
 
 const fresh: SetupFacts = { productCount: 0, legalName: '', grievanceName: '', grievanceEmail: '', grievancePhone: '', codOn: true, paymentsConnected: false, publishedAt: null }
 const officer = { grievanceName: 'Riya', grievanceEmail: 'care@kesar.in', grievancePhone: '9827041001' }
@@ -45,8 +47,8 @@ describe('setupSteps (O2a·1: four derived steps)', () => {
   })
 })
 
-describe('nextStep', () => {
-  const next = (f: Partial<SetupFacts>, role: string) => nextStep(setupSteps({ ...fresh, ...f }), as(role))?.key ?? null
+describe('nextSetupStep', () => {
+  const next = (f: Partial<SetupFacts>, role: string) => nextSetupStep(setupSteps({ ...fresh, ...f }), as(role))?.key ?? null
   it('an owner: the product, then the details, then opening', () => {
     expect(next({}, 'owner')).toBe('product')
     expect(next({ productCount: 1 }, 'owner')).toBe('details')
@@ -65,8 +67,8 @@ describe('nextStep', () => {
   })
   it('opening is never next while another step is open, even for someone who may not do that step', () => {
     const noBuild = (c: Capability) => c !== 'shop.build'
-    expect(nextStep(setupSteps({ ...fresh, productCount: 1 }), noBuild)).toBeNull()
-    expect(nextStep(setupSteps({ ...fresh, ...details }), as('admin'))?.key).toBe('product')
+    expect(nextSetupStep(setupSteps({ ...fresh, productCount: 1 }), noBuild)).toBeNull()
+    expect(nextSetupStep(setupSteps({ ...fresh, ...details }), as('admin'))?.key).toBe('product')
   })
 })
 
@@ -97,5 +99,16 @@ describe('websiteBlocksOpening (D0·3)', async () => {
     expect(websiteBlocksOpening({ siteOrigin: 'https://kesarstudio.in', buildingKeys: 1 })).toBe(false)
     expect(websiteBlocksOpening({ siteOrigin: null, buildingKeys: 0 })).toBe(false)
     expect(websiteBlocksOpening({ siteOrigin: 'https://kesarstudio.in', buildingKeys: 0 })).toBe(false)
+  })
+})
+
+describe('who acts on a step that saves settings is who may edit those sections', () => {
+  // `who` is a capability (the card asks can(who)); saveSetupFields lets through the editors of every section the
+  // popup writes (SETUP_FIELDS). A capability cannot be read off a role list here without a second table, so the two
+  // are pinned equal: a section's editors changing without the step's `who` fails this.
+  it.each(['details', 'payments'] as const)('%s', (popup) => {
+    const step = setupSteps(fresh).find((s) => s.key === popup)!
+    const editors = (Object.keys(SETUP_FIELDS[popup]) as SectionKey[]).map(editorsOf).reduce((a, b) => a.filter((r) => b.includes(r)))
+    expect(MEMBER_ROLES.filter((r) => holds(r, step.who))).toEqual(MEMBER_ROLES.filter((r) => editors.includes(r)))
   })
 })

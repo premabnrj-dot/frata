@@ -89,4 +89,16 @@ describe.skipIf(!host)('createProduct: a new product’s kind, type and sizes', 
     expect(startSizes.sized).toEqual(['S', 'M', 'L'])
     expect(await shapeOf(t, r.id)).toEqual({ type: 'Kurta set · Women', options: ['Size'], sizes: [['S'], ['M'], ['L']], prices: [0, 0, 0], hsn: '6211' })
   })
+
+  it('presses the same sizes as the first-product popup: the start sizes the type’s own chart has (shape.pressed)', async () => {
+    const t = await store(['women'])
+    expect((await create({ title: 'First kurta set' })).ok).toBe(true) // makes the store's types
+    // The store's kurta-set chart without L: the popup presses S and M, so New product must too (it pressed S, M, L).
+    await su!`update product_types set size_chart = jsonb_set(size_chart, '{rows}', (select coalesce(jsonb_agg(r), '[]') from jsonb_array_elements(size_chart->'rows') r where r->>'size' <> 'L'))
+      where tenant_id = ${t} and name = 'Kurta set · Women'`
+    const r = await create({ title: 'Ivory kurta set' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(await shapeOf(t, r.id)).toMatchObject({ type: 'Kurta set · Women', options: ['Size'], sizes: [['S'], ['M']] })
+  })
 })

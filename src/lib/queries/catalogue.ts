@@ -7,6 +7,7 @@ import { availability, LOW_STOCK_AT, type VariantFacts, type WhenOut } from '@/d
 import type { ListQuery } from '@/domains/catalogue/list-query'
 import { withoutRate, type Unrated } from '@/domains/tax/rates'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
+import { chartSizesOf } from '@/domains/catalogue/first-product'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 import { arrayParam } from '@/lib/db/sql-array'
@@ -307,6 +308,6 @@ export async function firstProductFormFor(tenantId: string): Promise<FirstProduc
       tx.select({ sells: shopSettings.sells, hsn: shopSettings.defaultHsn }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
       tx.select({ id: productTypes.id, name: productTypes.name, chart: productTypes.sizeChart }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(asc(productTypes.name)),
     ])
-    return { sells: s?.sells ?? [], defaultHsn: s?.hsn ?? '', types: types.map((t) => ({ id: t.id, name: t.name, chartSizes: (t.chart?.rows ?? []).map((r) => r.size) })) }
+    return { sells: s?.sells ?? [], defaultHsn: s?.hsn ?? '', types: types.map((t) => ({ id: t.id, name: t.name, chartSizes: chartSizesOf(t.chart) })) }
   })
 }

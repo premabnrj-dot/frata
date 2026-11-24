@@ -138,7 +138,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
       {loaded.has('product') && <FirstProduct open={open === 'product'} draft={drafts.product} setDraft={set('product')} onClose={close} onSaved={saved('product')} tenantId={tenantId} />}
       {loaded.has('details') && <BusinessDetails open={open === 'details'} draft={drafts.details} setDraft={set('details')} onClose={close} onSaved={saved('details')} />}
       {loaded.has('payments') && <Payments open={open === 'payments'} draft={drafts.payments} setDraft={set('payments')} onClose={close} onSaved={saved('payments')} connected={steps.some((s) => s.key === 'payments' && s.value.startsWith('UPI'))} />}
-      {loaded.has('publish') && <OpenStore open={open === 'publish'} onClose={close} address={address} />}
+      {loaded.has('publish') && <OpenStore open={open === 'publish'} onClose={close} />}
     </>
   )
 }

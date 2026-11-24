@@ -180,11 +180,11 @@ export default {
         })
 
         // D0 (Studio workbench plan; mockup docs/mockups/2026-11-22-studio-workbench.html screen 2): no domain is asked for
-        // (the frrata name and Connect my domain), a Test key's last week shows as days left, and Open my store refuses
+        // (the frrata name and Connect my domain), a Test key's last week shows as days left, and opening the store refuses
         // while a Test key builds a website with no proved address, then opens once the domain is the Website.
         const [{ published_at: pub }] = await db`select published_at from shop_settings where tenant_id = ${T}`
         try {
-          await t.step('D0: the frrata name, days left, and Open my store refuses until the domain is the Website', async () => {
+          await t.step('D0: the frrata name, days left, and opening refuses until the domain is the Website', async () => {
             const k4 = testKey(); await addTest(k4)
             await db`update storefront_keys set created_at = now() - interval '24 days', expires_at = now() + interval '6 days' - interval '1 hour'
               where hash = ${createHash('sha256').update(k4).digest('hex')}`

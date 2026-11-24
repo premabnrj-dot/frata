@@ -2,7 +2,7 @@ import { PictoTile } from '@/components/brand/illustrations'
 import type { PictogramName } from '@/components/brand/pictogram'
 import { StoreCard } from '@/components/brand/store-card'
 import { Section } from '@/components/layout/section'
-import { nextStep, type SetupStepKey } from '@/domains/setup/checklist'
+import { nextSetupStep, type SetupStepKey } from '@/domains/setup/checklist'
 import { holds, type MemberRole } from '@/domains/tenancy/roles'
 import type { Setup } from '@/lib/queries/settings'
 import type { StepView } from './drafts'
@@ -22,7 +22,7 @@ const PICTO: Record<SetupStepKey, PictogramName> = { product: 'product', details
 /** `hideable`: Home's open card, which "Hide this card" swaps for Today (O2a·8); /console/setup has no Today to show. */
 export function SetupCard({ setup, role, tenantId, hideable = false }: { setup: Setup; role: MemberRole; tenantId: string; hideable?: boolean }) {
   const can = (c: Parameters<typeof holds>[1]) => holds(role, c)
-  const next = nextStep(setup.steps, can)
+  const next = nextSetupStep(setup.steps, can)
   const steps: StepView[] = setup.steps.map((s) => ({ key: s.key, title: s.title, action: s.action, value: s.value, done: s.done, mine: can(s.who) }))
   return (
     <div className="grid items-start gap-4.5 md:grid-cols-[minmax(0,1fr)_240px]">

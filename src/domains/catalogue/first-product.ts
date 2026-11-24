@@ -12,6 +12,10 @@ import { sellsSized } from './packs'
 
 export type ProductTypeFacts = { id: string; name: string; chartSizes?: readonly string[] }
 
+/** A type's chart, as stored (product_types.size_chart), down to its sizes in order: the one reading of it that
+ *  firstProductShape's callers share (createProduct, addFirstProduct, the popup's read). */
+export const chartSizesOf = (chart: { rows?: readonly { size: string }[] } | null | undefined): string[] => (chart?.rows ?? []).map((r) => r.size)
+
 export type FirstProductShape = {
   kind: Kind
   /** Sizes are asked: the store sells something sized and the product is not one size. */

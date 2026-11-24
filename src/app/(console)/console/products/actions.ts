@@ -21,8 +21,8 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
-import { isKind, startSizes } from '@/domains/catalogue/kind'
-import { firstProductShape } from '@/domains/catalogue/first-product'
+import { isKind } from '@/domains/catalogue/kind'
+import { chartSizesOf, firstProductShape } from '@/domains/catalogue/first-product'
 import { arrayParam } from '@/lib/db/sql-array'
 import { setStatusIn } from '@/lib/catalogue/status'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
@@ -47,14 +47,15 @@ export async function createProduct(input: { title: string; kind?: string }): Pr
     const r = await asMember(ANY_MEMBER, { action: 'product.create', target: title }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       await ensureTypes(tx, tenantId)
-      const types = await tx.select({ id: productTypes.id, name: productTypes.name }).from(productTypes).where(eq(productTypes.tenantId, tenantId))
+      const types = await tx.select({ id: productTypes.id, name: productTypes.name, chart: productTypes.sizeChart }).from(productTypes).where(eq(productTypes.tenantId, tenantId))
       // A new product starts with the shop's starting HSN (Settings › Business and GST). Its name picks its kind and type (kind.ts):
       // a kids' kurta gets the Kids type and its sizes, a saree one variant and no chart; no matching type, none (PR·0:
       // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
       // The kind the merchant chose on the new-product step, else the name's guess (an unknown value is the guess too).
-      const shape = firstProductShape(title, types, shop?.sells ?? [], isKind(input?.kind) ? input.kind : undefined)
-      const sizes = shape.sized ? startSizes[shape.kind] : []
+      // The type's chart too, so the sizes pressed are the popup's (shape.pressed: the start sizes the chart has).
+      const shape = firstProductShape(title, types.map((t) => ({ id: t.id, name: t.name, chartSizes: chartSizesOf(t.chart) })), shop?.sells ?? [], isKind(input?.kind) ? input.kind : undefined)
+      const sizes = shape.pressed
       const typeId = shape.typeId
       const [p] = await tx.insert(products).values({
         tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId, hsn: shop?.hsn ?? null,

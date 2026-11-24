@@ -3,7 +3,7 @@
 import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { firstProductShape } from '@/domains/catalogue/first-product'
+import { chartSizesOf, firstProductShape } from '@/domains/catalogue/first-product'
 import { fromRupees } from '@/domains/money/paise'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
@@ -76,7 +76,7 @@ export async function addFirstProduct(input: FirstProductInput, activate: boolea
         tx.select({ sells: shopSettings.sells, hsn: shopSettings.defaultHsn }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
         tx.select({ id: productTypes.id, name: productTypes.name, chart: productTypes.sizeChart }).from(productTypes).where(eq(productTypes.tenantId, tenantId)),
       ])
-      const shape = firstProductShape(title, types.map((t) => ({ id: t.id, name: t.name, chartSizes: (t.chart?.rows ?? []).map((x) => x.size) })), shop?.sells ?? [])
+      const shape = firstProductShape(title, types.map((t) => ({ id: t.id, name: t.name, chartSizes: chartSizesOf(t.chart) })), shop?.sells ?? [])
       const sizes = shape.sized ? shape.options.filter((o) => p.sizes.includes(o)) : []
       if (shape.sized && (!p.sizes.length || sizes.length !== new Set(p.sizes).size)) throw new Stop({ ok: false, error: 'Some fields need a look.', errors: { sizes: WORDS.sizes } })
       const cell = (values: string[]) => ({ values, price, compareAt: null, unitCost: null, stock: Number(stock), sku: null, gtin: null, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null })

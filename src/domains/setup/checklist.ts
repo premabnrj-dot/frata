@@ -33,7 +33,7 @@ export type SetupStep = {
   /** The row's right side once done ("3 products", the legal name); empty while open. */
   value: string
   done: boolean
-  /** Who may act on it: a row the person may not act on is text, not a button (nextStep skips it). */
+  /** Who may act on it: a row the person may not act on is text, not a button (nextSetupStep skips it). */
   who: Capability
 }
 
@@ -56,7 +56,7 @@ export function setupSteps(f: SetupFacts): SetupStep[] {
  * The step Home leads with for this person: the first open one they may act on. Opening comes only once every other
  * step is done (whoever may do them); null when nothing is left for this person.
  */
-export function nextStep(steps: SetupStep[], can: (c: Capability) => boolean): SetupStep | null {
+export function nextSetupStep(steps: SetupStep[], can: (c: Capability) => boolean): SetupStep | null {
   const rest = steps.filter((s) => s.key !== 'publish')
   const first = rest.find((s) => !s.done && can(s.who))
   if (first) return first
@@ -73,8 +73,8 @@ export const notYet = (steps: SetupStep[]): string | null =>
   readyToOpen(steps) ? null : `Not yet: ${steps.filter((x) => !x.done && x.key !== 'publish').map((x) => x.title.toLowerCase()).join(', ')}.`
 
 /**
- * D0·3 (Studio workbench plan; mockup docs/mockups/2026-11-22-studio-workbench.html screen 2): Open my store refuses
- * while the brand's own website is being built with no proved address. Its Test keys stop the moment the store opens
+ * D0·3 (Studio workbench plan; mockup docs/mockups/2026-11-22-studio-workbench.html screen 2): opening the store (the
+ * card's Open store, then "Open your store?") refuses while the brand's own website is being built with no proved address. Its Test keys stop the moment the store opens
  * (ADR-0018 decision 4), and a Live key answers only on a proved, live domain, so opening now would leave the website
  * blank. "Building elsewhere" is derived, never stored: the store holds a Test or Build key that still answers (not
  * deleted, not past its end; orchestrator ruling C3, 2026-11-22) and has no Website on a live connected domain.

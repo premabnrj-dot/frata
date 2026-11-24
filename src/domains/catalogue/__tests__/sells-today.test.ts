@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { SELL_KEYS, SELL_LABELS, sellsSized, startingHsn } from '../sell-keys'
-import { labelAsked } from '../packs'
+import { SELL_KEYS, sellsSized, startingHsn } from '../sell-keys'
+import { labelAsked, SELL_TILES } from '../packs'
 import { presetsFor } from '../starting-charts'
 import { sampleSetFor } from '@/lib/themes/sample'
 import { renderPolicy } from '@/domains/policies/render'
@@ -26,7 +26,7 @@ describe('what a sell list derives today', () => {
     expect(SELL_KEYS).toEqual(['women', 'men', 'kids', 'ethnic', 'accessories', 'footwear', 'jewellery', 'beauty', 'wellness'])
   })
   it('the tiles, in sign-up order, with their words', () => {
-    expect(SELL_LABELS).toEqual([
+    expect(SELL_TILES.map((t) => [t.key, t.label])).toEqual([
       ['women', 'Women'], ['men', 'Men'], ['kids', 'Kids'], ['ethnic', 'Ethnic wear'], ['footwear', 'Footwear'],
       ['accessories', 'Bags and accessories'], ['jewellery', 'Jewellery'], ['beauty', 'Beauty and personal care'], ['wellness', 'Wellness'],
     ])

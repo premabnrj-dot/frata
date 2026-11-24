@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.7.0
+  version: 2.7.1
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -81,7 +81,8 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `site_domain_id` row is not live; a build key after opening unless a partner's, and a partner person's build key once
    that person leaves the partner, loses the store's members row or (a Lead or a Builder) its assignment
    (`app_build_key_maker_live`, called only inside the definers; Settings › Website reads the same answer through
-   `app_build_key_makers`). Open my store refuses while a store never opened has a Test or Build key that still answers and no Website
+   `app_build_key_makers`). Opening refuses (the setup card's **Open store**, then the **Open your store?** popup's
+   **Open store**) while a store never opened has a Test or Build key that still answers and no Website
    (D0·3: `app_store_building_keys`, the same rules, in `openShop`'s first select; `websiteBlocksOpening` beside
    `setupSteps`). Proof: `scripts/verify/tenancy.sql` § 81.
 9. **Keys are never stored, shown twice or logged by us.** Stored is the sha256 hex; the key is in the create action's

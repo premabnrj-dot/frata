@@ -482,8 +482,8 @@ Version 3.11.0 → 3.12.0. Verify: `node scripts/check-skills.mjs` clean.
 | (C1b; filled at C1b·6, empty is the goal) | | | |
 
 ## Debt
-- `SELL_LABELS` (`sell-keys.ts`) has a test as its only reader once C1a·6 hands sign-up `SELL_TILES` (finding 8). It stays while
-  `sells-today.test.ts` pins it; it goes when C1b's field reads `SELL_TILES` and the pin moves to the tiles.
+- ~~`SELL_LABELS` (`sell-keys.ts`) has a test as its only reader once C1a·6 hands sign-up `SELL_TILES` (finding 8).~~ Paid
+  2026-11-24 (O1/O2a fix pass): deleted; `sells-today.test.ts` pins `SELL_TILES`' keys and words in its place.
 - Until C1a·6, `create-shop-form.tsx` reads `SELL_LABELS` through `sell-keys.ts`, so `/start`'s client chunk carries the pack list
   beside the form's own `SellIcon` paths.
 
