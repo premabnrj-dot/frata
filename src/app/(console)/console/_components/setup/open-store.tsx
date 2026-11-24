@@ -32,7 +32,7 @@ export function OpenStore({ open, onClose }: { open: boolean; onClose: () => voi
   }
   return (
     <>
-      <Dialog open={open} onClose={onClose} picto={<PictoTile name="store" tone="haldi" size="sm" />} title="Open your store?" error={error}
+      <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} picto={<PictoTile name="store" tone="haldi" size="sm" />} title="Open your store?" error={error}
         actions={<><Button variant="secondary" data-autofocus onClick={onClose}>Not yet</Button><Button busy={busy} onClick={() => void go()}>Open store</Button></>} />
       <Dialog open={notReady} onClose={() => setNotReady(false)} title="Your store is still closed."
         actions={<><Link href="/console/settings/web-address" onClick={() => setNotReady(false)} className={button({ variant: 'primary' })}>Connect my domain</Link><Button variant="ghost" data-autofocus onClick={() => setNotReady(false)}>Keep it closed</Button></>}>

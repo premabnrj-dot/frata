@@ -358,6 +358,9 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
 | 5 Toast leaves after 3.2 s | 8 s, paused on hover | Feedback rule 2 | no |
 | 6 Payments pictogram drawn as a card with a haldi chip | the existing `payments` pictogram | one pictogram per meaning (`pictogram.tsx:91`) | no |
 | 7 A done row's value in `--text-3`, 13 px | the value in text 2 (`muted-foreground`), 13 px | a law: axe finds text 3 at 13 px below 4.5:1 on white (WCAG 1.4.3; e2e `99-setup`) | no |
+| 8 On a phone the popup sheet has a grab handle and its two buttons share the width | the `Dialog` primitive's sheet: no handle, buttons at the end of the row | one sheet for every dialog (Neel primitives); a handle that does not drag would promise a gesture the sheet lacks. Changing the primitive changes every sheet: an owner call | no |
+| 9 "Open your store?", the moment and the open card draw their own store (a box with a haldi door) | the existing `store` pictogram (a shopfront with a haldi awning) on its tile | one pictogram per meaning (`pictogram.tsx`): Home's empty state and the website already draw the store this way | no |
+| 10 Price and the Pay on delivery limit show "₹2,490" / "₹3,000" as typed values | a ₹ drawn inside the field before the digits; the value is digits and commas | the parser takes whole rupees (`sections.ts` rupees, `addFirstProduct`); a typed ₹ would be one more thing to strip | no |
 
 ## Out of scope (and the signal that brings each back)
 - The plan at opening, billing from the first opening, the plan step leaving sign-up: O2b.

@@ -51,6 +51,12 @@ export default {
       await p.setViewportSize({ width: 390, height: 844 }); await settled(); await p.screenshot({ path: t.out(`${name}-390`), fullPage: true })
       await p.setViewportSize({ width: 1280, height: 900 }); await settled()
     }
+    /** A popup at both widths (the page's own viewport: a sheet on a phone). */
+    const both = async (name) => {
+      await p.screenshot({ path: t.out(`${name}-1280`) })
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300); await p.screenshot({ path: t.out(`${name}-390`) })
+      await p.setViewportSize({ width: 1280, height: 900 }); await p.waitForTimeout(300)
+    }
     const card = () => p.getByRole('region', { name: 'Setup' })
     const rowButtons = () => card().getByRole('listitem').getByRole('button')
     try {
@@ -87,7 +93,7 @@ export default {
         await d.getByRole('button', { name: 'XL', exact: true }).click()
         assert.deepEqual(await pressed(), ['S', 'M', 'L', 'XL'])
         assert.deepEqual(await audit(p), [])
-        await p.screenshot({ path: t.out('product-1280') })
+        await both('product')
         await p.keyboard.press('Escape'); await d.waitFor({ state: 'hidden' })
         assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Add product', 'focus back on the opener')
         await opener.click(); await d.waitFor()
@@ -127,6 +133,7 @@ export default {
         await d.getByRole('button', { name: 'Photo added. Change photo' }).waitFor({ timeout: 20_000 })
         await d.getByRole('button', { name: 'Add product' }).click()
         await p.locator('[data-toast]').filter({ hasText: 'Added Ivory kurta set.' }).waitFor()
+        await d.waitFor({ state: 'hidden' })
         await until(async () => (await db`select status from products where tenant_id = ${T}`)[0]?.status === 'active', 10_000)
         const v = await db`select option_values, price, stock from variants where tenant_id = ${T} order by position`
         assert.deepEqual(v.map((x) => [x.option_values, Number(x.price), x.stock]), [[['S'], 249000, 5], [['M'], 249000, 5], [['L'], 249000, 5]])
@@ -143,7 +150,7 @@ export default {
         const d = p.getByRole('dialog', { name: 'Business details' }); await d.waitFor()
         await d.getByLabel('Legal name').fill('Mehr Studio LLP')
         await d.getByLabel('State').selectOption({ label: 'Rajasthan' })
-        await p.screenshot({ path: t.out('details-1280') })
+        await both('details')
         await d.getByRole('button', { name: 'Add grievance officer' }).click()
         const g = p.getByRole('dialog', { name: 'Grievance officer' }); await g.waitFor()
         assert.equal(await g.getByLabel('Email').inputValue(), F.email, 'filled from customer care')
@@ -154,7 +161,7 @@ export default {
         await d.getByRole('button', { name: 'Add grievance officer' }).click()
         assert.equal(await g.getByLabel('Name').inputValue(), 'Aanya Rao', 'and view 2')
         await g.getByLabel('Phone').fill('98270 41009')
-        await p.screenshot({ path: t.out('grievance-1280') })
+        await both('grievance')
         assert.deepEqual(await audit(p), [])
         await g.getByRole('button', { name: 'Save details' }).click()
         await p.locator('[data-toast]').filter({ hasText: 'Saved business details.' }).waitFor()
@@ -166,9 +173,9 @@ export default {
       await t.step('payments: the switch and the limit, saved; Razorpay is its own page', async () => {
         await rowButtons().filter({ hasText: 'Choose how shoppers pay' }).click()
         const d = p.getByRole('dialog', { name: 'How shoppers pay' }); await d.waitFor()
-        assert.equal(await d.getByLabel('Pay on delivery up to').inputValue(), '3,000')
+        await until(async () => (await d.getByLabel('Pay on delivery up to').inputValue()) === '3,000', 5000) // read when it opens
         await d.getByRole('link', { name: 'Connect Razorpay' }).waitFor()
-        await p.screenshot({ path: t.out('payments-1280') })
+        await both('payments')
         await d.getByLabel('Pay on delivery up to').fill('5,000')
         await d.getByRole('button', { name: 'Save payment choices' }).click()
         await p.locator('[data-toast]').filter({ hasText: 'Saved payment choices.' }).waitFor()
@@ -187,7 +194,8 @@ export default {
         assert.equal(await p.locator('[data-store-card]').isVisible(), false, 'no sketch on a phone')
         await rowButtons().filter({ hasText: 'Choose how shoppers pay' }).click()
         const d = p.getByRole('dialog', { name: 'How shoppers pay' }); await d.waitFor()
-        await p.screenshot({ path: t.out('payments-390') })
+        await until(async () => (await d.getByLabel('Pay on delivery up to').inputValue()) === '5,000', 5000) // read on open
+        await p.screenshot({ path: t.out('payments-phone-390') })
         await p.keyboard.press('Escape'); await d.waitFor({ state: 'hidden' })
         await p.setViewportSize({ width: 1280, height: 900 })
       })

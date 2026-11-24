@@ -67,7 +67,7 @@ export function FirstProduct({ open, draft, setDraft, onClose, onSaved, tenantId
   const more = () => { if (draft.title.trim()) void send(false); else { onClose(); router.push('/console/products') } }
 
   return (
-    <Dialog open={open} onClose={onClose} onDismiss={onClose} title="Add your first product"
+    <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} onDismiss={onClose} title="Add your first product"
       error={needs ? <><b className="font-semibold">Saved as a draft.</b><ul className="list-disc pl-5">{needs.map((n) => <li key={n}>{n[0]!.toUpperCase() + n.slice(1)}</li>)}</ul></> : error}
       actions={<><Button variant="ghost" busy={busy === 'more'} onClick={more}>Add more details</Button><Button busy={busy === 'add'} onClick={() => void send(true)}>Add product</Button></>}>
       <div className="grid gap-3">
@@ -84,7 +84,8 @@ export function FirstProduct({ open, draft, setDraft, onClose, onSaved, tenantId
               <FieldError name="fp-title" message={errors.title} /></label>
             <div className="grid grid-cols-2 gap-2.5">
               <label className="grid min-w-0 gap-1.5"><span className={LABEL}>Price</span>
-                <input className={`${FIELD} w-full font-num`} inputMode="numeric" value={draft.price} onChange={(e) => set({ price: e.target.value })} {...fieldProps('fp-price', errors.price)} />
+                <span className="relative block"><span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-muted-foreground">₹</span>
+                  <input className={`${FIELD} w-full pl-6 font-num`} inputMode="numeric" value={draft.price} onChange={(e) => set({ price: e.target.value })} {...fieldProps('fp-price', errors.price)} /></span>
                 <FieldError name="fp-price" message={errors.price} /></label>
               <label className="grid min-w-0 gap-1.5"><span className={LABEL}>{shape.sized ? 'In stock, each size' : 'In stock'}</span>
                 <input className={`${FIELD} w-full font-num`} inputMode="numeric" value={draft.stock} onChange={(e) => set({ stock: e.target.value })} {...fieldProps('fp-stock', errors.stock)} />

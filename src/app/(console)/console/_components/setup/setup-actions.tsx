@@ -68,7 +68,8 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
   const close = () => setOpen(null)
   const saved = (k: Popup) => (text: string) => {
     setOpen(null)
-    setDrafts((d) => ({ ...d, [k === 'product' ? 'product' : k]: k === 'product' ? EMPTY_PRODUCT : null }))
+    // Emptied once the popup has gone (its 200 ms exit), so it never shows blank fields on the way out.
+    window.setTimeout(() => setDrafts((d) => ({ ...d, [k === 'product' ? 'product' : k]: k === 'product' ? EMPTY_PRODUCT : null })), 250)
     if (text) toast.ok(text)
   }
   const set = <K extends keyof Drafts>(k: K) => (v: Drafts[K]) => setDrafts((d) => ({ ...d, [k]: v }))

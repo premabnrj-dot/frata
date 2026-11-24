@@ -39,7 +39,7 @@ export function Payments({ open, draft, setDraft, onClose, onSaved, connected }:
     } finally { setBusy(false) }
   }
   return (
-    <Dialog open={open} onClose={onClose} onDismiss={onClose} title="How shoppers pay"
+    <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} onDismiss={onClose} title="How shoppers pay"
       error={stale ? <>Change the lowest order in Pay on delivery first. <Link href="/console/settings/payments" className="font-semibold underline">Pay on delivery</Link></> : error}
       actions={<><Button variant="secondary" onClick={onClose}>Not now</Button><Button busy={busy} disabled={!draft} onClick={() => void save()}>Save payment choices</Button></>}>
       <div className="grid gap-3">
@@ -52,8 +52,9 @@ export function Payments({ open, draft, setDraft, onClose, onSaved, connected }:
             <span><span className="font-num">₹{String(v.codMax ?? '')}</span> · <Link href="/console/apps/delivery_zones" className="text-link underline-offset-2 hover:underline">Set in Delivery Zones</Link></span></p>
         ) : (
           <label className="grid gap-1.5"><span className="text-label font-medium">Pay on delivery up to</span>
-            <input data-autofocus className={`${FIELD} w-full max-w-40 font-num`} inputMode="numeric" value={String(v.codMax ?? '')} disabled={!draft}
-              onChange={(e) => set('codMax', e.target.value)} {...fieldProps('pay-max', errors.codMax)} />
+            <span className="relative block max-w-40"><span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-muted-foreground">₹</span>
+              <input data-autofocus className={`${FIELD} w-full pl-6 font-num`} inputMode="numeric" value={String(v.codMax ?? '')} disabled={!draft}
+                onChange={(e) => set('codMax', e.target.value)} {...fieldProps('pay-max', errors.codMax)} /></span>
             <FieldError name="pay-max" message={errors.codMax} /></label>
         )}
         <div className="flex min-h-10 items-center justify-between gap-3 border-t border-line-soft pt-3">

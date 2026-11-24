@@ -64,14 +64,14 @@ export function BusinessDetails({ open, draft, setDraft, onClose, onSaved }: Pop
 
   if (draft?.locked) {
     return (
-      <Dialog open={open} onClose={onClose} onDismiss={onClose} title="Business details" actions={<AskOwner page="business" asked={false} />}>
+      <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} onDismiss={onClose} title="Business details" actions={<AskOwner page="business" asked={false} />}>
         <Facts rows={[['Legal name', s('legalName') || '—'], ['GST registration', regName], ...(reg === 'none' ? [] : [['GSTIN', <span key="g" className="font-mono">{s('gstin')}</span>] as [string, React.ReactNode]])]} />
       </Dialog>
     )
   }
   if (unrated) {
     return (
-      <Dialog open={open} onClose={() => onSaved('Saved business details.')} title="Business details" actions={<Button data-autofocus onClick={() => onSaved('Saved business details.')}>Back to setup</Button>}>
+      <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={() => onSaved('Saved business details.')} title="Business details" actions={<Button data-autofocus onClick={() => onSaved('Saved business details.')}>Back to setup</Button>}>
         <UnratedNotice u={unrated} />
       </Dialog>
     )
@@ -82,7 +82,7 @@ export function BusinessDetails({ open, draft, setDraft, onClose, onSaved }: Pop
       <FieldError name={`bd-${k}`} message={errors[k]} /></label>
   )
   return (
-    <Dialog open={open} onClose={onClose} onDismiss={onClose} error={error} title={view === 1 ? 'Business details' : 'Grievance officer'}
+    <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} onDismiss={onClose} error={error} title={view === 1 ? 'Business details' : 'Grievance officer'}
       titleAfter={view === 2 ? <InfoTip about="the grievance officer">The law asks your store to name a person who answers complaints.</InfoTip> : null}
       actions={view === 1
         ? <><Button variant="secondary" onClick={onClose}>Not now</Button><Button disabled={!draft} onClick={() => go(2)}>Add grievance officer</Button></>

@@ -45,7 +45,7 @@ export function PickupPopup({ open, onClose }: { open: boolean; onClose: () => v
     } finally { setBusy(false) }
   }
   return (
-    <Dialog open={open} onClose={onClose} onDismiss={onClose} title="Pickup PIN code" error={error}
+    <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} onDismiss={onClose} title="Pickup PIN code" error={error}
       actions={<><Button variant="secondary" onClick={onClose}>Not now</Button><Button busy={busy} disabled={version === null} onClick={() => void save()}>Save PIN code</Button></>}>
       <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-2.5">
         <label className="grid min-w-0 gap-1.5"><span className="text-label font-medium">PIN code</span>
