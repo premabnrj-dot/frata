@@ -151,6 +151,13 @@ preview domain is bought (O6 below).
 3. Before the name is public: the IP India trademark search (classes 35 and 42), frrata.in at an Indian registrar,
    and the Instagram and WhatsApp handles (owner, 2026-11-07: checking these himself).
 
+### Migrations after live
+
+A migration whose first line is `-- apply: after-live` is a contract (frata-architecture § Definers: expand-then-contract):
+it drops what the old build still calls, so it is applied only once the new build serves and the old functions have run
+out. `npm run release:check` lists every one (`scripts/lib/after-live.mjs`); `scripts/prod-migrate.mjs` prints one only when
+named with `--after-live`, so a release that prints migrations in order never applies one early.
+
 ### Sign-up definers: 0166 before the push, 0167 after the build is live (O1, plan `docs/plans/2026-11-23-o1-signup.md` § Deploy order)
 
 Expand, then contract. Previews share this database (step 6): before 0167, rebase or close every open preview branch
@@ -161,7 +168,8 @@ that still calls `app_create_shop`, `app_create_shop_v2` or the 10-argument `app
 2. **Push;** wait until the production deployment is Ready and the old deployment's functions have run past their max
    duration (`vercel.json`).
 3. **Then** apply `drizzle/0167_signup_drop_old_definers.sql` (first line `-- apply: after-live`: never with the rest) and
-   its journal row; end with
+   its journal row: `node scripts/prod-migrate.mjs --after-live drizzle/0167_signup_drop_old_definers.sql` (without the
+   flag the script refuses an after-live migration; `npm run release:check` names every one); end with
    `select to_regprocedure('app_create_shop(uuid,text,text,text,text[])'), to_regprocedure('app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)'), to_regprocedure('app_partner_create_shop(uuid,uuid,text,text,text,text,integer,integer,integer,integer)')`
    — all three null.
 - **O2's 0168 never reaches production before 0167's journal row:** drizzle applies only files whose `when` is later

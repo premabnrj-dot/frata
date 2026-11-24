@@ -166,4 +166,27 @@ describe.skipIf(!host)('setup popups: saveSetupFields and loadSetupPopup (O2a·5
     const [a] = await su`select actor_kind, action from audit_events where tenant_id = ${T} and support_session_id = ${s!.id}`
     expect(a).toMatchObject({ actor_kind: 'support', action: 'settings.setup.payments' })
   })
+
+  it('takes the locks in saveSection’s order: the store’s row (FOR KEY SHARE) before its settings row (FOR UPDATE)', async () => {
+    // A transaction holding the store's row FOR UPDATE makes the save wait at its first lock. If that first lock were the
+    // settings row (as it was), the settings row would already be held while it waits: the other order, a deadlock with
+    // any writer that takes the store's row, then the settings.
+    as(OWNER, 'owner')
+    const holder = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const probe = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    try {
+      let release!: () => void
+      const held = new Promise<void>((r) => { release = r })
+      let locked!: () => void
+      const isLocked = new Promise<void>((r) => { locked = r })
+      const tx = holder.begin(async (t) => { await t`select 1 from tenants where id = ${T} for update`; locked(); await held })
+      await isLocked
+      const save = A.saveSetupFields('details', { legalName: 'Kesar Studio Pvt Ltd' }, await version()) // Business: PP1 reads the owner
+      await new Promise((r) => setTimeout(r, 400)) // the save is waiting on the store's row now
+      const free = await probe`select 1 from shop_settings where tenant_id = ${T} for update nowait`.then(() => true, () => false)
+      release(); await tx
+      expect(free).toBe(true)
+      expect(await save).toMatchObject({ ok: true })
+    } finally { await holder.end(); await probe.end() }
+  })
 })

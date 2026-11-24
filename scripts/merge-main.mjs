@@ -10,11 +10,13 @@
 // again (it numbers after main's last), and if the old file was applied to production, update its drizzle row's created_at
 // to the new `when` (scripts/prod-migrate.mjs prints the row).
 // `--journal` (check:migrations, in npm test): the journal alone (scripts/lib/journal.mjs), no network, no git.
+// Every run of --check also names each after-live migration (scripts/lib/after-live.mjs); `--after-live` prints only that.
 // A skill or agent changed on both sides with main's metadata.version ahead: take the higher version, bump its patch.
 // =============================================================================
 import { execSync } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
 import { journalProblems } from './lib/journal.mjs'
+import { afterLiveMigrations } from './lib/after-live.mjs'
 
 const migrationFiles = () => readdirSync('drizzle').filter((f) => /^\d{4}_.*\.sql$/.test(f))
 const journal = () => JSON.parse(readFileSync('drizzle/meta/_journal.json', 'utf8')).entries
@@ -24,6 +26,14 @@ if (process.argv.includes('--journal')) {
   console.log(problems.length ? `check:migrations — ${problems.length} problem(s)` : `check:migrations — clean (${journal().length} migrations in order)`)
   process.exit(problems.length ? 1 : 0)
 }
+
+// Contract migrations wait for the new build: each is named, so the release applies it after the deploy, not before.
+// `--after-live` prints only this line (no git, no network).
+function afterLiveLine() {
+  const later = afterLiveMigrations()
+  return later.length ? `· after-live migrations (apply only once the new build serves, with node scripts/prod-migrate.mjs --after-live): ${later.join(', ')}` : '· no after-live migrations'
+}
+if (process.argv.includes('--after-live')) { console.log(afterLiveLine()); process.exit(0) }
 
 const sh = (c) => execSync(c, { encoding: 'utf8' })
 let bad = 0
@@ -47,5 +57,6 @@ try {
 const flowNums = new Map()
 for (const f of readdirSync('e2e/flows').filter((x) => /^\d+-/.test(x))) { const n = f.split('-')[0]; flowNums.set(n, [...(flowNums.get(n) ?? []), f]) }
 for (const [n, fs] of flowNums) if (fs.length > 1) console.log(`· e2e flow number ${n} is shared: ${fs.join(', ')} (fine if intended, else renumber the branch's)`)
+console.log(afterLiveLine())
 console.log(bad ? `\n${bad} thing(s) to fix before pushing.` : 'merge-main: no migration collisions; journal in order.')
 process.exit(bad ? 1 : 0)

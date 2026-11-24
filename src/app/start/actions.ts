@@ -33,7 +33,7 @@ export async function checkAddress(slug: string): Promise<AddressCheck> {
 
 const Shop = z.object({
   name: z.string().trim().min(1).max(60),
-  slug: z.string(),
+  slug: z.string().max(30), // slugProblem's own limit, before anything reads a longer one
   sells: z.array(z.enum(SELLS)).max(SELLS.length),
   plan: z.enum(PLAN_CODES).default('growth'),
   codeId: z.uuid().nullable().default(null),

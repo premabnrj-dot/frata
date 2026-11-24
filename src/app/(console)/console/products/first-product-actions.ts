@@ -41,7 +41,7 @@ const Input = z.object({
   price: z.string().max(40),
   stock: z.string().max(20),
   sizes: z.array(z.string().max(40)).max(12),
-  photos: z.array(z.object({ base: z.string().max(300), widths: z.array(z.number().int()).max(8), width: z.number(), height: z.number() }).strict()).max(4),
+  photos: z.array(z.object({ base: z.string().max(300), widths: z.array(z.number().int()).max(8), width: z.number().int().min(1).max(20000), height: z.number().int().min(1).max(20000) }).strict()).max(4),
 }).strict()
 export type FirstProductInput = z.input<typeof Input>
 

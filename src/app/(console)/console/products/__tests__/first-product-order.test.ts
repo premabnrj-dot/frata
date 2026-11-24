@@ -27,4 +27,15 @@ describe('addFirstProduct: photos are checked before the transaction', () => {
     expect(await addFirstProduct(input(2), true)).toMatchObject({ ok: false, error: 'That file is not a photo we made. Upload it again.' })
     expect(calls).toEqual(['photos:start', 'photos:done'])
   })
+
+  it.each([
+    [{ width: 20_001, height: 1125 }], [{ width: 900, height: 1e9 }], [{ width: 0, height: 1125 }],
+    [{ width: 900.5, height: 1125 }], [{ width: -1, height: 1125 }], [{ width: 900, height: Infinity }],
+  ])('a photo of %j is refused by the schema in fixed words, before any read', async (size) => {
+    const { addFirstProduct } = await import('../first-product-actions')
+    calls.length = 0
+    const one = { ...input(1), photos: [{ base: 'https://x/p', widths: [400], ...size }] }
+    expect(await addFirstProduct(one, true)).toEqual({ ok: false, error: 'We couldn’t add the product. Nothing was saved.' })
+    expect(calls).toEqual([])
+  })
 })

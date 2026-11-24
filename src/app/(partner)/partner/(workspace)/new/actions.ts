@@ -15,7 +15,7 @@ import { hostFor, refreshHosts } from '@/lib/queries/storefront'
 // A partner makes a client store (approved mockup screen 6). The uid is getUser()'s; app_partner_create_shop_v2
 // re-checks the approval, the cap of stores not handed over and the address, and records the link with PARTNER_TERMS.
 
-const Store = z.object({ name: z.string().trim().min(1).max(60), slug: z.string() })
+const Store = z.object({ name: z.string().trim().min(1).max(60), slug: z.string().max(30) }) // slugProblem's own limit, first
 
 const SENTENCES: Record<string, string> = {
   not_partner: 'Your partner account is not approved yet.',

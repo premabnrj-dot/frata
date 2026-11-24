@@ -38,4 +38,11 @@ describe('createMyShop', () => {
     createShop.mockResolvedValue({ ok: false, error: 'unknown' })
     expect(await createMyShop(base)).toMatchObject({ ok: false, error: 'We could not create your store. Nothing was saved.' })
   })
+
+  it.each([31, 100_000])('a web address of %i characters is refused by the schema, before any check or write', async (n) => {
+    const { createMyShop } = await import('../actions')
+    expect(await createMyShop({ ...base, slug: 'a'.repeat(n) })).toEqual({ ok: false, error: 'Check the highlighted fields.' })
+    expect(createShop).not.toHaveBeenCalled()
+    expect((await createMyShop({ ...base, slug: 'a'.repeat(30) })).ok).toBe(true)
+  })
 })

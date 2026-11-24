@@ -48,6 +48,9 @@ export async function saveSetupFields(popup: SetupPopup, values: Values, version
   try {
     const r = await asMember(popupEditors(popup), { action: `settings.setup.${popup}`, detail }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
+      // saveSection's lock order: the store's row (FOR KEY SHARE, as hasOwnerHeldIn takes it) before its settings row.
+      // Taken the other way round, a writer holding the store's row and waiting for the settings would deadlock with us.
+      await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).for('key share')
       const [row] = await tx.select({ name: tenants.name, settings: getTableColumns(shopSettings) }).from(tenants)
         .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).for('update', { of: shopSettings })
       if (!row) throw new VersionConflict()
