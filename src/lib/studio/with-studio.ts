@@ -108,7 +108,8 @@ async function partnerStoresOf(userId: string) {
 
 /** The store ids Studio's door would let this person into after the step it asks (Partner workspace › Clients shows
  *  "Open Studio" only for these). Studio off, anyone not both Frrata staff and a live partner person, a Builder, a Lead
- *  not assigned, a removed link and a support visit each give an empty set, so a button never tells who is refused. */
+ *  not assigned, a removed link and a support visit each give an empty set, so a button never tells who is refused.
+ *  It is wider than the door on purpose while a passkey check is pending: the entry then shows that person the step. */
 export function studioStoreIds(): Promise<ReadonlySet<string>> {
   return oncePerCall(async () => {
     if (STUDIO_OPEN !== 'staff' || !isStudioConfigured()) return new Set<string>()

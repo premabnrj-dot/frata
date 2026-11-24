@@ -1,9 +1,9 @@
 # Open Studio on Partner workspace › Clients: the task plan (lane I)
-Status: draft, built on `claude/lane-i-studio-button`; released by the orchestrator after the reviews below.
+Status: active, built on `claude/lane-i-studio-button`; released by the orchestrator after the reviews below.
 **Mockup:** https://claude.ai/artifact/Ubt5ZTpxqWQ3afM8rYdsYh (`docs/mockups/2026-11-24-open-studio-button.html`, at 57fc900)
 **Approved:** owner, 2026-11-24 ("Mockup for open studio button is approved.", relayed by the orchestrator)
 **Review:** design-system-reviewer FAIL then fixed (phone placement, button gap), 2026-11-24
-**Review:** tenancy-auditor pending
+**Review:** tenancy-auditor SAFE, no cross-tenant path (2 low, fixed), 2026-11-24
 Migrations: none.
 
 ## The gap (owner, 2026-11-24)

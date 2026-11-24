@@ -120,9 +120,9 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                   {!builder && <Td cell="c" className={c.next?.reason === 'overdue' ? 'text-danger-text' : undefined}>
                     {words || (c.next?.reason === 'building' ? (owner ? <span className="md:hidden">Hand over</span> : null) : <span className="hidden text-muted-foreground md:inline">—</span>)}</Td>}
                   {!builder && <Td cell="hide" className="w-px whitespace-nowrap text-right"><div className="flex flex-wrap justify-end gap-2">
-                    {c.next?.action === 'handOver' && <HandOver tenantId={c.row.tenantId} store={c.row.name} again={false} size="sm" startOpen={handover === c.row.tenantId} />}
+                    {owner && c.next?.action === 'handOver' && <HandOver tenantId={c.row.tenantId} store={c.row.name} again={false} size="sm" startOpen={handover === c.row.tenantId} />}
                     {remind && <a href={remind} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary', size: 'sm' })}><MessageCircle aria-hidden="true" className="size-4" />Remind</a>}
-                    {c.next?.action === 'recordBill' && <Link href={`/partner/clients/${c.row.linkId}?record=1`} prefetch={false} className={button({ variant: 'secondary', size: 'sm' })}>Record bill</Link>}
+                    {owner && c.next?.action === 'recordBill' && <Link href={`/partner/clients/${c.row.linkId}?record=1`} prefetch={false} className={button({ variant: 'secondary', size: 'sm' })}>Record bill</Link>}
                     {!ended && studio.has(c.row.tenantId) && <OpenStudio tenantId={c.row.tenantId} size="sm" />}
                   </div></Td>}
                   {!ended && studio.has(c.row.tenantId) && <Td cell="e" className="md:hidden"><OpenStudio tenantId={c.row.tenantId} size="sm" /></Td>}
