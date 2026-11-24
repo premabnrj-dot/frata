@@ -51,7 +51,9 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
   // must not recount mid-flow.
   const [steps] = useState(() => signupSteps({ askEmail, codeOn }))
   const [moment, setMoment] = useState<Moment>('name')
-  const [dir, setDir] = useState<'forward' | 'back'>('forward')
+  // The first step is there at rest: only a step someone moved to animates in (a page must be complete on load).
+  const [dir, setDirRaw] = useState<'forward' | 'back' | null>(null)
+  const setDir = (d: 'forward' | 'back') => setDirRaw(d)
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
@@ -132,7 +134,7 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
     else toast.error(r.error, { action: { label: 'Try again', run: () => { void create() } } })
   }
 
-  const anim = dir === 'forward' ? 'animate-step-forward' : 'animate-step-back'
+  const anim = dir === null ? '' : dir === 'forward' ? 'animate-step-forward' : 'animate-step-back'
   const n = stepNumber(steps, moment)
   const showBack = moment !== 'making' && moment !== 'done' && steps.indexOf(moment as Step) > 0
 
