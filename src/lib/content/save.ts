@@ -39,10 +39,10 @@ import { cleanLine, DEFAULT_DESIGN, designChanges, checkoutProblems, designSumma
 // =============================================================================
 
 export type BrandResult =
-  | { ok: true; outcome: 'live' | 'waits' | 'unchanged'; version: number | null }
+  | { ok: true; outcome: 'live' | 'waits' | 'unchanged'; version: number | null; /** the waiting change (`waits` only) */ proposalId?: string }
   | { ok: false; error: string; fields?: Partial<Record<BrandField | LogoSlot | 'heading' | 'thanks' | 'trust', string>> }
 type Auth = Extract<Awaited<ReturnType<typeof requireMember>>, { ok: true }>
-type Out = { error: string; fields?: Partial<Record<BrandField | LogoSlot | 'heading' | 'thanks' | 'trust', string>> } | { outcome: 'live' | 'waits' | 'unchanged'; version: number | null; main?: string | null }
+type Out = { error: string; fields?: Partial<Record<BrandField | LogoSlot | 'heading' | 'thanks' | 'trust', string>> } | { outcome: 'live' | 'waits' | 'unchanged'; version: number | null; main?: string | null; proposalId?: string }
 
 const NOTHING = 'We couldn’t save that. Nothing was changed.'
 const FULL = 'Too many saves this minute. Nothing was changed. Try again in a minute.'
@@ -131,13 +131,13 @@ async function write(what: { action: string; roles: typeof CAN_BUILD | typeof CA
   }
   if (!r.ok) { await giveBack(); return r }
   if ('error' in r.value) { await giveBack(); return { ok: false, error: r.value.error, ...(r.value.fields ? { fields: r.value.fields } : {}) } }
-  const { outcome, version } = r.value
+  const { outcome, version, proposalId } = r.value
   if (outcome === 'live') {
     refreshShop(r.tenantId, 'settings')
     revalidatePath('/console', 'layout')
     if (r.value.main) afterMainLogo(r.tenantId, r.value.main)
   }
-  return { ok: true, outcome, version }
+  return { ok: true, outcome, version, ...(proposalId ? { proposalId } : {}) }
 }
 
 /**
@@ -190,7 +190,7 @@ export async function saveBrand(input: unknown, action: 'brand.save' | 'settings
       const [p] = await tx.insert(brandProposals).values({ tenantId: t, kind: 'brand', record: next, summary: changeSummary(changes), baseVersion: row?.version ?? 0, proposedBy: me }).returning({ id: brandProposals.id })
       await tx.execute(sql`select app_brand_notice(${p!.id}::uuid)`)
       await memberAudit(tx, auth, 'brand.propose', p!.id, { fields })
-      return { outcome: 'waits', version: row?.version ?? null }
+      return { outcome: 'waits', version: row?.version ?? null, proposalId: p!.id }
     }
     const v = await putLive(tx, t, me, live, next, row)
     await memberAudit(tx, auth, action, undefined, { fields, version: v })

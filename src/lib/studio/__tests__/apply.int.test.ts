@@ -98,19 +98,82 @@ describe.skipIf(!host)('Apply, Not this and the chat', () => {
     expect((await Q.studioChat(f.auth, null)).cards.find((x) => x.id === logo)).toMatchObject({ state: 'applied', reason: null })
   })
 
-  it('a store with an owner: refused before any save (until V3b)', async () => {
+  // V3b K1 (docs/plans/2026-11-24-v3b-first.md). Who waits is saveBrand's (its own int test: the partner once open waits,
+  // a newer save replaces; brandSaver's unit test: before opening, live even with an owner). Here: what Apply does with
+  // each answer, and what the card reads after, from the store's waiting change itself.
+  async function waiting(): Promise<string> {
+    const [b] = await su<[{ id: string }]>`insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by)
+      values (${f.tenant}, 'brand', '{}', '1 colour.', 1, ${f.user}) returning id`
+    return b.id
+  }
+  const cardOf = async (id: string) => (await Q.studioChat(f.auth, null)).cards.find((c) => c.id === id)
+
+  it('a store with an owner, not yet open: the save goes live, as a partner’s own Brand save does', async () => {
     const x = await chatFor(f)
-    const n = save.calls.length
     const [u] = await su<[{ u: string }]>`select gen_random_uuid() as u`
     await su`insert into members (tenant_id, user_id, role) values (${f.tenant}, ${u.u}, 'owner')`
     try {
-      expect(await A.applyProposal(f.auth, x.tokens, 1)).toEqual({ ok: false, error: A.OWNER_STORE })
+      save.answer = { ok: true, outcome: 'live', version: 5 }
+      expect(await A.applyProposal(f.auth, x.tokens, 4)).toEqual({ ok: true })
+      expect(save.calls.at(-1)).toEqual({ version: 4, patch: { palette: { accent: '#B5542B' } } })
+      expect(await cardOf(x.tokens)).toMatchObject({ state: 'applied' })
     } finally { await su`delete from members where tenant_id = ${f.tenant} and user_id = ${u.u}` }
-    // An open store always has an owner (a partner's store opens only once its owner accepts the handover: a trigger).
+  })
+
+  it('an open store: the change waits for the owner; the card reads sent; it is never Applied, and Apply again does nothing', async () => {
+    const x = await chatFor(f)
+    const b = await waiting()
+    save.answer = { ok: true, outcome: 'waits', version: 5, proposalId: b }
+    expect(await A.applyProposal(f.auth, x.tokens, 5)).toEqual({ ok: true, sent: true })
+    const [row] = await su`select applied_at, brand_proposal_id from studio_proposals where id = ${x.tokens}`
+    expect(row).toEqual({ applied_at: null, brand_proposal_id: b })
+    expect(await cardOf(x.tokens)).toMatchObject({ state: 'sent', reason: null })
+    const n = save.calls.length
+    expect(await A.applyProposal(f.auth, x.tokens, 5)).toEqual({ ok: false, error: 'This change is already applied or set aside. Nothing was changed.' })
+    expect(await A.dismissProposal(f.auth, x.tokens)).toEqual({ ok: true }) // Not this on a sent card changes nothing:
+    expect(await cardOf(x.tokens)).toMatchObject({ state: 'sent' })     // mark() leaves a sent card as it is
     expect(save.calls.length).toBe(n)
+    // The owner declines it (decideBrand's write): the card follows, and a poll after the card's line still carries it.
+    await su`update brand_proposals set decided_at = now(), decision = 'declined', decided_by = ${f.user} where id = ${b}`
+    expect(await cardOf(x.tokens)).toMatchObject({ state: 'declined' })
+    const c = await Q.studioChat(f.auth, null)
+    const later = await Q.studioChat(f.auth, c.lines.at(-1)!.seq)
+    expect(later.cards.find((k) => k.id === x.tokens)).toMatchObject({ state: 'declined' })
+  })
+
+  it('a change already waiting: the newer one takes its place; the older card reads replaced; approval reads approved', async () => {
+    const x = await chatFor(f)
+    const first = await waiting()
+    save.answer = { ok: true, outcome: 'waits', version: 5, proposalId: first }
+    expect(await A.applyProposal(f.auth, x.tokens, 5)).toEqual({ ok: true, sent: true })
+    // saveBrand marks the older one replaced and opens the newer, in its own transaction (its int test).
+    await su`update brand_proposals set decided_at = now(), decision = 'replaced', decided_by = ${f.user} where id = ${first}`
+    const second = await waiting()
+    save.answer = { ok: true, outcome: 'waits', version: 5, proposalId: second }
+    expect(await A.applyProposal(f.auth, x.logo, 5)).toEqual({ ok: true, sent: true })
+    expect(await cardOf(x.tokens)).toMatchObject({ state: 'replaced' })
+    expect(await cardOf(x.logo)).toMatchObject({ state: 'sent' })
+    await su`update brand_proposals set decided_at = now(), decision = 'approved', decided_by = ${f.user} where id = ${second}`
+    expect(await cardOf(x.logo)).toMatchObject({ state: 'approved' })
+  })
+
+  it('a stale version on an open store: refused in the save’s words, nothing sent, and it may be tried again', async () => {
+    const x = await chatFor(f)
+    save.answer = { ok: false, error: 'The brand changed since you opened it. Reload to see it.' }
+    expect(await A.applyProposal(f.auth, x.tokens, 1)).toEqual({ ok: false, error: 'The brand changed since you opened it. Reload to see it.' })
+    expect((await su`select brand_proposal_id from studio_proposals where id = ${x.tokens}`)[0]).toEqual({ brand_proposal_id: null })
+    expect(await cardOf(x.tokens)).toMatchObject({ state: 'refused' })
     // Not this: set aside, nothing saved.
+    const n = save.calls.length
     expect(await A.dismissProposal(f.auth, x.logo)).toEqual({ ok: true })
-    expect((await Q.studioChat(f.auth, null)).cards.find((c) => c.id === x.logo)).toMatchObject({ state: 'dismissed' })
+    expect(await cardOf(x.logo)).toMatchObject({ state: 'dismissed' })
     expect(save.calls.length).toBe(n)
+  })
+
+  it('a waiting change of another store can’t be named by a card (the key is the store’s and the change’s together)', async () => {
+    const x = await chatFor(f)
+    const [b] = await su<[{ id: string }]>`insert into brand_proposals (tenant_id, kind, record, summary, base_version, proposed_by)
+      values (${other.tenant}, 'brand', '{}', '1 colour.', 1, ${other.user}) returning id`
+    await expect(su`update studio_proposals set brand_proposal_id = ${b.id} where id = ${x.tokens}`).rejects.toThrow(/studio_proposals_brand/)
   })
 })

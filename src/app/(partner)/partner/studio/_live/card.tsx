@@ -9,6 +9,18 @@ import type { ChatCard } from '@/lib/queries/studio'
 // A proposal's card (the chat's cards, approved 16 Nov; states mockup state 9, approved 2026-11-23): what the agent
 // proposes, drawn with its exact value; Apply runs the console's own save as this person; Not this sets it aside. A logo
 // is drawn only through <img> (a cleaned, outline-only SVG as data). Refused: "Not applied", the save's words, Reload Brand.
+// On an open store Apply sends it to the owner; the badge then follows the owner's decision (V3b K1, mockup
+// docs/mockups/2026-11-24-v3b-first.html § 2).
+
+/** The badge a decided card wears (open and refused wear none here). */
+const DONE: Partial<Record<ChatCard['state'], { tone: 'ok' | 'warn' | 'neutral'; words: string }>> = {
+  applied: { tone: 'ok', words: 'Applied' },
+  dismissed: { tone: 'neutral', words: 'Not used' },
+  sent: { tone: 'warn', words: 'Sent to the owner' },
+  approved: { tone: 'ok', words: 'Approved' },
+  declined: { tone: 'neutral', words: 'Declined by the owner' },
+  replaced: { tone: 'neutral', words: 'Replaced by a newer change' },
+}
 
 type TokensValue = { palette?: Partial<Record<ColourRole, string>>; display?: Font; body?: Font; radius?: number; density?: Density }
 type Row = { label: string; value: string; swatch?: string }
@@ -51,7 +63,7 @@ export function ProposalCard({ card, busy, onApply, onDismiss, onReload }: {
         </div>
       ))}
       {svg ? <img alt="The proposed logo" src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} className="h-12 max-w-full justify-self-start object-contain" /> : null}
-      {card.state === 'applied' ? <Badge tone="ok" className="justify-self-start">Applied</Badge> : card.state === 'dismissed' ? <Badge tone="neutral" className="justify-self-start">Not used</Badge> : null}
+      {DONE[card.state] ? <Badge tone={DONE[card.state]!.tone} className="justify-self-start">{DONE[card.state]!.words}</Badge> : null}
       {card.state === 'refused' ? <><Badge tone="danger" className="justify-self-start">Not applied</Badge><FieldError id={`card-${card.id}`} message={refusedLine(card)} /></> : null}
       {open
         ? <div className="flex gap-1.5">

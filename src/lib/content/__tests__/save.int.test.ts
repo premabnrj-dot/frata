@@ -115,6 +115,7 @@ describe.skipIf(!host)('saveBrand', () => {
     expect((await tokens())!).toMatchObject({ version: 4, logo_stacked_url: null, font_display: 'tiro' })
     const [p] = await su`select id, summary, decided_at from brand_proposals where tenant_id = ${T}`
     expect(p).toMatchObject({ summary: '2 logo files and 1 font.', decided_at: null })
+    expect(r).toMatchObject({ proposalId: p!.id }) // Studio's Apply records it on the card (V3b K1)
     const lines = await su`select type, source_id, href, by from notices where tenant_id = ${T} and source_kind = 'brand'`
     expect(lines).toEqual([{ type: 'needs_you', source_id: p!.id, href: '/console/brand', by: PARTNER }])
     const { listNotices } = await import('@/lib/queries/notices')

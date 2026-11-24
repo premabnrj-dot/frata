@@ -1233,6 +1233,13 @@
       "when": 1795460873899,
       "tag": "0175_admin_cash",
       "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1795494459589,
+      "tag": "0176_studio_sent",
+      "breakpoints": true
     }
   ]
 }

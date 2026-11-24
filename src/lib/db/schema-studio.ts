@@ -15,6 +15,7 @@ import { bigint, boolean, check, foreignKey, index, jsonb, pgTable, primaryKey, 
 import { at, createdAt, id, tenants } from './schema'
 import { partnerMembers, partners, partnerStepups } from './schema-partners'
 import { staffStepups } from './schema-staff'
+import { brandProposals } from './schema-brand'
 import { FAIL_REASONS } from '@/domains/studio/turn'
 import { PROPOSAL_KINDS } from '@/domains/studio/proposals'
 import { sqlList } from '@/domains/tenancy/roles'
@@ -128,7 +129,11 @@ export const studioProposals = pgTable('studio_proposals', {
   refusedAt: at('refused_at'),
   refusedReason: text('refused_reason'),
   dismissedAt: at('dismissed_at'),
+  /** V3b K1: the store's waiting change this card became (saveBrand's outcome `waits`). The card's state after it is
+   *  that change's decision, read from brand_proposals: never a second copy of it here. */
+  brandProposalId: uuid('brand_proposal_id'),
 }, (t) => [
+  foreignKey({ name: 'studio_proposals_brand', columns: [t.tenantId, t.brandProposalId], foreignColumns: [brandProposals.tenantId, brandProposals.id] }),
   foreignKey({ name: 'studio_proposals_session', columns: [t.tenantId, t.partnerId, t.sessionId], foreignColumns: [studioSessions.tenantId, studioSessions.partnerId, studioSessions.id] }).onDelete('cascade'),
   foreignKey({ name: 'studio_proposals_call', columns: [t.tenantId, t.partnerId, t.toolCallId], foreignColumns: [studioToolCalls.tenantId, studioToolCalls.partnerId, studioToolCalls.id] }).onDelete('cascade'),
   unique('studio_proposals_once').on(t.toolCallId),

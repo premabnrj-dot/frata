@@ -111,9 +111,10 @@ export function StudioApp({ store, storeId, chat: first, design, empty, version 
     setBusyCard(c.id)
     const r = await applyAction({ id: c.id, version })
     setBusyCard(null)
-    setCards((m) => new Map(m).set(c.id, r.ok ? { ...c, state: 'applied', reason: null } : { ...c, state: 'refused', reason: r.error }))
+    setCards((m) => new Map(m).set(c.id, r.ok ? { ...c, state: r.sent ? 'sent' : 'applied', reason: null } : { ...c, state: 'refused', reason: r.error }))
     keepFocus(c.id)
-    if (r.ok) { toast.ok('Applied to Brand.'); router.refresh() }
+    if (r.ok && r.sent) toast.ok('Sent to the owner.')
+    else if (r.ok) { toast.ok('Applied to Brand.'); router.refresh() }
   })
   const dismiss = (c: ChatCard) => start(async () => {
     const r = await dismissAction({ id: c.id })
