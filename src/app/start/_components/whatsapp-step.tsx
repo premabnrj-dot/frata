@@ -27,7 +27,7 @@ export function WhatsappStep({ codeId, verified, onCode, onVerified, onNext }: {
         onCode(r.codeId)
       } else {
         const r = await verifySignupCode(codeId, code)
-        if (!r.ok) return setError({ field: 'code', text: r.error ?? 'Try again.' })
+        if (!r.ok) return setError({ field: 'code', text: r.error ?? 'We couldn’t check the code. Try again.' })
         onVerified(); onNext()
       }
     } catch { setError({ field: codeId ? 'code' : 'phone', text: 'No connection. Try again.' }) } finally { setPending(false) }
@@ -56,7 +56,7 @@ export function WhatsappStep({ codeId, verified, onCode, onVerified, onNext }: {
       )}
       {/* Busy, as Button's busy: the label stays, a spinner joins it, aria-disabled keeps focus; submit ignores a press. */}
       <button type="submit" className="su-go" aria-disabled={pending || undefined} aria-busy={pending || undefined}>
-        {pending ? <Spinner /> : null}{!codeId ? 'Send code' : verified ? 'Continue' : 'Verify'}</button>
+        {pending ? <Spinner /> : null}{!codeId ? 'Send code' : verified ? 'Continue' : 'Check code'}</button>
     </form>
   )
 }

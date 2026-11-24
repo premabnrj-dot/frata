@@ -203,8 +203,8 @@ mock order check).
     as `Facts` and "Ask the owner" (`owner-only.ts:72-74`), no save. `unrated` → `UnratedNotice`
     (`settings/_components/unrated.tsx`) in the popup and one button "Back to setup".
   - How shoppers pay: `Switch` "Pay on delivery"; "Pay on delivery up to" (rupees); held → the value as text with "Set
-    in Delivery Zones" (link `/console/apps/delivery_zones`); `stale` → "Change the lowest order in Pay on delivery
-    first." with a link to `/console/settings/payments`; "UPI and cards" row: "Connect Razorpay" (link
+    in Delivery Zones" (link `/console/apps/delivery_zones`); `stale` → "Your limit is below the lowest Pay on delivery
+    order. Change that first." with a link to `/console/settings/payments`; "UPI and cards" row: "Connect Razorpay" (link
     `/console/settings/online-payments`), connected → `Badge` ok "Connected"; "Not now", "Save payment choices".
 - `page.tsx:52-59`: before opening, header "Home" + `Badge` warn "Opening soon", no meta line; the card replaces
   `Checklist`. `setup/page.tsx:17-18`: the same card + `OpenShop`'s close half (closing stays there, ux rule 30).
@@ -314,7 +314,8 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
   store" · "Hide this card".
 - First product: "Add your first product" · "Add a photo" / "Photo added. Change photo" · "Name" · "Price" · "In stock,
   each size" / "In stock" · "Sizes" · "Add more details" · "Add product" · toast "Added Ivory kurta set." · "Saved as a
-  draft." then the needs (readiness labels as they are) · "We couldn’t add the product. Nothing was saved." · "Give your
+  draft." then the needs (readiness labels as they are) · "We couldn’t add the product. Nothing was saved." · a photo
+  the uploader refuses: its own sentence; any other failure "We couldn’t add the photo. Nothing was saved. Try again." · "Give your
   product a name of up to 140 characters." · "Whole rupees, digits only." · "A number, 0 or more." · "Choose sizes from
   the list."
 - Business details: "Business details" · "Legal name" · "GST registration" · "Not registered" · "Regular" ·
@@ -323,13 +324,15 @@ Undrawn rows are screenshotted and shown with the parity report (O2a·10).
   "Name" · "Phone" · "Email" · "Back" · "Save details" · toast "Saved business details." · "Ask the owner" · "Back to
   setup".
 - How shoppers pay: "How shoppers pay" · "Pay on delivery" · "Pay on delivery up to" · "Set in Delivery Zones" ·
-  "Change the lowest order in Pay on delivery first." · "UPI and cards" · "Connect Razorpay" · "Connected" · "Not now" ·
+  "Your limit is below the lowest Pay on delivery order. Change that first." · "UPI and cards" · "Connect Razorpay" · "Connected" · "Not now" ·
   "Save payment choices" · toast "Saved payment choices."
-- Open your store?: "Open your store?" · "Not yet" · "Open store" · refusals as `openShop` today.
+- Open your store?: "Open your store?" · "Not yet" · "Open store" · refusals as `openShop` today · a website on a
+  Test key: "Your store is still closed" (no period: a title).
 - Moment: "Kesar Studio is open" · "Copy link" · toast "Copied." · "Share on WhatsApp" · "Go to Home".
 - Pickup PIN code: "Pickup PIN code" · "PIN code" · "City and state" · "We do not know this PIN code. Check the 6
   digits." · "A PIN code is 6 digits and starts with 1 to 9." · "Not now" · "Save PIN code" · toast "Saved your pickup
-  PIN code." · header "From 302003" / "Add pickup PIN code".
+  PIN code." · header "From 302003" (named "Change pickup PIN code, from 302003": the visible words stay in the name,
+  WCAG 2.5.3) / "Add pickup PIN code".
 - Field errors otherwise the section rules' own (`sections.ts:236-288`).
 
 ## Practices recorded in skills (landed in O2a·11; bumps from the versions O1 leaves)

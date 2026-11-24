@@ -122,7 +122,7 @@ const WRITE_WORDS: Record<string, string> = {
   not_owner: ERR_WORDS.not_owner, no_domain: 'This domain is no longer connected', not_ready: 'Not connected yet',
   razorpay: 'Razorpay must approve this domain first', unknown: 'We couldn’t change it. Nothing was changed.',
   frozen: 'Address changes are frozen', no_renames_left: 'No changes left', one_added: 'One new address at a time',
-  bad_slug: 'Letters, digits and hyphens only', slug_taken: 'Taken', no_name: 'This address is no longer the store’s',
+  bad_slug: 'Letters, numbers and hyphens only', slug_taken: 'Taken', no_name: 'This address is no longer the store’s',
 }
 type Done = { ok: true } | { ok: false; error: string }
 

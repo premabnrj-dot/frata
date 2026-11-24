@@ -82,7 +82,7 @@ export async function saveSetupFields(popup: SetupPopup, values: Values, version
     return { ok: true, version: r.value.version, ...(r.value.unrated ? { unrated: r.value.unrated } : {}) }
   } catch (err) {
     if (err instanceof FieldErrors || err instanceof NeededWhenOpen) return { ok: false, error: 'Some fields need a look before saving.', errors: err.errors }
-    if (err instanceof Stale) return { ok: false, error: 'Change the lowest order in Pay on delivery first.', stale: err.keys }
+    if (err instanceof Stale) return { ok: false, error: 'Your limit is below the lowest Pay on delivery order. Change that first.', stale: err.keys }
     if (err instanceof OwnerOnly) return { ok: false, locked: true, error: refusalFor(err.page) }
     if (err instanceof VersionConflict) return { ok: false, conflict: true, error: 'Someone saved these settings while you were editing. Close this and open it again to see their changes.' }
     console.error('[saveSetupFields]', popup, dbReason(err))

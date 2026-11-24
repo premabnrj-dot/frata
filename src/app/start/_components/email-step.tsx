@@ -28,7 +28,7 @@ export function EmailStep({ onVerified }: { onVerified: (to: string) => void }) 
 
   async function doSend() {
     const v = email.trim()
-    if (!EMAIL_SHAPE.test(v)) return setError({ field: 'email', text: 'That does not look like an email address.' })
+    if (!EMAIL_SHAPE.test(v)) return setError({ field: 'email', text: 'That does not look like an email address. Enter one like name@brand.in.' })
     const typo = emailTypo(v)
     if (typo) return setError({ field: 'email', text: `Did you mean ${typo}?`, fix: typo })
     setError(null); setPending('send')

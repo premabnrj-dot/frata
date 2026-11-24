@@ -10,6 +10,10 @@ import { maxBytesFor } from '@/domains/media/upload-limits'
 // WebP where the browser really makes it. Safari on an iPhone answers 'image/webp' with a PNG (or nothing), so there
 // the photo is JPEG, every size of it: one format per photo, said by its base (domains/media/sizes.ts).
 
+/** A photo refused in our own words, which say how to fix it. Anything else thrown here (Blob, the network) is not ours
+ *  to show: callers say their own fixed sentence for it. */
+export class PhotoRefused extends Error {}
+
 export type Uploaded = { base: string; widths: number[]; width: number; height: number }
 
 const QUALITIES = [0.82, 0.72, 0.6]
@@ -36,19 +40,19 @@ async function sized(bitmap: ImageBitmap, width: number, format: PhotoFormat | n
   if (f === 'jpeg') { ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = 'white'; ctx.fillRect(0, 0, width, height) }
   for (const q of QUALITIES) {
     const blob = await encode(canvas, f, q)
-    if (!blob || blob.type !== contentTypeOf(f)) throw new Error('This browser could not make the photo. Try another browser.')
+    if (!blob || blob.type !== contentTypeOf(f)) throw new PhotoRefused('This browser could not make the photo. Try another browser.')
     if (blob.size <= maxBytesFor(width)) return { blob, format: f }
   }
-  throw new Error(`That photo is too detailed to shrink under ${Math.round(maxBytesFor(width) / 1024)} kB at ${width} px wide.`)
+  throw new PhotoRefused(`That photo is too detailed to shrink under ${Math.round(maxBytesFor(width) / 1024)} kB at ${width} px wide.`)
 }
 
 /** Resizes and uploads one photo; calls onProgress with 0–1. `via`: the token route (the Photos page: the import bucket). */
 export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void, folder: 'products' | 'theme' | 'brand' = 'products', via = '/api/console/upload'): Promise<Uploaded> {
-  if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error(`${file.name} is not a photo.`)
-  if (file.size > MAX_SOURCE_BYTES) throw new Error(`${file.name} is over 25 MB.`)
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => { throw new Error(`${file.name} could not be read. Save it as JPEG and try again.`) })
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new PhotoRefused(`${file.name} is not a photo.`)
+  if (file.size > MAX_SOURCE_BYTES) throw new PhotoRefused(`${file.name} is over 25 MB.`)
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => { throw new PhotoRefused(`${file.name} could not be read. Save it as JPEG and try again.`) })
   // A logo may be small (drawn at 400 wide); a photo needs 400 px of its own.
-  if (bitmap.width < (folder === 'brand' ? 120 : 400)) throw new Error(`${file.name} is ${bitmap.width} px wide; at least ${folder === 'brand' ? 120 : 400} px is needed.`)
+  if (bitmap.width < (folder === 'brand' ? 120 : 400)) throw new PhotoRefused(`${file.name} is ${bitmap.width} px wide. Use one at least ${folder === 'brand' ? 120 : 400} px wide.`)
   const widths = widthsFor(bitmap.width)
   const id = crypto.randomUUID()
   let base = '', format: PhotoFormat | null = null

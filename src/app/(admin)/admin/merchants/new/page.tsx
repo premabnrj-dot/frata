@@ -30,11 +30,11 @@ export default async function NewMerchantPage() {
           <div className="flex flex-col gap-1.5">
             <label htmlFor="slug" className="text-sm font-medium">Store address</label>
             <div className="flex overflow-hidden rounded-md border border-input has-[[aria-invalid=true]]:border-danger-mark">
-              <input id="slug" name="slug" required pattern="[a-z0-9-]+" data-error="Lower-case letters, digits and hyphens." className="h-10 flex-1 bg-card px-3 font-mono text-sm" />
+              <input id="slug" name="slug" required pattern="[a-z0-9-]+" data-error="Lower-case letters, numbers and hyphens." className="h-10 flex-1 bg-card px-3 font-mono text-sm" />
               <span className="flex items-center border-l border-border bg-muted px-3 font-mono text-sm text-muted-foreground">.{SHOP_DOMAIN}</span>
             </div>
             <FieldMessage name="slug" />
-            <span className="text-xs text-muted-foreground">Lower-case letters, digits and hyphens.</span>
+            <span className="text-xs text-muted-foreground">Lower-case letters, numbers and hyphens.</span>
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="ownerEmail" className="text-sm font-medium">Owner&apos;s email</label>

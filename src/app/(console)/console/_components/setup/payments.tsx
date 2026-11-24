@@ -45,7 +45,7 @@ export function Payments({ open, draft, setDraft, onClose, onSaved, connected }:
   }
   return (
     <Dialog open={open} className="w-[min(27.5rem,calc(100vw-2rem))]" onClose={onClose} onDismiss={onClose} title="How shoppers pay"
-      error={stale ? <>Change the lowest order in Pay on delivery first. <Link href="/console/settings/payments" className="font-semibold underline">Pay on delivery</Link></> : error}
+      error={stale ? <>Your limit is below the lowest Pay on delivery order. Change that first. <Link href="/console/settings/payments" className="font-semibold underline">Pay on delivery</Link></> : error}
       actions={<><Button variant="secondary" onClick={onClose}>Not now</Button><Button busy={busy} disabled={!draft} onClick={() => void save()}>Save payment choices</Button></>}>
       <div className="grid gap-3">
         <div className="flex min-h-10 items-center justify-between gap-3">

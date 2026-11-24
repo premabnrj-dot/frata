@@ -28,7 +28,7 @@ function clean(c: CollectionInput) {
   const title = String(c.title ?? '').trim().replace(/\s+/g, ' ')
   if (!title || title.length > 80) errors.title = 'A name of up to 80 characters, like Festive edit.'
   const handle = (String(c.handle ?? '').trim().toLowerCase() || handleFor(title)).slice(0, 80).replace(/-+$/, '')
-  if (!HANDLE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, digits and hyphens.'
+  if (!HANDLE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, numbers and hyphens.'
   const description = String(c.description ?? '').trim()
   if (description.length > 2000) errors.description = 'Up to 2,000 characters.'
   const seoTitle = String(c.seoTitle ?? '').trim().replace(/\s+/g, ' ')

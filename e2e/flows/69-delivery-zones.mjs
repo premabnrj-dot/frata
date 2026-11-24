@@ -173,7 +173,7 @@ export default {
           await o.setViewportSize({ width: 390, height: 844 }); await o.screenshot({ path: t.out('pickup-390') }); await o.setViewportSize({ width: 1280, height: 900 })
           await d.getByRole('button', { name: 'Save PIN code' }).click()
           await o.locator('[data-toast]').filter({ hasText: 'Saved your pickup PIN code.' }).waitFor()
-          await o.getByRole('button', { name: 'From 302003' }).waitFor()
+          await o.getByRole('button', { name: 'Change pickup PIN code, from 302003' }).waitFor()
           assert.equal((await db`select pickup_pincode from shop_settings where tenant_id = ${KESAR}`)[0].pickup_pincode, '302003')
           await db`update shop_settings set pickup_pincode = null where tenant_id = ${KESAR}`
           await o.goto(CONSOLE + '/console/apps/delivery_zones', { waitUntil: 'domcontentloaded' })

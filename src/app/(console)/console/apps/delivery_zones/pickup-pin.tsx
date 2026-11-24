@@ -12,8 +12,10 @@ export function PickupPin({ pickup }: { pickup: string | null }) {
   const [loaded, setLoaded] = useState(false)
   return (
     <>
-      <button type="button" className="inline-flex min-h-6 items-center text-link underline underline-offset-2" onClick={() => { setLoaded(true); setOpen(true) }}>
-        {pickup ? <span>From <span className="font-mono">{pickup}</span></span> : 'Add pickup PIN code'}
+      {/* Its name says what it does; the visible words stay inside it (WCAG 2.5.3, label in name). */}
+      <button type="button" className="inline-flex min-h-6 items-center text-link underline underline-offset-2" onClick={() => { setLoaded(true); setOpen(true) }}
+        aria-label={pickup ? `Change pickup PIN code, from ${pickup}` : undefined}>
+        {pickup ? <span>From <span className="font-num">{pickup}</span></span> : 'Add pickup PIN code'}
       </button>
       {loaded && <PickupPopup open={open} onClose={() => setOpen(false)} />}
     </>

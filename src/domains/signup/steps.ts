@@ -40,7 +40,7 @@ export const ADDRESS_WORDS: Record<AddressState, string> = {
 
 /** The line under an address being typed (the Change web address popup). */
 export function addressLine(s: AddressState): string {
-  return s === 'taken' || s === 'reserved' ? 'Taken. Try another.' : ADDRESS_WORDS[s]
+  return s === 'taken' || s === 'reserved' ? 'Taken. Try another address.' : ADDRESS_WORDS[s]
 }
 
 /** May the person go on with this address? Creation checks it again, so a silent check never stops anyone. */

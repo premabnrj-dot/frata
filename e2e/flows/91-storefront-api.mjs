@@ -208,7 +208,7 @@ export default {
 
             await p.goto(`${CONSOLE}/console/setup`)
             await openStore(p, { moment: false })
-            const dlg = p.getByRole('dialog', { name: 'Your store is still closed.' })
+            const dlg = p.getByRole('dialog', { name: 'Your store is still closed' })
             await dlg.getByText('Your website runs on a Test key. Test keys stop when the store opens.').waitFor()
             await dlg.getByRole('link', { name: 'Connect my domain' }).waitFor()
             await p.screenshot({ path: t.out('open-refused-1280') })
@@ -231,7 +231,7 @@ export default {
             let again = null
             for (let i = 0; i < 20 && !again; i++) { again = (await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at; if (!again) await new Promise((r) => setTimeout(r, 250)) }
             assert.ok(again, 'a store that opened once was refused when opened again')
-            assert.equal(await p.getByRole('dialog', { name: 'Your store is still closed.' }).count(), 0)
+            assert.equal(await p.getByRole('dialog', { name: 'Your store is still closed' }).count(), 0)
           })
         } finally {
           await db`update shop_settings set published_at = ${pub} where tenant_id = ${T}`

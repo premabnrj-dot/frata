@@ -14,7 +14,7 @@ import type { FirstProductForm } from '@/lib/queries/catalogue'
 import type { PopupProps, ProductDraft } from './drafts'
 // Static here: the popups' chunk loads on first open already; a second import() would be one more entry in every console
 // page's script loader.
-import { uploadPhoto } from '../../products/_components/upload-photos'
+import { PhotoRefused, uploadPhoto } from '../../products/_components/upload-photos'
 
 // "Add your first product" (mockup § 2 `#ov-product`, O2a·7): a photo, the name, the price, the stock, the sizes the
 // name implies (firstProductShape, the rule the server reads). "Add product" asks for Active; it stays a draft, with
@@ -47,7 +47,7 @@ export function FirstProduct({ open, draft, setDraft, onClose, onSaved, tenantId
     try {
       set({ photo: await uploadPhoto(f, tenantId, () => {}) })
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : 'We couldn’t add the photo. Try again.')
+      setError(e instanceof PhotoRefused ? e.message : 'We couldn’t add the photo. Nothing was saved. Try again.')
     } finally { setBusy(null) }
   }
   const editor = (handle: string) => { onSaved(''); router.push(`/console/products/${encodeURIComponent(handle)}`) }

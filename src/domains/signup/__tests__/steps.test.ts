@@ -47,8 +47,8 @@ describe('address states and words', () => {
     expect(ADDRESS_WORDS.reserved).toBe(ADDRESS_WORDS.taken)
   })
   it('the popup line asks for another when taken', () => {
-    expect(addressLine('taken')).toBe('Taken. Try another.')
-    expect(addressLine('reserved')).toBe('Taken. Try another.')
+    expect(addressLine('taken')).toBe('Taken. Try another address.')
+    expect(addressLine('reserved')).toBe('Taken. Try another address.')
     expect(addressLine('ok')).toBe('Available')
   })
   it('an address can be used when free, or when the check could not say', () => {

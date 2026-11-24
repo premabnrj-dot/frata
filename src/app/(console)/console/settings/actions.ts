@@ -152,7 +152,7 @@ const ADDRESS_ERRORS: Record<string, string> = {
   frozen: 'Frrata has paused address changes for this store.',
   no_renames_left: 'No changes left.',
   needs_razorpay: 'Razorpay must approve this address first.',
-  bad_slug: 'Letters, digits and hyphens, at least 3.',
+  bad_slug: 'Letters, numbers and hyphens, at least 3.',
   slug_taken: 'That address is taken. Try another.',
 }
 

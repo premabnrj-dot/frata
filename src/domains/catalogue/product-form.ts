@@ -133,7 +133,7 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4, how: { b
     }
   }
   const handle = (p.handle ?? '').trim().toLowerCase() || handleFor(title)
-  if (!HANDLE_SHAPE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, digits and hyphens, like linen-kurta-set.'
+  if (!HANDLE_SHAPE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, numbers and hyphens, like linen-kurta-set.'
   else if ((p.handle ?? '').trim() && RESERVED_HANDLES.includes(handle)) errors.handle = 'Frrata uses that address. Choose another.'
   const seoTitle = (p.seoTitle ?? '').trim(), seoDescription = (p.seoDescription ?? '').trim()
   if (seoTitle.length > 200) errors.seoTitle = 'Up to 200 characters.'
