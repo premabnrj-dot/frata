@@ -190,7 +190,7 @@ cost measured, "yes".
   to that repository only. The Frrata organisation of ADR-0016 § 2 comes before partners build sites.
 
 ## What the owner sets up (as it stands, 2026-11-24; the Cloudflare steps of the first proposal are history, not pending)
-- Vercel: one new Pro team for partner sites and the fleet (`docs/setup.md` S22). Three teams before outside partners' code is live.
+- Vercel: one new Pro team for partner sites and the fleet (`docs/setup.md` S22; step-by-step in `docs/setup-studio-hosting.md`). Three teams before outside partners' code is live.
 - GitHub organisation for partner sites and the starter (`docs/setup.md` S8).
 - The preview domain (O6) and the Public Suffix List request (P4b); see ADR-0019.
 - Nothing at Cloudflare is set up: no account, no Workers for Platforms, no zones. If § Switch when is met, the first

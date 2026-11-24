@@ -564,7 +564,8 @@ Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unbl
    repositories need Team (about $4 a member a month). The fleet's own repository stays outside it (decision S8).
 5. **S22 · Vercel teams** — ONE new team now, so partner sites never share Frrata's own team or its secrets (owner,
    2026-11-22: "keeping one vercel account for pilot/testing"; ADR-0017 "The decision as it stands" rule 3). The existing
-   `frata` team keeps hosting the pilot only. In Vercel, open the
+   `frata` team keeps hosting the pilot only. The step-by-step for this and the other accounts is
+   `docs/setup-studio-hosting.md`. In Vercel, open the
    team switcher (top left) › **Create Team**, once:
    - `frrata-sites`: where partner websites AND Frrata's build service that deploys them are hosted; staging is
      projects inside it. **Pro.** Then Settings › Deployment Protection › **Standard Protection** on.

@@ -306,6 +306,6 @@ framework (a partner market that refuses the first); per-site budgets; a private
   `frrata` organisation the records name (ADR-0016's amendment; `docs/setup.md` S8). The owner: "A new GitHub
   organisation named FrrataGit in the same account". Where this spec says "the GitHub organisation" (§ 7) that is it.
   The kit's packages stay `@frrata/*` on npm, which is a different namespace. Moving the starter and any site repository
-  from `frrata` is a step of `docs/setup-studio-hosting.md` (to be written, lane J).
+  from `frrata` is a step of `docs/setup-studio-hosting.md`.
 - **Domains:** a store's address is `<store>.frrata.store`, the API `api.frrata.store`, previews `frratapreview.store`
   (ADR-0019 amendment, 2026-11-24). This spec's § 1 stays history under ADR-0019.
