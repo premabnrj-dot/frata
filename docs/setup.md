@@ -574,13 +574,15 @@ Decision page: https://claude.ai/artifact/ChPS16kSEiabXz4J5Q7ALT. Each step unbl
      and the pen test. Not now.
    A Pro team is $20 a month plus its usage; nothing is hosted there until V2a. Then add this session's Vercel
    access to it (the Vercel connector asks). Unblocks: V2a.
-6. **O4 · the store domain** — changed 2026-11-24 (owner: "We need to replace frrata.shop with frrata.store (I can renew
-   this for 3 years)"): renew **`frrata.store`** to 3 years; `frrata.shop` becomes Frrata's public site ("public domain
-   can be frrata.shop"). The earlier figure (about ₹9,150 with GST at Hostinger) was for `frrata.shop`; the price of
-   `frrata.store` is not in the repo. Then the Public Suffix List submission (P4b) is opened from your GitHub account.
-7. **O6 · Preview domain** — decided 2026-11-24 (owner: "preview domain can be: frratapreview.store (can buy for 3
-   years)"): buy **`frratapreview.store`** for 3 years (the earlier estimate, about ₹3,200, was for a `.com`; the price of a
-   `.store` name is not in the repo).
+6. **O4 · the store domain** — changed twice on 2026-11-24. First: "We need to replace frrata.shop with frrata.store (I can
+   renew this for 3 years)" (superseded). Then (owner): "It would be actually frrata.online for merchant subdomains":
+   the store domain is **`frrata.online`**; get it for 3 years (whether you already hold it, the registrar and the price:
+   the repo does not say). `frrata.shop` becomes Frrata's public site ("public domain can be frrata.shop"); its earlier
+   figure (about ₹9,150 with GST at Hostinger) was for its own renewal. Then the Public Suffix List submission (P4b) is
+   opened from your GitHub account, for `frrata.online`.
+7. **O6 · Preview domain** — decided twice on 2026-11-24: "preview domain can be: frratapreview.store (can buy for 3
+   years)" (superseded), then "frratapreview.online for the testing": buy **`frratapreview.online`** (the earlier
+   estimate, about ₹3,200, was for a `.com`; the price of a `.online` name is not in the repo).
 
 ### Studio's agent on one test store, Frrata staff only (V3a; plan `docs/plans/2026-11-22-v3a-runtime.md`, ADR-0020)
 What is built: Studio at `/partner/studio`, its Managed Agents runtime behind `src/lib/studio/runtime.ts`, the per-minute
