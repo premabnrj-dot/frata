@@ -104,6 +104,10 @@ Part of `frata-architecture` (SKILL.md holds the rules every change obeys: layer
 - **What a product still needs before it goes live, for one or many, is `readinessIn`** (`src/lib/catalogue/readiness.ts`:
   one read per table, the rule `readiness` in product-form.ts): Publish (`setStatus`) and the import's Done step both ask
   it. **Before deleting a product photo's files, ask `photosInUse`** (`photos-in-use.ts`: a look, a story or a page may show it).
+- **Home's first product (`addFirstProduct`, O2a·6) is not a second writer**: one transaction composes
+  `writeProducts`, `attachIn` and `setStatusIn` (Active only through `readiness()`; refused → a draft with its needs).
+  Its sizes come from `firstProductShape` (`src/domains/catalogue/first-product.ts`), the rule `createProduct` reads
+  too. Photo checks (`photosAreMade`, network) run before the transaction, never inside it.
 
 ## Importing products (PI·1, 2026-11-12; plan docs/plans/2026-11-12-product-import.md § Tasks 4–7)
 

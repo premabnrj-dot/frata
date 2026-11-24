@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 10.6.1
+  version: 10.7.0
   owner: owner
   verified: 2026-11-23
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/app/site.css", "src/components/brand/site-home.tsx"]
@@ -96,10 +96,13 @@ from it).
 - **Pictograms** (`src/components/brand/pictogram.tsx`): a 48 grid, 4 px margin,
   a **2 px ink line**, round caps and joins, paper inside, **one haldi accent
   shape**, at most one warm fill. 32, 48 or 64 px. Names: store, build,
-  handover, earn, delivered, clients, owner, calendar, shield, apply. A new one
-  follows the same rule and joins `PICTOGRAMS`.
-- **A pictogram always sits on its tile** (`PictoTile`: 64 px, radius 12,
-  fill / haldi-soft / indigo-soft). Never loose, never coloured another way.
+  handover, earn, delivered, clients, owner, calendar, shield, apply, payments, risk, returned, tally, product,
+  details. A new one follows the same rule and joins `PICTOGRAMS`; one pictogram per meaning (the setup card's
+  payments step is `payments`, its opening step `store`).
+- **A pictogram always sits on its tile** (`PictoTile`: 64 px, radius 12, or `size="sm"` 44 px, radius 10, in a
+  setup popup's header through `Dialog`'s `picto`; fill / haldi-soft / indigo-soft). Never loose, never coloured
+  another way. A page that shows a pictogram in a client component's chunk pays for every drawing: draw it on the
+  server and pass the node (the setup card does).
 - **Spot illustrations** (`src/components/brand/illustrations.tsx`) are built
   from pictograms on a haldi-soft field, flat, no perspective, no faces, no
   stock art. One per page at most (the hero).

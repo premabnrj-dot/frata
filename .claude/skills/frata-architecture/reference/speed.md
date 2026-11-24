@@ -88,3 +88,8 @@ Rules:
 - **A named exception to the 100 ms query budget**: "+ Filter"'s values with counts (`filterValues`) and saved views'
   counts (`viewCounts`) run in their own transaction with `jit = off` and an 800 ms ceiling, streamed or on demand, and
   show no count when they time out; never inside another read's transaction.
+- **A page's popup reads when it opens, never with the page** (O2a, 2026-11-23): Home's setup popups and Delivery
+  Zones' Pickup PIN code load with next/dynamic on first open and call their loader then; the page's own reads stay
+  as they were. **Every async chunk is one more entry in every console page's script loader** (~20 B gzipped each):
+  pages at their pins felt four popup chunks, so related popups share ONE chunk (`setup/popups.ts`), and a rarely drawn
+  part of a pinned page (Settings' LockedFacts, Brand's ReviewCard) loads when drawn rather than raising a pin.

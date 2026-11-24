@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.13.0
+  version: 3.14.0
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
@@ -345,6 +345,12 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   }
 }
 ```
+
+- **A popup that saves part of a settings section** (O2a, 2026-11-23) goes through `parseFields` and `SETUP_FIELDS`
+  (`src/domains/settings/fields.ts`): the subsets are named on the server, only the keys sent are written
+  (`Object.hasOwn`), the whole section is checked against the stored values, and the save keeps every page lock
+  (`columnsIn` in `console/settings/save-locks.ts`: PP1, an open store's grievance officer, Delivery Zones' fields)
+  and the version. Never a whole-section parse of a partial form: a field the popup leaves out would be blanked.
 
 **An anonymous action that reads the database** (O1·7, `src/app/start/check-address-open.ts`) is its own `'use server'`
 file in `check:actions`' ENTRY_POINTS with exactly its named exports (EXACT_EXPORTS: a second export fails the gate),

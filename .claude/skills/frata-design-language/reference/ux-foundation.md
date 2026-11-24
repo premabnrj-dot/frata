@@ -161,6 +161,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     is the exception: no action or navigation runs while it is open.)
     `Dialog` also answers `close`, for a close request let through without
     `cancel`, so its `onClose` must always set `open` to false.
+27b. A setup popup (Feedback rule 4) keeps what was typed when it closes (✕, Esc, Back, the backdrop) until it
+    saves or the page reloads: the values live in the page's island, not the popup. Its first field takes focus
+    (`data-autofocus`), and focus goes back to the button that opened it. Its script loads on first open
+    (next/dynamic), and it reads its values then.
 28. Lists never animate. While a move is on its way (`NavProgress`, after
     150 ms) `main#content` has `aria-busy` and its tables and `[data-list]`
     dim to .55. Mark a list of records that is not a `<table>` with
@@ -172,7 +176,8 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     exceptions named in the script, each with its reason.
 
 **Home "Today" (owner-approved mockup 2026-11-07, U·4; spec `docs/specs/2026-11-07-ux-today.md`)**
-30. Before the shop opens, Home is the setup checklist. Once it is open, Home is
+30. Before the store opens, Home is the setup card: the next step, then the four steps (O2a, mockup
+    2026-11-23 § 2). The session that opens the store sees the open card until it hides it. Once it is open, Home is
     the day's work, as Neel § Screens · Home draws it: "Today" and the day, Store open (a link to `/console/setup`,
     where the store closes for now; always one tap away) and Share store; three counts in one card (To confirm, To
     pack, On hold; 30/36 figures, a chip each: "Oldest 8 d", "Nothing waiting", "N high risk"; each a link to its
