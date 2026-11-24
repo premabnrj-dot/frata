@@ -36,3 +36,23 @@ export async function setFxRate(staff: StaffOk, day: string, typed: string): Pro
     return { ok: false, error: 'unknown' }
   }
 }
+
+export type RateRow = { day: string; rateE4: number; setAt: Date; by: string | null }
+
+/** The newest typed rate's India day, for Admin's banner on every page (one row; null before the first). */
+export async function newestRateDay(): Promise<string | null> {
+  const [r] = await adminDb().execute<{ day: string }>(sql`select day::text as day from admin_fx_rate_latest()`)
+  return r?.day ?? null
+}
+
+/** Admin › Money › Dollar rate's list: the last 7 days' rates, each with who typed it last (Activity's own row for it,
+ *  `credits.rate.set` with the day as target; staff are named by email there too). Admin only. */
+export async function recentRates(staff: StaffOk): Promise<RateRow[]> {
+  if (!(ADMIN_ONLY as readonly string[]).includes(staff.role)) return []
+  const rows = await adminDb().execute<{ day: string; rate_e4: number; set_at: string; by: string | null }>(sql`
+    select r.day::text as day, r.rate_e4, r.set_at,
+      (select a.actor_email from audit_events a where a.action = 'credits.rate.set' and a.target = r.day::text
+          and a.at >= r.set_at - interval '1 minute' order by a.at desc limit 1) as by
+      from admin_fx_rates_recent(7) r`)
+  return rows.map((r) => ({ day: r.day, rateE4: Number(r.rate_e4), setAt: new Date(r.set_at), by: r.by }))
+}

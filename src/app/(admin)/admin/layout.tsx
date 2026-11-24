@@ -21,6 +21,10 @@ import { Icon } from '@/components/icons/icon'
 import { isMasterAdmin } from '@/domains/tenancy/staff-words'
 import { passkeys } from '@/lib/auth/session'
 import { TurnPasskeysOn } from './staff/passkeys-switch'
+import { RateBanner } from './_components/rate-banner'
+import { newestRateDay } from '@/lib/admin/fx-rate'
+import { rateState } from '@/domains/studio/rate-state'
+import { istDayKey } from '@/domains/time/day'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +64,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     )
   }
   // Both at once (speed review on the plan): neither waits on the other.
-  const [own, n, pk] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null), passkeys()])
+  const [own, n, pk, newest] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null), passkeys(),
+    newestRateDay().catch(() => undefined)])
+  // The dollar rate (V3b K2, mockup docs/mockups/2026-11-24-v3b-first.html § 1): ageing from its third day, then stopped.
+  // One banner at a time (Neel § Banners): Studio stopped first, then passkeys off, then the rate ageing.
+  const rate = newest === undefined ? null : rateState(newest, istDayKey(new Date()))
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). Neel N4 (owner-approved
   // mockup): Today first, then four groups, each item with the count of what waits in it (todayCounts, the same list
@@ -78,7 +86,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const plans = item('/admin/plans', 'Plans', 'plans')
   const billingItem = item('/admin/billing', 'Billing', 'payments', 'billing')
   // Costs is a master admin's page; support staff are not shown it (the page and every action refuse them too).
-  const costsItems = (ADMIN_ONLY as readonly string[]).includes(staff.role) ? [item('/admin/costs', 'Costs', 'costs', 'costs'), item('/admin/cashflow', 'Cashflow', 'cashflow', 'cash')] : []
+  const costsItems = (ADMIN_ONLY as readonly string[]).includes(staff.role) ? [item('/admin/costs', 'Costs', 'costs', 'costs'), item('/admin/cashflow', 'Cashflow', 'cashflow', 'cash'), item('/admin/rate', 'Dollar rate', 'bank')] : []
   const appsItem = item('/admin/apps', 'Apps', 'apps')
   const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people')
   const themesItem = item('/admin/themes', 'Themes', 'themes', 'themes')
@@ -99,8 +107,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, apiItem, staffItem, plans, billingItem, ...costsItems, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {/* Passkeys off from Admin › Staff (owner 2026-11-23, docs/mockups/2026-11-23-admin-passkeys-switch.html § Off):
           on every Admin page until an Admin turns them on; Support staff see it without the button. */}
-      {pk.off && <Banner tone="warn" title={<span className="inline-flex items-center gap-2.5"><Icon name="key" className="size-4" />Passkeys are off</span>} action={isMasterAdmin(staff.role)
+      {rate && (rate.kind === 'none' || rate.kind === 'lapsed') && <RateBanner state={rate} admin={isMasterAdmin(staff.role)} />}
+      {!(rate && (rate.kind === 'none' || rate.kind === 'lapsed')) && pk.off && <Banner tone="warn" title={<span className="inline-flex items-center gap-2.5"><Icon name="key" className="size-4" />Passkeys are off</span>} action={isMasterAdmin(staff.role)
         ? <TurnPasskeysOn /> : undefined} />}
+      {!pk.off && rate && (rate.kind === 'ageing' || rate.kind === 'last') && <RateBanner state={rate} admin={isMasterAdmin(staff.role)} />}
       {children}
     </AppShell>
   )
