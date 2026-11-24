@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
@@ -21,9 +21,11 @@ export function PickupPopup({ open, onClose }: { open: boolean; onClose: () => v
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldError, setFieldError] = useState<string | undefined>()
+  // Once the person types, the stored value arriving late never overwrites it (it still brings the version).
+  const typed = useRef(false)
   useEffect(() => {
     if (!open || version !== null) return
-    loadSetupPopup('pickup').then((r) => { if (r.ok) { setVersion(r.version); setPin(String(r.values.pickupPincode ?? '')) } else setError(r.error) },
+    loadSetupPopup('pickup').then((r) => { if (r.ok) { setVersion(r.version); if (!typed.current) setPin(String(r.values.pickupPincode ?? '')) } else setError(r.error) },
       () => setError('We couldn’t reach Frrata. Try again.'))
   }, [open, version])
   useEffect(() => {
@@ -38,7 +40,7 @@ export function PickupPopup({ open, onClose }: { open: boolean; onClose: () => v
     setBusy(true); setError(null); setFieldError(undefined)
     try {
       const r = await saveSetupFields('pickup', { pickupPincode: pin }, version)
-      if (r.ok) { setVersion(null); onClose(); toast.ok('Saved your pickup PIN code.'); return }
+      if (r.ok) { setVersion(null); typed.current = false; onClose(); toast.ok('Saved your pickup PIN code.'); return }
       if ('errors' in r && r.errors?.pickupPincode) setFieldError(r.errors.pickupPincode); else setError(r.error)
     } catch {
       setError('We couldn’t save. Nothing was changed. Try again in a minute.')
@@ -50,10 +52,11 @@ export function PickupPopup({ open, onClose }: { open: boolean; onClose: () => v
       <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-2.5">
         <label className="grid min-w-0 gap-1.5"><span className="text-label font-medium">PIN code</span>
           <input data-autofocus className={`${FIELD} w-full font-num`} inputMode="numeric" maxLength={6} autoComplete="postal-code" value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} {...fieldProps('pk-pin', fieldError)} /></label>
-        <div className="grid min-w-0 gap-1.5"><span className="text-label font-medium" id="pk-place-l">City and state</span>
-          <p aria-live="polite" aria-labelledby="pk-place-l" key={line?.line ?? ''}
-            className={`flex min-h-11 items-center rounded-md px-1 text-label md:min-h-9 ${line ? 'animate-value-flash' : ''} ${line && !line.known ? 'text-warn-text' : 'text-muted-foreground'}`}>{line?.line ?? ''}</p></div>
+            onChange={(e) => { typed.current = true; setPin(e.target.value.replace(/\D/g, '').slice(0, 6)) }} {...fieldProps('pk-pin', fieldError)} /></label>
+        <div className="grid min-w-0 gap-1.5"><span className="text-label font-medium">City and state</span>
+          {/* The live region stays mounted (a new one is often not spoken); only the line inside is re-keyed, to flash. */}
+          <p aria-live="polite" className={`flex min-h-11 items-center text-label md:min-h-9 ${line && !line.known ? 'text-warn-text' : 'text-muted-foreground'}`}>
+            <span key={line?.line ?? ''} className={`rounded-md px-1 ${line ? 'animate-value-flash' : ''}`}>{line?.line ?? ''}</span></p></div>
       </div>
       <FieldError name="pk-pin" message={fieldError} />
     </Dialog>

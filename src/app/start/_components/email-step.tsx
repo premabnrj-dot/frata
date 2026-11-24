@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Spinner } from '@/components/ui/button'
 import { FieldError, errorId } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { EMAIL_SHAPE, emailTypo } from '@/domains/signup/slug'
@@ -52,7 +53,7 @@ export function EmailStep({ onVerified }: { onVerified: (to: string) => void }) 
   }
 
   return (
-    <form className="su-st" noValidate onSubmit={(e) => { e.preventDefault(); if (sent) void doCheck(code); else void doSend() }}>
+    <form className="su-st" noValidate onSubmit={(e) => { e.preventDefault(); if (pending) return; if (sent) void doCheck(code); else void doSend() }}>
       <h1 tabIndex={-1}>Your email</h1>
       <div className="su-f">
         <label htmlFor="su-email">Email</label>
@@ -79,8 +80,9 @@ export function EmailStep({ onVerified }: { onVerified: (to: string) => void }) 
             {wait > 0 ? `Send again in ${wait} s` : 'Send again'}</button> : null}
         </div>
       )}
-      <button type="submit" className="su-go" disabled={!!pending}>
-        {pending === 'send' ? 'Sending…' : pending === 'check' ? 'Checking…' : sent ? 'Check code' : 'Send code'}
+      {/* Busy, as Button's busy: the label stays, a spinner joins it, aria-disabled keeps focus; onSubmit ignores a press. */}
+      <button type="submit" className="su-go" aria-disabled={!!pending || undefined} aria-busy={!!pending || undefined}>
+        {pending ? <Spinner /> : null}{sent ? 'Check code' : 'Send code'}
       </button>
     </form>
   )

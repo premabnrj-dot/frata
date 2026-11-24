@@ -39,6 +39,11 @@ export function BusinessDetails({ open, draft, setDraft, onClose, onSaved }: Pop
     if (!open || draft) return
     loadSetupPopup('details').then((r) => (r.ok ? setDraft({ values: r.values, version: r.version, locked: r.locked, held: r.held, view: 1 }) : setError(r.error)), () => setError('We couldn’t reach Frrata. Try again.'))
   }, [open, draft, setDraft])
+  // A refused save (Feedback rule 3): focus goes to the first wrong field, once its view has rendered.
+  useEffect(() => {
+    if (!Object.keys(errors).length) return
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>('dialog[open] [aria-invalid="true"]')?.focus())
+  }, [errors])
   const v = draft?.values ?? {}
   const s = (k: string) => String(v[k] ?? '')
   const set = (k: string, x: string) => draft && setDraft({ ...draft, values: { ...draft.values, [k]: x } })

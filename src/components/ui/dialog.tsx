@@ -26,7 +26,7 @@ export function Dialog({ open, onClose, onDismiss, picto, title, titleAfter, des
   /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
   /**
-   * Draws the ✕ (`aria-label="Close"`) at the header's end, which calls this (O1·8; a setup popup or a choice, never a
+   * Draws the close mark (`data-dialog-x`, a mask in base.css; `aria-label="Close"`) at the header's end, which calls this (O1·8; a setup popup or a choice, never a
    * confirm of what loses something). It must set `open` to false, as onClose; it may be the same function.
    */
   onDismiss?: () => void
@@ -67,7 +67,7 @@ export function Dialog({ open, onClose, onDismiss, picto, title, titleAfter, des
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] text-left rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
       <div data-dialog-body="" className="grid gap-4 p-5">
-        <div className="flex items-center gap-3">{picto}<h2 id={titleId} className="text-section font-semibold">{title}</h2>{titleAfter}<span className="flex-1" />{onDismiss && <button type="button" aria-label="Close" onClick={onDismiss} className="size-8 rounded-md hover:bg-accent">✕</button>}</div>
+        <div className="flex items-center gap-3">{picto}<h2 id={titleId} className="text-section font-semibold">{title}</h2>{titleAfter}<span className="flex-1" />{onDismiss && <button type="button" aria-label="Close" data-dialog-x="" onClick={onDismiss} className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" />}</div>
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}
         <DialogError error={error} />

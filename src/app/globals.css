@@ -69,3 +69,11 @@
    heights follow the bar's own place in src/components/ui/unsaved.tsx (bottom-[3.5rem+…] on a phone): change both. */
 [data-shell]:has([data-savebar="bottom"]) { --toast-lift: 7rem; }
 @media (min-width: 48rem) { [data-shell]:has([data-savebar="bottom"]) { --toast-lift: 4rem; } }
+
+/* The ✕ of a Dialog (onDismiss): the `close` icon's two strokes (src/components/icons/icon.tsx), drawn as a mask over the
+   button's text colour (a token class on the button), so it costs no script (ux-foundation rule 20a). Here, not in
+   base.css: the shop sheet imports base.css and draws no Dialog. */
+[data-dialog-x]::before {
+  content: ""; display: block; width: 1rem; height: 1rem; margin: auto; background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E") center / contain no-repeat;
+}

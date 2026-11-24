@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Spinner } from '@/components/ui/button'
 import { FieldError, errorId } from '@/components/ui/field-error'
 import { sendSignupCode, verifySignupCode } from '../actions'
 
@@ -16,6 +17,7 @@ export function WhatsappStep({ codeId, verified, onCode, onVerified, onNext }: {
   const [pending, setPending] = useState(false)
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (pending) return
     if (verified) return onNext()
     setPending(true)
     try {
@@ -52,7 +54,9 @@ export function WhatsappStep({ codeId, verified, onCode, onVerified, onNext }: {
           <FieldError name="wa-code" message={error?.field === 'code' ? error.text : null} className="text-sm" />
         </div>
       )}
-      <button type="submit" className="su-go" disabled={pending}>{!codeId ? 'Send code' : verified ? 'Continue' : 'Verify'}</button>
+      {/* Busy, as Button's busy: the label stays, a spinner joins it, aria-disabled keeps focus; submit ignores a press. */}
+      <button type="submit" className="su-go" aria-disabled={pending || undefined} aria-busy={pending || undefined}>
+        {pending ? <Spinner /> : null}{!codeId ? 'Send code' : verified ? 'Continue' : 'Verify'}</button>
     </form>
   )
 }

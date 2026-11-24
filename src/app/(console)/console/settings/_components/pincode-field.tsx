@@ -37,9 +37,11 @@ export function PincodeField({ f, value, error, onChange, saved, savedPlace }: {
             className="h-11 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text md:h-9" />
         </div>
         <div className="min-w-0 space-y-1">
-          <span id={`${id}-place-l`} className="block text-sm font-medium">City and state</span>
-          <p id={`${id}-place`} aria-live="polite" key={line}
-            className={`flex min-h-11 items-center rounded px-1 -mx-1 text-sm md:min-h-9 ${line ? 'animate-value-flash' : ''} ${place === null ? 'text-warn-text' : 'text-muted-foreground'}`}>{line}</p>
+          <span className="block text-sm font-medium">City and state</span>
+          {/* The live region stays mounted (a new one is often not spoken); only the line inside is re-keyed, to flash. */}
+          <p id={`${id}-place`} aria-live="polite"
+            className={`flex min-h-11 items-center text-sm md:min-h-9 ${place === null ? 'text-warn-text' : 'text-muted-foreground'}`}>
+            <span key={line} className={`-mx-1 rounded px-1 ${line ? 'animate-value-flash' : ''}`}>{line}</span></p>
         </div>
       </div>
       {error ? <FieldError name={id} message={error} /> : null}

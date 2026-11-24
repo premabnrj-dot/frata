@@ -165,9 +165,10 @@ export function SignupFlow({ shopDomain, plans, trialDays, codeOn, askEmail, has
                   onChange={(e) => { setName(e.target.value); setError(null); if (!slugEdited) setSlug(slugFor(e.target.value)) }} />
                 <FieldError name="name" message={error?.field === 'name' ? error.text : null} className="text-sm" />
               </div>
-              <div id="su-addr" className="su-addr" aria-live="polite">
+              <div id="su-addr" className="su-addr">
                 <code>{slug || 'your-brand'}.{shopDomain}</code>
-                {check && ADDRESS_WORDS[check.state] ? <Badge tone={TONE[check.state]}>{ADDRESS_WORDS[check.state]}</Badge> : null}
+                {/* Only whether the address is free is spoken, not the address on every keystroke. */}
+                <span role="status" className="contents">{check && ADDRESS_WORDS[check.state] ? <Badge tone={TONE[check.state]}>{ADDRESS_WORDS[check.state]}</Badge> : null}</span>
                 <button ref={changeRef} type="button" className="su-link" onClick={() => { setPopupLoaded(true); setPopup(true) }}>Change web address</button>
               </div>
               <FieldError name="slug" message={error?.field === 'slug' ? error.text : null} className="text-sm" />

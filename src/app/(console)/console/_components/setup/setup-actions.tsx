@@ -55,6 +55,17 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
   const first = useRef(next)
   const [moved, setMoved] = useState(false)
   useEffect(() => { if (next !== first.current) setMoved(true) }, [next])
+  // After a save the next-step block is re-keyed (or becomes the open state), so the button that opened the popup is
+  // gone and focus falls to the page's body: put it on the new step's button ("See your store" once open). The page's
+  // refresh may land before or after the popup closes, so this waits, for a few seconds, until focus has fallen.
+  const target = useRef<HTMLElement | null>(null)
+  const refocus = useRef(0)
+  useEffect(() => {
+    if (!refocus.current || open) return
+    if (Date.now() > refocus.current) { refocus.current = 0; return } // clock-ok: an effect, not render
+    const a = document.activeElement
+    if ((!a || a === document.body) && target.current) target.current.focus()
+  })
 
   const show = (k: Popup) => {
     const s = steps.find((x) => x.key === k)!
@@ -67,6 +78,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
   }
   const close = () => setOpen(null)
   const saved = (k: Popup) => (text: string) => {
+    refocus.current = Date.now() + 5000 // clock-ok: an event handler
     setOpen(null)
     // Emptied once the popup has gone (its 200 ms exit), so it never shows blank fields on the way out.
     window.setTimeout(() => setDrafts((d) => ({ ...d, [k === 'product' ? 'product' : k]: k === 'product' ? EMPTY_PRODUCT : null })), 250)
@@ -83,7 +95,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
           <div className="grid min-w-0 gap-2.5">
             <h2 className="text-base leading-6 font-semibold">Your store is open</h2>
             <div className="flex flex-wrap gap-2">
-              <a href={`https://${address}`} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary' })}>See your store</a>
+              <a ref={(el) => { target.current = el }} data-setup-next="" href={`https://${address}`} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary' })}>See your store</a>
               {hideable && <Button variant="ghost" onClick={() => moment?.hide()}>Hide this card</Button>}
             </div>
           </div>
@@ -98,7 +110,7 @@ export function SetupActions({ steps, next, picto, tenantId, address, hideable =
           </div>
           {step ? <>
             <h2 className="text-base leading-6 font-semibold">{step.title}</h2>
-            <div className="flex flex-wrap gap-2"><Button onClick={() => show(step.key)}>{step.action}</Button></div>
+            <div className="flex flex-wrap gap-2"><Button ref={(el) => { target.current = el }} data-setup-next="" onClick={() => show(step.key)}>{step.action}</Button></div>
           </> : null}
         </div>
         )}

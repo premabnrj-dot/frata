@@ -140,6 +140,8 @@ export default {
         await card().getByRole('img', { name: '2 of 4 done' }).waitFor()
         await card().getByRole('heading', { level: 2, name: 'Add business details' }).waitFor()
         await card().getByRole('listitem').filter({ hasText: '1 product' }).waitFor()
+        // The opener went with the old step: focus moves to the new step's button, never to the page's body.
+        await until(async () => (await p.evaluate(() => document.activeElement?.textContent)) === 'Add details', 3000)
         await shot('part')
       })
 
@@ -168,6 +170,7 @@ export default {
         const after = (await db`select legal_name, home_state, grievance_name, grievance_phone, grievance_email, address, support_email from shop_settings where tenant_id = ${T}`)[0]
         assert.deepEqual(after, { legal_name: 'Mehr Studio LLP', home_state: '08', grievance_name: 'Aanya Rao', grievance_phone: '9827041009', grievance_email: F.email, address: before.address, support_email: before.support_email })
         await card().getByRole('heading', { level: 2, name: 'Open your store' }).waitFor()
+        await until(async () => (await p.evaluate(() => document.activeElement?.textContent)) === 'Open store', 3000)
       })
 
       await t.step('payments: the switch and the limit, saved; Razorpay is its own page', async () => {
@@ -244,6 +247,7 @@ export default {
         await p.locator('main').getByText('Open', { exact: true }).first().waitFor()
         await card().getByRole('heading', { level: 2, name: 'Your store is open' }).waitFor()
         assert.equal(await card().getByRole('link', { name: 'See your store' }).getAttribute('href'), `https://${SLUG}.frata.test`)
+        await until(async () => (await p.evaluate(() => document.activeElement?.textContent)) === 'See your store', 3000)
         await shot('open')
         await card().getByRole('button', { name: 'Hide this card' }).click()
         await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor()

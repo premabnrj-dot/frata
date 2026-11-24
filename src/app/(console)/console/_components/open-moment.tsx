@@ -35,10 +35,16 @@ export function OpenMoment({ name, address, whatsapp, header, open, children }: 
   const [layer, setLayer] = useState(false)
   const [hidden, setHidden] = useState(false)
   const value = useMemo(() => ({ opened: () => { setJust(true); setHidden(false); setLayer(true) }, closed: () => { setJust(false); setLayer(false) }, hide: () => setHidden(true) }), [])
+  // Go to Home: the layer leaves and Home shows the open card in its place, so nothing holds focus. Put it on the card's
+  // "See your store" (or the next step's button when there is no open card).
+  const closed = () => {
+    setLayer(false)
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-setup-next]')?.focus())
+  }
   return (
     <Ctx.Provider value={value}>
       {just && !hidden && open ? open : <>{header}{children}</>}
-      {layer && <MomentLayer name={name} address={address} whatsapp={whatsapp} onClose={() => setLayer(false)} />}
+      {layer && <MomentLayer name={name} address={address} whatsapp={whatsapp} onClose={closed} />}
     </Ctx.Provider>
   )
 }
