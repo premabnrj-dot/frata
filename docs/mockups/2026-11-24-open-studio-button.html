@@ -1,0 +1,60 @@
+<title>Open Studio button</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: two screens (Clients list, client page), each with and without the button, desktop then phone. Neel tokens. */
+:root{--g0:#fff;--g50:#F6F5F3;--g100:#EEEDEA;--g200:#E3E1DD;--g600:#67625C;--g950:#171615;--n50:#EEF0FD;--n600:#3A44C2;--ok-bg:#E7F5EC;--ok-fg:#1A6B43;--warn-bg:#FDF3DC;--warn-fg:#85500B;
+--bg:#EEEDEA;--surface:#fff;--line:#E3E1DD;--text:#171615;--text2:#67625C;--sunk:#F6F5F3;--action:#3A44C2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171615;--surface:#22201E;--line:#34312E;--text:#F6F5F3;--text2:#A29D97;--sunk:#1c1b19;--action:#8E97F0;--ok-bg:#12301f;--ok-fg:#7FD3A6;--warn-bg:#3a2a0a;--warn-fg:#F0C070;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171615;--surface:#22201E;--line:#34312E;--text:#F6F5F3;--text2:#A29D97;--sunk:#1c1b19;--action:#8E97F0;--ok-bg:#12301f;--ok-fg:#7FD3A6;--warn-bg:#3a2a0a;--warn-fg:#F0C070;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/20px Inter,system-ui,sans-serif;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1040px;margin:auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:22px;line-height:28px;margin:0}h2{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text2);margin:0 0 8px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media(max-width:820px){.pair{grid-template-columns:1fr}}
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0;overflow-x:auto}
+.cap{font-size:12px;color:var(--text2);margin-bottom:8px}
+table{width:100%;border-collapse:collapse}th{background:var(--sunk);text-align:left;font-size:12px;font-weight:500;color:var(--text2);padding:8px 10px;height:36px}
+td{padding:8px 10px;border-top:1px solid var(--line);height:48px;vertical-align:middle}
+.sub{display:block;font-size:12px;color:var(--text2)}
+.badge{font-size:12px;border-radius:999px;padding:2px 8px;background:var(--ok-bg);color:var(--ok-fg)}.badge.w{background:var(--warn-bg);color:var(--warn-fg)}
+.btn{font:500 13px/18px Inter,sans-serif;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:5px 12px;box-shadow:0 1px 2px rgba(23,22,21,.06);white-space:nowrap;min-height:30px}
+.btn.l{padding:9px 14px;min-height:36px}.btn.p{background:var(--action);border-color:var(--action);color:#fff}
+.acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.phone{width:340px;max-width:100%;border:1px solid var(--line);border-radius:20px;padding:14px;background:var(--surface)}
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.stack{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+</style>
+<main>
+<h1>Open Studio</h1>
+
+<section><h2>Clients list · desktop</h2>
+<div class="pair">
+<div class="frame"><div class="cap">Shown: partner owner or Lead, Studio on</div>
+<table><tr><th>Client</th><th>Stage</th><th>Next</th><th><span style="position:absolute;left:-9999px">Next step</span></th></tr>
+<tr><td>Kasturi Looms<span class="sub">kasturi.frrata.shop</span></td><td><span class="badge">Live</span></td><td>Bill due 2 Dec</td><td><div class="acts"><button class="btn">Remind</button><button class="btn">Open Studio</button></div></td></tr>
+<tr><td>Ikat House<span class="sub">ikat.frrata.shop</span></td><td><span class="badge w">Building</span></td><td>Hand over</td><td><div class="acts"><button class="btn">Hand over</button><button class="btn">Open Studio</button></div></td></tr></table></div>
+<div class="frame"><div class="cap">Hidden: ordinary partner, Builder, removed link, Studio off. Same row, nothing else changes</div>
+<table><tr><th>Client</th><th>Stage</th><th>Next</th><th></th></tr>
+<tr><td>Kasturi Looms<span class="sub">kasturi.frrata.shop</span></td><td><span class="badge">Live</span></td><td>Bill due 2 Dec</td><td><div class="acts"><button class="btn">Remind</button></div></td></tr></table></div>
+</div></section>
+
+<section><h2>Client page · desktop</h2>
+<div class="pair">
+<div class="frame"><div class="cap">Shown: beside Open store, second in line</div>
+<div class="hd"><div><b style="font-size:20px">Kasturi Looms</b><span class="sub">kasturi.frrata.shop · Bill due 2 Dec</span></div>
+<div class="acts"><button class="btn l">More</button><button class="btn l">Open store</button><button class="btn l">Open Studio</button><button class="btn l p">Remind</button></div></div></div>
+<div class="frame"><div class="cap">Hidden</div>
+<div class="hd"><div><b style="font-size:20px">Kasturi Looms</b><span class="sub">kasturi.frrata.shop · Bill due 2 Dec</span></div>
+<div class="acts"><button class="btn l">More</button><button class="btn l">Open store</button><button class="btn l p">Remind</button></div></div></div>
+</div></section>
+
+<section><h2>Phone</h2>
+<div class="stack" style="gap:16px;align-items:flex-start">
+<div class="phone"><div class="cap">List, shown</div><div class="card"><div class="row"><b>Kasturi Looms</b><span class="badge">Live</span></div><span class="sub">Bill due 2 Dec</span><div class="stack"><button class="btn">Remind</button><button class="btn">Open Studio</button></div></div></div>
+<div class="phone"><div class="cap">List, hidden</div><div class="card"><div class="row"><b>Kasturi Looms</b><span class="badge">Live</span></div><span class="sub">Bill due 2 Dec</span><div class="stack"><button class="btn">Remind</button></div></div></div>
+<div class="phone"><div class="cap">Client page, shown</div><b style="font-size:18px">Kasturi Looms</b><div class="stack"><button class="btn l">Open store</button><button class="btn l">Open Studio</button><button class="btn l p">Remind</button></div></div>
+<div class="phone"><div class="cap">Client page, hidden</div><b style="font-size:18px">Kasturi Looms</b><div class="stack"><button class="btn l">Open store</button><button class="btn l p">Remind</button></div></div>
+</div></section>
+</main>

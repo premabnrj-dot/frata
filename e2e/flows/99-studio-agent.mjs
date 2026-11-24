@@ -119,6 +119,31 @@ export default {
         await db`delete from members where tenant_id = ${other}`.catch(() => {}); await db`delete from tenants where id = ${other}`.catch(() => {})
       }
     })
+    await t.step('Open Studio on Partner workspace › Clients: one click to Studio on that store; hidden for a person Studio refuses', async () => {
+      // Owner 2026-11-24, docs/mockups/2026-11-24-open-studio-button.html. The store comes from the person's own list.
+      const c = await signedIn(t.browser, 'partner', { viewport: { width: 1280, height: 860 }, reducedMotion: 'reduce' })
+      const q = await c.newPage(); q.setDefaultTimeout(15_000); q.on('pageerror', (e) => t.errors.push(e.message))
+      await q.goto(CONSOLE + '/partner')
+      const row = q.getByRole('row').filter({ hasText: 'Kesar test' })
+      await row.waitFor()
+      await row.getByRole('button', { name: 'Open Studio' }).click()
+      await q.waitForURL(/\/partner\/studio$/)
+      await q.getByText('No requests yet').waitFor()
+      // The client's own page carries it beside Open store.
+      await q.goto(CONSOLE + '/partner')
+      await row.getByRole('link', { name: 'Kesar test' }).click()
+      await q.getByRole('button', { name: 'Open store' }).waitFor()
+      await q.getByRole('button', { name: 'Open Studio' }).waitFor()
+      // Not Frrata staff: no button, on either screen, and nothing to tell why.
+      await db`delete from platform_staff where user_id = ${P.id}`
+      await q.reload()
+      assert.equal(await q.getByRole('button', { name: 'Open Studio' }).count(), 0, 'a person Studio refuses sees no button on the client page')
+      await q.goto(CONSOLE + '/partner')
+      await q.getByRole('row').filter({ hasText: 'Kesar test' }).waitFor()
+      assert.equal(await q.getByRole('button', { name: 'Open Studio' }).count(), 0, 'nor on the Clients list')
+      await db`insert into platform_staff (user_id, email, role) values (${P.id}, ${P.email}, 'support') on conflict (user_id) do nothing`
+      await c.close()
+    })
     const { ctx, p } = await open({ width: 1280, height: 860 })
     const chat = p.getByRole('complementary', { name: 'Chat' }), insp = p.getByRole('complementary', { name: 'Inspector' })
     const ask = chat.getByRole('textbox', { name: 'Ask for a change' })
