@@ -140,6 +140,13 @@ export default {
         const side = p.getByRole('dialog', { name: `Quick look: ${NAME}` })
         await side.getByRole('heading', { name: /^Payments/ }).waitFor()
         await p.screenshot({ path: t.out('panel') })
+        await side.getByRole('button', { name: 'Edit' }).click()
+        const edit = p.getByRole('dialog', { name: `Edit ${NAME}` })
+        await edit.getByLabel('Amount comes from').selectOption('vercel')
+        await edit.getByRole('button', { name: 'Save details' }).click()
+        await expectToast(p, 'Saved.', 'ok')
+        const [src] = await db`select source from cost_items where name = ${NAME}`
+        assert.equal(src.source, 'vercel', 'the cost names its vendor')
         await side.getByRole('button', { name: 'End cost' }).click()
         const dlg = p.getByRole('dialog', { name: `End ${NAME}?` })
         await dlg.getByRole('button', { name: 'End cost' }).click()

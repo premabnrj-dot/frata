@@ -20,6 +20,10 @@ export const COST_KINDS = ['recurring', 'one_time'] as const
 export const COST_CADENCES = ['monthly', 'quarterly', 'yearly'] as const
 export type Cadence = (typeof COST_CADENCES)[number]
 export const COST_CURRENCIES = ['INR', 'USD'] as const
+/** Where a dollar cost may take its figure from: the vendors whose daily charges Admin › Infrastructure already reads (spec docs/specs/2026-11-23-costs-autofill.md). */
+export const COST_SOURCES = ['vercel', 'mux'] as const
+export type CostSource = (typeof COST_SOURCES)[number]
+export const SOURCE_WORDS: Record<CostSource, string> = { vercel: 'Vercel', mux: 'Mux' }
 export type CostCurrency = (typeof COST_CURRENCIES)[number]
 export const CADENCE_WORDS: Record<Cadence, string> = { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' }
 const STEP: Record<Cadence, number> = { monthly: 1, quarterly: 3, yearly: 12 }
@@ -35,6 +39,8 @@ export const HORIZON_DAYS = 30
 
 export type CostItem = {
   id: string
+  /** Null: typed by hand. Only a repeating dollar cost may name one. */
+  source?: CostSource | null
   name: string
   kind: 'recurring' | 'one_time'
   cadence: Cadence | null
@@ -273,3 +279,18 @@ export function overview(items: readonly CostItem[], payments: readonly PaymentR
     categories: byCategory(payments, month).map((c) => ({ ...c, before: before.get(c.category) ?? 0 })),
   }
 }
+
+// ── A vendor's own figure for a bill ────────────────────────────────────────────────────────────────────────────────
+
+/** The month a bill covers: vendors charge for usage in arrears, so a bill due in a month is for the month before it. */
+export const billMonthOf = (due: string): string => monthKey(due, -1)
+
+/** What a vendor's daily charges add up to in a month (`YYYY-MM`), in micro-dollars; null when no day of that month was read. */
+export function monthMicros(rows: readonly { day: string; costMicros: number }[], ym: string): number | null {
+  let sum = 0, seen = false
+  for (const r of rows) if (r.day.slice(0, 7) === ym) { sum += r.costMicros; seen = true }
+  return seen ? sum : null
+}
+
+/** A month is final once it has ended: a figure for the month still running is partial and is not offered. */
+export const monthEnded = (ym: string, today: string): boolean => ym < today.slice(0, 7)

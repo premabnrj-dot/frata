@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { istDayKey } from '@/domains/time/day'
 import {
-  overview, HORIZON_DAYS, anchorMayMove, burnOf, byCategory, cleanText, costsCsv, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
+  billMonthOf, monthEnded, monthMicros, overview, HORIZON_DAYS, anchorMayMove, burnOf, byCategory, cleanText, costsCsv, parseAmount, parseDay, parseRupees, dueDates, dueRows, dueState, fyRange, fyStartOf, isDueDate, isLive, monthlyPaise, spentIn, usdToPaise,
   type CostItem, type CostPayment,
 } from '../costs'
 
@@ -255,5 +255,22 @@ describe('the CSV cap', () => {
     const r = { id: 'p', itemId: 'i', periodFor: '2026-11-26', paidOn: '2026-11-23', amount: 100, currency: 'INR' as const, inrPaise: 100, gstPaise: null, createdAt: new Date(0), category: 'AI', name: 'A', vendor: null }
     expect(costsCsv([r], true).trim().split('\r\n').at(-1)).toBe('"Export capped at 1 rows. Pick a shorter period."')
     expect(costsCsv([r]).includes('capped')).toBe(false)
+  })
+})
+
+describe('a vendor\'s figure for a bill', () => {
+  it('a bill due in a month covers the month before it, across a year end', () => {
+    expect(billMonthOf('2026-11-05')).toBe('2026-10')
+    expect(billMonthOf('2027-01-01')).toBe('2026-12')
+  })
+  it('adds the daily charges of that month only; null when no day was read', () => {
+    const rows = [{ day: '2026-10-30', costMicros: 1_000_000 }, { day: '2026-10-31', costMicros: 2_500_000 }, { day: '2026-11-01', costMicros: 9_000_000 }, { day: '2026-09-30', costMicros: 7_000_000 }]
+    expect(monthMicros(rows, '2026-10')).toBe(3_500_000)
+    expect(monthMicros(rows, '2026-08')).toBeNull()
+    expect(monthMicros([{ day: '2026-10-02', costMicros: 0 }], '2026-10')).toBe(0)
+  })
+  it('only a month that has ended is final', () => {
+    expect(monthEnded('2026-10', '2026-11-01')).toBe(true)
+    expect(monthEnded('2026-11', '2026-11-30')).toBe(false)
   })
 })

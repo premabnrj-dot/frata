@@ -10,7 +10,7 @@
 
 import { sql } from 'drizzle-orm'
 import { boolean, check, date, foreignKey, index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-import { AMOUNT_MAX, COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, COST_KINDS } from '@/domains/admin/costs'
+import { AMOUNT_MAX, COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, COST_KINDS, COST_SOURCES } from '@/domains/admin/costs'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, id, money } from './schema'
 
@@ -34,6 +34,8 @@ export const costItems = pgTable('cost_items', {
   anchorOn: date('anchor_on', { mode: 'string' }).notNull(),
   endsOn: date('ends_on', { mode: 'string' }),
   note: text('note'),
+  /** Where a repeating dollar cost takes its figure from (COST_SOURCES); null is typed by hand. */
+  source: text('source'),
   createdAt: at('created_at').notNull().defaultNow(),
 }, (t) => [
   index('cost_items_live').on(t.kind, t.endsOn),
@@ -47,6 +49,7 @@ export const costItems = pgTable('cost_items', {
   check('cost_items_vendor', sql`${t.vendor} is null or length(${t.vendor}) <= 80`),
   check('cost_items_note', sql`${t.note} is null or length(${t.note}) <= 300`),
   check('cost_items_days', sql`${t.anchorOn} between ${DAY_MIN} and ${DAY_MAX} and (${t.endsOn} is null or ${t.endsOn} between ${DAY_MIN} and ${DAY_MAX})`),
+  check('cost_items_source', sql`${t.source} is null or (${t.source} in (${list(COST_SOURCES)}) and ${t.kind} = 'recurring' and ${t.currency} = 'USD')`),
   check('cost_items_once', sql`${t.kind} <> 'one_time' or not ${t.varies}`),
 ])
 

@@ -2,8 +2,8 @@ import 'server-only'
 import { cache } from 'react'
 import { and, asc, desc, eq, gte, or, sql } from 'drizzle-orm'
 import {
-  anchorMayMove, daysBetween, fyRange, isDueDate, LOOKBACK_MONTHS, MAX_LIVE_COSTS, type Cadence, type CostCategory, type CostCurrency,
-  type CostItem, type CostItemInput, type PaidInput, type PaymentRow, dueRows,
+  anchorMayMove, billMonthOf, daysBetween, dueState, fyRange, isDueDate, isLive, LOOKBACK_MONTHS, MAX_LIVE_COSTS, monthEnded, monthMicros, type Cadence, type CostCategory, type CostCurrency,
+  type CostItem, type CostSource, type CostItemInput, type PaidInput, type PaymentRow, dueRows,
 } from '@/domains/admin/costs'
 import { dueCostsByMonth, unpaidCostsToMonthEnd } from '@/domains/admin/cash'
 import { FX_RATE_BAND_E4 } from '@/domains/studio/credits'
@@ -18,6 +18,7 @@ import { adminDb } from '@/lib/db/admin'
 import { costItems, costPayments } from '@/lib/db/schema-costs'
 import { errName } from '@/lib/log'
 import { auditStaff } from './audit'
+import { usageRows } from './infra'
 
 // =============================================================================
 // FILE: src/lib/admin/costs.ts — ADMIN › COSTS' reads and writes (spec docs/specs/2026-11-23-admin-costs.md; plan
@@ -39,7 +40,7 @@ export const UNDO_FREE_MS = 10 * 60_000
 const MAX_BACKDATE_DAYS = 45
 
 const toItem = (r: typeof costItems.$inferSelect): CostItem => ({
-  id: r.id, name: r.name, vendor: r.vendor, kind: r.kind as CostItem['kind'], cadence: r.cadence as Cadence | null, amount: r.amount,
+  id: r.id, source: r.source as CostSource | null, name: r.name, vendor: r.vendor, kind: r.kind as CostItem['kind'], cadence: r.cadence as Cadence | null, amount: r.amount,
   currency: r.currency as CostCurrency, varies: r.varies, anchorOn: r.anchorOn, endsOn: r.endsOn, category: r.category, note: r.note,
 })
 
@@ -239,7 +240,7 @@ export async function endCost(staff: StaffOk, itemId: string, endsOn: string): P
 }
 
 export type CostPatch = Partial<{
-  name: string; vendor: string | null; category: CostCategory; note: string | null; varies: boolean
+  name: string; vendor: string | null; category: CostCategory; note: string | null; varies: boolean; source: CostSource | null
   amount: number; currency: CostCurrency; cadence: Cadence; anchorOn: string
 }>
 
@@ -265,6 +266,7 @@ export async function editCost(staff: StaffOk, itemId: string, patch: CostPatch,
         if (patch.cadence !== undefined && patch.cadence !== row.cadence && (last?.n ?? 0) > 0) return refuse('locked')
         if (patch.anchorOn !== undefined && !anchorMayMove(patch.anchorOn, last?.p ?? null)) return refuse('locked')
       }
+      if (patch.source !== undefined && patch.source !== null && (row.kind !== 'recurring' || row.currency !== 'USD')) return refuse('bad_input')
       await tx.update(costItems).set(patch).where(eq(costItems.id, itemId))
       await auditStaff(tx, staff, { action: 'costs.item.edit', target: itemId, detail: { fields } })
       return { ok: true }
@@ -301,6 +303,34 @@ export async function costForecastInputs(staff: StaffOk, today: string, months: 
   const r = rate ? rate.rateE4 : null
   const { byMonth, unrated } = dueCostsByMonth(items, r, monthKey(today, 1), months)
   return { dueByMonth: byMonth, unpaidToMonthEnd: unpaidCostsToMonthEnd(items, paidBy, r, today), unrated }
+}
+
+/** A vendor's figure for the bill a cost is next due to pay. */
+export type VendorFigure = { source: CostSource; month: string; micros: number }
+
+/** For every repeating dollar cost that names a source: what that vendor's daily charges add up to for the month the next bill covers,
+ *  offered only once that month has ended (a running month is partial). Nothing is saved; Mark paid opens with it for the person to confirm.
+ *  A cost whose month has no rows read, or whose pull failed, is simply absent (the bill stays typed by hand, never a zero). */
+export async function vendorFigures(staff: StaffOk, today: string): Promise<Record<string, VendorFigure>> {
+  adminOnly(staff)
+  const { items, payments } = await loadCosts(today)
+  const paidBy = new Map<string, Set<string>>()
+  for (const p of payments) { const s = paidBy.get(p.itemId) ?? new Set<string>(); s.add(p.periodFor); paidBy.set(p.itemId, s) }
+  const wanted: { id: string; source: CostSource; month: string }[] = []
+  for (const it of items) {
+    if (!it.source || it.kind !== 'recurring' || !isLive(it, today)) continue
+    const next = dueState(it, paidBy.get(it.id) ?? new Set<string>(), today).next
+    if (!next) continue
+    const month = billMonthOf(next)
+    if (monthEnded(month, today)) wanted.push({ id: it.id, source: it.source, month })
+  }
+  const out: Record<string, VendorFigure> = {}
+  for (const source of new Set(wanted.map((w) => w.source))) {
+    const mine = wanted.filter((w) => w.source === source)
+    const rows = await usageRows(source, `${mine.map((w) => w.month).sort()[0]}-01`).catch(() => [])
+    for (const w of mine) { const micros = monthMicros(rows, w.month); if (micros !== null && micros > 0) out[w.id] = { source, month: w.month, micros } }
+  }
+  return out
 }
 
 // ── Admin › Cashflow reads Costs only through these exports (check:tenant § 10: no other file names the cost tables) ────────────────

@@ -8,7 +8,7 @@ import { confirmPasskey } from '@/components/passkeys/passkey-client'
 import type { ActionResult } from '@/components/ui/action-form'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import type { Cadence, CostCategory, CostCurrency } from '@/domains/admin/costs'
+import type { Cadence, CostCategory, CostCurrency, CostSource } from '@/domains/admin/costs'
 import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
@@ -29,7 +29,8 @@ export function AddCostButton({ today, starter = null, label = 'Add cost', varia
 
 // ── Mark paid, with a toast that undoes it ──────────────────────────────────────────────────────────────────────────
 
-export type PaidTarget = { itemId: string; name: string; currency: CostCurrency; varies: boolean; period: string; periodText: string; today: string; amount: string; inr: string }
+/** `from` is a vendor's own figure for the bill ("From Vercel · Oct"): it only fills the field, the person confirms it. */
+export type PaidTarget = { itemId: string; name: string; currency: CostCurrency; varies: boolean; period: string; periodText: string; today: string; amount: string; inr: string; from?: { label: string; amount: string } }
 
 /** Undo with the passkey step when the server asks (a payment older than ten minutes). */
 async function undoWith(itemId: string, paymentId: string, router: ReturnType<typeof useRouter>): Promise<{ ok: boolean; error?: string }> {
@@ -81,7 +82,7 @@ export function UndoPaymentButton({ itemId, paymentId }: { itemId: string; payme
 
 // ── A cost's own actions ────────────────────────────────────────────────────────────────────────────────────────────
 
-export type CostFacts = { id: string; name: string; vendor: string | null; category: CostCategory; note: string | null; varies: boolean; currency: CostCurrency; amount: string; cadence: Cadence | null; anchorOn: string; recurring: boolean; paid: boolean }
+export type CostFacts = { id: string; source: CostSource | null; name: string; vendor: string | null; category: CostCategory; note: string | null; varies: boolean; currency: CostCurrency; amount: string; cadence: Cadence | null; anchorOn: string; recurring: boolean; paid: boolean }
 
 // The fields load when a dialog opens (they hold the date picker, the switch and the segmented choice).
 const AddFields = dynamic(() => import('./fields').then((m) => m.AddFields))

@@ -3,30 +3,34 @@ import { Money, Numeric } from '@/components/data/numeric'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
-import { CATEGORY_WORDS, overview, usdToPaise, type CostCategory, type CostItem, type CostPayment, type DueState } from '@/domains/admin/costs'
+import { CATEGORY_WORDS, overview, SOURCE_WORDS, usdToPaise, type CostCategory, type CostItem, type CostPayment, type DueState } from '@/domains/admin/costs'
 import { paise } from '@/domains/money/paise'
 import { monthKey } from '@/domains/time/month'
 import { formatInr } from '@/lib/format'
+import type { VendorFigure } from '@/lib/admin/costs'
 import { NeedsBand } from '../../_components/needs-band'
 import { amountText, dayText, inputOf, monthLongName, monthShortName, whenOf } from '../format'
 import { MarkPaidButton, type PaidTarget } from './forms'
 
 /** What Mark paid opens with for a cost's next unpaid bill. */
-export function paidTarget(item: CostItem, state: DueState, today: string, rate: number | null): PaidTarget | null {
+export function paidTarget(item: CostItem, state: DueState, today: string, rate: number | null, figure?: VendorFigure | null): PaidTarget | null {
   if (!state.next) return null
+  // A vendor's figure fills the bill and its rupees estimate; the person still confirms both.
+  const micros = figure ? figure.micros : item.amount
   return {
     itemId: item.id, name: item.name, currency: item.currency, varies: item.varies, period: state.next, periodText: dayText(state.next), today,
-    amount: inputOf(item.amount, item.currency), inr: item.currency === 'USD' && rate ? inputOf(usdToPaise(item.amount, rate), 'INR') : '',
+    amount: inputOf(micros, item.currency), inr: item.currency === 'USD' && rate ? inputOf(usdToPaise(micros, rate), 'INR') : '',
+    ...(figure ? { from: { label: `From ${SOURCE_WORDS[figure.source]} · ${monthShortName(figure.month)}`, amount: inputOf(figure.micros, item.currency) } } : {}),
   }
 }
 
 const sub = (item: CostItem) => [item.vendor, CATEGORY_WORDS[item.category as CostCategory]].filter(Boolean).join(' · ')
 
 /** The Overview (mockup § Overview): the overdue band, four figures, what is due, and the month by category. */
-export function Overview({ items, payments, today, rate }: { items: CostItem[]; payments: (CostPayment & { amount: number; currency: 'INR' | 'USD'; gstPaise: number | null; createdAt: Date })[]; today: string; rate: number | null }) {
+export function Overview({ items, payments, today, rate, figures = {} }: { figures?: Record<string, VendorFigure>; items: CostItem[]; payments: (CostPayment & { amount: number; currency: 'INR' | 'USD'; gstPaise: number | null; createdAt: Date })[]; today: string; rate: number | null }) {
   const o = overview(items, payments, today, rate)
   const first = o.due.find((d) => d.row.tone === 'overdue')
-  const target = first ? paidTarget(first.item, first.state, today, rate) : null
+  const target = first ? paidTarget(first.item, first.state, today, rate, figures[first.item.id]) : null
   const inr = (p: number) => formatInr(paise(p))
   const top = o.categories[0]?.paise ?? 1
   const prev = monthShortName(monthKey(today, -1))
@@ -46,11 +50,11 @@ export function Overview({ items, payments, today, rate }: { items: CostItem[]; 
             <DataTableHead><th>Cost</th><th>When</th><th>Due</th><th className="text-right">Amount</th><th><span className="sr-only">Action</span></th></DataTableHead>
             <DataTableBody>
               {o.due.map(({ row, item, state }) => {
-                const w = whenOf(state)!, t = paidTarget(item, state, today, rate)!
+                const w = whenOf(state)!, t = paidTarget(item, state, today, rate, figures[item.id])!
                 return (
                   <DataTableRow key={item.id}>
                     <Td cell="a"><Link href={`/admin/costs?view=all&id=${item.id}`} data-row-link className="font-medium hover:underline">{item.name}</Link>
-                      <span className="hidden text-small text-muted-foreground md:block">{sub(item)}</span>
+                      <span className="hidden text-small text-muted-foreground md:block">{sub(item)}{t.from ? <> · {t.from.label}</> : null}</span>
                       <span className="text-small text-muted-foreground md:hidden">{dayText(row.next)} · {w.text.toLowerCase()}</span></Td>
                     <Td cell="hide"><Badge tone={w.tone}>{w.text}</Badge>{item.varies ? <> <Tag>varies</Tag></> : null}</Td>
                     <Td cell="hide">{dayText(row.next)}</Td>

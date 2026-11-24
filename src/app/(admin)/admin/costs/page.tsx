@@ -12,7 +12,7 @@ import { ViewTabs } from '@/components/ui/view-tabs'
 import { CADENCE_WORDS, CATEGORY_WORDS, dueState, fyStartOf, isLive, monthlyPaise, type CostCategory, type CostItem } from '@/domains/admin/costs'
 import { paise } from '@/domains/money/paise'
 import { istDayKey } from '@/domains/time/day'
-import { costPanel, costsData } from '@/lib/admin/costs'
+import { costPanel, costsData, vendorFigures } from '@/lib/admin/costs'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { ChipLink } from '../_components/chip-link'
 import { CostSide } from './_components/cost-side'
@@ -74,7 +74,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
     )
   }
   const tabs = <ViewTabs label="Costs" tabs={VIEWS.map(([k, l]) => ({ href: `/admin/costs?view=${k}`, label: l, current: view === k }))} />
-  if (view === 'overview') return <>{header}{tabs}<Overview items={data.items} payments={data.payments} today={today} rate={rate} /></>
+  if (view === 'overview') return <>{header}{tabs}<Overview items={data.items} payments={data.payments} today={today} rate={rate} figures={await vendorFigures(staff, today)} /></>
   if (view === 'payments') return <>{header}{tabs}<Payments staff={staff} today={today} sp={sp} /></>
 
   // All costs
@@ -126,7 +126,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
         )}
       </div>
       {open
-        ? <CostSide item={open.item} payments={open.payments} today={today} rate={rate} closeHref={here}
+        ? <CostSide item={open.item} payments={open.payments} today={today} rate={rate} figure={(await vendorFigures(staff, today))[open.item.id] ?? null} closeHref={here}
             {...(prevId ? { prevHref: `${here}&id=${prevId}` } : {})} {...(nextId ? { nextHref: `${here}&id=${nextId}` } : {})} />
         : id ? <Panel title="We couldn’t find that cost" /> : null}
     </>
