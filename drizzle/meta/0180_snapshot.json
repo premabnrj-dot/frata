@@ -1,6 +1,6 @@
 {
-  "id": "7c1ad7f7-ae27-49ad-8459-cae37c09f89b",
-  "prevId": "7bf2683c-b7f6-4ae4-9521-f1a5b5984590",
+  "id": "54d3b8e0-da53-411d-ac64-44deecadd5cf",
+  "prevId": "511c60c1-77c4-4f5e-b2b7-c1a4d442fc02",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -23800,6 +23800,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -23875,6 +23881,10 @@
         "cost_items_days": {
           "name": "cost_items_days",
           "value": "\"cost_items\".\"anchor_on\" between '2020-01-01' and '2100-12-31' and (\"cost_items\".\"ends_on\" is null or \"cost_items\".\"ends_on\" between '2020-01-01' and '2100-12-31')"
+        },
+        "cost_items_source": {
+          "name": "cost_items_source",
+          "value": "\"cost_items\".\"source\" is null or (\"cost_items\".\"source\" in ('vercel','mux') and \"cost_items\".\"kind\" = 'recurring' and \"cost_items\".\"currency\" = 'USD')"
         },
         "cost_items_once": {
           "name": "cost_items_once",

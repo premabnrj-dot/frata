@@ -4,6 +4,7 @@
 //  - add (repeating and one-time with its payment), Mark paid on a real due date only, twice is one row;
 //  - Undo is free for ten minutes and then needs a fresh passkey check; the audit row keeps what it deleted;
 //  - edits: the anchor moves only past the last paid period, the cadence is locked once paid, money edits need the check.
+import postgres from 'postgres'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 const host = process.env.INT_DB_HOST
@@ -85,6 +86,31 @@ describe.skipIf(!host)('Admin › Costs', () => {
     expect(await costs.markPaid(staff, id, { periodFor: '2026-11-09', paidOn: TODAY, amount: 2_500_000 }, TODAY)).toEqual({ ok: false, error: 'not_due' })
     expect(await costs.editCost(staff, id, { amount: 1, currency: 'INR' }, new Date())).toEqual({ ok: false, error: 'locked' })
     expect(await costs.addCost(staff, { kind: 'one_time', name: 'Future', category: 'other', amount: 1, currency: 'INR', paidOn: '2026-12-31' }, TODAY)).toEqual({ ok: false, error: 'bad_input' })
+  })
+
+  it('a cost can name a vendor to fill its bill from; only a repeating dollar cost may, and the figure is that vendor\'s last full month', async () => {
+    const staff = master()
+    const usd = (name: string, extra: object = {}) => recurring(name, { currency: 'USD', amount: 20_000_000, varies: true, anchorOn: '2026-11-05', ...extra })
+    const clear = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    await clear`delete from infra_usage_daily where source = 'mux' and day between '2026-10-01' and '2026-10-31'` // a rerun starts with no October rows
+    await clear.end()
+    const a = await costs.addCost(staff, usd('Mux'), TODAY)
+    const id = (a as { id: string }).id
+    const inr = (await costs.addCost(staff, recurring('Rupee'), TODAY) as { id: string }).id
+    expect(await costs.editCost(staff, inr, { source: 'mux' }, new Date())).toEqual({ ok: false, error: 'bad_input' }) // a rupee cost has no vendor figure
+    expect((await costs.vendorFigures(staff, TODAY))[id]).toBeUndefined() // no source yet
+    expect(await costs.editCost(staff, id, { source: 'mux' }, new Date())).toEqual({ ok: true })
+    expect((await costs.vendorFigures(staff, TODAY))[id]).toBeUndefined() // the month has no rows read: stays typed by hand, never a zero
+    const sql = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    await sql`insert into infra_usage_daily (source, day, project, service, subject, quantity, unit, cost_micros) values ('mux', '2026-10-30', ${stamp}, 'video', '', 1, 'min', 1000000), ('mux', '2026-10-31', ${stamp}, 'video', '', 1, 'min', 2500000), ('mux', '2026-11-02', ${stamp}, 'video', '', 1, 'min', 9000000) on conflict do nothing`
+    await sql.end()
+    const f = (await costs.vendorFigures(staff, TODAY))[id]
+    expect(f?.month).toBe('2026-10')
+    expect(f?.micros).toBeGreaterThanOrEqual(3_500_000)
+    expect(await costs.editCost(staff, id, { currency: 'INR', amount: 188_400 }, new Date())).toEqual({ ok: false, error: 'bad_input' }) // a currency change cannot strand a source
+    expect(await costs.editCost(staff, id, { source: null }, new Date())).toEqual({ ok: true })
+    expect((await costs.vendorFigures(staff, TODAY))[id]).toBeUndefined()
+    await expect(costs.vendorFigures(support, TODAY)).rejects.toThrow('ADMIN_ONLY')
   })
 
   it('a long-past anchor is refused on add', async () => {

@@ -1,0 +1,2 @@
+ALTER TABLE "cost_items" ADD COLUMN "source" text;--> statement-breakpoint
+ALTER TABLE "cost_items" ADD CONSTRAINT "cost_items_source" CHECK ("cost_items"."source" is null or ("cost_items"."source" in ('vercel','mux') and "cost_items"."kind" = 'recurring' and "cost_items"."currency" = 'USD'));

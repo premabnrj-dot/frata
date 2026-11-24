@@ -4,23 +4,24 @@ import { CADENCE_WORDS, CATEGORY_WORDS, dueState, isLive, monthlyPaise, usdToPai
 import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
 import { amountText, dayText, inputOf, whenOf } from '../format'
+import type { VendorFigure } from '@/lib/admin/costs'
 import { CostFrame } from './cost-frame'
 import { CostFooter, CostHeaderMenu, UndoPaymentButton, type CostFacts } from './forms'
 import { paidTarget } from './overview'
 
 /** One cost beside the list (mockup § All costs): its facts, its payments (the newest can be undone) and its actions. */
-export function CostSide({ item, payments, today, rate, closeHref, prevHref, nextHref }: {
-  item: CostItem; payments: PaymentRow[]; today: string; rate: number | null; closeHref: string; prevHref?: string; nextHref?: string
+export function CostSide({ item, payments, today, rate, figure = null, closeHref, prevHref, nextHref }: {
+  figure?: VendorFigure | null; item: CostItem; payments: PaymentRow[]; today: string; rate: number | null; closeHref: string; prevHref?: string; nextHref?: string
 }) {
   const ended = !isLive(item, today)
   const state = dueState(item, new Set(payments.map((p) => p.periodFor)), today)
   const w = ended ? null : whenOf(state)
   const m = monthlyPaise(item, rate)
   const facts: CostFacts = {
-    id: item.id, name: item.name, vendor: item.vendor ?? null, category: item.category as CostCategory, note: item.note ?? null, varies: item.varies, currency: item.currency,
+    id: item.id, source: item.source ?? null, name: item.name, vendor: item.vendor ?? null, category: item.category as CostCategory, note: item.note ?? null, varies: item.varies, currency: item.currency,
     amount: inputOf(item.amount, item.currency), cadence: item.cadence, anchorOn: item.anchorOn, recurring: item.kind === 'recurring' && !ended, paid: payments.length > 0,
   }
-  const target = ended ? null : paidTarget(item, state, today, rate)
+  const target = ended ? null : paidTarget(item, state, today, rate, figure)
   return (
     <CostFrame title={item.name} closeHref={closeHref} {...(prevHref ? { prevHref } : {})} {...(nextHref ? { nextHref } : {})} footer={<CostFooter c={facts} today={today} target={target} />}>
       <div className="flex flex-wrap items-center gap-1.5">

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 // An after-live migration (`-- apply: after-live` on its first line) is never printed for production unless named with
-// --after-live, and release:check names every one (security review of O1, 2026-11-24: 0180 carried the line, no script read it).
+// --after-live, and release:check names every one (security review of O1, 2026-11-24: 0181 carried the line, no script read it).
 describe('after-live migrations', async () => {
   const { afterLiveMigrations, isAfterLive } = await import('../lib/after-live.mjs')
 
@@ -13,32 +13,32 @@ describe('after-live migrations', async () => {
     expect(isAfterLive('-- O1 contract\n-- apply: after-live\n')).toBe(false)
     expect(isAfterLive('create table t ();')).toBe(false)
   })
-  it('0180 is one, and 0179 (the expand) is not', () => {
+  it('0181 is one, and 0180 (the expand) is not', () => {
     const found = afterLiveMigrations()
-    expect(found).toContain('0180_signup_drop_old_definers.sql')
-    expect(found.some((f: string) => f.startsWith('0179_'))).toBe(false)
+    expect(found).toContain('0181_signup_drop_old_definers.sql')
+    expect(found.some((f: string) => f.startsWith('0180_'))).toBe(false)
   })
 
   const run = (...args: string[]) => spawnSync(process.execPath, ['scripts/prod-migrate.mjs', ...args], { encoding: 'utf8' })
   it('prod-migrate refuses an after-live migration without the flag, and prints nothing to apply', () => {
-    const r = run('drizzle/0180_signup_drop_old_definers.sql')
+    const r = run('drizzle/0181_signup_drop_old_definers.sql')
     expect(r.status).toBe(1)
     expect(r.stdout).toBe('')
-    expect(r.stderr).toContain('--after-live drizzle/0180_signup_drop_old_definers.sql')
+    expect(r.stderr).toContain('--after-live drizzle/0181_signup_drop_old_definers.sql')
   })
   it('with --after-live it prints the SQL and the drizzle row', () => {
-    const r = run('--after-live', 'drizzle/0180_signup_drop_old_definers.sql')
+    const r = run('--after-live', 'drizzle/0181_signup_drop_old_definers.sql')
     expect(r.status).toBe(0)
-    expect(r.stdout).toContain('-- 1. Apply 0180_signup_drop_old_definers')
+    expect(r.stdout).toContain('-- 1. Apply 0181_signup_drop_old_definers')
     expect(r.stdout).toContain('insert into drizzle.__drizzle_migrations')
   })
   it('an ordinary migration needs no flag', () => {
-    expect(execFileSync(process.execPath, ['scripts/prod-migrate.mjs', 'drizzle/0179_signup_without_pickup.sql'], { encoding: 'utf8' })).toContain('-- 1. Apply 0179_')
+    expect(execFileSync(process.execPath, ['scripts/prod-migrate.mjs', 'drizzle/0180_signup_without_pickup.sql'], { encoding: 'utf8' })).toContain('-- 1. Apply 0180_')
   })
   it('release:check names every after-live migration (merge-main prints the same line on --check)', () => {
     const r = spawnSync(process.execPath, ['scripts/merge-main.mjs', '--after-live'], { encoding: 'utf8' })
     expect(r.status).toBe(0)
-    expect(r.stdout).toMatch(/after-live migrations .*0180_signup_drop_old_definers\.sql/)
+    expect(r.stdout).toMatch(/after-live migrations .*0181_signup_drop_old_definers\.sql/)
     expect(readFileSync('scripts/merge-main.mjs', 'utf8')).toMatch(/console\.log\(afterLiveLine\(\)\)\nconsole\.log\(bad \?/)
   })
 })

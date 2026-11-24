@@ -5,7 +5,8 @@ import { FIELD } from '@/components/ui/field'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
 import { Day, Money as SharedMoney, Row } from '../../_components/field-parts'
-import { CADENCE_WORDS, CATEGORY_WORDS, COST_CADENCES, COST_CATEGORIES, type CostCategory, type CostCurrency } from '@/domains/admin/costs'
+import { Tag } from '@/components/ui/badge'
+import { CADENCE_WORDS, CATEGORY_WORDS, COST_CADENCES, COST_CATEGORIES, COST_SOURCES, SOURCE_WORDS, type CostCategory, type CostCurrency } from '@/domains/admin/costs'
 import type { CostFacts, PaidTarget } from './forms'
 
 // =============================================================================
@@ -77,7 +78,8 @@ export function PaidFields({ t }: { t: PaidTarget }) {
   return (
     <>
       <input type="hidden" name="itemId" value={t.itemId} /><input type="hidden" name="periodFor" value={t.period} /><input type="hidden" name="currency" value={t.currency} />
-      {t.varies ? <Money name="amount" label="Billed" currency={t.currency} autoFocus /> : null}
+      {t.from ? <p className="text-small text-muted-foreground"><Tag>{t.from.label}</Tag></p> : null}
+      {t.varies ? <Money name="amount" label="Billed" currency={t.currency} defaultValue={t.from?.amount} autoFocus /> : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <Day label="Paid on" name="paidOn" value={t.today} today={t.today} max={t.today} />
         {t.varies
@@ -107,6 +109,7 @@ export function DetailsFields({ c }: { c: CostFacts }) {
       </div>
       <Row label="Note" name="note"><input name="note" maxLength={300} defaultValue={c.note ?? ''} autoComplete="off" className={FIELD} /></Row>
       {c.recurring ? <Varies on={varies} onChange={setVaries} /> : null}
+      {c.recurring && c.currency === 'USD' ? <Row label="Amount comes from" name="source"><select name="source" defaultValue={c.source ?? 'none'} className={FIELD}><option value="none">I type it</option>{COST_SOURCES.map((k) => <option key={k} value={k}>{SOURCE_WORDS[k]}</option>)}</select></Row> : null}
     </>
   )
 }

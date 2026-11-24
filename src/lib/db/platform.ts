@@ -150,7 +150,7 @@ export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'b
 const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
 
 /**
- * app_create_shop_v3 (0179): `uid` must come from requireUser() (getUser), never from input. No pickup PIN code (it is
+ * app_create_shop_v3 (0180): `uid` must come from requireUser() (getUser), never from input. No pickup PIN code (it is
  * asked in Settings › Store); `signupMs` is the browser's "/start → created" time, kept by the definer only inside a day.
  * `sells` must already be checked against SELLS: it is sent as one array literal
  * (drizzle would expand a JS array into a list of parameters).

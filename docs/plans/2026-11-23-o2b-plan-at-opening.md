@@ -587,7 +587,7 @@ is in progress in the working tree as this is written, with O1's two as `0176_si
 **The rule:** this plan's three migrations are generated in O2b·3, O2b·7 and O2b·8, AFTER the branch has merged main and
 O1's two are on main renumbered (O2b·0b), as the next free numbers in that order: `<partner-trial>`, `<open-plan>`,
 `<billing-from-opening>`. At the time of writing main's next free number is 0176; with O1's two taking 0176–0177 this
-plan's would be 0178–0180 (an example, never hard-coded: whatever main holds at O2b·0b wins). Every name in this plan
+plan's would be 0178–0181 (an example, never hard-coded: whatever main holds at O2b·0b wins). Every name in this plan
 (`drizzle/<partner-trial>.sql` and the rest) reads as the file `npm run db:generate` writes then. If another branch merges
 first, regenerate: delete this plan's `.sql` and snapshots, take main's journal, `npm run db:generate` again so `idx` and
 `when` follow main's last (`scripts/merge-main.mjs:9-11`), and recompute the sha256 and the journal row with

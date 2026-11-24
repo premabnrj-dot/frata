@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import {
-  COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, cleanText, parseAmount, parseDay, parseRupees,
+  COST_CADENCES, COST_CATEGORIES, COST_CURRENCIES, COST_SOURCES, cleanText, parseAmount, parseDay, parseRupees,
   type CostCurrency, type CostItemInput, type PaidInput,
 } from '@/domains/admin/costs'
 import type { CostPatch } from '@/lib/admin/costs'
@@ -100,7 +100,7 @@ export function parseEnd(raw: Record<string, string>, today: string): Parsed<{ i
 
 const EditShape = z.object({
   itemId: uuid, name: clean(80).optional(), vendor: opt(80).optional(), category: z.enum(COST_CATEGORIES).optional(), note: opt(300).optional(),
-  varies: z.enum(['on', 'off']).optional(), currency: z.enum(COST_CURRENCIES).optional(), amount: money.optional(), cadence: z.enum(COST_CADENCES).optional(), anchorOn: z.string().optional(),
+  varies: z.enum(['on', 'off']).optional(), source: z.enum(['none', ...COST_SOURCES]).optional(), currency: z.enum(COST_CURRENCIES).optional(), amount: money.optional(), cadence: z.enum(COST_CADENCES).optional(), anchorOn: z.string().optional(),
 })
 
 export function parseEdit(raw: Record<string, string>, today: string): Parsed<{ itemId: string; patch: CostPatch }> {
@@ -114,6 +114,7 @@ export function parseEdit(raw: Record<string, string>, today: string): Parsed<{ 
   if (d.category) patch.category = d.category
   if (d.note !== undefined) patch.note = d.note
   if (d.varies) patch.varies = d.varies === 'on'
+  if (d.source) patch.source = d.source === 'none' ? null : d.source
   if (d.currency) patch.currency = d.currency
   if (d.amount !== undefined) {
     const v = d.currency ? parseAmount(d.amount, d.currency) : null
