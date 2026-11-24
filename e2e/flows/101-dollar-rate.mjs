@@ -65,7 +65,7 @@ export default {
         await expectToast(meera, /^Rate saved for \d{1,2} [A-Z][a-z]{2}\.$/, 'ok')
         const row = meera.getByRole('row').filter({ hasText: '94.1997' })
         await row.waitFor()
-        await row.getByText(M.email).waitFor()
+        await row.getByText(M.email).first().waitFor()
         const [r] = await db`select rate_e4 from fx_rates where day = ${today}::date`
         assert.equal(r.rate_e4, 941997)
         assert.equal(await meera.locator('[data-banner]').count(), 0, 'no banner once today’s rate is in')
