@@ -1,42 +1,44 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { createContext, useContext, useMemo, useState } from 'react'
-import { Section } from '@/components/layout/section'
 
 // =============================================================================
 // FILE: src/app/(console)/console/_components/open-moment.tsx
 //
-// THE ONE BRAND MOMENT (frata-design-language rule 26): "Your shop is open", a check drawn once, only in the
-// session of the person who opened it. Home swaps the checklist for Today when the shop opens, so the moment
-// cannot live in the checklist: this provider wraps both and sits at the same place in the tree, and
-// router.refresh() keeps its state (U·4 review). Nothing is stored, so nothing carries it to another shop.
-// Its status region is always there (a region inserted with its text is often not read).
+// THE ONE BRAND MOMENT (frata-design-language rule 26; plan 2026-11-23-o2a-setup-card O2a·8, mockup § 2): the store just
+// opened, so a layer over the whole frame draws the check, "<Store> is open", the address with Copy link, Share on
+// WhatsApp and Go to Home — only in the session of the person who opened it. After it, until "Hide this card", Home
+// shows the setup card's open state in place of Today. Home swaps the card for Today when the store opens, so this
+// provider wraps both at the same place in the tree, and router.refresh() keeps its state. Nothing is stored (spec § O2:
+// nothing stores "done"), so nothing carries it to another session, a reload or another store.
 // =============================================================================
 
-const Ctx = createContext<{ opened: () => void; closed: () => void } | null>(null)
+// In the popups' chunk, which "Open your store?" has already loaded: no chunk of its own (no entry in every page's loader).
+const MomentLayer = dynamic(() => import('./setup/popups').then((m) => m.MomentLayer), { ssr: false })
 
-/** For OpenShop: say the shop just opened, or closed again. Outside a provider it does nothing. */
+type Moment = { opened: () => void; closed: () => void; hide: () => void }
+const Ctx = createContext<Moment | null>(null)
+
+/** For "Open your store?" (opened), closing for now (closed) and the open card (hide). Outside a provider: nothing. */
 export const useOpenMoment = () => useContext(Ctx)
 
-/** `header` renders first, so the check lands under the page's title, not above it. */
-export function OpenMoment({ address, header, children }: { address: string; header: React.ReactNode; children: React.ReactNode }) {
+/**
+ * `header` renders first. `open`: what Home shows while the store has just opened in this session (its header and the
+ * setup card's open state), drawn on the server once the store is open; until it arrives, `header` and `children` stay.
+ */
+export function OpenMoment({ name, address, whatsapp, header, open, children }: {
+  name: string; address: string; whatsapp: string
+  header: React.ReactNode; open?: React.ReactNode; children: React.ReactNode
+}) {
   const [just, setJust] = useState(false)
-  const value = useMemo(() => ({ opened: () => setJust(true), closed: () => setJust(false) }), [])
+  const [layer, setLayer] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  const value = useMemo(() => ({ opened: () => { setJust(true); setHidden(false); setLayer(true) }, closed: () => { setJust(false); setLayer(false) }, hide: () => setHidden(true) }), [])
   return (
     <Ctx.Provider value={value}>
-      {header}
-      <div role="status" className={just ? undefined : 'sr-only'}>
-        {just && (
-          <Section className="flex items-center gap-3 space-y-0">
-            <svg viewBox="0 0 56 56" width="40" height="40" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-brand">
-              <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
-              <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
-            </svg>
-            <p className="text-sm"><b className="block font-display text-xl font-semibold tracking-tight">Your store is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
-          </Section>
-        )}
-      </div>
-      {children}
+      {just && !hidden && open ? open : <>{header}{children}</>}
+      {layer && <MomentLayer name={name} address={address} whatsapp={whatsapp} onClose={() => setLayer(false)} />}
     </Ctx.Provider>
   )
 }

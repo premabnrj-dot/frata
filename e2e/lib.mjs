@@ -195,11 +195,18 @@ export async function fakeBlob(ctx, refuse = 0) {
 
 /**
  * Opens the store from the setup card (Home or /console/setup; plan 2026-11-23-o2a-setup-card O2a·7–8): its "Open
- * store", then "Open store" in "Open your store?". Returns once the popup has closed.
+ * store", then "Open store" in "Open your store?". Then the open moment: its layer with the drawn check takes the
+ * screen and focus lands on "Go to Home", which closes it. `moment: false`: return once "Open store" is pressed, for a
+ * caller that asserts a refusal (D0·3's own dialog, openShop's words) or the database itself.
  */
-export async function openStore(page) {
+export async function openStore(page, { moment = true } = {}) {
   await page.getByRole('region', { name: 'Setup' }).getByRole('button', { name: 'Open store', exact: true }).click()
   const d = page.getByRole('dialog', { name: 'Open your store?' }); await d.waitFor()
   await d.getByRole('button', { name: 'Open store', exact: true }).click()
+  if (!moment) return
   await d.waitFor({ state: 'hidden' })
+  const m = page.getByRole('dialog', { name: / is open$/ }); await m.waitFor()
+  await m.locator('svg .animate-draw-circle').waitFor()
+  await until(async () => (await page.evaluate(() => document.activeElement?.textContent)) === 'Go to Home', 3000)
+  await m.getByRole('button', { name: 'Go to Home' }).click(); await m.waitFor({ state: 'hidden' })
 }

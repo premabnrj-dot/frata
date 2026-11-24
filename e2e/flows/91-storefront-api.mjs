@@ -10,7 +10,7 @@ import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
 import { createHash, randomInt } from 'node:crypto'
 import { crc32 } from 'node:zlib'
-import { CONSOLE, OWN_DOMAIN, PORTS, expectToast, signedIn } from '../lib.mjs'
+import { CONSOLE, OWN_DOMAIN, PORTS, expectToast, openStore, signedIn } from '../lib.mjs'
 
 const API = 'api.localhost'
 const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
@@ -207,8 +207,7 @@ export default {
             const v = await audit(p); assert.deepEqual(v, [], `axe: ${v.join('; ')}`)
 
             await p.goto(`${CONSOLE}/console/setup`)
-            await p.getByRole('button', { name: 'Open my store' }).click()
-            await p.getByRole('button', { name: 'Open it' }).click()
+            await openStore(p, { moment: false })
             const dlg = p.getByRole('dialog', { name: 'Your store is still closed.' })
             await dlg.getByText('Your website runs on a Test key. Test keys stop when the store opens.').waitFor()
             await dlg.getByRole('link', { name: 'Connect my domain' }).waitFor()
@@ -221,16 +220,14 @@ export default {
             await db`insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values (${domain}, ${T}, ${'shop.' + OWN_DOMAIN}, ${OWN_DOMAIN}, false, ${'cccccccc-0000-0000-0000-000000000001'}, now(), now())`
             await db`update shop_settings set site_origin = ${'https://' + OWN_DOMAIN}, site_domain_id = ${domain} where tenant_id = ${T}`
             await p.reload()
-            await p.getByRole('button', { name: 'Open my store' }).click()
-            await p.getByRole('button', { name: 'Open it' }).click()
+            await openStore(p, { moment: false })
             let opened = null
             for (let i = 0; i < 20 && !opened; i++) { opened = (await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at; if (!opened) await new Promise((r) => setTimeout(r, 250)) }
             assert.ok(opened, 'the store did not open once its domain was the Website')
             // Closed again with its Website gone: its Test keys ended at the first opening, so opening again is never refused.
             await db`update shop_settings set published_at = null, site_origin = null, site_domain_id = null where tenant_id = ${T}`
             await p.reload()
-            await p.getByRole('button', { name: 'Open my store' }).click()
-            await p.getByRole('button', { name: 'Open it' }).click()
+            await openStore(p, { moment: false })
             let again = null
             for (let i = 0; i < 20 && !again; i++) { again = (await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at; if (!again) await new Promise((r) => setTimeout(r, 250)) }
             assert.ok(again, 'a store that opened once was refused when opened again')

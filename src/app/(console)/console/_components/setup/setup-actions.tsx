@@ -3,11 +3,12 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-context'
 import { cn } from '@/lib/utils'
 import type { SetupStepKey } from '@/domains/setup/checklist'
 import { EMPTY, EMPTY_PRODUCT, type Drafts, type StepView } from './drafts'
+import { useOpenMoment } from '../open-moment'
 
 // =============================================================================
 // FILE: src/app/(console)/console/_components/setup/setup-actions.tsx — THE SETUP CARD'S ONE ISLAND
@@ -33,19 +34,22 @@ function arc(frac: number): string {
   return `M18 3A15 15 0 ${frac > 0.5 ? 1 : 0} 1 ${(18 + 15 * Math.sin(a)).toFixed(2)} ${(18 - 15 * Math.cos(a)).toFixed(2)}`
 }
 
-export function SetupActions({ steps, next, picto, tenantId, address }: {
+export function SetupActions({ steps, next, picto, tenantId, address, hideable = false }: {
   steps: StepView[]
   next: SetupStepKey | null
   /** The next step's pictogram on its tile, drawn on the server (no pictogram drawing in this island's chunk). */
   picto: React.ReactNode
   tenantId: string
   address: string
+  hideable?: boolean
 }) {
   const toast = useToast()
+  const moment = useOpenMoment()
   const [open, setOpen] = useState<Popup | null>(null)
   const [loaded, setLoaded] = useState<Set<Popup>>(() => new Set())
   const [drafts, setDrafts] = useState<Drafts>(EMPTY)
   const done = steps.filter((s) => s.done).length
+  const isOpen = steps.find((s) => s.key === 'publish')?.done === true
   const step = steps.find((s) => s.key === next) ?? null
   // The next step enters from the side once it changes after a save, never on the first paint.
   const first = useRef(next)
@@ -72,7 +76,17 @@ export function SetupActions({ steps, next, picto, tenantId, address }: {
   return (
     <>
       <div className="grid grid-cols-1 items-center gap-4 border-b border-line-soft p-4 md:grid-cols-[auto_minmax(0,1fr)] md:p-5">
-        <div className="flex items-center gap-3.5">{step ? picto : null}</div>
+        <div className="flex items-center gap-3.5">{step || isOpen ? picto : null}</div>
+        {isOpen ? (
+          // The open state (mockup § 2 "Open"), in the session that opened the store, until it is hidden.
+          <div className="grid min-w-0 gap-2.5">
+            <h2 className="text-base leading-6 font-semibold">Your store is open</h2>
+            <div className="flex flex-wrap gap-2">
+              <a href={`https://${address}`} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary' })}>See your store</a>
+              {hideable && <Button variant="ghost" onClick={() => moment?.hide()}>Hide this card</Button>}
+            </div>
+          </div>
+        ) : (
         <div key={next ?? 'none'} className={cn('grid min-w-0 gap-2.5', moved && 'animate-step-forward')}>
           <div className="flex items-center gap-2.5">
             <svg viewBox="0 0 36 36" className="size-9 shrink-0" role="img" aria-label={`${done} of ${steps.length} done`} fill="none" strokeWidth="4">
@@ -86,6 +100,7 @@ export function SetupActions({ steps, next, picto, tenantId, address }: {
             <div className="flex flex-wrap gap-2"><Button onClick={() => show(step.key)}>{step.action}</Button></div>
           </> : null}
         </div>
+        )}
       </div>
       <ul className="grid">
         {steps.map((s) => {
@@ -100,7 +115,7 @@ export function SetupActions({ steps, next, picto, tenantId, address }: {
           const row = 'flex min-h-11 w-full min-w-0 items-center gap-2.5 border-b border-line-soft px-4 text-left text-sm md:px-5'
           return (
             <li key={s.key} className="[&:last-child>*]:border-b-0">
-              {!s.mine ? <div className={row}>{inner}</div>
+              {!s.mine || isOpen ? <div className={row}>{inner}</div>
                 : s.key === 'product' && s.done ? <Link href="/console/products" className={cn(row, 'hover:bg-sunk')}>{inner}</Link>
                 : <button type="button" className={cn(row, 'hover:bg-sunk')} onClick={() => show(s.key)}>{inner}</button>}
             </li>

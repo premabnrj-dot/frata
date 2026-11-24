@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
-import { CONSOLE, USERS, fakeBlob, makePhotos, signedIn, until } from '../lib.mjs'
+import { CONSOLE, USERS, fakeBlob, makePhotos, openStore, signedIn, until } from '../lib.mjs'
 
 const T = '99999999-0000-4000-8000-0000000000a1'
 const SLUG = 'mehr-setup-e2e'
@@ -192,7 +192,59 @@ export default {
         await p.setViewportSize({ width: 1280, height: 900 })
       })
 
+      await t.step('reduced motion: the card and a popup', async () => {
+        const r = await open('founder', { width: 1280, height: 900 }, { reducedMotion: 'reduce' })
+        try {
+          await r.p.goto(CONSOLE + '/console')
+          await r.p.getByRole('region', { name: 'Setup' }).getByRole('listitem').getByRole('button').filter({ hasText: 'Choose how shoppers pay' }).click()
+          await r.p.getByRole('dialog', { name: 'How shoppers pay' }).waitFor()
+          await r.p.screenshot({ path: t.out('reduced-1280') })
+        } finally { await r.ctx.close() }
+      })
+      await t.step('"Open your store?" as drawn, without the plan (§ Deviations 1): its pictogram, Not yet focused', async () => {
+        await card().getByRole('button', { name: 'Open store', exact: true }).click()
+        const d = p.getByRole('dialog', { name: 'Open your store?' }); await d.waitFor()
+        await d.locator('[data-picto]').waitFor()
+        assert.equal(await d.getByRole('button', { name: 'Close' }).count(), 0, 'no ✕')
+        assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Not yet', 'the safe button takes focus')
+        assert.deepEqual(await audit(p), [])
+        await p.screenshot({ path: t.out('open-popup-1280') })
+        await p.setViewportSize({ width: 390, height: 844 }); await p.screenshot({ path: t.out('open-popup-390') }); await p.setViewportSize({ width: 1280, height: 900 })
+        await d.getByRole('button', { name: 'Not yet' }).click(); await d.waitFor({ state: 'hidden' })
+        assert.equal((await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at, null)
+      })
+
+      await t.step('the open moment over the whole frame: the drawn check, the address, Share on WhatsApp, Go to Home focused', async () => {
+        await openStore(p, { moment: false })
+        const m = p.getByRole('dialog', { name: 'Mehr Studio is open' }); await m.waitFor()
+        await m.locator('svg .animate-draw-circle').waitFor()
+        assert.ok(await p.evaluate(() => !!document.elementFromPoint(100, 120)?.closest('dialog')), 'the layer covers the sidebar')
+        await until(async () => (await p.evaluate(() => document.activeElement?.textContent)) === 'Go to Home', 3000)
+        assert.match(await m.getByRole('link', { name: 'Share on WhatsApp' }).getAttribute('href'), /^https:\/\/wa\.me\/\?text=Mehr%20Studio%20/)
+        await m.getByText(`${SLUG}.frata.test`).waitFor()
+        await m.getByRole('button', { name: 'Copy link' }).waitFor()
+        await p.waitForTimeout(700) // the rise and the drawn check end (320 + 200 ms) before the picture
+        assert.deepEqual(await audit(p), [])
+        await p.screenshot({ path: t.out('moment-1280') })
+        await p.setViewportSize({ width: 390, height: 844 }); await p.screenshot({ path: t.out('moment-390') }); await p.setViewportSize({ width: 1280, height: 900 })
+        assert.ok((await db`select published_at from shop_settings where tenant_id = ${T}`)[0].published_at, 'open in the database')
+      })
+
+      await t.step('Go to Home: the open card in place of Today; Hide this card shows Today; a reload shows Today', async () => {
+        await p.getByRole('button', { name: 'Go to Home' }).click()
+        await p.getByRole('heading', { level: 1, name: 'Home' }).waitFor()
+        await p.locator('main').getByText('Open', { exact: true }).first().waitFor()
+        await card().getByRole('heading', { level: 2, name: 'Your store is open' }).waitFor()
+        assert.equal(await card().getByRole('link', { name: 'See your store' }).getAttribute('href'), `https://${SLUG}.frata.test`)
+        await shot('open')
+        await card().getByRole('button', { name: 'Hide this card' }).click()
+        await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
+        await p.reload(); await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
+        assert.equal(await p.getByText('Your store is open', { exact: true }).count(), 0)
+      })
+
       await t.step('Staff: one actionable row (the product), the rest as text', async () => {
+        await db`update shop_settings set published_at = null where tenant_id = ${T}`
         await db`delete from variants where tenant_id = ${T}`; await db`delete from product_images where tenant_id = ${T}`; await db`delete from products where tenant_id = ${T}`
         await db`insert into members (tenant_id, user_id, role) values (${T}, ${USERS.staff.id}, 'staff') on conflict do nothing`
         const s = await open('staff', { width: 1280, height: 900 })
@@ -206,15 +258,6 @@ export default {
         } finally { await s.ctx.close() }
       })
 
-      await t.step('reduced motion: the card and a popup', async () => {
-        const r = await open('founder', { width: 1280, height: 900 }, { reducedMotion: 'reduce' })
-        try {
-          await r.p.goto(CONSOLE + '/console')
-          await r.p.getByRole('region', { name: 'Setup' }).getByRole('button', { name: 'Add product' }).click()
-          await r.p.getByRole('dialog', { name: 'Add your first product' }).waitFor()
-          await r.p.screenshot({ path: t.out('reduced-1280') })
-        } finally { await r.ctx.close() }
-      })
     } finally {
       await ctx.close()
       await cleanup()

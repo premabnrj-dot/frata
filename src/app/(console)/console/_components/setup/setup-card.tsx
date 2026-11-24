@@ -19,15 +19,16 @@ import { SetupActions } from './setup-actions'
 
 const PICTO: Record<SetupStepKey, PictogramName> = { product: 'product', details: 'details', payments: 'payments', publish: 'store' }
 
-export function SetupCard({ setup, role, tenantId }: { setup: Setup; role: MemberRole; tenantId: string }) {
+/** `hideable`: Home's open card, which "Hide this card" swaps for Today (O2a·8); /console/setup has no Today to show. */
+export function SetupCard({ setup, role, tenantId, hideable = false }: { setup: Setup; role: MemberRole; tenantId: string; hideable?: boolean }) {
   const can = (c: Parameters<typeof holds>[1]) => holds(role, c)
   const next = nextStep(setup.steps, can)
   const steps: StepView[] = setup.steps.map((s) => ({ key: s.key, title: s.title, action: s.action, value: s.value, done: s.done, mine: can(s.who) }))
   return (
     <div className="grid items-start gap-4.5 md:grid-cols-[minmax(0,1fr)_240px]">
       <Section flush ariaLabel="Setup">
-        <SetupActions steps={steps} next={next?.key ?? null} tenantId={tenantId} address={setup.address}
-          picto={next ? <PictoTile name={PICTO[next.key]} tone="haldi" /> : null} />
+        <SetupActions steps={steps} next={next?.key ?? null} tenantId={tenantId} address={setup.address} hideable={hideable}
+          picto={next || setup.open ? <PictoTile name={next ? PICTO[next.key] : 'store'} tone="haldi" /> : null} />
       </Section>
       <div aria-hidden="true" className="hidden md:block">
         <Section className="p-3.5 md:p-3.5"><StoreCard host={setup.address} name={setup.name} sell={setup.sell} open={setup.open} flat /></Section>

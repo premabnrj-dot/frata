@@ -357,34 +357,28 @@ export default {
         await q.waitForFunction(() => Number(getComputedStyle(document.querySelector('main#content table')).opacity) < 0.7, null, { timeout: 2000 })
         await q.locator('main#content:not([aria-busy])').waitFor({ timeout: 10000 })
         await dc.close()
-        // The one brand moment, from the setup page (where the shop is closed again), then from Home, whose checklist
-        // gives way to Today as the shop opens: the check is drawn once with the words, and survives that switch.
+        // The one brand moment (O2a·8), from the setup page (where the store is closed again), then from Home, whose card
+        // gives way to its open state as the store opens: the layer with the drawn check, then Go to Home.
         const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' })
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
         await h.getByRole('link', { name: 'Store open. Go to setup to close it.' }).click(); await h.waitForURL(/\/console\/setup$/)
         const closeShop = async () => { await h.getByRole('button', { name: 'Close the store for now' }).click(); await h.getByRole('button', { name: 'Close store' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
-        // Opened from the setup card's "Open your store?" (O2a·7), on /console/setup as on Home.
-        const openShop = () => openStore(h)
-        const check = '[role="status"] svg .animate-draw-circle'
-        await closeShop(); await openShop()
-        await h.locator(check).waitFor()
-        assert.equal(await h.locator(check).count(), 1)
-        await h.getByText('Your store is open', { exact: true }).waitFor()
-        // Closing straight after: the check gives way to what just happened, it does not linger.
+        const card = h.getByRole('region', { name: 'Setup' })
         await closeShop()
-        // The first close's toast may still be up (8 s), so wait for the check itself to go.
-        await h.locator(check).waitFor({ state: 'detached' })
-        assert.equal(await h.locator(check).count(), 0, 'the check goes when the shop closes')
-        // From Home: the checklist (the shop is closed), then Today with the check above it.
-        await h.goto(CONSOLE + '/console'); await h.getByRole('region', { name: 'Setup' }).getByRole('heading', { level: 2, name: 'Open your store' }).waitFor()
-        await openShop()
-        await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
-        await h.locator(check).waitFor()
-        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 1, 'the check outlives the card it was opened from')
+        await card.getByRole('heading', { level: 2, name: 'Open your store' }).waitFor()
+        await openStore(h) // the moment's layer, its drawn check, focus on Go to Home (lib.mjs)
+        await card.getByRole('heading', { level: 2, name: 'Your store is open' }).waitFor()
+        // Closing straight after: the card is back to its next step.
+        await closeShop()
+        await card.getByRole('heading', { level: 2, name: 'Open your store' }).waitFor()
+        // From Home: the card (the store is closed), then its open state in place of Today, once.
+        await h.goto(CONSOLE + '/console'); await card.getByRole('heading', { level: 2, name: 'Open your store' }).waitFor()
+        await openStore(h)
+        await h.getByRole('heading', { level: 1, name: 'Home' }).waitFor()
+        await card.getByRole('heading', { level: 2, name: 'Your store is open' }).waitFor()
         await h.reload(); await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
-        assert.equal(await h.locator(check).count(), 0, 'once: not on the next visit')
-        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 0)
+        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 0, 'once: not on the next visit')
         await hc.close()
       })
 

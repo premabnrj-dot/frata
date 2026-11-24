@@ -1,5 +1,5 @@
 import 'server-only'
-import { SHARE_PRESETS, shopLink, type SharePreset } from '@/domains/analytics/link'
+import { SHARE_PRESETS, shopLink, whatsappShare, type SharePreset } from '@/domains/analytics/link'
 import { isListed } from '@/domains/storefront/listing'
 import { shopCatalogue, shopSettingsFor } from '@/lib/queries/storefront'
 import { pausedAt } from '@/lib/queries/trial-pause'
@@ -43,7 +43,7 @@ export async function shareFor(tenantId: string, target: ShareTarget, now = new 
   const card = ready && src ? (await shareImage(shop, src, title, now)).url : null
   return {
     ready, title, card, links,
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(`${title} ${links.share_whatsapp}`)}`,
+    whatsapp: whatsappShare(title, links.share_whatsapp),
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(links.share_facebook)}`,
   }
 }

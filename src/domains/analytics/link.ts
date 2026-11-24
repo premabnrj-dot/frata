@@ -55,3 +55,6 @@ export function shopLink(origin: string, path: string, tags: { preset?: Preset |
   if (tags.code) u.searchParams.set('code', tags.code)
   return u.toString()
 }
+
+/** WhatsApp's share address for a page: its title, then its link (the console's Share sheet and the open moment, O2a·8). */
+export const whatsappShare = (title: string, link: string) => `https://wa.me/?text=${encodeURIComponent(`${title} ${link}`)}`

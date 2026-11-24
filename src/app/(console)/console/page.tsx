@@ -13,6 +13,7 @@ import { OpenMoment } from './_components/open-moment'
 import { Today } from './_components/today'
 import { ShareSheet } from './_components/share-sheet'
 import { shareFor } from '@/lib/seo/share'
+import { shopLink, whatsappShare } from '@/domains/analytics/link'
 
 // =============================================================================
 // FILE: src/app/(console)/console/page.tsx — Home
@@ -55,10 +56,15 @@ export default async function ConsoleHome() {
     <Link href="/console/setup" aria-label="Store open. Go to setup to close it." className="inline-flex min-h-6 items-center rounded-full"><Badge tone="ok">Store open</Badge></Link>
     {share ? <ShareSheet share={share} target={{ kind: 'shop' }} label="Share store" /> : null}
   </> : <Badge tone="warn">Opening soon</Badge>
+  // The open moment's Share on WhatsApp (pure: no read). While the store has just opened in this session, Home is the
+  // card's open state under "Home" and Open (O2a·8); drawn here once it is open, shown by OpenMoment only then.
+  const whatsapp = whatsappShare(setup.name, shopLink(`https://${setup.address}`, '/', { preset: 'share_whatsapp' }))
+  const role = auth.membership.role
+  const openView = setup.open ? <><PageHeader title="Home" actions={<Badge tone="ok">Open</Badge>} /><SetupCard setup={setup} role={role} tenantId={tenantId} hideable /></> : undefined
   return (
-    <OpenMoment key={tenantId} address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'} actions={actions}
-      meta={setup.open ? todayLongIN(now) : undefined} />}>
-      {setup.open ? <Today s={s} setup={setup} now={now} /> : <SetupCard setup={setup} role={auth.membership.role} tenantId={tenantId} />}
+    <OpenMoment key={tenantId} name={setup.name} address={setup.address} whatsapp={whatsapp} open={openView}
+      header={<PageHeader title={setup.open ? 'Today' : 'Home'} actions={actions} meta={setup.open ? todayLongIN(now) : undefined} />}>
+      {setup.open ? <Today s={s} setup={setup} now={now} /> : <SetupCard setup={setup} role={role} tenantId={tenantId} />}
     </OpenMoment>
   )
 }

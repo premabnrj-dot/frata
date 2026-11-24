@@ -240,12 +240,6 @@
     "why": "D0·3's refusal, moved with \"Open your store?\" from open-shop.tsx (O2a·8): drawn verbatim in the approved Studio workbench mockup screen 2 (owner, 2026-11-22): Website names the brand's own site built as code on the Storefront API, never the store itself (glossary § Surfaces)"
   },
   {
-    "file": "src/app/(console)/console/_components/open-shop.tsx",
-    "rule": "W4",
-    "text": "website",
-    "why": "Drawn verbatim in the approved Studio workbench mockup screen 2 (owner, 2026-11-22): Website names the brand's own site built as code on the Storefront API, never the store itself (glossary § Surfaces)"
-  },
-  {
     "file": "src/app/(console)/console/shop-actions.ts",
     "rule": "W4",
     "text": "website",

@@ -73,7 +73,8 @@ These sections are the owner-approved rules of one surface; they are moved here 
     wordmark with its 2 px thread and one 22×4 dot per step, the question column (max 400 wide, Bricolage headings,
     48 px fields and the ink button with the thread under it), the store drawing itself on the haldi illustration tint
     beside it; on a phone the store is a strip above the question. Keeps "Sign in" (signed out) and "Stuck? WhatsApp
-    us". Its colours are tokens; a store's own colours and the per-category stops live in `src/app/start/signup.css`.
+    us". Its colours are tokens; the store card (a store's own colours and the per-category stops) is
+    `src/components/brand/store-card.tsx` and `store-card.css`, which Home's setup sketch draws too (O2a·7).
 43. **The product is shown as it is**, drawn (`ExampleOrderCard` on `/`,
     `EarningsPreview`): `inert`, marked "Example", every figure from the engines
     (`exampleOrder()` through `orderProfit()`, `shareExample()`), never typed.
