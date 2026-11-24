@@ -102,7 +102,7 @@ Part of `frata-architecture` (SKILL.md holds the rules every change obeys: layer
   tell it in words). **A product goes live only through `goLive`** (readiness.ts: Publish and "Publish the N ready").
   **HSN digits for the turnover are `hsnDigitsIn`** (queries/settings.ts) passed to `cleanTax` / `cleanProduct`.
 - **What a product still needs before it goes live, for one or many, is `readinessIn`** (`src/lib/catalogue/readiness.ts`:
-  one read per table, the rule `readiness` in product-form.ts): Publish (`setStatus`) and the import's Done step both ask
+  one read per table, the rule `readiness` in `src/domains/catalogue/readiness.ts`, re-exported by product-form.ts): Publish (`setStatus`) and the import's Done step both ask
   it. **Before deleting a product photo's files, ask `photosInUse`** (`photos-in-use.ts`: a look, a story or a page may show it).
 - **Home's first product (`addFirstProduct`, O2a·6) is not a second writer**: one transaction composes
   `writeProducts`, `attachIn` and `setStatusIn` (Active only through `readiness()`; refused → a draft with its needs).
