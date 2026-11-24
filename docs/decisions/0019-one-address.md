@@ -43,7 +43,7 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
    `siteOrigin` and `checkoutOrigin` then hold the same origin. Test keys before a domain are unchanged.
 8. **Previews** live on one separate registrable domain where Frrata's app serves nothing (no fourth tenant source):
    **`frratapreview.store`** (owner, 2026-11-24; § Amendment).
-9. **`frrata.store` goes to the Public Suffix List** (was `frrata.shop`; § Amendment).** No security property depends on the listing: `__Host-` cookies only,
+9. **`frrata.store` goes to the Public Suffix List** (was `frrata.shop`; § Amendment). No security property depends on the listing: `__Host-` cookies only,
    no `Domain` cookie, and fetch metadata on every personal or state-changing route hold before it.
 
 ## Consequences
