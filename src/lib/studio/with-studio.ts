@@ -71,9 +71,7 @@ export function studioEntry(): Promise<StudioEntry> {
 async function entry(): Promise<StudioEntry> {
   const door = await studioDoor()
   if (door.ok || door.reason === 'closed') return door
-  const [staff, partner] = await Promise.all([requireStaff(ANY_STAFF), requirePartner()])
-  const s = staff.ok ? staff : staff.reason === 'needs_passkey' ? staff.identity : null
-  const p = partner.ok ? partner : partner.reason === 'needs_passkey' ? partner.identity : null
+  const { staff, partner, s, p } = await theSamePerson()
   if (!s || !p || s.userId !== p.userId || !s.sessionId || s.sessionId !== p.sessionId) return door
   // Passkeys off (Admin › Staff, drizzle/0171): no step-up cookie is asked for, so both checks count as made.
   const [sp, pp, pk] = await Promise.all([staffProof(s.userId), partnerProof(s.userId), passkeys()])
@@ -89,9 +87,35 @@ async function entry(): Promise<StudioEntry> {
   }
   // Both checks made: the switcher's store is not one where they are the partner. Their own partner stores, never a
   // support visit (app_access_for's list for this user; the switch re-checks it).
-  const stores = ((await accessOf(s.userId).catch(() => null))?.memberships ?? [])
-    .filter((m) => (STUDIO_ROLES as readonly string[]).includes(m.role) && !m.supportSessionId).map((m) => ({ tenantId: m.tenantId, name: m.tenantName }))
+  const stores = await partnerStoresOf(s.userId)
   return stores.length ? { ok: false, reason: 'step', step: { kind: 'store', stores } } : door
+}
+
+/** Frrata staff and a partner person, each signed in (a passkey check still to make counts), as the entry reads them. */
+async function theSamePerson() {
+  const [staff, partner] = await Promise.all([requireStaff(ANY_STAFF), requirePartner()])
+  const s = staff.ok ? staff : staff.reason === 'needs_passkey' ? staff.identity : null
+  const p = partner.ok ? partner : partner.reason === 'needs_passkey' ? partner.identity : null
+  return { staff, partner, s, p }
+}
+
+/** The person's own stores where they are the partner, never a support visit (app_access_for's list; a Lead's only
+ *  while assigned, a Builder's are never here). The one list the entry's store step and the Clients buttons read. */
+async function partnerStoresOf(userId: string) {
+  return ((await accessOf(userId).catch(() => null))?.memberships ?? [])
+    .filter((m) => (STUDIO_ROLES as readonly string[]).includes(m.role) && !m.supportSessionId).map((m) => ({ tenantId: m.tenantId, name: m.tenantName }))
+}
+
+/** The store ids Studio's door would let this person into after the step it asks (Partner workspace › Clients shows
+ *  "Open Studio" only for these). Studio off, anyone not both Frrata staff and a live partner person, a Builder, a Lead
+ *  not assigned, a removed link and a support visit each give an empty set, so a button never tells who is refused. */
+export function studioStoreIds(): Promise<ReadonlySet<string>> {
+  return oncePerCall(async () => {
+    if (STUDIO_OPEN !== 'staff' || !isStudioConfigured()) return new Set<string>()
+    const { s, p } = await theSamePerson()
+    if (!s || !p || s.userId !== p.userId || !s.sessionId || s.sessionId !== p.sessionId) return new Set<string>()
+    return new Set((await partnerStoresOf(s.userId)).map((m) => m.tenantId))
+  })
 }
 
 export class StudioUnbound extends Error { override name = 'StudioUnbound' }

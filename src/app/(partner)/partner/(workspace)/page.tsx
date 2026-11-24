@@ -18,6 +18,8 @@ import { unpaidTotal } from '@/domains/partners/bills'
 import { istDayKey } from '@/domains/time/day'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
+import { studioStoreIds } from '@/lib/studio/with-studio'
+import { OpenStudio } from './_components/open-studio'
 import { partnerClients } from '@/lib/db/partners'
 import { myPartnerRequests } from '@/lib/db/people'
 import { Invitations } from './invitations'
@@ -42,12 +44,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const role = auth.partner.memberRole
   const owner = partnerCan(role, 'billing')
   const now = new Date()
-  const [rows, billing, shares, asked] = await Promise.all([
+  const [rows, billing, shares, asked, studio] = await Promise.all([
     partnerClients(auth).catch(failed('clients')),
     owner ? billSummary(auth).catch(failed('clients.bills')) : Promise.resolve([]),
     owner && SHARE_IN_RUPEES ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
     // A store's invitation to be its partner: the partner owner's only (the definer matches their confirmed email).
     owner ? myPartnerRequests(auth).catch(() => []) : Promise.resolve([]),
+    role === 'builder' ? Promise.resolve(new Set<string>()) : studioStoreIds().catch(() => new Set<string>()),
   ])
   const invitations = <Invitations rows={asked.map((r) => ({ id: r.id, store: r.storeName, expires: dayMonthIN(r.expiresAt) }))} />
   const canCreate = partnerCan(role, 'createShop')
@@ -97,7 +100,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           <DataTableHead>
             <th>Client</th><th>Stage</th>
             {!builder && <th>Next</th>}
-            {owner && <th><span className="sr-only">Next step</span></th>}
+            {!builder && <th><span className="sr-only">Next step</span></th>}
             {owner && <th className="text-right">Your billing</th>}
             {builder && <th><span className="sr-only">Open</span></th>}
           </DataTableHead>
@@ -116,11 +119,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                   <Td cell="d"><Badge tone={STAGE_TONE[c.stage]}>{STAGE_LABEL[c.stage]}</Badge></Td>
                   {!builder && <Td cell="c" className={c.next?.reason === 'overdue' ? 'text-danger-text' : undefined}>
                     {words || (c.next?.reason === 'building' ? (owner ? <span className="md:hidden">Hand over</span> : null) : <span className="hidden text-muted-foreground md:inline">—</span>)}</Td>}
-                  {owner && <Td cell="hide" className="w-px whitespace-nowrap text-right">
+                  {!builder && <Td cell="hide" className="w-px whitespace-nowrap text-right"><div className="flex flex-wrap justify-end gap-2">
                     {c.next?.action === 'handOver' && <HandOver tenantId={c.row.tenantId} store={c.row.name} again={false} size="sm" startOpen={handover === c.row.tenantId} />}
                     {remind && <a href={remind} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary', size: 'sm' })}><MessageCircle aria-hidden="true" className="size-4" />Remind</a>}
                     {c.next?.action === 'recordBill' && <Link href={`/partner/clients/${c.row.linkId}?record=1`} prefetch={false} className={button({ variant: 'secondary', size: 'sm' })}>Record bill</Link>}
-                  </Td>}
+                    {!ended && studio.has(c.row.tenantId) && <OpenStudio tenantId={c.row.tenantId} size="sm" />}
+                  </div></Td>}
+                  {!ended && studio.has(c.row.tenantId) && <Td cell="e" className="md:hidden"><OpenStudio tenantId={c.row.tenantId} size="sm" /></Td>}
                   {owner && <Td cell="b" className="text-right">{c.deal ? <><Money paise={c.deal.amount} />{c.deal.kind === 'retainer' ? <span className="text-muted-foreground"> a month</span> : null}</> : <span className="text-muted-foreground">—</span>}</Td>}
                   {builder && <Td cell="b" className="whitespace-nowrap text-right md:w-px">
                     <form action={switchStoreAction}><input type="hidden" name="tenantId" value={c.row.tenantId} /><button type="submit" className={button({ variant: 'secondary', size: 'sm', className: 'whitespace-nowrap' })}>Open store</button></form>

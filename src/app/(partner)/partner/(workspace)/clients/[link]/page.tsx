@@ -18,6 +18,8 @@ import { SHARE_IN_RUPEES } from '@/domains/partners/share'
 import { istDayKey } from '@/domains/time/day'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
+import { studioStoreIds } from '@/lib/studio/with-studio'
+import { OpenStudio } from '../../_components/open-studio'
 import { partnerClients } from '@/lib/db/partners'
 import { billSummary, clientBills, clientShares } from '@/lib/db/partner-bills'
 import { dayMonthIN } from '@/lib/format-date'
@@ -42,7 +44,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   const { link } = await params
   if (role === 'builder' || !z.uuid().safeParse(link).success) return gone
   const owner = partnerCan(role, 'billing')
-  const rows = await partnerClients(auth).catch(failed('client'))
+  const [rows, studio] = await Promise.all([partnerClients(auth).catch(failed('client')), studioStoreIds().catch(() => new Set<string>())])
   if (!rows) return <><PageHeader title="Client" back={back} /><Panel title="We couldn’t load this client" action={<Link href={`/partner/clients/${link}`} className={button({ variant: 'secondary', size: 'sm' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel></>
   const row = rows.find((r) => r.linkId === link)
   if (!row) return gone
@@ -71,6 +73,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   const actions = <>
     {!ended && <StoreMore tenantId={row.tenantId} />}
     {!ended && <form action={switchStoreAction}><input type="hidden" name="tenantId" value={row.tenantId} /><button type="submit" className={button({ variant: 'secondary' })}><Icon name="merchants" className="size-4" />Open store</button></form>}
+    {!ended && studio.has(row.tenantId) && <OpenStudio tenantId={row.tenantId} />}
     {primary}
   </>
   const meta = <span className="flex flex-wrap gap-x-3.5">
