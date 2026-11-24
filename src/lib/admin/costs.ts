@@ -266,7 +266,9 @@ export async function editCost(staff: StaffOk, itemId: string, patch: CostPatch,
         if (patch.cadence !== undefined && patch.cadence !== row.cadence && (last?.n ?? 0) > 0) return refuse('locked')
         if (patch.anchorOn !== undefined && !anchorMayMove(patch.anchorOn, last?.p ?? null)) return refuse('locked')
       }
-      if (patch.source !== undefined && patch.source !== null && (row.kind !== 'recurring' || row.currency !== 'USD')) return refuse('bad_input')
+      // A vendor figure is for a repeating dollar cost: judge the row as it will be, so a currency change cannot strand a source.
+      const nextSource = patch.source !== undefined ? patch.source : row.source
+      if (nextSource && (row.kind !== 'recurring' || (patch.currency ?? row.currency) !== 'USD')) return refuse('bad_input')
       await tx.update(costItems).set(patch).where(eq(costItems.id, itemId))
       await auditStaff(tx, staff, { action: 'costs.item.edit', target: itemId, detail: { fields } })
       return { ok: true }
@@ -318,7 +320,7 @@ export async function vendorFigures(staff: StaffOk, today: string): Promise<Reco
   for (const p of payments) { const s = paidBy.get(p.itemId) ?? new Set<string>(); s.add(p.periodFor); paidBy.set(p.itemId, s) }
   const wanted: { id: string; source: CostSource; month: string }[] = []
   for (const it of items) {
-    if (!it.source || it.kind !== 'recurring' || !isLive(it, today)) continue
+    if (!it.source || !it.varies || it.kind !== 'recurring' || !isLive(it, today)) continue
     const next = dueState(it, paidBy.get(it.id) ?? new Set<string>(), today).next
     if (!next) continue
     const month = billMonthOf(next)
@@ -327,7 +329,7 @@ export async function vendorFigures(staff: StaffOk, today: string): Promise<Reco
   const out: Record<string, VendorFigure> = {}
   for (const source of new Set(wanted.map((w) => w.source))) {
     const mine = wanted.filter((w) => w.source === source)
-    const rows = await usageRows(source, `${mine.map((w) => w.month).sort()[0]}-01`).catch(() => [])
+    const rows = await usageRows(source, `${mine.map((w) => w.month).sort()[0]}-01`).catch((e) => { console.error('[costs] vendor figures', errName(e)); return [] })
     for (const w of mine) { const micros = monthMicros(rows, w.month); if (micros !== null && micros > 0) out[w.id] = { source, month: w.month, micros } }
   }
   return out

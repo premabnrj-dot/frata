@@ -2,7 +2,7 @@
 
 **Mockup:** https://claude.ai/artifact/1tQ7VNtR4jKhSYhy5NWSAm § 8
 **Approved:** owner, 2026-11-23 (screens and the recommended calls; Anthropic and Supabase skipped for now)
-**Review:** words-reviewer 4 findings, 3 fixed and the tag kept as the spec words it, 2026-11-24
+**Review:** words-reviewer 4 findings, 3 fixed and the tag kept as the spec words it; impact-reviewer 8 findings, 6 fixed and 2 left (a required `source` field, a hand-built facts type), 2026-11-24
 
 Unit economics: not run, nothing a merchant pays or Frrata charges changes.
 

@@ -215,6 +215,8 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   there re-checks `ADMIN_ONLY` itself. Due dates, next due, overdue and burn are derived in `src/domains/admin/costs.ts`, never stored;
   USD is micro-dollars. Editing an amount, currency or anchor, and undoing a payment older than 10 minutes, need `confirmedRecently`.
 
+- **Costs auto-fill A1** (drizzle/0179, spec `docs/specs/2026-11-23-costs-autofill.md`): `cost_items.source` (Vercel or Mux, a repeating dollar cost only, CHECKed). `vendorFigures` in `src/lib/admin/costs.ts` sums that vendor's daily charges from `infra_usage_daily` for the month a due bill covers, only once the month has ended; it fills Mark paid and saves nothing.
+
 ## Admin › Cashflow (R1 built 2026-11-23; spec docs/specs/2026-11-23-admin-cashflow.md, plan docs/plans/2026-11-23-admin-cashflow.md)
 
 - `cash_accounts`, `cash_balances`, `cash_entries` and `cash_settings` are platform-scope tables in 0093's shape (drizzle/0175, proof § 104, `check:tenant`

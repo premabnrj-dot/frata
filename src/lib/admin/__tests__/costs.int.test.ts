@@ -91,6 +91,9 @@ describe.skipIf(!host)('Admin › Costs', () => {
   it('a cost can name a vendor to fill its bill from; only a repeating dollar cost may, and the figure is that vendor\'s last full month', async () => {
     const staff = master()
     const usd = (name: string, extra: object = {}) => recurring(name, { currency: 'USD', amount: 20_000_000, varies: true, anchorOn: '2026-11-05', ...extra })
+    const clear = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    await clear`delete from infra_usage_daily where source = 'mux' and day between '2026-10-01' and '2026-10-31'` // a rerun starts with no October rows
+    await clear.end()
     const a = await costs.addCost(staff, usd('Mux'), TODAY)
     const id = (a as { id: string }).id
     const inr = (await costs.addCost(staff, recurring('Rupee'), TODAY) as { id: string }).id
@@ -104,6 +107,7 @@ describe.skipIf(!host)('Admin › Costs', () => {
     const f = (await costs.vendorFigures(staff, TODAY))[id]
     expect(f?.month).toBe('2026-10')
     expect(f?.micros).toBeGreaterThanOrEqual(3_500_000)
+    expect(await costs.editCost(staff, id, { currency: 'INR', amount: 188_400 }, new Date())).toEqual({ ok: false, error: 'bad_input' }) // a currency change cannot strand a source
     expect(await costs.editCost(staff, id, { source: null }, new Date())).toEqual({ ok: true })
     expect((await costs.vendorFigures(staff, TODAY))[id]).toBeUndefined()
     await expect(costs.vendorFigures(support, TODAY)).rejects.toThrow('ADMIN_ONLY')
