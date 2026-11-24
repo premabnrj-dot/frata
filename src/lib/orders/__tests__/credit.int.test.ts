@@ -39,7 +39,7 @@ describe.skipIf(!host)('issueCredit on a real database', () => {
     expect(r).toMatchObject({ ok: true, number: expect.stringMatching(/\/26-27\/C0001$/) })
     const again = await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, actor, ids.a, now))
     expect(again).toMatchObject({ ok: false, error: expect.stringMatching(/^(Already credited|Everything on this invoice is credited already)/) })
-    expect(await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, actor, ids.b, now))).toMatchObject({ ok: false, error: expect.stringMatching(/No invoice was issued/) })
+    expect(await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, actor, ids.b, now))).toMatchObject({ ok: false, error: expect.stringMatching(/has no invoice to credit/) })
     const [cn] = await withTenant(tenantId, (tx) => tx.select().from(creditNotes).where(eq(creditNotes.orderId, ids.a)))
     expect([cn!.againstInvoice, cn!.reason, cn!.taxable, cn!.cgst + cn!.sgst, cn!.total]).toEqual(['CS/26-27/00001', 'cancelled', 237143, 11857, 249000])
     // Came back: the second credit note, C0002, says why; and undoing Came back is refused once credited (a later
@@ -63,7 +63,7 @@ describe.skipIf(!host)('issueCredit on a real database', () => {
     const undo = await withTenant(tenantId, (tx) => out.undoOutcome(tx, tenantId, owner, (back as { eventId: string }).eventId, new Date('2026-11-08T07:30:00Z')))
     expect(undo).toMatchObject({ ok: false, error: 'This order changed since. Open it to see what happened.' })
     // A Frrata support visit cannot issue one (security review 2026-11-08).
-    expect(await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, { ...actor, kind: 'support' }, ids.a, now))).toMatchObject({ ok: false, error: expect.stringMatching(/owner or an admin/) })
+    expect(await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, { ...actor, kind: 'support' }, ids.a, now))).toMatchObject({ ok: false, error: expect.stringMatching(/owner or a manager/) })
     await expect(withTenant(tenantId, (tx) => tx.update(creditNotes).set({ total: 0 }).where(eq(creditNotes.orderId, ids.a)))).rejects.toThrow()
   })
 

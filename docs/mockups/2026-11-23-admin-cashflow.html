@@ -1,0 +1,408 @@
+<title>Admin Cashflow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+
+/* Frrata Admin in Neel (docs/mockups/2026-11-13-design-language-neel.html). Sample figures only; every number on a
+   screen is computed from the sample rows in § Sample rows below. Notes live outside the screens (Rule 0). */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --warn-bg:#FDF3DC; --warn-fg:#85500B; --bad-bg:#FDECEC; --bad-fg:#A82828; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --neu-bg:#F1F0EE; --neu-fg:#57524D;
+  --ok-dot:#2F9E62; --warn-dot:#C98318; --bad-dot:#DC3B3B; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --sunk:var(--g50); --line:var(--g200); --line-soft:var(--g100); --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50); --bar:#171615;
+  --e1:0 1px 2px rgba(23,22,21,.06); --e3:0 24px 48px -12px rgba(23,22,21,.28); --chart:var(--n600);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C; --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#0C0B0B; color-scheme:dark } }
+* { box-sizing:border-box }
+[hidden] { display:none !important }
+html { scroll-padding-top:64px; scroll-behavior:smooth }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto } * { transition:none !important } }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0; padding-block:0 80px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)) }
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:30; background:var(--page) }
+h1,h2,h3,h4,p { margin:0 } h1,h2,h3 { text-wrap:balance }
+button,input,select { font:inherit; color:inherit }
+button { cursor:pointer }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.num { font-variant-numeric:tabular-nums }
+svg.i { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none }
+.doc { max-width:1240px; margin:0 auto }
+.top { position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--page); border-bottom:1px solid var(--line); margin:0 -16px; padding:0 16px }
+.top nav { max-width:1240px; margin:0 auto; display:flex; gap:4px; overflow-x:auto; padding:8px 0; scrollbar-width:none }
+.top nav a { color:var(--text-2); text-decoration:none; padding:6px 10px; border-radius:8px; white-space:nowrap; font-weight:500; font-size:13px }
+.top nav a:hover { background:var(--sunk) }
+.head { padding:28px 0 8px } .head h1 { font:600 26px/32px var(--font) }
+.sec { padding:36px 0 0 } .sec > h2 { font:600 18px/24px var(--font); margin-bottom:4px }
+.cap { color:var(--text-2); font-size:13px; margin:0 0 14px }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px }
+.pcard { border:1px solid var(--line); border-radius:12px; padding:16px; background:var(--g0); display:grid; gap:6px; align-content:start }
+.pcard h3 { font:600 14px/20px var(--font) } .pcard p { color:var(--text-2) }
+.take { color:var(--ok-fg); font-weight:600 } .skip { color:var(--warn-fg); font-weight:600 }
+table.plain { border-collapse:collapse; width:100%; font-size:13px } table.plain th, table.plain td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top }
+table.plain th { background:var(--sunk); font-weight:600; color:var(--text-2) }
+.scroll { overflow-x:auto; border:1px solid var(--line); border-radius:12px }
+.scroll table.plain { min-width:560px }
+.call { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:4px; margin-bottom:10px }
+.call b { font-weight:600 } .rec { color:var(--ok-fg); font-weight:500 }
+
+/* ---------- a screen (Admin chrome) ---------- */
+.screen { border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--page); box-shadow:var(--e1); position:relative }
+.app { display:grid; grid-template-columns:220px minmax(0,1fr); min-height:640px }
+.side { background:var(--bar); color:#fff; padding:14px 10px; display:grid; align-content:start; gap:2px; font-size:13px }
+.side .brand { display:flex; align-items:center; gap:8px; padding:6px 10px 14px; font-weight:600 }
+.side .tag { font-size:10px; letter-spacing:.06em; background:#34312E; border-radius:4px; padding:1px 5px; font-weight:600 }
+.side .grp { color:#8F8A84; font-size:11px; font-weight:600; padding:12px 10px 4px; letter-spacing:.04em; text-transform:uppercase }
+.side a { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; color:#CFCCC7; text-decoration:none }
+.side a.on { background:#2B2927; color:#fff; font-weight:500 }
+.pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:11px; font-weight:600; padding:0 7px; line-height:18px }
+.main { padding:24px 28px 32px; min-width:0; display:grid; gap:18px; align-content:start }
+.ph { display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+.ph h2 { font:600 22px/28px var(--font); margin-right:auto }
+.btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; border:1px solid transparent; padding:0 14px; height:36px; font-weight:500; background:var(--action); color:var(--action-text) }
+.btn.sec2 { background:var(--g0); color:var(--text); border-color:var(--g300); box-shadow:var(--e1) }
+.btn.sm { height:30px; padding:0 10px; font-size:13px } .btn.ghost { background:transparent; color:var(--text-2) }
+.btn.danger { background:#C42F2F; color:#fff }
+.tabs { display:flex; gap:20px; border-bottom:1px solid var(--line); overflow-x:auto }
+.tabs a { padding:8px 0; color:var(--text-2); text-decoration:none; font-weight:500; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap }
+.tabs a.on { color:var(--text); border-color:var(--action) }
+.figs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border:1px solid var(--line); border-radius:12px }
+.fig { padding:14px 16px; border-left:1px solid var(--line-soft); display:grid; gap:2px } .fig:first-child { border-left:0 }
+.fig small { color:var(--text-2); font-size:12px; font-weight:500 } .fig b { font:600 22px/28px var(--font) } .fig span { font-size:12px; color:var(--text-2) }
+.card { border:1px solid var(--line); border-radius:12px; background:var(--g0); min-width:0 }
+.card > header { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line-soft) }
+.card > header h3 { font:600 16px/24px var(--font); margin-right:auto }
+.band { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; background:var(--warn-bg); color:var(--warn-fg); font-weight:500 }
+.band .btn { margin-left:auto }
+.row { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line-soft); min-height:52px }
+.row:last-child { border-bottom:0 }
+.row.hd { background:var(--sunk); min-height:36px; padding-block:6px; color:var(--text-2); font-weight:600; font-size:12px; border-radius:12px 12px 0 0 }
+.row .nm { display:grid; min-width:0 } .row .nm b { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .row .nm span { color:var(--text-2); font-size:12px }
+.row .r { text-align:right } .row.on { background:var(--select) }
+a.row { color:inherit; text-decoration:none }
+.badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:0 8px; line-height:20px; font-size:12px; font-weight:500; white-space:nowrap }
+.badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor }
+.b-ok { background:var(--ok-bg); color:var(--ok-fg) } .b-warn { background:var(--warn-bg); color:var(--warn-fg) } .b-bad { background:var(--bad-bg); color:var(--bad-fg) } .b-neu { background:var(--neu-bg); color:var(--neu-fg) } .b-info { background:var(--info-bg); color:var(--info-fg) }
+.tag { display:inline-flex; border:1px solid var(--line); border-radius:6px; padding:0 6px; line-height:18px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.chips { display:flex; gap:6px; flex-wrap:wrap }
+.chip { border:1px solid var(--line); background:var(--g0); border-radius:999px; padding:0 12px; height:30px; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--text-2) }
+.chip.on { background:var(--select); border-color:var(--n200); color:var(--n700) } .chip em { font-style:normal; color:var(--text-3); font-size:12px }
+.search { display:flex; align-items:center; gap:8px; border:1px solid var(--g500); border-radius:8px; height:36px; padding:0 10px; color:var(--text-3); min-width:200px; flex:1 }
+.bars { display:grid; gap:0 } .bar { display:grid; grid-template-columns:150px minmax(0,1fr) 96px 80px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--line-soft) } .bar:last-child { border-bottom:0 }
+.bar i { display:block; height:8px; border-radius:4px; background:var(--chart) } .bar .tr { background:var(--sunk); border-radius:4px }
+.up { color:var(--bad-fg) } .down { color:var(--ok-fg) }
+.pager { display:flex; align-items:center; gap:8px; padding:10px 16px; color:var(--text-2); font-size:13px; border-top:1px solid var(--line-soft) }
+.pager .btn { margin-left:auto } .pager .btn + .btn { margin-left:0 }
+
+/* panels, dialogs, toast */
+.scrim { position:absolute; inset:0; background:rgba(23,22,21,.38) }
+.sidepanel { position:absolute; top:0; right:0; bottom:0; width:min(420px,100%); background:var(--g0); border-left:1px solid var(--line); box-shadow:var(--e3); display:grid; grid-template-rows:auto minmax(0,1fr) auto }
+.sidepanel > header { padding:16px 20px 12px; display:grid; gap:6px; border-bottom:1px solid var(--line-soft) }
+.sidepanel > header h3 { font:600 18px/24px var(--font) }
+.sp-body { padding:16px 20px; display:grid; gap:16px; align-content:start; overflow:auto }
+.sp-foot { padding:12px 20px; border-top:1px solid var(--line-soft); display:flex; gap:8px; flex-wrap:wrap }
+.facts { display:grid; grid-template-columns:130px minmax(0,1fr); gap:8px 12px } .facts dt { color:var(--text-2) } .facts dd { margin:0; min-width:0 }
+.dlg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(460px,calc(100% - 24px)); max-height:calc(100% - 24px); overflow:auto; background:var(--g0); border-radius:16px; box-shadow:var(--e3); padding:20px; display:grid; gap:14px }
+.dlg h3 { font:600 18px/24px var(--font) } .dlg .foot { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+.seg { display:inline-grid; grid-auto-flow:column; background:var(--sunk); border:1px solid var(--line); border-radius:10px; padding:2px; gap:2px }
+.seg button { border:0; background:transparent; height:30px; padding:0 14px; border-radius:8px; font-weight:500; color:var(--text-2) } .seg button[aria-pressed="true"] { background:var(--g0); color:var(--text); box-shadow:var(--e1) }
+.fld { display:grid; gap:4px } .fld label { font-size:13px; font-weight:500 }
+.in { height:36px; border:1px solid var(--g500); border-radius:8px; padding:0 10px; background:var(--g0); display:flex; align-items:center; gap:8px; min-width:0 } .in.err { border-color:#C42F2F; box-shadow:0 0 0 3px var(--bad-bg) } .in.ph2 { color:var(--text-3) }
+.in .cur { color:var(--text-2); border-right:1px solid var(--line); padding-right:8px; margin-right:2px }
+.ferr { color:var(--bad-fg); font-size:13px }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:12px } .three { display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px }
+.sw { display:flex; align-items:center; gap:10px } .sw i { width:34px; height:20px; border-radius:10px; background:var(--g500); position:relative } .sw i::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff } .sw.on i { background:var(--action) } .sw.on i::after { left:16px }
+.toast { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); background:var(--g950); color:var(--g0); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:12px; box-shadow:var(--e3); max-width:calc(100% - 24px) }
+.toast .ok { width:8px; height:8px; border-radius:50%; background:#2F9E62; flex:none } .toast .bad { width:8px; height:8px; border-radius:50%; background:var(--bad-dot); flex:none } .toast button { background:none; border:0; color:#C3C9F6; font-weight:600; padding:0 }
+.tile { width:64px; height:64px; border-radius:12px; background:var(--select); display:grid; place-items:center; color:var(--n700) } .tile svg { width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
+.empty { display:grid; justify-items:center; gap:12px; padding:48px 16px; text-align:center } .empty h3 { font:600 16px/24px var(--font) }
+.skel { background:linear-gradient(90deg,var(--sunk),var(--line-soft),var(--sunk)); border-radius:6px; height:14px } .skel.t { height:28px; width:120px }
+.statebox { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)) } .statebox .screen { min-height:300px }
+.phone { width:390px; max-width:100%; margin:0 auto }
+.phone .ptop { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line) } .phone .ptop b { font-weight:600; margin-right:auto }
+.phone .pbody { padding:16px; display:grid; gap:14px; min-height:620px; align-content:start }
+.phone .pfigs { display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:12px } .phone .pfigs .fig:nth-child(odd) { border-left:0 } .phone .pfigs .fig:nth-child(n+3) { border-top:1px solid var(--line-soft) } .phone .pfigs .fig b { font-size:18px; line-height:24px }
+.phone .prow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:12px 16px; border-bottom:1px solid var(--line-soft); align-items:center } .phone .prow:last-child { border-bottom:0 }
+.phone .prow .nm { display:grid } .phone .prow .nm span { color:var(--text-2); font-size:12px }
+.phone .pbar { display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid var(--line); background:var(--g0); text-align:center; font-size:11px; color:var(--text-2) } .phone .pbar span { padding:8px 0 10px; display:grid; justify-items:center; gap:2px } .phone .pbar .on { color:var(--n700); font-weight:600 }
+@media (max-width:900px) {
+  .app { grid-template-columns:minmax(0,1fr) } .app .side { display:none } .main { padding:16px }
+  .figs { grid-template-columns:1fr 1fr } .fig:nth-child(odd) { border-left:0 } .fig:nth-child(n+3) { border-top:1px solid var(--line-soft) }
+  .row { grid-template-columns:minmax(0,1fr) auto } .row .hide-s, .row.hd { display:none }
+  .bar { grid-template-columns:100px minmax(0,1fr) 80px } .bar .chg { display:none }
+  .three, .two { grid-template-columns:1fr }
+}
+
+/* Cashflow additions */
+:root { --in:var(--n600); --out:#C98318; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --out:#F2C14E } }
+.chart { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; padding:16px; align-items:end }
+.col { display:grid; gap:4px; text-align:center; font-size:12px; color:var(--text-2) }
+.pair { height:120px; display:flex; align-items:flex-end; justify-content:center; gap:4px; position:relative }
+.pair i { display:block; width:min(22px,38%); border-radius:4px 4px 0 0 } .pair i.in { background:var(--in) } .pair i.out { background:var(--out) } .pair i.low { background:var(--out) }
+.pair.one i { width:min(34px,60%) } .pair u { position:absolute; left:0; right:0; border-top:1.5px dashed var(--bad-dot) }
+.col b { font-weight:500; color:var(--text) } .neg { color:var(--bad-fg) } .pos { color:var(--ok-fg) }
+.legend { display:flex; gap:14px; font-size:12px; color:var(--text-2); padding:0 16px 12px } .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px }
+table.fc { border-collapse:collapse; width:100%; font-size:13px; min-width:720px } table.fc th, table.fc td { padding:9px 12px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap }
+table.fc th:first-child, table.fc thead th:first-child { text-align:left } table.fc thead th { background:var(--sunk); color:var(--text-2); font-weight:600; font-size:12px }
+.row.mv { grid-template-columns:minmax(0,2fr) minmax(0,.8fr) minmax(0,.8fr) minmax(0,1fr) auto }
+.big { font:600 28px/34px var(--font) }
+.acct { display:grid; gap:2px; padding:14px 16px; border-bottom:1px solid var(--line-soft) } .acct:last-child { border-bottom:0 }
+.acct .top { display:flex; align-items:center; gap:10px } .acct .top b { font-weight:500; margin-right:auto }
+.fold { border:1px solid var(--line); border-radius:12px; padding:0 16px } .fold summary { padding:12px 0; cursor:pointer; font-weight:500 } .fold .chips { padding:0 0 14px }
+@media (max-width:900px) { .chart { gap:6px; padding:12px 8px } .row.mv { grid-template-columns:minmax(0,1fr) auto } }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cost" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5v.01M17.5 14.5v.01"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+</svg>
+
+<div class="top"><nav aria-label="Sections">
+  <a href="#short">In short</a><a href="#audit">Today</a><a href="#take">What to take</a><a href="#overview">Overview</a><a href="#movements">Movements</a><a href="#add">Add entry</a><a href="#balance">Update balance</a><a href="#accounts">Accounts</a><a href="#states">States</a><a href="#phone">Phone</a><a href="#autofill">Costs auto-fill</a><a href="#calls">Your calls</a>
+</nav></div>
+
+<div class="doc">
+<div class="head"><h1>Frrata Admin › Cashflow</h1><p class="cap" style="margin:6px 0 0">Mockup for the gate · 2026-11-23 · specs <code>docs/specs/2026-11-23-admin-cashflow.md</code> and <code>2026-11-23-costs-autofill.md</code> · every figure is a sample</p></div>
+
+<section class="sec" id="short"><h2>In short</h2>
+  <div class="grid2">
+    <div class="pcard"><h3>What</h3><p>One Admin page for the whole cash picture: what is in the bank, what came in, what went out, and where the balance goes over the next six months.</p></div>
+    <div class="pcard"><h3>Where the numbers come from</h3><p>Money in from Billing. Money out from Costs. Everything else is typed once as an entry. The balance in the bank is typed with its date.</p></div>
+    <div class="pcard"><h3>Why now</h3><p>Costs gave us what we spend. This adds what we hold and what we earn, so runway and break-even are one glance, not a sum.</p></div>
+    <div class="pcard"><h3>What we need from you</h3><p>Approve these screens, then the calls at the end.</p></div>
+  </div>
+</section>
+
+<section class="sec" id="audit"><h2>Where cash facts live today</h2>
+  <p class="cap">There is no cash screen to screenshot. This is what exists.</p>
+  <div class="scroll"><table class="plain">
+    <tr><th>Where</th><th>What it holds</th><th>Why it falls short</th><th>Proposed</th></tr>
+    <tr><td>Billing</td><td>What merchants owe and paid</td><td>Money in only, per invoice.</td><td>Read by month.</td></tr>
+    <tr><td>Costs</td><td>What we paid, what is due</td><td>Money out only.</td><td>Read by month and by due date.</td></tr>
+    <tr><td>The bank app</td><td>The balance</td><td>Nobody here sees it with the rest.</td><td>Typed with its date.</td></tr>
+    <tr><td>Notes and docs</td><td>Funding, grants, loans</td><td>No dates, no totals.</td><td>One entry each.</td></tr>
+  </table></div>
+</section>
+
+<section class="sec" id="take"><h2>What to take</h2>
+  <p class="cap">From product knowledge, not re-read in the last 12 months. Treat as unverified until the research agent confirms.</p>
+  <div class="grid2">
+    <div class="pcard"><h3>Float and Fathom · cash forecast</h3><p><span class="take">Take:</span> opening cash, money in, money out, closing cash, by month.</p><p><span class="skip">Skip:</span> scenarios and several companies.</p></div>
+    <div class="pcard"><h3>Mercury and Brex · runway line</h3><p><span class="take">Take:</span> one runway figure with the date cash runs out.</p><p><span class="skip">Skip:</span> card spend controls.</p></div>
+    <div class="pcard"><h3>Zoho Books · bank reconcile</h3><p><span class="take">Take:</span> the typed balance against what the books say, and the difference.</p><p><span class="skip">Skip:</span> bank feeds and matching.</p></div>
+    <div class="pcard"><h3>Razorpay dashboard · settlements</h3><p><span class="take">Take:</span> money in shown by day with its source.</p><p><span class="skip">Skip:</span> payouts to merchants, which Frrata does not make.</p></div>
+  </div>
+</section>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="sec" id="overview">
+  <h2>1 · Overview</h2>
+  <p class="cap">Cash now, how long it lasts, the six months behind, the six ahead.</p>
+  <div class="screen"><div class="app">
+    <aside class="side" aria-label="Admin"><div class="brand">Frrata <span class="tag">STAFF</span></div><a>Today<span class="pill">5</span></a><div class="grp">Money</div><a>Plans</a><a>Billing</a><a>Costs</a><a class="on"><svg class="i"><use href="#i-cost"/></svg>Cashflow<span class="pill">1</span></a><div class="grp">Platform</div><a>Infrastructure</a><a>Activity</a></aside>
+    <div class="main">
+      <div class="ph"><h2>Cashflow</h2><button class="btn sec2">Add entry</button><button class="btn">Update balance</button></div>
+      <div class="tabs"><a class="on" href="#overview">Overview</a><a href="#movements">Movements</a><a href="#accounts">Accounts</a></div>
+      <div class="band">Cash falls below ₹2,50,000 in Jan 2027<button class="btn sm sec2">See forecast</button></div>
+      <div class="figs">
+        <div class="fig"><small>Cash in bank</small><b class="num">₹3,05,000</b><span>2 accounts · 22 Nov</span></div>
+        <div class="fig"><small>Cash lasts until</small><b class="num">Nov 2027</b><span>11 months at this pace</span></div>
+        <div class="fig"><small>Net each month</small><b class="num neg">−₹39,624</b><span>average of Aug to Oct</span></div>
+        <div class="fig"><small>Keep at least</small><b class="num">₹2,50,000</b><span><a href="#balance" style="color:var(--link)">Change</a></span></div>
+      </div>
+      <div class="card"><header><h3>Last six months</h3><span class="tag">* Nov so far</span></header>
+        <div class="chart"><div class="col"><div class="pair"><i class="in" style="height:2%"></i><i class="out" style="height:10%"></i></div><b>Jun</b><span class="num neg">−₹46,300</span></div><div class="col"><div class="pair"><i class="in" style="height:100%"></i><i class="out" style="height:11%"></i></div><b>Jul</b><span class="num ">+₹4,54,400</span></div><div class="col"><div class="pair"><i class="in" style="height:3%"></i><i class="out" style="height:11%"></i></div><b>Aug</b><span class="num neg">−₹39,800</span></div><div class="col"><div class="pair"><i class="in" style="height:4%"></i><i class="out" style="height:12%"></i></div><b>Sep</b><span class="num neg">−₹40,400</span></div><div class="col"><div class="pair"><i class="in" style="height:4%"></i><i class="out" style="height:12%"></i></div><b>Oct</b><span class="num neg">−₹38,671</span></div><div class="col"><div class="pair"><i class="in" style="height:5%"></i><i class="out" style="height:15%"></i></div><b>Nov*</b><span class="num neg">−₹49,012</span></div></div>
+        <div class="legend"><span><i style="background:var(--in)"></i>Money in</span><span><i style="background:var(--out)"></i>Money out</span></div></div>
+      <div class="card"><header><h3>Next six months</h3><span class="tag">Estimate</span></header>
+        <div class="chart"><div class="col"><div class="pair one"><i class="in" style="height:78%"></i><u style="bottom:77%"></u></div><b>Dec</b><span class="num">₹2,52,791</span></div><div class="col"><div class="pair one"><i class="low" style="height:66%"></i><u style="bottom:77%"></u></div><b>Jan</b><span class="num">₹2,13,916</span></div><div class="col"><div class="pair one"><i class="in" style="height:100%"></i><u style="bottom:77%"></u></div><b>Feb</b><span class="num">₹3,25,041</span></div><div class="col"><div class="pair one"><i class="in" style="height:86%"></i><u style="bottom:77%"></u></div><b>Mar</b><span class="num">₹2,78,666</span></div><div class="col"><div class="pair one"><i class="low" style="height:74%"></i><u style="bottom:77%"></u></div><b>Apr</b><span class="num">₹2,39,791</span></div><div class="col"><div class="pair one"><i class="low" style="height:62%"></i><u style="bottom:77%"></u></div><b>May</b><span class="num">₹2,00,916</span></div></div>
+        <div class="legend"><span><i style="background:var(--in)"></i>Cash at month end</span><span><i style="background:var(--out)"></i>Below your floor</span><span><i style="border-top:1.5px dashed var(--bad-dot);height:0;width:14px;border-radius:0;margin-top:5px"></i>Floor</span></div>
+        <div class="scroll" style="border:0;border-top:1px solid var(--line-soft);border-radius:0"><table class="fc">
+          <thead><tr><th>Month</th><th>Opening</th><th>Billing</th><th>Other in</th><th>Costs</th><th>GST to pay</th><th>Closing</th></tr></thead><tbody><tr><th scope="row">Dec</th><td class="num">₹3,01,736</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹63,070</td><td class="num">−₹4,042</td><td class="num"><b>₹2,52,791</b></td></tr><tr><th scope="row">Jan</th><td class="num">₹2,52,791</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹2,13,916</b> <span class="badge b-warn">Below floor</span></td></tr><tr><th scope="row">Feb</th><td class="num">₹2,13,916</td><td class="num">₹18,167</td><td class="num">₹1,50,000</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹3,25,041</b></td></tr><tr><th scope="row">Mar</th><td class="num">₹3,25,041</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹61,771</td><td class="num">−₹2,771</td><td class="num"><b>₹2,78,666</b></td></tr><tr><th scope="row">Apr</th><td class="num">₹2,78,666</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹2,39,791</b> <span class="badge b-warn">Below floor</span></td></tr><tr><th scope="row">May</th><td class="num">₹2,39,791</td><td class="num">₹18,167</td><td class="num">—</td><td class="num">−₹54,271</td><td class="num">−₹2,771</td><td class="num"><b>₹2,00,916</b> <span class="badge b-warn">Below floor</span></td></tr></tbody></table></div>
+        <details class="fold" style="margin:12px 16px 16px"><summary>How this is worked out</summary>
+          <div class="chips"><span class="chip on">Billing ₹18,167 a month</span><span class="chip">Opening is cash now less ₹3,264 due in Nov</span><span class="chip">Costs from their due dates</span><span class="chip">GST on this month’s invoices, then 18% of billing</span><span class="chip">Entries marked Planned</span></div></details></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ============ MOVEMENTS ============ -->
+<section class="sec" id="movements">
+  <h2>2 · Movements</h2>
+  <p class="cap">Every rupee in and out, from three sources. Only an entered one can be edited here.</p>
+  <div class="screen"><div class="app" style="min-height:560px">
+    <aside class="side" aria-hidden="true"><div class="brand">Frrata <span class="tag">STAFF</span></div><a>Today</a><div class="grp">Money</div><a>Costs</a><a class="on">Cashflow</a></aside>
+    <div class="main">
+      <div class="ph"><h2>Cashflow</h2><button class="btn sec2">Add entry</button><button class="btn">Update balance</button></div>
+      <div class="tabs"><a href="#overview">Overview</a><a class="on" href="#movements">Movements</a><a href="#accounts">Accounts</a></div>
+      <div class="ph"><div class="chips"><span class="chip on">Nov 2026</span><span class="chip">Oct</span><span class="chip">Sep</span><span class="chip">Aug</span></div><div class="chips" style="margin-left:auto"><span class="chip on">All</span><span class="chip">In</span><span class="chip">Out</span><span class="chip">Entered</span></div></div>
+      <div class="figs" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="fig"><small>In</small><b class="num pos">₹26,500</b><span>Billing</span></div><div class="fig"><small>Out</small><b class="num">−₹75,512</b><span>Costs</span></div><div class="fig"><small>Net</small><b class="num neg">−₹49,012</b><span>Nov so far</span></div></div>
+      <div class="card"><div class="row hd mv"><div>What</div><div>Date</div><div>From</div><div class="r">Amount</div><div style="width:60px"></div></div><div class="row mv"><div class="nm"><b>Billing payments</b><span>12 payments</span></div><div class="hide-s">23 Nov</div><div class="hide-s"><span class="tag">Billing</span></div><div class="r num pos">+₹26,500</div><div class="r"></div></div><div class="row mv"><div class="nm"><b>Logo and mark</b><span>Design studio</span></div><div class="hide-s">9 Nov</div><div class="hide-s"><span class="tag">Costs</span></div><div class="r num ">−₹25,000</div><div class="r"></div></div><div class="row mv"><div class="nm"><b>WhatsApp conversations</b><span>Meta</span></div><div class="hide-s">5 Nov</div><div class="hide-s"><span class="tag">Costs</span></div><div class="r num ">−₹2,740</div><div class="r"></div></div><div class="row mv"><div class="nm"><b>Anthropic usage</b><span>Anthropic</span></div><div class="hide-s">3 Nov</div><div class="hide-s"><span class="tag">Costs</span></div><div class="r num ">−₹5,417</div><div class="r"></div></div><div class="row mv"><div class="nm"><b>Contractor</b><span>People</span></div><div class="hide-s">1 Nov</div><div class="hide-s"><span class="tag">Costs</span></div><div class="r num ">−₹40,000</div><div class="r"></div></div><div class="row mv"><div class="nm"><b>Supabase Pro</b><span>Supabase</span></div><div class="hide-s">1 Nov</div><div class="hide-s"><span class="tag">Costs</span></div><div class="r num ">−₹2,355</div><div class="r"></div></div><div class="row mv"><div class="nm"><b>Owner capital</b><span>Current account</span></div><div class="hide-s">14 Jul</div><div class="hide-s"><span class="tag">Entered</span></div><div class="r num pos">+₹5,00,000</div><div class="r"><button class="btn sm ghost">Edit</button></div></div><div class="row mv"><div class="nm"><b>Startup grant</b><span>Reserve · not yet</span></div><div class="hide-s">Feb</div><div class="hide-s"><span class="tag">Planned</span></div><div class="r num pos">+₹1,50,000</div><div class="r"><button class="btn sm ghost">Edit</button></div></div></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ============ ADD ============ -->
+<section class="sec" id="add">
+  <h2>3 · Add an entry</h2>
+  <p class="cap">For what Billing and Costs don't hold: funding, a grant, a loan, GST paid. Mark it Planned and it joins the forecast.</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div class="screen" style="min-height:560px"><div class="scrim"></div>
+      <form class="dlg" onsubmit="return false" aria-labelledby="adde">
+        <h3 id="adde">Add an entry</h3>
+        <div class="seg" role="group" aria-label="Direction"><button type="button" aria-pressed="true">Money in</button><button type="button" aria-pressed="false">Money out</button></div>
+        <div class="fld"><label>What</label><div class="in">Startup grant<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
+        <div class="two"><div class="fld"><label>Amount</label><div class="in num"><span class="cur">INR</span>1,50,000</div></div><div class="fld"><label>Account</label><div class="in">Reserve<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div></div>
+        <div class="sw on"><i></i>Not received yet</div>
+        <div class="fld"><label>Expected on</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>Feb 2027</div></div>
+        <div class="fld"><label>Note</label><div class="in ph2">Optional</div></div>
+        <div class="foot"><button class="btn sec2" type="button">Cancel</button><button class="btn" type="button">Add entry</button></div>
+      </form>
+    </div>
+    <div class="screen" style="min-height:560px"><div class="scrim"></div>
+      <div class="dlg"><h3>Add an entry</h3>
+        <div class="seg"><button aria-pressed="false">Money in</button><button aria-pressed="true">Money out</button></div>
+        <div class="fld"><label>What</label><div class="in err">GST paid<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
+        <div class="fld"><label>Amount</label><div class="in err num"><span class="cur">INR</span>0</div><span class="ferr">Enter an amount above ₹0.</span></div>
+        <div class="fld"><label>Paid on</label><div class="in err num"><svg class="i"><use href="#i-cal"/></svg>12 Dec 2026</div><span class="ferr">Pick today or an earlier day.</span></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Add entry</button></div>
+        <div class="toast" style="position:static;transform:none;justify-self:start"><span class="bad"></span>2 fields need fixing<button>Show</button></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ UPDATE BALANCE ============ -->
+<section class="sec" id="balance">
+  <h2>4 · Update balance</h2>
+  <p class="cap">Type what the bank says. The books' own figure shows beside it, and the difference.</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div class="screen" style="min-height:520px"><div class="scrim"></div>
+      <div class="dlg"><h3>Update balance</h3>
+        <div class="fld"><label>Account</label><div class="in">Current account<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
+        <div class="two"><div class="fld"><label>Balance</label><div class="in num"><span class="cur">INR</span>1,75,000</div></div><div class="fld"><label>As of</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>23 Nov 2026</div></div></div>
+        <div class="card" style="padding:12px 14px;display:grid;gap:6px"><div class="ph" style="gap:8px"><span style="color:var(--text-2)">Our books say</span><b class="num" style="margin-left:auto">₹1,92,400</b></div><div class="ph" style="gap:8px"><span style="color:var(--text-2)">Difference</span><b class="num neg" style="margin-left:auto">−₹17,400</b></div></div>
+        <div class="fld"><label>Keep at least</label><div class="in num"><span class="cur">INR</span>2,50,000</div></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Save balance</button></div></div>
+    </div>
+    <div class="screen" style="min-height:520px"><div class="scrim"></div>
+      <div class="dlg"><h3>Update balance</h3>
+        <div class="fld"><label>Account</label><div class="in">Reserve<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
+        <div class="two"><div class="fld"><label>Balance</label><div class="in num"><span class="cur">INR</span>1,30,000</div></div><div class="fld"><label>As of</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>23 Nov 2026</div></div></div>
+        
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Save balance</button></div>
+        <div class="toast" style="position:static;transform:none;justify-self:start"><span class="ok"></span>Balance saved · ₹3,05,000 in all<button>Undo</button></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ACCOUNTS ============ -->
+<section class="sec" id="accounts">
+  <h2>5 · Accounts</h2>
+  <p class="cap">Each place cash sits, with its latest balance and the ones before.</p>
+  <div class="screen"><div class="app" style="min-height:420px">
+    <aside class="side" aria-hidden="true"><div class="brand">Frrata <span class="tag">STAFF</span></div><a>Today</a><div class="grp">Money</div><a>Costs</a><a class="on">Cashflow</a></aside>
+    <div class="main">
+      <div class="ph"><h2>Cashflow</h2><button class="btn sec2">Add account</button><button class="btn">Update balance</button></div>
+      <div class="tabs"><a href="#overview">Overview</a><a href="#movements">Movements</a><a class="on" href="#accounts">Accounts</a></div>
+      <div class="card">
+        <div class="acct"><div class="top"><b>Current account</b><span class="tag">Main</span><span class="num"><b style="font-weight:600">₹1,75,000</b></span></div><span style="color:var(--text-2);font-size:12px">As of 22 Nov · ₹1,82,400 on 14 Nov · ₹2,18,100 on 1 Nov</span></div>
+        <div class="acct"><div class="top"><b>Reserve</b><span class="num"><b style="font-weight:600">₹1,30,000</b></span></div><span style="color:var(--text-2);font-size:12px">As of 22 Nov · ₹1,30,000 on 1 Nov</span></div>
+        <div class="acct" style="background:var(--sunk)"><div class="top"><b>Total</b><span class="num"><b style="font-weight:600">₹3,05,000</b></span></div></div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ============ STATES ============ -->
+<section class="sec" id="states">
+  <h2>6 · States</h2>
+  <p class="cap">First use, loading, error and no permission.</p>
+  <div class="statebox">
+    <div class="screen"><div class="main"><div class="ph"><h2>Cashflow</h2><button class="btn">Update balance</button></div>
+      <div class="empty"><div class="tile"><svg viewBox="0 0 24 24"><use href="#i-cost"/></svg></div><h3>Add your cash in the bank</h3><button class="btn">Update balance</button></div></div></div>
+    <div class="screen"><div class="main"><div class="ph"><h2>Cashflow</h2></div>
+      <div class="figs" aria-busy="true"><div class="fig"><div class="skel"></div><div class="skel t"></div></div><div class="fig"><div class="skel"></div><div class="skel t"></div></div><div class="fig"><div class="skel"></div><div class="skel t"></div></div><div class="fig"><div class="skel"></div><div class="skel t"></div></div></div>
+      <div class="card" style="padding:16px;display:grid;gap:12px"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div></div>
+    <div class="screen"><div class="main"><div class="ph"><h2>Cashflow</h2></div>
+      <div class="empty"><div class="tile"><svg viewBox="0 0 24 24"><use href="#i-cost"/></svg></div><h3>We couldn’t read cashflow</h3><span style="color:var(--text-2)">Nothing was changed.</span><button class="btn sec2">Try again</button></div></div></div>
+    <div class="screen"><div class="main"><div class="ph"><h2>Cashflow</h2></div>
+      <div class="empty"><div class="tile"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><h3>Only a master admin can open Cashflow</h3><button class="btn sec2">Back to Today</button></div></div></div>
+  </div>
+</section>
+
+<!-- ============ PHONE ============ -->
+<section class="sec" id="phone">
+  <h2>7 · On a phone</h2>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(300px,390px));justify-content:center">
+    <div class="screen phone"><div class="ptop"><b>Cashflow</b><button class="btn sm">Update</button></div>
+      <div class="pbody">
+        <div class="tabs"><a class="on" href="#phone">Overview</a><a href="#phone">Movements</a><a href="#phone">Accounts</a></div>
+        <div class="band" style="flex-wrap:wrap">Cash falls below ₹2,50,000 in Jan<button class="btn sm sec2" style="margin-left:0">See forecast</button></div>
+        <div class="pfigs"><div class="fig"><small>Cash in bank</small><b class="num">₹3,05,000</b></div><div class="fig"><small>Cash lasts until</small><b class="num">Nov 2027</b></div><div class="fig"><small>Net each month</small><b class="num neg">−₹39,624</b></div><div class="fig"><small>Keep at least</small><b class="num">₹2,50,000</b></div></div>
+        <div class="card"><header><h3>Next six months</h3></header><div class="chart"><div class="col"><div class="pair one"><i class="in" style="height:78%"></i><u style="bottom:77%"></u></div><b>Dec</b><span class="num">₹2,52,791</span></div><div class="col"><div class="pair one"><i class="low" style="height:66%"></i><u style="bottom:77%"></u></div><b>Jan</b><span class="num">₹2,13,916</span></div><div class="col"><div class="pair one"><i class="in" style="height:100%"></i><u style="bottom:77%"></u></div><b>Feb</b><span class="num">₹3,25,041</span></div><div class="col"><div class="pair one"><i class="in" style="height:86%"></i><u style="bottom:77%"></u></div><b>Mar</b><span class="num">₹2,78,666</span></div><div class="col"><div class="pair one"><i class="low" style="height:74%"></i><u style="bottom:77%"></u></div><b>Apr</b><span class="num">₹2,39,791</span></div><div class="col"><div class="pair one"><i class="low" style="height:62%"></i><u style="bottom:77%"></u></div><b>May</b><span class="num">₹2,00,916</span></div></div></div>
+      </div>
+      <div class="pbar"><span>Today</span><span>Merchants</span><span>Partners</span><span class="on">Money</span><span>More</span></div></div>
+    <div class="screen phone" style="min-height:760px"><div class="scrim"></div>
+      <div class="dlg" style="top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0"><h3>Update balance</h3>
+        <div class="fld"><label>Account</label><div class="in">Current account<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
+        <div class="two"><div class="fld"><label>Balance</label><div class="in num"><span class="cur">INR</span>1,75,000</div></div><div class="fld"><label>As of</label><div class="in num">23 Nov 2026</div></div></div>
+        <div class="ph" style="gap:8px"><span style="color:var(--text-2)">Difference from our books</span><b class="num neg" style="margin-left:auto">−₹17,400</b></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Save balance</button></div></div></div>
+  </div>
+</section>
+
+<!-- ============ COSTS AUTO-FILL ============ -->
+<section class="sec" id="autofill">
+  <h2>8 · Costs, filled in from the vendors</h2>
+  <p class="cap">Checked 2026-11-23. Vercel is read already. Anthropic can be read with an organisation admin key. Supabase has no billing API, so it stays typed.</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div class="screen"><div class="main">
+      <div class="ph"><h2>Connections</h2></div>
+      <div class="card">
+        <div class="row" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto"><div class="nm"><b>Vercel</b><span>Read every hour · last 14 min ago</span></div><div><span class="badge b-ok">Connected</span></div><div></div></div>
+        <div class="row" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto"><div class="nm"><b>Mux</b><span>Read every hour · last 14 min ago</span></div><div><span class="badge b-ok">Connected</span></div><div></div></div>
+        <div class="row" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto"><div class="nm"><b>Anthropic</b><span>Needs an admin key</span></div><div><span class="badge b-neu">Not connected</span></div><div><button class="btn sm sec2">Connect</button></div></div>
+        <div class="row" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto"><div class="nm"><b>Supabase</b><span>No billing feed. Typed by hand</span></div><div><span class="badge b-neu">Manual</span></div><div></div></div>
+      </div>
+      <div class="card" style="padding:14px 16px;display:grid;gap:12px">
+        <div class="sw"><i></i>Record Vercel bills for me</div>
+        <div class="sw on"><i></i>Record Anthropic bills for me</div>
+      </div></div></div>
+    <div class="screen"><div class="main">
+      <div class="ph"><h2>Costs</h2></div>
+      <div class="card">
+        <div class="row" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto"><div class="nm"><b>Vercel Pro</b><span>Vercel · Infrastructure</span></div><div><span class="tag">Auto</span></div><div class="r num">$34.18</div><div><span class="badge b-warn">Confirm rupees</span></div></div>
+        <div class="row" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto"><div class="nm"><b>Anthropic usage</b><span>Anthropic · AI</span></div><div><span class="tag">Auto</span></div><div class="r num">$57.50</div><div><span class="badge b-ok">Confirmed</span></div></div>
+        <div class="row" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto"><div class="nm"><b>Supabase Pro</b><span>Supabase · Infrastructure</span></div><div><span class="tag">Manual</span></div><div class="r num">$25.00</div><div><button class="btn sm sec2">Mark paid</button></div></div>
+      </div></div></div>
+  </div>
+</section>
+
+<section class="sec" id="calls">
+  <h2>Your calls</h2>
+  <div class="call"><b>1 · Who sees Cashflow</b><span>Master admin only. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>2 · What counts as money in</b><span>Billing payments you captured, less refunds, plus entries. Partner credit purchases join once a read for them exists. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>3 · GST</b><span>Show GST to pay as its own line: next month’s from the invoices you issued, later months estimated from billing. <span class="rec">Recommended.</span> Your CA confirms the rule.</span></div>
+  <div class="call"><b>4 · Forecast length</b><span>Six months, with billing at the average of the last three months. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>5 · Low-cash floor</b><span>One typed figure. Falling below it shows on Today. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>6 · Costs from the vendors</b><span>The vendor’s figure fills the bill for you to confirm. Recording turns on for a vendor only after you have matched one month. Vercel first, then Anthropic with an admin key. Supabase stays typed. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>Not built</b><span>Bank feeds, scenarios, several companies, payouts, and partner payments.</span></div>
+  <h2 style="margin-top:28px">Sample figures</h2>
+  <p class="cap">Every number is worked out from the sample rows in the generator, not typed by hand.</p>
+  <div class="scroll"><table class="plain">
+    <tr><th>Month</th><th>Billing in</th><th>Entered in</th><th>Costs out</th><th>Entered out</th><th>Net</th></tr>
+    <tr><td>Jun</td><td class="num">₹6,000</td><td class="num">₹0</td><td class="num">₹52,300</td><td class="num">₹0</td><td class="num">−₹46,300</td></tr><tr><td>Jul</td><td class="num">₹9,500</td><td class="num">₹5,00,000</td><td class="num">₹55,100</td><td class="num">₹0</td><td class="num">+₹4,54,400</td></tr><tr><td>Aug</td><td class="num">₹14,000</td><td class="num">₹0</td><td class="num">₹53,800</td><td class="num">₹0</td><td class="num">−₹39,800</td></tr><tr><td>Sep</td><td class="num">₹18,500</td><td class="num">₹0</td><td class="num">₹58,900</td><td class="num">₹0</td><td class="num">−₹40,400</td></tr><tr><td>Oct</td><td class="num">₹22,000</td><td class="num">₹0</td><td class="num">₹54,271</td><td class="num">₹6,400</td><td class="num">−₹38,671</td></tr><tr><td>Nov</td><td class="num">₹26,500</td><td class="num">₹0</td><td class="num">₹75,512</td><td class="num">₹0</td><td class="num">−₹49,012</td></tr>
+    <tr><th colspan="5">Average net, Aug to Oct</th><th class="num">−₹39,624</th></tr>
+  </table></div>
+</section>
+</div>

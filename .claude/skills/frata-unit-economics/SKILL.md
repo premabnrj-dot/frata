@@ -2,9 +2,9 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.19.0
+  version: 2.22.0
   owner: owner
-  verified: 2026-11-16
+  verified: 2026-11-24
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -227,6 +227,18 @@ higher caps, review of big sends, export/API.
 | An upgrade from the card is not undone within 60 days | pricing-ladder spec · 2026-11-11 | downgrades within 60 days of a `source: featured` change |
 | Frrata gives up ₹500–₹26,500 a month per shop that moves up from the card | review · 2026-11-11 | invoices before and after, per moved shop |
 
+## The dollar rate: one rule (owner, 2026-11-24; fixes three rates in the records)
+The rate is the one **staff type in Admin** (the owner, often: "exchange rate, I'll enter quite often, i'll type",
+2026-11-24), kept as a dated row by `src/lib/admin/fx-rate.ts` (`app_fx_rate_set`, audited). It is the **only** rate
+the running product uses: a rupee figure a turn charges is that day's typed rate × 1.10; with no rate typed in the last
+4 days (`RATE_MAX_AGE_DAYS`) every Studio turn is refused.
+- **Plans, ADRs and reviews** (anything not charged to a person) use **₹94 a dollar** (₹93.93, x-rates.com, 2026-11-16)
+  as the *base*, and **₹103.40** (₹94 × 1.10) as the *loaded* figure for a vendor's list price. ₹103.40 is the base with
+  the loading, not a third rate.
+- **₹88** (the 2026-11-15 assumption in ADR-0017's tables, the V1 plan and older research) is retired; a figure
+  reused from there is restated at ₹94 base with the date it was restated. When the typed rate moves more than 3% from
+  ₹94, this line is updated in the same commit with its date.
+
 ## Studio credits and code-site hosting (owner-approved 2026-11-16; `docs/specs/2026-11-16-studio-agent.md` § 8; hypotheses)
 
 - **The credit** = ₹6.33 of **loaded** cost. Loaded cost = the vendors' list cost (Managed Agents' `usage.list_cost`, the
@@ -239,6 +251,11 @@ higher caps, review of big sends, export/API.
   the free 20 end after 90 days, once per PAN or GSTIN; every bought credit (seat, pack, typed) lasts 12 months; Any amount
   20–4,000; ₹1,999 kept at 2.99× after a 2% fee with Amex, Diners and international cards off. Seats and credits
   stay outside the partner share.
+- **Studio → Studio Plus starts at once** (owner 2026-11-23, option B): Plus's first month is paid that day, 500 credits
+  now, a new cycle from that day; Studio credits left keep their own use-by dates; the Studio fee already paid is never
+  refunded or split by days (a split would refund up to ₹2,899.03 before GST on day 1 while the partner keeps all 150
+  credits). Every credit still sells at ₹19.99–20.00; Studio Plus → Studio waits for the renewal. Hypotheses: carried-over
+  seat lots spent by day 90; a move not undone within 60 days (review, 2026-11-23).
 - **Costs are net of GST.** Frrata claims the GST input credit on every bill it pays (Anthropic, Vercel, GitHub and
   the rest; owner, 2026-11-16), so list cost is the cost.
 - **Inputs:** Opus 5.5 $4 in, $20 out, cache read $0.20, 5-minute write $5, 1-hour write $8 per million; Managed Agents
@@ -263,7 +280,7 @@ higher caps, review of big sends, export/API.
 |---|---|---|
 | 251 credits an 8-page Opus site, ≤ 280 median | Studio spec · 2026-11-16 | proof task 1, three runs with real pauses |
 | 19 credits a page turn, 3–4 an edit | same | proof tasks 4–13 |
-| 1.10 loading | unit-economics review · 2026-11-16 | the first two Anthropic invoices against the bank's debits; returned turns ÷ all turns, month 1; Razorpay fees on purchases |
+| 1.10 loading | unit-economics review · 2026-11-16 | the first two Anthropic invoices against the bank's debits; returned turns ÷ all turns, month 1; Razorpay fees on purchases. It leaves out Frrata's own function time (V3a review · 2026-11-23: about $0.22 a month idle cron, about $0.47 of staff polls; at V3b's 70 sessions about $60 a month of polls) and turns that overshoot their reserve (charged never above it): read `studio_spend_turns` measured > reserved and Vercel's charges for `/api/cron/studio` and the poll route over the staff test's 30 days |
 | Hosting ₹294 / ₹2,937 / ₹9,764 a month | ADR-0017 guess · 2026-11-15 | the pilot's 30 days of Vercel usage |
 | Partners pay ₹380 a page against ₹40–80 elsewhere | review · 2026-11-16 | win/loss notes, first 20 partners |
 | The share repays a site's credits in 7.1 months on Launch, 1.3 on Growth | share table · 2026-11-07 | Phase 6 statements of partner-built stores |

@@ -14,7 +14,7 @@ import { ownerPasskeys } from '@/lib/admin/partner-passkeys'
 import { todayItems } from '@/lib/admin/today'
 import { isMasterAdmin } from '@/domains/tenancy/staff-words'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { staffProof } from '@/lib/auth/session'
+import { passkeys, staffProof } from '@/lib/auth/session'
 import { formatPhone } from '@/lib/format'
 import { dateTimeIN, dayMonthIN, sinceIN } from '@/lib/format-date'
 import { DialogButton, MoreDialogs, type DialogSpec } from '../_components/form-dialog'
@@ -38,11 +38,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const now = new Date()
   // `review` (the old view name) still lands on Needs you.
   const view: View = sp.view === 'approved' || sp.view === 'declined' ? sp.view : 'needs'
-  const [counts, review, approved, declined, { items }] = await Promise.all([
+  const [counts, review, approved, declined, { items }, pk] = await Promise.all([
     partnerCounts(staff), listPartners(staff, 'review'),
     view === 'declined' ? Promise.resolve([]) : listPartners(staff, 'approved'),
     view === 'declined' ? listPartners(staff, 'declined') : Promise.resolve([]),
-    todayItems(staff),
+    todayItems(staff), passkeys(),
   ])
   // A partner owner's passkey request waits on a master admin: the same item Today shows (by partner id).
   const asking = new Set(items.filter((i) => i.kind === 'partner_passkey').map((i) => i.key))
@@ -137,7 +137,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                 ))}
               </div>
             ) : <p className="text-muted-foreground">The team couldn&apos;t be read. Reload to try again.</p>)}
-            {tab === 'passkeys' && open.approvedAt && (keys ? <OwnerPasskeysPanel partnerId={open.id} s={keys} now={now.toISOString()} admin={isAdmin} /> : <p className="text-muted-foreground">Confirm it&apos;s you to see passkeys.</p>)}
+            {tab === 'passkeys' && open.approvedAt && (pk.off ? <p className="text-muted-foreground">Passkeys are off</p>
+              : keys ? <OwnerPasskeysPanel partnerId={open.id} s={keys} now={now.toISOString()} admin={isAdmin} /> : <p className="text-muted-foreground">Confirm it&apos;s you to see passkeys.</p>)}
           </Section>
         )}
       </div>

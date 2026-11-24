@@ -28,7 +28,9 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
    host) stays drawn as a second implementation behind it and is not built until a switch signal (point 7). The client
    is made with a 30-second timeout and 1 retry for control calls and 15 seconds for the event fetch after a webhook.
 3. **Frrata's own Claude account.** One Anthropic Console organisation in the company's name, billed to the company,
-   with workspaces `studio` (partners' sessions) and `studio-eval` (the proof and model upgrades). The app reaches
+   with workspaces `studio-eval` (the proof, model upgrades and, until a partner uses Studio, staff turns; **the only
+   one that exists and holds the live key, 2026-11-23**) and `studio` (partners' sessions; made, with its own spend limit
+   and key, before any partner uses Studio: `docs/setup.md` V3a step 1). The app reaches
    Anthropic through Vercel's OIDC token if the spike proves it, else one Production-only API key through `secret()`;
    no key in a sandbox, a repository or a browser. **Never a partner's Claude sign-in** (the Agent SDK's terms):
    every model call is Frrata's, billed to Frrata and then to the partner as credits. The agent is "Frrata agent",
@@ -46,13 +48,38 @@ ADR-0018 (the build-key amendment), ADR-0003, ADR-0008
      role; a write takes its `*In(tx)` form inside its own `withTenant`. A cached loader never runs inside a
      transaction (it would deadlock the pool);
    - every id in a tool's input is matched with `where tenant_id = turn.tenant`.
-5. **A third Postgres setting, `app.partner_id`,** beside `app.tenant_id` and `app.member_role`, set only by
+   *(As built, 2026-11-23, V3a R5: `asTurn(turn, work)`, with no `cap`: a tool gets `ctx.reads`, a frata_builder Actor, and
+   `ctx.write((tx, partnerId) => …)`, a store transaction the database binds to the turn's person again; no tool input
+   carries an id at all, `check:studio`.)*
+5. **A third Postgres setting, `app.partner_id`,** *(as first written; superseded by the amendment below: the partner
+   is bound by a database-held row, not a setting)* beside `app.tenant_id` and `app.member_role`, set only by
    `requireMember`/`requireCapability` from `app_access_for` and carried in the Actor. Every `studio_*` table has a
    restrictive policy `tenant_id = app_current_tenant() and partner_id = <the setting>` and composite foreign keys
    `(tenant_id, partner_id, session_id) → studio_sessions`, so the brand's own staff or a later partner never read a
    session. Studio's rows and the credit ledger are written by `frata_app` definers keyed on the turn: each checks
    `turn.tenant_id = app_current_tenant()`, that the turn is open and that `app_turn_actor` is live; settle caps at the
-   reserve; EXECUTE is revoked from public, anon, authenticated, service_role, frata_builder and frata_admin.
+   reserve *(amended 2026-11-23: while no credits exist, settle counts the measured cost uncapped, so an overshoot of
+   one request is counted; only the cron's unbound end caps it at the reserve)*; EXECUTE is revoked from public, anon, authenticated, service_role, frata_builder and frata_admin.
+   **Amended 2026-11-22/23 (V3a plan check, ruling c; orchestrator agreed; the R2 tenancy audits and security review
+   folded in; built in drizzle/0167):** `requireMember` and `requireCapability` stay unchanged (a `Membership` carries no
+   partner, and setting it there would touch every console request). The lock is held **by the database**, not by a
+   setting code could write: `app_current_partner()` answers only for a row in the definer-only `studio_binds` whose
+   random token is in the `app.studio_bind` setting AND whose transaction id is the current transaction's, for the
+   current store. The bind proves a **person**: it names them, their partner membership and the two step-up rows (staff,
+   partner) that proved them. Only two definers write it: `app_studio_partner` (the signed-in person: Frrata staff while
+   Studio is staff-only, an owner or an assigned Lead on the current store, both REAL step-ups live) through
+   `withStudio`, and `app_studio_bind_turn` (an open turn whose person `app_turn_actor` still answers for) for `asTurn`
+   and the cron's advance. Sessions are made, their vendor ids and build key written once, turns opened and closed and
+   spend settled only through definers matching the bound person. With passkeys on, a turn keeps
+   the ids of its person's step-up rows, so sign-out or expiry ends it. **Amended (owner, 2026-11-23,
+   `docs/plans/2026-11-23-passkeys-off.md`):** while passkeys are off from Admin › Staff, the person binds and a turn
+   runs with no step-up (`app_passkeys_off()`, drizzle/0171). Such a turn ends at its next check once passkeys are on,
+   when its staff place, store or partner goes, or at its ceiling. Signing out alone does not end it while off. Ending, cleaning and deleting a session go
+   through definers that read no partner's rows (an unbound end settles at most the reserve). The cron's work list
+   (`app_studio_due`) answers ids only; its callers and `app_studio_bind_turn`'s are pinned by `check:studio` (a code
+   boundary; a separate database login for the runner is the database-held version, before partners use Studio). The
+   restrictive policies are `to public`; frata_builder and frata_admin hold no grant on any `studio_*` table in V3a.
+   Proof § 91.
 6. **Nothing the agent writes reaches a store without a person's tap.** Content, brand words, tokens and logos are rows
    in `studio_proposals`, each drawn with its exact value and Apply; Apply runs the console's own save as that person.
    No tool publishes, hands over, opens the store, touches a domain or a key, changes a price, stock, product or order,

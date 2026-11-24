@@ -72,6 +72,7 @@ const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth
 const ADMIN_LIB_IN_APP = {
   'src/app/api/cron/drain/route.ts': 'The 5-minute drain sends the staff security emails through frata_admin (CRON_SECRET via isCronRequest; staff passkeys, security re-review F2)',
   'src/app/api/cron/outbox/route.ts': 'The daily run issues this month\'s bills on the 1st to 3rd through frata_admin, issueMonthAuto only (CRON_SECRET via isCronRequest; billing rework R2, owner decision 3)',
+  'src/lib/studio/with-studio.ts': 'Studio\'s entry states (owner 2026-11-23): gateState for the signed-in staff member\'s OWN staff passkeys only, from their requireStaff identity, after both staff and partner checks name the same user',
   'src/app/api/cron/infra/route.ts': 'Admin › Infrastructure\'s hourly pull of vendor usage (CRON_SECRET via isCronRequest; writes platform rows only, plan 2026-11-11 I·1)',
 }
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
@@ -188,9 +189,10 @@ for (const file of walk('src')) {
   if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts). The one
+    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts); Studio's
+    // through withStudio (withTenant plus the database's partner bind, src/lib/studio/with-studio.ts). The one
     // pre-tenant query file: which shop a storefront key names (ADR-0018), through the definer, cached.
-    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant( or withActor(`)
+    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(|\bwithStudio\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant(, withActor( or withStudio(`)
   }
 }
 
@@ -227,7 +229,7 @@ const OPEN_FOR_APP = {
 // Each policy as the migrations LEAVE it: a later alter replaces an earlier body, a drop removes it (so a branch a
 // later migration took away is not reported, and one it adds is).
 const finalPolicies = new Map()
-for (const m of sql.matchAll(/(create|alter|drop) policy\s+(?:if exists\s+)?(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
+for (const m of sql.matchAll(/(create|alter|drop) policy\s+(?:if exists\s+)?(\w+)\s+on\s+(?:"?public"?\.)?"?([a-z_]+)"?([\s\S]*?);/g)) {
   const [, verb, name, table, body] = m
   const key = `${table}.${name}`
   if (verb === 'drop') { finalPolicies.delete(key); continue }
@@ -262,12 +264,66 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:client_bills|client_deals|bill_tries))\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — a partner's own bills have no table grants; the partner definers are the only door (P2)`)
 }
+// Studio's agent (V3a, drizzle/*_studio_access.sql): a turn's person and step-ups and every spend row are platform scope;
+// no role holds a grant; the app_studio_* definers and app_turn_actor are the only door (ADR-0020 § 5 as amended).
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(studio_(?:turn_keys|binds|spend_[a-z]+))\b[^;]*?\bto\b/g)) {
+  failures.push(`grant on ${m[1]}  — Studio's turn keys and spend rows have no table grants; the app_studio_* definers are the only door (V3a)`)
+}
 // Studio credits (C1, drizzle/0163–0164; plan docs/plans/2026-11-22-c1-credits.md): no table grant to ANY role; the
 // person definers (app_partner_credit*, app_partner_set_*, app_partner_invoice, app_partner_seat_change) and the system
 // ones (app_pc_*) are the only door, and Admin reads only admin_partner_gst_rows (tenancy audit
 // low finding: a rule naming every table, since partner_billing and partner_invoices share no prefix with the rest).
-for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:billing|seats|credit_purchases|invoices|credit_uses|credit_entries|client_budgets|credit_notices|credit_tries)|fx_rates)\b[^;]*?\bto\b/g)) {
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:billing|seats|credit_purchases|invoices|credit_uses|credit_entries|client_budgets|credit_notices|credit_tries|mandate_cancels)|fx_rates)\b[^;]*?\bto\b/g)) {
   failures.push(`grant on ${m[1]}  — Studio credit tables have no table grants; the app_partner_credit* / app_pc_* definers are the only door (C1)`)
+}
+// 10. ADMIN-ONLY PLATFORM TABLES (Admin › Costs drizzle/0172; tenancy review 2026-11-23 and its re-audit; Cashflow plan task 1).
+// Each family is a few platform tables only frata_admin touches, named once here with the grants it may have and the only two files
+// that may name them. A grant on one to any other role or beyond its list, a policy that is not exactly "for all to frata_admin
+// using …", an `alter policy`, an owner change or RLS turned off, a view, function, RULE, TRIGGER or PUBLICATION that reads, copies or
+// publishes one, a `begin atomic` body (its dependencies hide from this text), a role membership or a blanket grant, fails. The
+// database cannot tell a master admin from support staff (one connection), so the file fence is the second lock: every export of
+// the lib file re-checks ADMIN_ONLY, and another module reads these tables only through those exports. tenancy.sql proves the same
+// on a real Postgres, including the catalog (pg_rewrite, pg_trigger, pg_depend, pg_publication_tables).
+const ADMIN_ONLY_FAMILIES = [
+  { name: 'Costs', schema: 'schema-costs', files: ['src/lib/db/schema-costs.ts', 'src/lib/admin/costs.ts'], grants: { cost_items: 'select, insert, update', cost_payments: 'select, insert, delete' } },
+  // Admin › Cashflow (drizzle/0175): a balance is appended and deleted (Undo), an entry edited, the settings row seeded and only updated.
+  { name: 'Cash', schema: 'schema-cash', files: ['src/lib/db/schema-cash.ts', 'src/lib/admin/cash.ts'], grants: { cash_accounts: 'select, insert, update', cash_balances: 'select, insert, delete', cash_entries: 'select, insert, update, delete', cash_settings: 'select, update' } },
+]
+const FAMILY_OF = Object.fromEntries(ADMIN_ONLY_FAMILIES.flatMap(f => Object.keys(f.grants).map(t => [t, f])))
+const FAMILY_GRANTS = Object.assign({}, ...ADMIN_ONLY_FAMILIES.map(f => f.grants))
+const tableRe = (names) => new RegExp(`\\b(?:${names.join('|')})\\b`)
+const PROTECTED = tableRe(Object.keys(FAMILY_GRANTS))
+for (const m of sql.matchAll(/grant\s+([^;]*?)\bon\s+(?:table\s+)?([^;]*?)\bto\s+([^;]*);/g)) {
+  for (const t of Object.keys(FAMILY_GRANTS)) {
+    if (!new RegExp(`\\b${t}\\b`).test(m[2])) continue
+    if (m[1].trim().replace(/\s+/g, ' ') !== FAMILY_GRANTS[t] || m[2].trim() !== t || m[3].trim() !== 'frata_admin') {
+      failures.push(`grant on ${t}  — only "grant ${FAMILY_GRANTS[t]} on ${t} to frata_admin" is allowed (${FAMILY_OF[t].name}, check:tenant § 10)`)
+    }
+  }
+}
+for (const { name, table, body } of finalPolicies.values()) {
+  if (FAMILY_GRANTS[table] && !/^\s*for all to frata_admin\s+using\b/.test(body)) failures.push(`policy ${name} on ${table}  must be "for all to frata_admin using …" and nothing else (${FAMILY_OF[table].name})`)
+}
+for (const m of sql.matchAll(/alter policy\s+\w+\s+on\s+(?:"?public"?\.)?"?([a-z_]+)"?/g)) if (FAMILY_GRANTS[m[1]]) failures.push(`alter policy on ${m[1]}  — drop and create it, so the gate reads its whole body (${FAMILY_OF[m[1]].name})`)
+for (const m of sql.matchAll(/alter table\s+(?:only\s+)?(?:"?public"?\.)?"?([a-z_]+)"?\s+(?:owner to|disable row level security|no force row level security)/g)) if (FAMILY_GRANTS[m[1]]) failures.push(`${m[1]}  changes owner or turns row level security off (${FAMILY_OF[m[1]].name})`)
+for (const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?(?:materialized\s+)?view\b[^;]*;/g)) if (PROTECTED.test(m[0])) failures.push('a view reads an Admin-only table  — only that family\'s lib file reads them (check:tenant § 10)')
+for (const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?function\b[\s\S]*?\$(\w*)\$([\s\S]*?)\$\1\$/g)) if (PROTECTED.test(m[2])) failures.push('a function reads an Admin-only table  — only that family\'s lib file reads them (check:tenant § 10)')
+for (const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?rule\b[^;]*;/g)) if (PROTECTED.test(m[0])) failures.push('a RULE on an Admin-only table  — it could copy a row out of it (check:tenant § 10)')
+for (const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?(?:constraint\s+)?trigger\b[^;]*;/g)) if (PROTECTED.test(m[0])) failures.push('a TRIGGER on an Admin-only table  — its function could copy a row out of it (check:tenant § 10)')
+for (const m of sql.matchAll(/(?:alter|create)\s+publication\b[^;]*;/g)) if (PROTECTED.test(m[0])) failures.push('a publication holds an Admin-only table  — replication would carry its rows (check:tenant § 10)')
+if (/\bbegin\s+atomic\b/.test(sql)) failures.push('a `begin atomic` function body  — this gate cannot read what it depends on; write the body as a string (check:tenant § 10)')
+// A role handed another role's powers, or a blanket grant, reaches the tables without naming them.
+for (const m of sql.matchAll(/\bgrant\s+(frata_\w+)\s+to\s+([^;]*);/g)) failures.push(`grant ${m[1]} to ${m[2].trim()}  — a role membership hands over every grant of ${m[1]} (the proofs in § 82 and § 102 name none)`)
+for (const m of sql.matchAll(/\bgrant\s+[^;]*\bon\s+all\s+(?:tables|functions)\s+in\s+schema\b[^;]*;/g)) failures.push('a blanket grant on all tables or functions in a schema  — grant each object by name (check:tenant § 10)')
+for (const m of sql.matchAll(/\balter\s+default\s+privileges\b[^;]*\bgrant\b[^;]*;/g)) failures.push('alter default privileges … grant  — grant each object by name (check:tenant § 10)')
+// The file fence, per family: a file outside its two names no table of it and imports no schema of it.
+for (const f of walk('src')) {
+  const c = code(f)
+  for (const fam of ADMIN_ONLY_FAMILIES) {
+    if (fam.files.includes(f)) continue
+    if (new RegExp(`${fam.schema}(?:\\.[jt]sx?)?['"]`).test(c)) failures.push(`${f}  imports the ${fam.name} tables — only ${fam.files.filter(x => !x.includes('/db/')).join(' and ')} may (check:tenant § 10)`)
+    else if (tableRe(Object.keys(fam.grants)).test(c)) failures.push(`${f}  names a ${fam.name} table — only ${fam.files.join(' and ')} may (check:tenant § 10)`)
+  }
 }
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {

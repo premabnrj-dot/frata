@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // does: a Builder, a person signed out, a code or an answer of the wrong shape, a key id that is not a uuid. The
 // definers decide again; these hold the words and keep the calls from being made at all.
 const partner = vi.hoisted(() => ({ value: null as unknown }))
-const calls = vi.hoisted(() => ({ check: vi.fn(), options: vi.fn(), verify: vi.fn(), del: vi.fn() }))
+const calls = vi.hoisted(() => ({ check: vi.fn(), options: vi.fn(), verify: vi.fn(), off: vi.fn(), del: vi.fn() }))
+const pk = vi.hoisted(() => ({ off: false }))
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'localhost:3077' }) }))
 vi.mock('@/lib/auth/require-partner', () => ({ requirePartner: async () => partner.value }))
+vi.mock('@/lib/auth/session', () => ({ passkeys: async () => ({ off: pk.off, since: null, by: null }) }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: async () => '127.0.0.1' }))
 vi.mock('@/lib/auth/webauthn', async () => {
   const { z } = await import('zod')
@@ -17,20 +19,38 @@ vi.mock('@/lib/storefront-api/device', () => ({
   checkDeviceCode: (...a: unknown[]) => calls.check(...a),
   giveOptions: (...a: unknown[]) => calls.options(...a),
   giveVerify: (...a: unknown[]) => calls.verify(...a),
+  giveOff: (...a: unknown[]) => calls.off(...a),
 }))
 
-const { checkCodeAction, deleteComputerAction, giveOptionsAction, giveVerifyAction } = await import('../actions')
+const { checkCodeAction, deleteComputerAction, giveOffAction, giveOptionsAction, giveVerifyAction } = await import('../actions')
 const ok = (role: string) => ({ ok: true, userId: 'u1', email: 'pia@studio.test', sessionId: 's1', stepup: 'h1', partner: { memberRole: role }, confirmedAt: new Date() })
 const answer = { id: 'A'.repeat(43), type: 'public-key', response: {} }
 
 describe('Developer actions', () => {
-  beforeEach(() => { for (const f of Object.values(calls)) f.mockReset() })
+  beforeEach(() => { for (const f of Object.values(calls)) f.mockReset(); pk.off = false })
+
+  it('passkeys off (Admin › Staff): Check code says so, and Give key goes through giveOff with "This is my computer"', async () => {
+    partner.value = ok('owner')
+    calls.check.mockResolvedValue({ ok: true, look: { store: 'Kesar', startedAt: 'x', sameNetwork: true, full: false, hasPasskey: false } })
+    expect(await checkCodeAction('BCDF-GHJK')).toMatchObject({ ok: true, value: { off: false } })
+    pk.off = true
+    expect(await checkCodeAction('BCDF-GHJK')).toMatchObject({ ok: true, value: { off: true, hasPasskey: false } })
+    calls.off.mockResolvedValue({ ok: true, store: 'Kesar' })
+    expect(await giveOffAction('BCDF-GHJK', true)).toEqual({ ok: true, value: 'Kesar' })
+    expect(calls.off).toHaveBeenCalledWith({ userId: 'u1', sessionId: 's1', stepup: 'h1' }, 'BCDF-GHJK', '127.0.0.1', true)
+    calls.off.mockResolvedValue({ ok: false, why: 'not_confirmed' })
+    expect(await giveOffAction('BCDF-GHJK', 'yes')).toEqual({ ok: false, why: 'not_confirmed' })
+    expect(calls.off).toHaveBeenLastCalledWith(expect.anything(), 'BCDF-GHJK', '127.0.0.1', false)
+    expect(await giveOffAction(42)).toEqual({ ok: false, why: 'bad_code' })
+  })
 
   it('a Builder is refused with its own reason, and nothing is called', async () => {
     partner.value = ok('builder')
     expect(await checkCodeAction('BCDF-GHJK')).toEqual({ ok: false, why: 'builder' })
     expect(await giveOptionsAction('BCDF-GHJK')).toEqual({ ok: false, why: 'builder' })
     expect(await giveVerifyAction('BCDF-GHJK', answer)).toEqual({ ok: false, why: 'builder' })
+    expect(await giveOffAction('BCDF-GHJK')).toEqual({ ok: false, why: 'builder' })
+    expect(calls.off).not.toHaveBeenCalled()
     expect(calls.check).not.toHaveBeenCalled()
     expect(calls.options).not.toHaveBeenCalled()
     expect(calls.verify).not.toHaveBeenCalled()

@@ -83,6 +83,8 @@ export async function up({ build = true } = {}) {
   run('fake-ses', 'node', ['e2e/fakes/ses.mjs'], { PORT: String(PORTS.ses), APP: `http://localhost:${PORTS.app}` })
   // Blob's public store (photosAreMade reads every size's first bytes): the app reaches it through a test-only preload.
   run('fake-blob', 'node', ['e2e/fakes/blob.mjs'], { PORT: String(PORTS.blob) })
+  // Studio's agent (V3a): Managed Agents answered by the fake on loopback, never the live API.
+  run('fake-anthropic', 'node', ['e2e/fakes/anthropic.mjs'], { PORT: String(PORTS.anthropic), KEY: 'sk-ant-e2e' })
   if (build) {
     // The database is migrated and seeded already: the build reads the plans, so the public pages' prices, the hero's
     // example order and the partner calculator render in e2e (impact review W·1).
@@ -97,6 +99,8 @@ export async function up({ build = true } = {}) {
   const host = new URL(server).host
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
     ...PUBLIC_ENV, NODE_OPTIONS: `--import ${ROOT}e2e/fakes/blob-read.mjs`, E2E_BLOB_PORT: String(PORTS.blob),
+    // Studio (V3a R7): the fake Managed Agents server, open to staff; the base is refused on Vercel (src/lib/env.ts).
+    STUDIO_ANTHROPIC_KEY: 'sk-ant-e2e', STUDIO_ANTHROPIC_BASE: `http://127.0.0.1:${PORTS.anthropic}`, STUDIO_OPEN: 'staff', STUDIO_AGENT_ID: 'agent_e2e', STUDIO_AGENT_VERSION: '1', STUDIO_ENVIRONMENT_ID: 'env_e2e',
     DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, DATABASE_URL_BUILDER: `postgres://frata_builder:${builderPw}@${host}/${DB}`, ANALYTICS_DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}_analytics`, ANALYTICS_INGEST_ON: '1', PAYMENT_KEYS_SECRET: 'e2e-only-secret', STOREFRONT_PREVIEW_SECRET: Buffer.alloc(32, 9).toString('base64'), TRIAL_CLAIM_SECRET: 'e2e-trial-claim-secret', FRRATA_WA_PHONE_NUMBER_ID: '200000000099', FRRATA_WA_TOKEN: 'EAAe2efrratasignup', FRRATA_WA_SIGNUP_TEMPLATE: 'frrata_signup_code',
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1', GSP_PROVIDER: 'fake', BILLING_TEST_ISSUE: '1', RAZORPAY_BILLING_KEY_ID: BILLING_KEYS.id, RAZORPAY_BILLING_KEY_SECRET: BILLING_KEYS.secret, RAZORPAY_BILLING_WEBHOOK_SECRET: BILLING_KEYS.webhook,
     META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,

@@ -150,7 +150,7 @@ export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'b
 const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
 
 /**
- * app_create_shop_v3 (0166): `uid` must come from requireUser() (getUser), never from input. No pickup PIN code (it is
+ * app_create_shop_v3 (0176): `uid` must come from requireUser() (getUser), never from input. No pickup PIN code (it is
  * asked in Settings › Store); `signupMs` is the browser's "/start → created" time, kept by the definer only inside a day.
  * `sells` must already be checked against SELLS: it is sent as one array literal
  * (drizzle would expand a JS array into a list of parameters).
@@ -377,4 +377,18 @@ export async function addonTrialNotices(): Promise<number> {
 export async function deleteEndedBuildKeys(): Promise<number> {
   const rows = await db().execute<{ n: number }>(sql`select app_delete_ended_build_keys() as n`)
   return Number(rows[0]?.n ?? 0)
+}
+
+/** Passkeys on or off for everyone (drizzle/0171 app_passkeys_state; owner 2026-11-23): off, since when, set by whom.
+ *  Unreadable reads as on (passkeys asked: the safe side). */
+export type PasskeysState = { off: boolean; since: string | null; by: string | null }
+export async function passkeysState(): Promise<PasskeysState> {
+  try {
+    const rows = await db().execute<{ s: PasskeysState }>(sql`select app_passkeys_state() as s`)
+    const v = rows[0]?.s
+    return { off: v?.off === true, since: v?.since ?? null, by: v?.by ?? null }
+  } catch (e) {
+    console.error('[passkeys] state', errName(e))
+    return { off: false, since: null, by: null }
+  }
 }

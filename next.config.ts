@@ -3,6 +3,9 @@ import { ADMIN_PASSKEY_HEADERS, FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, pla
 import { apiRedirects, apiRewrites, shopRewrites } from './src/domains/tenancy/host'
 import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
+/** The client entries that render AppShell (their layouts import it): webpack names an entry by its app path. */
+const APP_SHELL_ENTRY = /^app\/\((?:console|admin|lookeditor)\)\/|^app\/\(partner\)\/partner\/\(workspace\)\//
+
 const config: NextConfig = {
   reactStrictMode: true,
   // Documents (D0): React-PDF runs on the server only, as itself; its fonts are files read at render, so they are
@@ -12,7 +15,11 @@ const config: NextConfig = {
   // ('#standard-fonts/…'), which the file tracer cannot follow — without them every PDF fails in production with
   // MODULE_NOT_FOUND Helvetica.cjs (2026-11-08). scripts/check-pdf-trace.mjs (postbuild) renders a PDF from the traced
   // files alone and fails the build if anything is missing.
-  outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
+  outputFileTracingIncludes: {
+    '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'],
+    // Studio's Starter 0 (src/lib/studio/starter.ts): read only by the Send action, on the Studio page's function.
+    '/partner/studio': ['./kit/starter/**/*', '!./kit/starter/node_modules/**'],
+  },
   // The Storefront API's host first (ADR-0018), then every other host is a shop, served from /s/<host>/…
   // (src/domains/tenancy/host.ts).
   // The API host's root goes to its docs (SA1b D·9).
@@ -22,12 +29,18 @@ const config: NextConfig = {
   async rewrites() {
     return { beforeFiles: [...apiRewrites(API_HOST), ...shopRewrites(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST, API_HOST)], afterFiles: [], fallback: [] }
   },
-  // Every response may not be framed (DENY), except the customizer's look preview on the console host, which the
-  // console itself frames (themes spec § Preview; a later entry can't remove X-Frame-Options, so the global entry
-  // skips that path and two entries cover it: SAMEORIGIN on the console host, DENY on any other host).
+  // Every response may not be framed (DENY), except the customizer's look preview and Studio's store-only preview on the
+  // console host, which the console itself frames (themes spec § Preview; owner 2026-11-23: Studio's pane is the store
+  // alone, so /console/preview, with the console around it, is DENY like every other console page). A later entry can't
+  // remove X-Frame-Options, so the global entry skips those paths and two entries cover each: SAMEORIGIN on the console
+  // host, DENY on any other host.
   async headers() {
     return [
-      { source: '/:path((?!console/theme-preview/).*)', headers: SECURITY_HEADERS },
+      { source: '/:path((?!console/theme-preview/|console/studio-preview(?:/|$)).*)', headers: SECURITY_HEADERS },
+      ...['/console/studio-preview', '/console/studio-preview/:path*'].flatMap((source) => [
+        { source, has: [{ type: 'host' as const, value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
+        { source, missing: [{ type: 'host' as const, value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
+      ]),
       { source: '/console/theme-preview/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
       { source: '/console/theme-preview/:path*', missing: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
       // Admin on the console host may ask for a passkey (a later entry replaces the same header key).
@@ -49,11 +62,49 @@ const config: NextConfig = {
   // its own copy beside the layouts' (speed review 2026-11-16: about 1.3 kB twice on checkout and the product page, the
   // counter 0.5 kB twice on the product page). check:storefront-build holds the pages' weight.
   webpack(config, { dev, isServer }) {
+    // A lazy chunk's file name carries 8 hex characters of its content hash, not Next's 16 (page weight 2026-11-23, the
+    // owner's option A): webpack's runtime, which every page ships, lists each lazy chunk's hash, and 8 characters fewer
+    // each is 0.22 kB gzipped off every page. Nothing reads the length (no service worker; the CSP uses a nonce; the
+    // checks and e2e match whole file names). Collision exposure: a new version of one chunk would need the same 32-bit
+    // hash as its old one to be served stale from a browser's cache, about 1 in 4.3 billion per changed chunk.
+    if (!dev && !isServer && config.output && config.output.chunkFilename === 'static/chunks/[name].[contenthash].js') {
+      config.output.chunkFilename = 'static/chunks/[name].[contenthash:8].js'
+    }
     const split = config.optimization?.splitChunks
     if (!dev && !isServer && split && split.cacheGroups) {
       split.cacheGroups.shopShared = {
         name: 'shop-shared', chunks: 'all', enforce: true, priority: 20,
         test: /[\\/]src[\\/](components[\\/]storefront[\\/](bag-store|bag-words|close-mark|landing|chunk|sections[\\/]rail-counter)\.tsx?|domains[\\/]checkout[\\/]bag-fill\.ts)$/,
+      }
+      // The shell's browser modules (AppShell's navs, Toaster, progress bar and live region, and the Button and cn()
+      // every page beside them uses), in ONE chunk for the pages that draw the shell: Console, Admin, the partner
+      // workspace and the customizer. Each was in the layout's chunk AND again in a page's shared chunk, the same
+      // minSize split as the shop's above (page weight 2026-11-23: 4.6–7.1 kB gzipped twice on most of those pages).
+      // Only those surfaces' chunks take part: a page elsewhere that imports Button keeps its own copy, never the navs.
+      split.cacheGroups.appShell = {
+        name: 'app-shell', enforce: true, priority: 20,
+        chunks: (chunk: { name?: string | null }) => APP_SHELL_ENTRY.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](shell[\\/](nav|nav-progress|rail-toggle|announce)|ui[\\/](toast|toast-context|button|use-shortcuts)|icons[\\/]icon)\.tsx?|lib[\\/]utils\.ts|domains[\\/]ui[\\/]shortcuts\.ts)$/,
+      }
+      // The same, one surface each (page weight 2026-11-23): what a surface's own layout loads, once for its pages.
+      // The partner workspace's passkey gate and its form parts (1.1–2.4 kB twice on each workspace page); Admin's passkey
+      // gate (0.8–1.3 kB on each Admin page); the Toaster on the sign-in pages (2.4 kB on sign-in, start, join, handover
+      // and the partner application). Each group's modules are ones its layout already loads, so no page loads a module it
+      // didn't; the 12 Admin pages that never had the duplicate pay 0.1–0.17 kB for the extra file, the other 13 save 0.6–1.0.
+      split.cacheGroups.partnerShell = {
+        name: 'partner-shell', enforce: true, priority: 19,
+        chunks: (chunk: { name?: string | null }) => /^app\/\(partner\)\/partner\/\(workspace\)\//.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](passkeys[\\/](partner-gate|partner-frame|passkey-client|check-timer)|ui[\\/](action-form|field-error|submit|dialog|banner)|brand[\\/]mark-paths|shell[\\/]fonts)\.tsx?|lib[\\/](format-date|settle)\.ts|domains[\\/]partners[\\/]passkeys\.ts)$/,
+      }
+      split.cacheGroups.adminShell = {
+        name: 'admin-shell', enforce: true, priority: 19,
+        chunks: (chunk: { name?: string | null }) => /^app\/\(admin\)\//.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/](components[\\/](passkeys[\\/](passkey-gate|passkey-client)|layout[\\/]section)\.tsx?|lib[\\/](format-date|settle)\.ts)$/,
+      }
+      split.cacheGroups.signInToaster = {
+        name: 'sign-in-toaster', enforce: true, priority: 19,
+        chunks: (chunk: { name?: string | null }) => /^app\/(login|start|join|handover|partners)\//.test(chunk.name ?? ''),
+        test: /[\\/]src[\\/]components[\\/](ui[\\/](toast|toast-context)|shell[\\/]announce)\.tsx?$/,
       }
     }
     return config

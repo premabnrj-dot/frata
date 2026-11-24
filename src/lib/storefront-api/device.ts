@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server'
-import { deviceCodeChallenge, deviceCodeClaim, deviceCodeGive, deviceCredentials, deviceCodeLook, deviceCodeStart, deviceCodeTake, deviceCodeUnclaim, type CodeLook, type PartnerSession } from '@/lib/db/device-codes'
+import { deviceCodeChallenge, deviceCodeClaim, deviceCodeGive, deviceCodeGiveOff, deviceCredentials, deviceCodeLook, deviceCodeStart, deviceCodeTake, deviceCodeUnclaim, type CodeLook, type PartnerSession } from '@/lib/db/device-codes'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
 import { CONSOLE_HOST } from '@/lib/public-env'
@@ -20,8 +20,9 @@ import { errName } from '@/lib/log'
 //          person's own network, whether the store has room; only for a Partner owner or an assigned Lead of the store's
 //          partner (the definer decides). Limited per person a minute.
 //   give   (the same person) → a passkey check made for THIS code (its challenge on the code's row; an earlier check
-//          never counts, the passkeys-off switch neither), then the approval and the store's audit row in one
-//          transaction, under the store's ceiling. Limited per person a minute.
+//          never counts), then the approval and the store's audit row in one transaction, under the store's ceiling.
+//          While passkeys are off (Admin › Staff, drizzle/0171) the approval comes without one (giveOff). Limited per
+//          person a minute.
 //   poll   (the CLI, its secret) → pending, or the confirmed sign-in claimed ONCE: mintBuildKey as that person (purpose
 //          developer, 24 hours), the key in the answer once, never stored, logged or shown again; "full" when the store
 //          has its limit of keys.
@@ -110,6 +111,18 @@ export async function giveVerify(p: PartnerSession, typed: string, response: Aut
   const r = await codeCeremony(p, sha(code), given).confirmVerify({ userId: p.userId, sessionId: p.sessionId }, response, site)
   if (!r.ok) console.error('[device] give refused', r.error) // a refusal code, never the code or the key
   return r.ok && given.store ? { ok: true, store: given.store } : { ok: false, why: r.ok ? 'not_confirmed' : asRefusal(r.error) }
+}
+
+/** Give key while passkeys are off: the same checks and limit as giveOptions, no passkey; the store's name. */
+export async function giveOff(p: PartnerSession, typed: string, ip: string, mine: boolean): Promise<{ ok: true; store: string } | { ok: false; why: DeviceRefusal }> {
+  const code = deviceCodeOf(typed)
+  if (!code) return { ok: false, why: 'bad_code' }
+  if (!(await withinLimit(LIMITS.deviceGivePerson, p.userId, new Date(), true))) return { ok: false, why: 'busy' }
+  try {
+    return { ok: true, store: await deviceCodeGiveOff(p, sha(code), netHash(ip), mine) }
+  } catch (err) {
+    return { ok: false, why: refusalOf(err) }
+  }
 }
 
 export type Polled = { status: 'pending' } | { status: 'ok'; key: string; expiresAt: string } | { status: 'busy' } | { status: 'full' } | { status: 'refused' } | null

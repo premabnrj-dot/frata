@@ -66,7 +66,7 @@ export async function applyAsPartner(uid: string, a: Application): Promise<{ ok:
   }
 }
 
-/** app_partner_create_shop_v2 (0166): no pickup PIN code (it is asked in Settings › Store). */
+/** app_partner_create_shop_v2 (0176): no pickup PIN code (it is asked in Settings › Store). */
 export async function createClientStore(c: Caller, p: { name: string; slug: string }):
   Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
   try {
@@ -89,6 +89,8 @@ export type ClientRow = {
   linkId: string
   /** The store owner's join and the open invite's day: null for a Builder and once removed (P2, drizzle/0147). */
   ownerSince: Date | null; inviteSentAt: Date | null
+  /** The link's own share (owner only; 0 for a store whose owner added this partner, drizzle/0174). */
+  linkShareBps: number | null
 }
 
 export async function partnerClients(c: Caller): Promise<ClientRow[]> {
@@ -96,6 +98,7 @@ export async function partnerClients(c: Caller): Promise<ClientRow[]> {
   return rows.map((r) => ({
     tenantId: r.tenant_id as string, name: r.name as string, slug: (r.slug as string | null) ?? null, linkedAt: new Date(r.linked_at as string),
     firstOpenedAt: d(r.share_starts_at as string | null), removedAt: d(r.removed_at as string | null),
+    linkShareBps: r.share_bps === null || r.share_bps === undefined ? null : Number(r.share_bps),
     shareMonths: r.share_months === null ? null : Number(r.share_months), noticeDays: r.notice_days === null ? null : Number(r.notice_days), ownerEmail: (r.owner_email as string | null) ?? null,
     inviteEmail: (r.invite_email as string | null) ?? null, inviteExpiresAt: d(r.invite_expires_at as string | null), planName: (r.plan_name as string | null) ?? null,
     hasOwner: (r.has_owner as unknown) === true,

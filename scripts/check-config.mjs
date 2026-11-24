@@ -24,6 +24,7 @@ const PLATFORM = new Set(['NODE_ENV', 'VERCEL', 'VERCEL_ENV', 'NEXT_RUNTIME'])
 const OWNED_CALLS = [
   ['postgres()', /(^|[^.\w])postgres\(/, f => f === 'src/lib/db/index.ts' || f === 'src/lib/db/admin.ts' || f === 'src/lib/db/actor.ts' || f === 'src/lib/db/analytics.ts', 'src/lib/db/index.ts (frata_app), src/lib/db/admin.ts (frata_admin), src/lib/db/actor.ts (frata_builder) or src/lib/db/analytics.ts (the analytics database)'],
   ['a Supabase client', /\bcreate(Server|Browser)Client\(/, f => f.startsWith('src/lib/supabase/'), 'src/lib/supabase/'],
+  ['an Anthropic client', /\bnew\s+Anthropic\(/, f => f === 'src/lib/studio/client.ts', 'src/lib/studio/client.ts (Studio\'s one client: the key, base URL, no logging, timeouts)'],
 ]
 
 const walk = dir => readdirSync(dir).flatMap(n => {
@@ -55,7 +56,7 @@ for (const [name, files] of readers) {
 // Previews off production (spec 2026-11-12): in src/lib/env.ts every variable is read through secret() unless it is
 // plain configuration listed here; CRON_SECRET only beside SECRETS_ALLOWED. Adding a name here says "this is not a
 // secret" — a reviewer checks that claim.
-const PLAIN = new Set(['VERCEL', 'VERCEL_ENV', 'RAZORPAY_API_BASE', 'META_GRAPH_BASE', 'FRRATA_WA_SIGNUP_TEMPLATE', 'FRRATA_WA_TEMPLATE_LANG',
+const PLAIN = new Set(['VERCEL', 'VERCEL_ENV', 'STUDIO_AGENT_ID', 'STUDIO_AGENT_VERSION', 'STUDIO_ENVIRONMENT_ID', 'STUDIO_ANTHROPIC_BASE', 'RAZORPAY_API_BASE', 'META_GRAPH_BASE', 'FRRATA_WA_SIGNUP_TEMPLATE', 'FRRATA_WA_TEMPLATE_LANG',
   'EKCODE_WA_AUTH_TEMPLATE', 'EKCODE_WA_TEMPLATE_LANG', 'FRRATA_GSTIN', 'FRRATA_LEGAL_NAME', 'FRRATA_ADDRESS', 'FRRATA_SAC', 'E2E_FIXTURES', 'E2E_BLOB_PORT',
   'GSP_PROVIDER', 'VERCEL_PROJECT_ID', 'VERCEL_TEAM_ID', 'VERCEL_API_BASE', 'DOH_BASE', 'DOMAIN_CAPACITY', 'MUX_ENVIRONMENT_ID', 'MUX_API_BASE',
   'MUX_STREAM_BASE', 'MUX_IMAGE_BASE', 'SES_ACCOUNT_ID', 'SES_CONFIG_SHOPS', 'SES_CONFIG_NOTICES', 'SES_SNS_TOPIC_ARN', 'EMAIL_SHOP_DOMAIN',

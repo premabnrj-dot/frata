@@ -25,6 +25,11 @@ export const LIMITS = {
   partnerInvite: { action: 'partner_invite:owner', max: 20, windowSeconds: 3600 },
   // Builders T1c (security review L11): an owner changes Lead ↔ Builder at most 30 times an hour; fail closed.
   partnerRole: { action: 'partner_role:owner', max: 30, windowSeconds: 3600 },
+  // Settings › People (security re-review H1, 2026-11-23): invitations a person sends, and a store sends, an hour; and a
+  // person's day. Counted before any check, failing closed. Per recipient is capped in SQL (app_people_mail).
+  peopleInvitePerson: { action: 'people_invite:person', max: 20, windowSeconds: 3600 },
+  peopleInviteStore: { action: 'people_invite:store', max: 20, windowSeconds: 3600 },
+  peopleInviteDay: { action: 'people_invite:day', max: 50, windowSeconds: 86400 },
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
   // Sign-up's address check before sign-in (O1·7), all three failing closed (an answer of `limited` costs a person
   // nothing): per network (a name typed with the 300 ms pause is ~10 checks; a carrier NAT shares an address), per IPv6
@@ -174,6 +179,8 @@ export const LIMITS = {
   apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
   // G·2: build keys minted per store (a session, a preview, a developer's computer each make one), failing closed.
   apiBuildKeyShop: { action: 'api_build_key:shop', max: 30, windowSeconds: 3600 },
+  // Studio V3a: a person's Sends (each one a turn under the spend caps) and Stops, failing closed.
+  studioSendUser: { action: 'studio_send:user', max: 60, windowSeconds: 3600 },
   // G·3, a developer's device sign-in, all failing closed: starts per network (each is a row for 10 minutes), the CLI's
   // polls per network first (any 43-character string is a well-formed secret) then per device (one every 5 s for 10
   // minutes is 120). The page (four screens § 2: "Too many tries. Wait a minute."), per person a minute: Check code (a

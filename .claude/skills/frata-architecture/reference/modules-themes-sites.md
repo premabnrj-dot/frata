@@ -174,9 +174,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
   of a shop with no publish row records its baseline (`baselineRevision`; migration 0034 is its SQL twin).
 - **Writes** are `src/app/(console)/console/look/actions.ts` (all `asMember`, a support visit refused). Every image
   in a layer is rebuilt by `acceptedBase(…, 'theme')` for this shop; uploads go to `tenants/<id>/theme/`.
-- **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is the ONLY
-  framed route: SAMEORIGIN + `frame-ancestors 'self'`, only on the console host (`next.config.ts`,
-  `framing.test.ts`). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
+- **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is framed by the
+  console: SAMEORIGIN + `frame-ancestors 'self'`, only on the console host (`next.config.ts`, `framing.test.ts`); the
+  one other framed route is the store preview `/console/preview`, for Studio's preview pane (V3a R7). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
 - **Page settings** (T2: gallery, details, card, desktop columns, collection top) are additive with today's values
   as `PAGE_DEFAULTS`; a manifest may leave them out. A new setting never edits a released manifest.
 - **Released manifests never change**: `released-manifests.test.ts` snapshots each manifest's evaluated content (so a
@@ -229,7 +229,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - **Look v4** (owner-approved 2026-11-09, research `docs/research/2026-11-09-look-v4.md`; menus moved to the store's content
   in V1, § A store's content): the layer gains `site` (palette of six roles, text styles, icon library + stroke), in
   `src/domains/themes/site.ts` (pure), with the menus' shape and limits (`MenusSchema`, `MENU_LIMITS`, `menusOf`; their
-  rows are the store's content). Saved through `layerProblems` (siteProblem first, in the merchant's words; an
+  rows are the store's content). What a browser reads (roles, styles, `MENU_LIMITS`, `menusOf`, the palette rule) is in
+  `site-facts.ts`, zod-free, which site.ts re-exports; every `domains/themes`, `content`, `pages` and `catalogue/stories`
+  file a form reads has such a `*-facts.ts` half (page weight 2026-11-23; check:storefront-build fails zod in a first load). Saved through `layerProblems` (siteProblem first, in the merchant's words; an
   unreadable palette is refused) and stored as parsed; read **part by part** (`readSite`: a bad part drops only itself;
   a stored palette that no longer reads is ignored). Absent = the theme exactly: a text style sets CSS only when set
   (`data-t-<style>` + `--t-*`), the palette paints paper (and the tint's accent and buttons) only when set, the default

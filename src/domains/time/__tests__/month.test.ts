@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { monthStartIST, nextMonthStartIST } from '../month'
+import { addMonths, monthKey, monthRange, monthStartIST, nextMonthStartIST } from '../month'
 
 describe('monthStartIST', () => {
   it('is midnight IST on the 1st, i.e. 18:30 UTC the day before', () => {
@@ -19,5 +19,30 @@ describe('monthOfYM / ymOf', () => {
     expect(monthOfYM('2026-12')!.toISOString()).toBe('2026-11-30T18:30:00.000Z')
     expect(ymOf(monthOfYM('2026-12')!)).toBe('2026-12')
     expect(monthOfYM('2026-13')).toBeNull()
+  })
+})
+
+describe('addMonths', () => {
+  it('a day past the month end falls to its last day, and each date derives from the first', () => {
+    const d = new Date('2027-01-31T00:00:00Z')
+    expect(addMonths(d, 1).toISOString()).toBe('2027-02-28T00:00:00.000Z')
+    expect(addMonths(d, 2).toISOString()).toBe('2027-03-31T00:00:00.000Z')
+  })
+  it('keeps the time of day and the milliseconds, and goes back for a negative n', () => {
+    expect(addMonths(new Date('2026-11-23T10:20:30.456Z'), 3).toISOString()).toBe('2027-02-23T10:20:30.456Z')
+    expect(addMonths(new Date('2026-11-23T00:00:00Z'), -13).toISOString()).toBe('2025-10-23T00:00:00.000Z')
+  })
+})
+
+describe('monthKey and monthRange', () => {
+  it('a month key goes back and forward across a year', () => {
+    expect(monthKey('2026-11-23')).toBe('2026-11')
+    expect(monthKey('2026-01-31', -1)).toBe('2025-12')
+    expect(monthKey('2026-12-01', 1)).toBe('2027-01')
+  })
+  it('a range is the first and last day, leap years included', () => {
+    expect(monthRange('2026-11')).toEqual({ from: '2026-11-01', to: '2026-11-30' })
+    expect(monthRange('2028-02')).toEqual({ from: '2028-02-01', to: '2028-02-29' })
+    expect(monthRange('2026-12')).toEqual({ from: '2026-12-01', to: '2026-12-31' })
   })
 })

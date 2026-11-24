@@ -12,6 +12,8 @@ Decision record: `docs/decisions/0020-studio-agent.md`; design: `docs/specs/2026
 - Vercel Sandbox (the second runtime)
 - Answered from documentation (2026-11-22)
 - Measured on `studio-eval` (2026-11-22)
+- As built in V3a (2026-11-23)
+- Reading Anthropic's bill by API (2026-11-23)
 - Not yet confirmed (the V3a·1 spike)
 
 ## Account and terms — checked 2026-11-16
@@ -111,6 +113,52 @@ Probes now run on Haiku 5.5 (owner, 2026-11-22).
   [`mount-sha`, public repository].
 - `usage.list_cost` equals the tokens at list rates plus running time, **in whole cents** (a $0.044 turn reads $0.04)
   [`session`].
+- **2026-11-23, R8 (security M1), on Haiku 5.5, two runs:** the setup was an environment allowing only `api.frrata.shop`
+  and a vault header credential scoped to it. The egress **never sent the value** to a Frrata-owned echo by any of four ways:
+  - a `Host:` header naming the echo got a 403 without the key;
+  - `--resolve` to Vercel's anycast address 76.76.21.21 got a 403 without the key (the address was supplied from outside,
+    because the sandbox cannot resolve the echo);
+  - `--connect-to` the echo, and going to it directly, failed at DNS before sending (curl exit 6).
+
+  Who sends the 403s is not known [`fronting`; report § R8].
+
+## As built in V3a — 2026-11-23 (`src/lib/studio/runtime-managed.ts`, `docs/plans/2026-11-22-v3a-runtime.md`; checked against the SDK 1.12.0 types and the fake server, not yet the live API)
+- **Budgets are set at create and only raised.** A session is always created with `budget.max_list_cost` (cents, a
+  string); a session without one can never get one. Each turn's Send raises it first: spent + the turn's ceiling −
+  max(largest request, the model's floor), strictly above what is spent, or the session restarts (`budgetFor`).
+- **At the cap the session pauses** (`session.status_idle` with `stop_reason: budget_reached`) and takes only settle
+  events (tool results, interrupt). Raising the budget resumes the old work, so the next Send raises, then sends
+  `user.interrupt`, then the message.
+- **One `requires_action` idle per round:** every pending custom tool call is answered in one send (each answer alone
+  raises another idle).
+- **Events are listed in processing order, filtered by `created_at[gte]`.** A queued message is listed before it is
+  processed (no `processed_at`): the cursor is a `created_at` and never passes an unprocessed event (`events.ts`).
+- **The SDK sends `Authorization: Bearer <key>`** (with `authToken: null` set explicitly so no environment variable is
+  read), `anthropic-version` 2026-10-21; the beta header on every Managed Agents call.
+- **Vault credentials:** `environment_variable` with `injection_location: { header: true }` and networking limited to
+  exactly `api.frrata.shop`; never `body`.
+- **Haiku 5.5 above 100K prompt tokens** is priced at the higher rate ($0.50 in, $2.50 out; cache read 0.1×, a 1-hour
+  write 2×): Studio's caps use it (`src/domains/studio/spend.ts`), since a page turn's prompt crosses 100K.
+
+## Reading Anthropic's bill by API — checked 2026-11-23 (`integration-researcher`; plan `docs/specs/2026-11-23-costs-autofill.md`)
+
+[V-undated] = primary page read, the page carries no date. [U] = unverified. Every row below was read on platform.claude.com or support.claude.com.
+
+- **Cost API** [V-undated]: `GET /v1/organizations/analytics/cost` (beta header `anthropic-beta: analytics-usage-cost-2026-08-24`) is current;
+  `GET /v1/organizations/cost_report` is marked Legacy. USD only; `amount` is a decimal string in cents with six decimals, after
+  discounts and before credits (`list_amount` is list price). Dimensions: workspace, API key, model, service tier, token type;
+  filter `workspace_ids[]`. Buckets `1m`, `1h`, `1d`; at most 31 days a request; refresh typically within 4 hours, up to 24; values can
+  change until about 7 days after the month ends, so read final months only after that. Legacy `amount` says "lowest currency
+  units (e.g. cents)" while its example looks like dollars: verify on a real month before trusting either [U].
+- **Admin key** [V-undated]: `sk-ant-admin01-…`, created by a Console **organisation** admin (an individual Console account cannot; not on
+  claude.ai Team), sent in `x-api-key`, shown once, **no scopes**, expiry fixed at creation (3 hours to Never; an email 7 days before),
+  Workload Identity Federation with `org:admin` is the docs' preferred alternative. It is a different key from `STUDIO_ANTHROPIC_KEY`.
+- **Managed Agents** [V-undated]: `session_usage` is a cost type ($0.08 a session-hour); group by `agent_id` or `session_id`; a session's
+  `usage.list_cost` is whole cents at list price. Some session usage is attributed to an Anthropic-managed service account.
+- **Not in the cost data** [V-undated]: credits applied, Priority Tier commitment fees. The sum of `amount` is not the invoice total [U: no page relates them].
+- **Invoices** [V, support article updated 2026-10-19]: a Stripe invoice at the end of each calendar month (under $0.50 rolls forward), or a
+  receipt per prepaid credit purchase; USD; no invoice API found. GST invoice for Indian customers: **no source found** [U], ask a CA
+  and Anthropic billing before booking input credit. Rate limit for `/analytics/cost` on a Console org: not stated [U] (60 a minute on the Enterprise analytics API).
 
 ## Not yet confirmed (the V3a·1 spike: blocked on owner set-up, see the report § Blocked)
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, clientStage, shareWindow } from '../stage'
+import { addMonths } from '@/domains/time/month'
+import { clientStage, shareWindow } from '../stage'
 import { shareExample } from '../example'
 import { PARTNER_TERMS } from '../terms'
 

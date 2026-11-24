@@ -9,7 +9,7 @@ Status: **accepted** (owner, 2026-11-15: "all others approved": decisions 1–6 
   (`tenantForHost`, `src/lib/db/platform.ts`). CLAUDE.md and `frata-architecture` § Tenancy say "only two sources".
   The one form-supplied exception is starting a support session (ADR-0007).
 - ADR-0014 makes a shop's website code on the Storefront API. A site holds one read-only public key and no database
-  access. The API answers on `api.frrata.shop`, under `/2026-12/k/<key>/…`, whatever host the site runs on, so neither
+  access. The API answers on `api.frrata.shop` (from 2026-11-24 `api.frrata.online`; § Amendment, host), under `/2026-12/k/<key>/…`, whatever host the site runs on, so neither
   of today's sources can name the shop. ADR-0014's Consequences already say ADR-0002 gains a third source, as SA0
   drafts it.
 - The content-layer spec's tenancy review (2026-11-15) recorded two findings this record must carry: **SA0 lands
@@ -202,8 +202,8 @@ or a body, never a URL path. So a third key kind.
    OWN code in Partner workspace › Developer: a Partner owner, or a Lead assigned to the store, of the store's linked
    partner (the maker rule above); never the store's own people (owners and Managers hold no passkey, and an owner
    approving someone else's code is the device-code phishing flow), a Builder, or anyone on a support visit. Give key
-   asks for a passkey made for THAT code (its challenge on the code's row; an earlier check never counts, the
-   passkeys-off switch neither), checks the store's ceiling under its settings lock, and approves with the store's audit
+   asks for a passkey made for THAT code (its challenge on the code's row; an earlier check never counts; *amended 2026-11-23:* while passkeys are
+   off from Admin › Staff, `giveOff` approves with none, drizzle/0171), checks the store's ceiling under its settings lock, and approves with the store's audit
    row in one definer. The dialog shows where the code started (a sha256 of the CLI's /64 or /24, gone with the code).
    Your computers lists and deletes the person's own developer keys; the store's owner still sees and deletes them on
    Settings › Website (point 8).
@@ -222,3 +222,13 @@ Proposed:
 > A key reads only what the shop's public pages show; a build key (ADR-0018) also reads the shop's drafts, from a
 > server only, and after the shop opens only while the partner person who made it is live, still a member of the shop
 > and, for a Lead or a Builder, assigned to it.
+
+## Amendment (the API host, owner 2026-11-24)
+**First statement, SUPERSEDED the same day (kept as history):** "We need to replace frrata.shop with frrata.store (I can
+renew this for 3 years)": the host was to be `api.frrata.store`.
+**Second statement, the rule (owner, 2026-11-24): "It would be actually frrata.online for merchant subdomains".** **The
+Storefront API host is `api.frrata.online`** (it was `api.frrata.shop`), under the same `/2026-12/k/<key>/…` paths. Nothing
+else in this record changes: the key still names the shop (§ 4), never the host. The move keeps `api.frrata.shop`
+answering for a while so a released site is not cut off; how long, and the order, is `docs/plans/2026-11-24-domains.md`.
+Released versions never change what they answer, so a site that wrote `api.frrata.shop` into its code keeps working until
+that host is retired with notice.

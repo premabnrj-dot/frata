@@ -186,13 +186,16 @@ export const planVersions = pgTable('plan_versions', {
   includedOrders: integer('included_orders').notNull(),
   feeBps: integer('fee_bps').notNull(),
   features: text('features').array().notNull().default(sql`'{}'::text[]`),
+  /** People a store may add (Managers, Staff, Accountants, open invitations included; never the owner or the partner's
+   *  people). Owner 2026-11-23: "keep modest limit per plan". Checked in app_invite_person and app_claim_invites. */
+  peopleLimit: integer('people_limit').notNull().default(3),
   createdAt: createdAt(),
   createdBy: uuid('created_by'),
 }, (t) => [
   uniqueIndex('plan_versions_plan_version').on(t.planId, t.version),
   check('plan_versions_features', sql`${t.features} <@ array[${sql.raw(sqlList(PLAN_GRANTABLE))}]::text[]`),
   check('plan_versions_fee', sql`${t.feeBps} between 0 and 10000`),
-  check('plan_versions_numbers', sql`${t.monthlyPrice} >= 0 and ${t.includedOrders} >= 0`),
+  check('plan_versions_numbers', sql`${t.monthlyPrice} >= 0 and ${t.includedOrders} >= 0 and ${t.peopleLimit} >= 0`),
 ])
 
 /** A store's plan history. The current plan is the latest row that has started (currentPlan). */

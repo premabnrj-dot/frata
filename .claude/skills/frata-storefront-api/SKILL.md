@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 2.7.1
+  version: 2.8.1
   owner: owner
   verified: 2026-11-22
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -130,7 +130,7 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `app_device_code_*` definers, `src/lib/db/device-codes.ts`), for 10 minutes. The person at the terminal confirms
    their OWN code on the partner page: `checkDeviceCode` (the store, when and from which network it started, room,
    a passkey; `deviceCheckPerson`) and Give key (`giveOptions`/`giveVerify`: the shared passkey ceremony over a store
-   bound to that code, `deviceGivePerson`); the definers allow a Partner owner or an assigned Lead of the store's
+   bound to that code, `deviceGivePerson`; while passkeys are off from Admin, `giveOff` with no passkey, drizzle/0171); the definers allow a Partner owner or an assigned Lead of the store's
    partner only (never the store's own people, a Builder or a support visit) and approve with the store's audit row
    under the ceiling. `/api/dev/device/poll` (per network, then per device) claims a confirmed code ONCE and mints
    through `mintBuildKey` as that person (developer, 24 hours, named "<email>’s computer"); a mint that fails for a

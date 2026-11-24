@@ -1,0 +1,441 @@
+<title>Admin Costs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Frrata Admin in Neel (docs/mockups/2026-11-13-design-language-neel.html). Sample figures only; every number on a
+   screen is computed from the sample rows in § Sample rows below. Notes live outside the screens (Rule 0). */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --warn-bg:#FDF3DC; --warn-fg:#85500B; --bad-bg:#FDECEC; --bad-fg:#A82828; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --neu-bg:#F1F0EE; --neu-fg:#57524D;
+  --ok-dot:#2F9E62; --warn-dot:#C98318; --bad-dot:#DC3B3B; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --sunk:var(--g50); --line:var(--g200); --line-soft:var(--g100); --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50); --bar:#171615;
+  --e1:0 1px 2px rgba(23,22,21,.06); --e3:0 24px 48px -12px rgba(23,22,21,.28); --chart:var(--n600);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C; --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#0C0B0B; color-scheme:dark } }
+* { box-sizing:border-box }
+[hidden] { display:none !important }
+html { scroll-padding-top:64px; scroll-behavior:smooth }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto } * { transition:none !important } }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0; padding-block:0 80px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)) }
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:30; background:var(--page) }
+h1,h2,h3,h4,p { margin:0 } h1,h2,h3 { text-wrap:balance }
+button,input,select { font:inherit; color:inherit }
+button { cursor:pointer }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.num { font-variant-numeric:tabular-nums }
+svg.i { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none }
+.doc { max-width:1240px; margin:0 auto }
+.top { position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--page); border-bottom:1px solid var(--line); margin:0 -16px; padding:0 16px }
+.top nav { max-width:1240px; margin:0 auto; display:flex; gap:4px; overflow-x:auto; padding:8px 0; scrollbar-width:none }
+.top nav a { color:var(--text-2); text-decoration:none; padding:6px 10px; border-radius:8px; white-space:nowrap; font-weight:500; font-size:13px }
+.top nav a:hover { background:var(--sunk) }
+.head { padding:28px 0 8px } .head h1 { font:600 26px/32px var(--font) }
+.sec { padding:36px 0 0 } .sec > h2 { font:600 18px/24px var(--font); margin-bottom:4px }
+.cap { color:var(--text-2); font-size:13px; margin:0 0 14px }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px }
+.pcard { border:1px solid var(--line); border-radius:12px; padding:16px; background:var(--g0); display:grid; gap:6px; align-content:start }
+.pcard h3 { font:600 14px/20px var(--font) } .pcard p { color:var(--text-2) }
+.take { color:var(--ok-fg); font-weight:600 } .skip { color:var(--warn-fg); font-weight:600 }
+table.plain { border-collapse:collapse; width:100%; font-size:13px } table.plain th, table.plain td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top }
+table.plain th { background:var(--sunk); font-weight:600; color:var(--text-2) }
+.scroll { overflow-x:auto; border:1px solid var(--line); border-radius:12px }
+.scroll table.plain { min-width:560px }
+.call { border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:grid; gap:4px; margin-bottom:10px }
+.call b { font-weight:600 } .rec { color:var(--ok-fg); font-weight:500 }
+
+/* ---------- a screen (Admin chrome) ---------- */
+.screen { border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--page); box-shadow:var(--e1); position:relative }
+.app { display:grid; grid-template-columns:220px minmax(0,1fr); min-height:640px }
+.side { background:var(--bar); color:#fff; padding:14px 10px; display:grid; align-content:start; gap:2px; font-size:13px }
+.side .brand { display:flex; align-items:center; gap:8px; padding:6px 10px 14px; font-weight:600 }
+.side .tag { font-size:10px; letter-spacing:.06em; background:#34312E; border-radius:4px; padding:1px 5px; font-weight:600 }
+.side .grp { color:#8F8A84; font-size:11px; font-weight:600; padding:12px 10px 4px; letter-spacing:.04em; text-transform:uppercase }
+.side a { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; color:#CFCCC7; text-decoration:none }
+.side a.on { background:#2B2927; color:#fff; font-weight:500 }
+.pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:11px; font-weight:600; padding:0 7px; line-height:18px }
+.main { padding:24px 28px 32px; min-width:0; display:grid; gap:18px; align-content:start }
+.ph { display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+.ph h2 { font:600 22px/28px var(--font); margin-right:auto }
+.btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; border:1px solid transparent; padding:0 14px; height:36px; font-weight:500; background:var(--action); color:var(--action-text) }
+.btn.sec2 { background:var(--g0); color:var(--text); border-color:var(--g300); box-shadow:var(--e1) }
+.btn.sm { height:30px; padding:0 10px; font-size:13px } .btn.ghost { background:transparent; color:var(--text-2) }
+.btn.danger { background:#C42F2F; color:#fff }
+.tabs { display:flex; gap:20px; border-bottom:1px solid var(--line); overflow-x:auto }
+.tabs a { padding:8px 0; color:var(--text-2); text-decoration:none; font-weight:500; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap }
+.tabs a.on { color:var(--text); border-color:var(--action) }
+.figs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border:1px solid var(--line); border-radius:12px }
+.fig { padding:14px 16px; border-left:1px solid var(--line-soft); display:grid; gap:2px } .fig:first-child { border-left:0 }
+.fig small { color:var(--text-2); font-size:12px; font-weight:500 } .fig b { font:600 22px/28px var(--font) } .fig span { font-size:12px; color:var(--text-2) }
+.card { border:1px solid var(--line); border-radius:12px; background:var(--g0); min-width:0 }
+.card > header { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line-soft) }
+.card > header h3 { font:600 16px/24px var(--font); margin-right:auto }
+.band { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; background:var(--warn-bg); color:var(--warn-fg); font-weight:500 }
+.band .btn { margin-left:auto }
+.row { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line-soft); min-height:52px }
+.row:last-child { border-bottom:0 }
+.row.hd { background:var(--sunk); min-height:36px; padding-block:6px; color:var(--text-2); font-weight:600; font-size:12px; border-radius:12px 12px 0 0 }
+.row .nm { display:grid; min-width:0 } .row .nm b { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .row .nm span { color:var(--text-2); font-size:12px }
+.row .r { text-align:right } .row.on { background:var(--select) }
+a.row { color:inherit; text-decoration:none }
+.badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:0 8px; line-height:20px; font-size:12px; font-weight:500; white-space:nowrap }
+.badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor }
+.b-ok { background:var(--ok-bg); color:var(--ok-fg) } .b-warn { background:var(--warn-bg); color:var(--warn-fg) } .b-bad { background:var(--bad-bg); color:var(--bad-fg) } .b-neu { background:var(--neu-bg); color:var(--neu-fg) } .b-info { background:var(--info-bg); color:var(--info-fg) }
+.tag { display:inline-flex; border:1px solid var(--line); border-radius:6px; padding:0 6px; line-height:18px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.chips { display:flex; gap:6px; flex-wrap:wrap }
+.chip { border:1px solid var(--line); background:var(--g0); border-radius:999px; padding:0 12px; height:30px; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--text-2) }
+.chip.on { background:var(--select); border-color:var(--n200); color:var(--n700) } .chip em { font-style:normal; color:var(--text-3); font-size:12px }
+.search { display:flex; align-items:center; gap:8px; border:1px solid var(--g500); border-radius:8px; height:36px; padding:0 10px; color:var(--text-3); min-width:200px; flex:1 }
+.bars { display:grid; gap:0 } .bar { display:grid; grid-template-columns:150px minmax(0,1fr) 96px 80px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--line-soft) } .bar:last-child { border-bottom:0 }
+.bar i { display:block; height:8px; border-radius:4px; background:var(--chart) } .bar .tr { background:var(--sunk); border-radius:4px }
+.up { color:var(--bad-fg) } .down { color:var(--ok-fg) }
+.pager { display:flex; align-items:center; gap:8px; padding:10px 16px; color:var(--text-2); font-size:13px; border-top:1px solid var(--line-soft) }
+.pager .btn { margin-left:auto } .pager .btn + .btn { margin-left:0 }
+
+/* panels, dialogs, toast */
+.scrim { position:absolute; inset:0; background:rgba(23,22,21,.38) }
+.sidepanel { position:absolute; top:0; right:0; bottom:0; width:min(420px,100%); background:var(--g0); border-left:1px solid var(--line); box-shadow:var(--e3); display:grid; grid-template-rows:auto minmax(0,1fr) auto }
+.sidepanel > header { padding:16px 20px 12px; display:grid; gap:6px; border-bottom:1px solid var(--line-soft) }
+.sidepanel > header h3 { font:600 18px/24px var(--font) }
+.sp-body { padding:16px 20px; display:grid; gap:16px; align-content:start; overflow:auto }
+.sp-foot { padding:12px 20px; border-top:1px solid var(--line-soft); display:flex; gap:8px; flex-wrap:wrap }
+.facts { display:grid; grid-template-columns:130px minmax(0,1fr); gap:8px 12px } .facts dt { color:var(--text-2) } .facts dd { margin:0; min-width:0 }
+.dlg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(460px,calc(100% - 24px)); max-height:calc(100% - 24px); overflow:auto; background:var(--g0); border-radius:16px; box-shadow:var(--e3); padding:20px; display:grid; gap:14px }
+.dlg h3 { font:600 18px/24px var(--font) } .dlg .foot { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+.seg { display:inline-grid; grid-auto-flow:column; background:var(--sunk); border:1px solid var(--line); border-radius:10px; padding:2px; gap:2px }
+.seg button { border:0; background:transparent; height:30px; padding:0 14px; border-radius:8px; font-weight:500; color:var(--text-2) } .seg button[aria-pressed="true"] { background:var(--g0); color:var(--text); box-shadow:var(--e1) }
+.fld { display:grid; gap:4px } .fld label { font-size:13px; font-weight:500 }
+.in { height:36px; border:1px solid var(--g500); border-radius:8px; padding:0 10px; background:var(--g0); display:flex; align-items:center; gap:8px; min-width:0 } .in.err { border-color:#C42F2F; box-shadow:0 0 0 3px var(--bad-bg) } .in.ph2 { color:var(--text-3) }
+.in .cur { color:var(--text-2); border-right:1px solid var(--line); padding-right:8px; margin-right:2px }
+.ferr { color:var(--bad-fg); font-size:13px }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:12px } .three { display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px }
+.sw { display:flex; align-items:center; gap:10px } .sw i { width:34px; height:20px; border-radius:10px; background:var(--g500); position:relative } .sw i::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff } .sw.on i { background:var(--action) } .sw.on i::after { left:16px }
+.toast { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); background:var(--g950); color:var(--g0); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:12px; box-shadow:var(--e3); max-width:calc(100% - 24px) }
+.toast .ok { width:8px; height:8px; border-radius:50%; background:#2F9E62; flex:none } .toast .bad { width:8px; height:8px; border-radius:50%; background:var(--bad-dot); flex:none } .toast button { background:none; border:0; color:#C3C9F6; font-weight:600; padding:0 }
+.tile { width:64px; height:64px; border-radius:12px; background:var(--select); display:grid; place-items:center; color:var(--n700) } .tile svg { width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
+.empty { display:grid; justify-items:center; gap:12px; padding:48px 16px; text-align:center } .empty h3 { font:600 16px/24px var(--font) }
+.skel { background:linear-gradient(90deg,var(--sunk),var(--line-soft),var(--sunk)); border-radius:6px; height:14px } .skel.t { height:28px; width:120px }
+.statebox { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)) } .statebox .screen { min-height:300px }
+.phone { width:390px; max-width:100%; margin:0 auto }
+.phone .ptop { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line) } .phone .ptop b { font-weight:600; margin-right:auto }
+.phone .pbody { padding:16px; display:grid; gap:14px; min-height:620px; align-content:start }
+.phone .pfigs { display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:12px } .phone .pfigs .fig:nth-child(odd) { border-left:0 } .phone .pfigs .fig:nth-child(n+3) { border-top:1px solid var(--line-soft) } .phone .pfigs .fig b { font-size:18px; line-height:24px }
+.phone .prow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:12px 16px; border-bottom:1px solid var(--line-soft); align-items:center } .phone .prow:last-child { border-bottom:0 }
+.phone .prow .nm { display:grid } .phone .prow .nm span { color:var(--text-2); font-size:12px }
+.phone .pbar { display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid var(--line); background:var(--g0); text-align:center; font-size:11px; color:var(--text-2) } .phone .pbar span { padding:8px 0 10px; display:grid; justify-items:center; gap:2px } .phone .pbar .on { color:var(--n700); font-weight:600 }
+@media (max-width:900px) {
+  .app { grid-template-columns:minmax(0,1fr) } .app .side { display:none } .main { padding:16px }
+  .figs { grid-template-columns:1fr 1fr } .fig:nth-child(odd) { border-left:0 } .fig:nth-child(n+3) { border-top:1px solid var(--line-soft) }
+  .row { grid-template-columns:minmax(0,1fr) auto } .row .hide-s, .row.hd { display:none }
+  .bar { grid-template-columns:100px minmax(0,1fr) 80px } .bar .chg { display:none }
+  .three, .two { grid-template-columns:1fr }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cost" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5v.01M17.5 14.5v.01"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+</svg>
+
+<div class="top"><nav aria-label="Sections">
+  <a href="#short">In short</a><a href="#audit">Today</a><a href="#take">What to take</a><a href="#overview">Overview</a><a href="#all">All costs</a><a href="#add">Add</a><a href="#pay">Mark paid</a><a href="#payments">Payments</a><a href="#states">States</a><a href="#phone">Phone</a><a href="#calls">Your calls</a>
+</nav></div>
+
+<div class="doc">
+<div class="head"><h1>Frrata Admin › Costs</h1><p class="cap" style="margin:6px 0 0">Mockup for the C0 gate · 2026-11-23 · spec <code>docs/specs/2026-11-23-admin-costs.md</code> · every figure is a sample</p></div>
+
+<section class="sec" id="short">
+  <h2>In short</h2>
+  <div class="grid2">
+    <div class="pcard"><h3>What</h3><p>One Admin page for what Frrata pays. Repeating costs, one-time costs, and costs that change every bill.</p></div>
+    <div class="pcard"><h3>Why now</h3><p>Monthly burn is the cost side of break-even and funding need. Today it is typed into docs.</p></div>
+    <div class="pcard"><h3>What it costs us</h3><p>Two tables, one page, no integrations, no outbound messages. Reminders ride on Today.</p></div>
+    <div class="pcard"><h3>What we need from you</h3><p>Approve these screens, then the five calls at the end.</p></div>
+  </div>
+</section>
+
+<section class="sec" id="audit">
+  <h2>Where costs live today</h2>
+  <p class="cap">There is no Costs screen to screenshot. This is what exists.</p>
+  <div class="scroll"><table class="plain">
+    <tr><th>Where</th><th>What it holds</th><th>Why it falls short</th><th>Proposed</th></tr>
+    <tr><td>Infrastructure</td><td>Vercel and Mux usage, estimated from vendor rates</td><td>An estimate of usage, not the bill paid. Other vendors absent.</td><td>Stays. Costs holds the bill paid.</td></tr>
+    <tr><td>Billing</td><td>What merchants and partners pay Frrata</td><td>Income only.</td><td>Stays. Costs is the other side.</td></tr>
+    <tr><td>Docs and rates file</td><td>Typed plan prices, dated</td><td>No due dates, no history, no total.</td><td>Burn read from Costs.</td></tr>
+    <tr><td>Bank and card statements</td><td>The truth</td><td>Nobody sees renewals coming.</td><td>Due list and Today reminders.</td></tr>
+  </table></div>
+</section>
+
+<section class="sec" id="take">
+  <h2>What to take</h2>
+  <p class="cap">From product knowledge, not re-read in the last 12 months. Treat as unverified until the research agent confirms.</p>
+  <div class="grid2">
+    <div class="pcard"><h3>Stripe dashboard · upcoming invoices</h3><p><span class="take">Take:</span> a short list of what is due, each with one action.</p><p><span class="skip">Skip:</span> proration and plan graphs.</p></div>
+    <div class="pcard"><h3>Zoho Books · recurring expenses</h3><p><span class="take">Take:</span> a template that repeats and a payment logged against each due date.</p><p><span class="skip">Skip:</span> bills, vendors as a module, approvals.</p></div>
+    <div class="pcard"><h3>Subscription trackers</h3><p><span class="take">Take:</span> one monthly total and a renewal date on every row.</p><p><span class="skip">Skip:</span> email scanning and card linking.</p></div>
+    <div class="pcard"><h3>Linear · side panel</h3><p><span class="take">Take:</span> a row opens a panel, the list stays put.</p><p><span class="skip">Skip:</span> boards and views.</p></div>
+  </div>
+</section>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="sec" id="overview">
+  <h2>1 · Overview</h2>
+  <p class="cap">Opens here. The overdue band leads, then the four figures, then due, then the month.</p>
+  <div class="screen"><div class="app">
+    <aside class="side" aria-label="Admin">
+      <div class="brand">Frrata <span class="tag">STAFF</span></div>
+      <a href="#overview"><svg class="i"><use href="#i-home"/></svg>Today<span class="pill">4</span></a>
+      <div class="grp">Money</div>
+      <a href="#overview">Plans</a><a href="#overview">Billing</a><a href="#overview" class="on"><svg class="i"><use href="#i-cost"/></svg>Costs<span class="pill">2</span></a>
+      <div class="grp">Platform</div><a href="#overview">Infrastructure</a><a href="#overview">Activity</a>
+    </aside>
+    <div class="main">
+      <div class="ph"><h2>Costs</h2><button class="btn sec2"><svg class="i"><use href="#i-down"/></svg>Export CSV</button><button class="btn"><svg class="i"><use href="#i-plus"/></svg>Add cost</button></div>
+      <div class="tabs" role="tablist"><a class="on" href="#overview">Overview</a><a href="#all">All costs</a><a href="#payments">Payments</a></div>
+      <div class="band">1 cost is overdue · Google Workspace · 3 days<button class="btn sm sec2">Mark paid</button></div>
+      <div class="figs">
+        <div class="fig"><small>Spent in Nov</small><b class="num">₹35,512</b><span>4 payments</span></div>
+        <div class="fig"><small>Monthly burn</small><b class="num">₹16,879</b><span>7 repeating costs</span></div>
+        <div class="fig"><small>Yearly burn</small><b class="num">₹2,02,551</b><span>at ₹94.20 to the dollar</span></div>
+        <div class="fig"><small>Due in 30 days</small><b class="num">₹14,190</b><span>5 costs</span></div>
+      </div>
+      <div class="card">
+        <header><h3>Due and overdue</h3><span class="tag">6</span></header>
+        <div class="row"><div class="nm"><b>Google Workspace</b><span>Google · Software</span></div><div><span class="badge b-bad">Overdue 3 days</span></div><div class="hide-s">20 Nov</div><div class="r num">₹1,380</div><button class="btn sm">Mark paid</button></div>
+        <div class="row"><div class="nm"><b>Vercel Pro</b><span>Vercel · Infrastructure</span></div><div><span class="badge b-warn">In 3 days</span></div><div class="hide-s">26 Nov</div><div class="r num">$20.00</div><button class="btn sm sec2">Mark paid</button></div>
+        <div class="row"><div class="nm"><b>Supabase Pro</b><span>Supabase · Infrastructure</span></div><div><span class="badge b-neu">In 8 days</span></div><div class="hide-s">1 Dec</div><div class="r num">$25.00</div><button class="btn sm sec2">Mark paid</button></div>
+        <div class="row"><div class="nm"><b>Anthropic usage</b><span>Anthropic · AI</span> </div><div><span class="badge b-neu">In 8 days</span> <span class="tag">varies</span></div><div class="hide-s">1 Dec</div><div class="r num">about $60</div><button class="btn sm sec2">Mark paid</button></div>
+        <div class="row"><div class="nm"><b>WhatsApp conversations</b><span>Meta · Messaging</span></div><div><span class="badge b-neu">In 12 days</span> <span class="tag">varies</span></div><div class="hide-s">5 Dec</div><div class="r num">about ₹3,000</div><button class="btn sm sec2">Mark paid</button></div>
+        <div class="row"><div class="nm"><b>frrata.shop domain</b><span>Registrar · Infrastructure</span></div><div><span class="badge b-neu">In 21 days</span></div><div class="hide-s">14 Dec</div><div class="r num">₹1,299</div><button class="btn sm sec2">Mark paid</button></div>
+      </div>
+      <div class="card">
+        <header><h3>November by category</h3><span class="tag">vs October</span></header>
+        <div class="bars">
+          <div class="bar"><span>Design and brand</span><span class="tr"><i style="width:100%"></i></span><span class="r num">₹25,000</span><span class="chg r num up">+₹25,000</span></div>
+          <div class="bar"><span>AI</span><span class="tr"><i style="width:21.7%"></i></span><span class="r num">₹5,417</span><span class="chg r num up">+₹412</span></div>
+          <div class="bar"><span>Messaging</span><span class="tr"><i style="width:11%"></i></span><span class="r num">₹2,740</span><span class="chg r num down">−₹260</span></div>
+          <div class="bar"><span>Infrastructure</span><span class="tr"><i style="width:9.4%"></i></span><span class="r num">₹2,355</span><span class="chg r num">₹0</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ============ ALL COSTS ============ -->
+<section class="sec" id="all">
+  <h2>2 · All costs, with a cost open</h2>
+  <p class="cap">A row opens a side panel. The list stays where it is.</p>
+  <div class="screen"><div class="app" style="min-height:700px">
+    <aside class="side" aria-hidden="true"><div class="brand">Frrata <span class="tag">STAFF</span></div><a>Today</a><div class="grp">Money</div><a>Plans</a><a>Billing</a><a class="on">Costs</a></aside>
+    <div class="main">
+      <div class="ph"><h2>Costs</h2><button class="btn sec2"><svg class="i"><use href="#i-down"/></svg>Export CSV</button><button class="btn"><svg class="i"><use href="#i-plus"/></svg>Add cost</button></div>
+      <div class="tabs"><a href="#overview">Overview</a><a class="on" href="#all">All costs</a><a href="#payments">Payments</a></div>
+      <div class="ph"><div class="chips"><span class="chip on">All <em>9</em></span><span class="chip">Repeating <em>7</em></span><span class="chip">One-time <em>1</em></span><span class="chip">Ended <em>1</em></span></div><div class="search" style="margin-left:auto;max-width:280px"><svg class="i"><use href="#i-search"/></svg>Search name or vendor</div></div>
+      <div class="card">
+        <div class="row hd"><div>Cost</div><div>Repeats</div><div>Next due</div><div class="r">Amount</div><div style="width:84px" class="r">Per month</div></div>
+        <div class="row"><div class="nm"><b>Anthropic usage</b><span>Anthropic · AI</span></div><div class="hide-s">Monthly <span class="tag">varies</span></div><div class="hide-s">1 Dec</div><div class="r num">about $60</div><div class="r num" style="width:84px">₹5,652</div></div>
+        <div class="row on"><div class="nm"><b>Supabase Pro</b><span>Supabase · Infrastructure</span></div><div class="hide-s">Monthly</div><div class="hide-s">1 Dec</div><div class="r num">$25.00</div><div class="r num" style="width:84px">₹2,355</div></div>
+        <div class="row"><div class="nm"><b>Vercel Pro</b><span>Vercel · Infrastructure</span></div><div class="hide-s">Monthly</div><div class="hide-s">26 Nov</div><div class="r num">$20.00</div><div class="r num" style="width:84px">₹1,884</div></div>
+        <div class="row"><div class="nm"><b>WhatsApp conversations</b><span>Meta · Messaging</span></div><div class="hide-s">Monthly <span class="tag">varies</span></div><div class="hide-s">5 Dec</div><div class="r num">about ₹3,000</div><div class="r num" style="width:84px">₹3,000</div></div>
+        <div class="row"><div class="nm"><b>Google Workspace</b><span>Google · Software</span></div><div class="hide-s">Monthly</div><div class="hide-s"><span class="badge b-bad">Overdue</span></div><div class="r num">₹1,380</div><div class="r num" style="width:84px">₹1,380</div></div>
+        <div class="row"><div class="nm"><b>CA fees</b><span>Mehta and Co · Legal</span></div><div class="hide-s">Quarterly</div><div class="hide-s">31 Dec</div><div class="r num">₹7,500</div><div class="r num" style="width:84px">₹2,500</div></div>
+        <div class="row"><div class="nm"><b>frrata.shop domain</b><span>Registrar · Infrastructure</span></div><div class="hide-s">Yearly</div><div class="hide-s">14 Dec</div><div class="r num">₹1,299</div><div class="r num" style="width:84px">₹108</div></div>
+        <div class="row"><div class="nm"><b>Logo and mark</b><span>Design studio · Design and brand</span></div><div class="hide-s"><span class="tag">Once</span></div><div class="hide-s">Paid 9 Nov</div><div class="r num">₹25,000</div><div class="r" style="width:84px">—</div></div>
+        <div class="row" style="opacity:.7"><div class="nm"><b>Old email tool</b><span>Mailer · Software</span></div><div class="hide-s">Monthly</div><div class="hide-s"><span class="badge b-neu">Ended 31 Oct</span></div><div class="r num">$12.00</div><div class="r" style="width:84px">—</div></div>
+        <div class="pager"><span>9 costs</span></div>
+      </div>
+    </div>
+    <div class="scrim"></div>
+    <aside class="sidepanel" aria-label="Supabase Pro">
+      <header><div class="ph"><h3 style="margin-right:auto">Supabase Pro</h3><button class="btn sm ghost" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button><button class="btn sm ghost" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div><div class="chips"><span class="badge b-neu">Due 1 Dec</span><span class="tag">Infrastructure</span></div></header>
+      <div class="sp-body">
+        <dl class="facts" style="margin:0">
+          <dt>Amount</dt><dd class="num">$25.00 · about ₹2,355</dd>
+          <dt>Repeats</dt><dd>Monthly</dd>
+          <dt>Vendor</dt><dd>Supabase</dd>
+          <dt>Per year</dt><dd class="num">₹28,260</dd>
+        </dl>
+        <div class="card"><header><h3>Payments</h3><span class="tag">3</span></header>
+          <div class="row" style="grid-template-columns:minmax(0,1fr) auto auto;padding:8px 16px"><span>1 Nov</span><span class="num">₹2,355</span><button class="btn sm ghost">Undo</button></div>
+          <div class="row" style="grid-template-columns:minmax(0,1fr) auto auto;padding:8px 16px"><span>1 Oct</span><span class="num">₹2,355</span><span style="width:40px"></span></div>
+          <div class="row" style="grid-template-columns:minmax(0,1fr) auto auto;padding:8px 16px"><span>1 Sep</span><span class="num">₹2,340</span><span style="width:40px"></span></div>
+        </div>
+      </div>
+      <div class="sp-foot"><button class="btn">Mark paid</button><button class="btn sec2">Edit</button><button class="btn sec2" style="margin-left:auto">End cost</button></div>
+    </aside>
+  </div></div>
+</section>
+
+<!-- ============ ADD ============ -->
+<section class="sec" id="add">
+  <h2>3 · Add a cost</h2>
+  <p class="cap">One dialog. Repeats or Once decides the fields. Try the switch.</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div class="screen" style="min-height:560px"><div class="scrim"></div>
+      <form class="dlg" onsubmit="return false" aria-labelledby="addt">
+        <h3 id="addt">Add a cost</h3>
+        <div class="seg" role="group" aria-label="Type"><button type="button" aria-pressed="true" data-t="rep">Repeats</button><button type="button" aria-pressed="false" data-t="once">Once</button></div>
+        <div class="fld"><label>Name</label><div class="in">Vercel Pro</div></div>
+        <div class="two"><div class="fld"><label>Vendor</label><div class="in ph2">Optional</div></div><div class="fld"><label>Category</label><div class="in">Infrastructure<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div></div>
+        <div class="two"><div class="fld"><label>Amount</label><div class="in num"><span class="cur">USD</span>20.00</div></div>
+          <div class="fld" data-only="rep"><label>Repeats</label><div class="in">Monthly<span style="margin-left:auto;color:var(--text-3)">▾</span></div></div>
+          <div class="fld" data-only="once" hidden><label>Paid on</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>23 Nov 2026</div></div></div>
+        <div class="fld" data-only="rep"><label>Next due on</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>26 Nov 2026</div></div>
+        <div class="sw on" data-only="rep"><i></i>Amount changes each time</div>
+        <div class="two" data-only="once" hidden><div class="fld"><label>Paid in rupees</label><div class="in num"><span class="cur">INR</span>25,000</div></div><div class="fld"><label>GST included</label><div class="in ph2 num"><span class="cur">INR</span>Optional</div></div></div>
+        <div class="foot"><button class="btn sec2" type="button">Cancel</button><button class="btn" type="button">Add cost</button></div>
+      </form>
+    </div>
+    <div class="screen" style="min-height:560px"><div class="scrim"></div>
+      <div class="dlg" role="group" aria-label="Add a cost, with mistakes">
+        <h3>Add a cost</h3>
+        <div class="seg"><button aria-pressed="true">Repeats</button><button aria-pressed="false">Once</button></div>
+        <div class="fld"><label>Name</label><div class="in err ph2">Name</div><span class="ferr">Add a name.</span></div>
+        <div class="fld"><label>Amount</label><div class="in err num"><span class="cur">INR</span>0</div><span class="ferr">Enter an amount above ₹0.</span></div>
+        <div class="fld"><label>Next due on</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>26 Nov 2026</div></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Add cost</button></div>
+        <div class="toast" style="position:static;transform:none;justify-self:start"><span class="bad"></span>2 fields need fixing<button>Show</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MARK PAID ============ -->
+<section class="sec" id="pay">
+  <h2>4 · Mark paid</h2>
+  <p class="cap">Opens filled. A dollar cost fills the rupees from the day's rate. A cost that varies opens on the amount.</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+    <div class="screen" style="min-height:420px"><div class="scrim"></div>
+      <div class="dlg"><h3>Mark Vercel Pro paid</h3>
+        <div class="two"><div class="fld"><label>Paid on</label><div class="in num"><svg class="i"><use href="#i-cal"/></svg>23 Nov 2026</div></div><div class="fld"><label>For the bill due</label><div class="in num">26 Nov 2026</div></div></div>
+        <div class="two"><div class="fld"><label>Billed</label><div class="in num"><span class="cur">USD</span>20.00</div></div><div class="fld"><label>Left your account</label><div class="in num"><span class="cur">INR</span>1,884</div></div></div>
+        <div class="fld"><label>GST included</label><div class="in ph2 num"><span class="cur">INR</span>Optional</div></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Mark paid</button></div></div>
+    </div>
+    <div class="screen" style="min-height:420px"><div class="scrim"></div>
+      <div class="dlg"><h3>Mark Anthropic usage paid</h3>
+        <div class="fld"><label>Billed</label><div class="in num" style="box-shadow:0 0 0 3px var(--n100);border-color:var(--n500)"><span class="cur">USD</span>57.50</div></div>
+        <div class="two"><div class="fld"><label>Paid on</label><div class="in num">3 Dec 2026</div></div><div class="fld"><label>Left your account</label><div class="in num"><span class="cur">INR</span>5,417</div></div></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Mark paid</button></div>
+        <div class="toast" style="position:static;transform:none;justify-self:start"><span class="ok"></span>Anthropic usage paid · ₹5,417<button>Undo</button></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAYMENTS ============ -->
+<section class="sec" id="payments">
+  <h2>5 · Payments and export</h2>
+  <p class="cap">Newest first, 50 a page. The export covers one financial year.</p>
+  <div class="screen"><div class="app" style="min-height:560px">
+    <aside class="side" aria-hidden="true"><div class="brand">Frrata <span class="tag">STAFF</span></div><a>Today</a><div class="grp">Money</div><a>Plans</a><a>Billing</a><a class="on">Costs</a></aside>
+    <div class="main">
+      <div class="ph"><h2>Costs</h2><button class="btn sec2"><svg class="i"><use href="#i-down"/></svg>Export CSV</button><button class="btn"><svg class="i"><use href="#i-plus"/></svg>Add cost</button></div>
+      <div class="tabs"><a href="#overview">Overview</a><a href="#all">All costs</a><a class="on" href="#payments">Payments</a></div>
+      <div class="ph"><div class="chips"><span class="chip on">Nov 2026</span><span class="chip">Oct 2026</span><span class="chip">FY 2026–27</span></div></div>
+      <div class="card">
+        <div class="row hd"><div>Cost</div><div>Paid on</div><div>For the bill due</div><div class="r">Billed</div><div class="r" style="width:84px">In rupees</div></div>
+        <div class="row"><div class="nm"><b>Logo and mark</b><span>Design and brand</span></div><div class="hide-s">9 Nov</div><div class="hide-s">—</div><div class="r num">₹25,000</div><div class="r num" style="width:84px">₹25,000</div></div>
+        <div class="row"><div class="nm"><b>WhatsApp conversations</b><span>Messaging</span></div><div class="hide-s">5 Nov</div><div class="hide-s">5 Nov</div><div class="r num">₹2,740</div><div class="r num" style="width:84px">₹2,740</div></div>
+        <div class="row"><div class="nm"><b>Anthropic usage</b><span>AI</span></div><div class="hide-s">3 Nov</div><div class="hide-s">1 Nov</div><div class="r num">$57.50</div><div class="r num" style="width:84px">₹5,417</div></div>
+        <div class="row"><div class="nm"><b>Supabase Pro</b><span>Infrastructure</span></div><div class="hide-s">1 Nov</div><div class="hide-s">1 Nov</div><div class="r num">$25.00</div><div class="r num" style="width:84px">₹2,355</div></div>
+        <div class="pager"><span>4 payments · ₹35,512</span></div>
+      </div>
+    </div>
+    <div class="scrim" style="display:none"></div>
+  </div></div>
+</section>
+
+<!-- ============ STATES ============ -->
+<section class="sec" id="states">
+  <h2>6 · States</h2>
+  <p class="cap">Empty, loading, error and no permission.</p>
+  <div class="statebox">
+    <div class="screen"><div class="main"><div class="ph"><h2>Costs</h2><button class="btn"><svg class="i"><use href="#i-plus"/></svg>Add cost</button></div>
+      <div class="empty"><div class="tile"><svg viewBox="0 0 24 24"><use href="#i-cost"/></svg></div><h3>No costs yet</h3><button class="btn">Add cost</button>
+        <div class="chips" style="justify-content:center"><span class="chip">Domain</span><span class="chip">Vercel</span><span class="chip">Supabase</span><span class="chip">Anthropic</span><span class="chip">WhatsApp</span><span class="chip">Email</span><span class="chip">CA fees</span></div></div></div></div>
+    <div class="screen"><div class="main"><div class="ph"><h2>Costs</h2></div>
+      <div class="figs" aria-busy="true"><div class="fig"><div class="skel"></div><div class="skel t"></div></div><div class="fig"><div class="skel"></div><div class="skel t"></div></div><div class="fig"><div class="skel"></div><div class="skel t"></div></div><div class="fig"><div class="skel"></div><div class="skel t"></div></div></div>
+      <div class="card" style="padding:16px;display:grid;gap:12px"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div></div>
+    <div class="screen"><div class="main"><div class="ph"><h2>Costs</h2></div>
+      <div class="empty"><div class="tile"><svg viewBox="0 0 24 24"><use href="#i-cost"/></svg></div><h3>We could not read costs</h3><span style="color:var(--text-2)">Nothing was changed.</span><button class="btn sec2">Try again</button></div></div></div>
+    <div class="screen"><div class="main"><div class="ph"><h2>Costs</h2></div>
+      <div class="empty"><div class="tile"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><h3>Only a master admin can open Costs</h3><button class="btn sec2">Back to Today</button></div></div></div>
+  </div>
+</section>
+
+<!-- ============ PHONE ============ -->
+<section class="sec" id="phone">
+  <h2>7 · On a phone</h2>
+  <p class="cap">The list and the cost are two pages. Dialogs are sheets.</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(300px,390px));justify-content:center">
+    <div class="screen phone"><div class="ptop"><b>Costs</b><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Add</button></div>
+      <div class="pbody">
+        <div class="tabs"><a class="on" href="#phone">Overview</a><a href="#phone">All</a><a href="#phone">Payments</a></div>
+        <div class="band" style="flex-wrap:wrap">1 overdue · Google Workspace<button class="btn sm sec2" style="margin-left:0">Mark paid</button></div>
+        <div class="pfigs"><div class="fig"><small>Spent in Nov</small><b class="num">₹35,512</b></div><div class="fig"><small>Monthly burn</small><b class="num">₹16,879</b></div><div class="fig"><small>Yearly burn</small><b class="num">₹2,02,551</b></div><div class="fig"><small>Due in 30 days</small><b class="num">₹14,190</b></div></div>
+        <div class="card">
+          <div class="prow"><div class="nm"><b>Vercel Pro</b><span>26 Nov · in 3 days</span></div><span class="num">$20.00</span></div>
+          <div class="prow"><div class="nm"><b>Supabase Pro</b><span>1 Dec · in 8 days</span></div><span class="num">$25.00</span></div>
+          <div class="prow"><div class="nm"><b>Anthropic usage</b><span>1 Dec · varies</span></div><span class="num">about $60</span></div>
+        </div>
+      </div>
+      <div class="pbar"><span>Today</span><span>Merchants</span><span>Partners</span><span class="on">Money</span><span>More</span></div></div>
+    <div class="screen phone" style="min-height:760px"><div class="scrim"></div>
+      <div class="dlg" style="top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0">
+        <h3>Mark Vercel Pro paid</h3>
+        <div class="fld"><label>Paid on</label><div class="in num">23 Nov 2026</div></div>
+        <div class="two"><div class="fld"><label>Billed</label><div class="in num"><span class="cur">USD</span>20.00</div></div><div class="fld"><label>Left your account</label><div class="in num"><span class="cur">INR</span>1,884</div></div></div>
+        <div class="foot"><button class="btn sec2">Cancel</button><button class="btn">Mark paid</button></div></div></div>
+  </div>
+</section>
+
+<!-- ============ CALLS ============ -->
+<section class="sec" id="calls">
+  <h2>Your calls</h2>
+  <div class="call"><b>1 · Who sees Costs</b><span>Master admin only. <span class="rec">Recommended.</span> Alternative: support staff read only.</span></div>
+  <div class="call"><b>2 · Currencies</b><span>Rupees and dollars. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>3 · Year for the CA export</b><span>April to March. <span class="rec">Recommended.</span></span></div>
+  <div class="call"><b>4 · Pull bills from Infrastructure</b><span>No, type each bill. <span class="rec">Recommended for now.</span> Comes back if three items drift from their bills twice.</span></div>
+  <div class="call"><b>5 · Is this the right time</b><span>It moves none of the seven ranked problems. It feeds the burn the break-even numbers use.</span></div>
+  <div class="call"><b>Not built</b><span>Receipts, budgets and alerts, approvals, more currencies, email reminders, auto-import.</span></div>
+
+  <h2 style="margin-top:28px">Sample rows</h2>
+  <p class="cap">The figures above come from these rows at ₹94.20 to the dollar.</p>
+  <div class="scroll"><table class="plain">
+    <tr><th>Cost</th><th>Repeats</th><th>Billed</th><th>Per month in rupees</th></tr>
+    <tr><td>Vercel Pro</td><td>Monthly</td><td>$20.00</td><td class="num">₹1,884</td></tr>
+    <tr><td>Supabase Pro</td><td>Monthly</td><td>$25.00</td><td class="num">₹2,355</td></tr>
+    <tr><td>Google Workspace</td><td>Monthly</td><td>₹1,380</td><td class="num">₹1,380</td></tr>
+    <tr><td>frrata.shop domain</td><td>Yearly</td><td>₹1,299</td><td class="num">₹108.25</td></tr>
+    <tr><td>Anthropic usage (estimate)</td><td>Monthly</td><td>$60.00</td><td class="num">₹5,652</td></tr>
+    <tr><td>WhatsApp (estimate)</td><td>Monthly</td><td>₹3,000</td><td class="num">₹3,000</td></tr>
+    <tr><td>CA fees</td><td>Quarterly</td><td>₹7,500</td><td class="num">₹2,500</td></tr>
+    <tr><th colspan="3">Monthly burn · ×12 for the year</th><th class="num">₹16,879.25 · ₹2,02,551</th></tr>
+  </table></div>
+</section>
+</div>
+
+<script>
+// The one live control: Repeats or Once.
+document.querySelectorAll('.seg').forEach(function (seg) {
+  var form = seg.closest('.dlg'); if (!form) return
+  seg.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-t]'); if (!b) return
+    seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)) })
+    form.querySelectorAll('[data-only]').forEach(function (el) { el.hidden = el.getAttribute('data-only') !== b.getAttribute('data-t') })
+  })
+})
+</script>

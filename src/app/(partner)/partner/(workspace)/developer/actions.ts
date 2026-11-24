@@ -6,7 +6,8 @@ import { requirePartner } from '@/lib/auth/require-partner'
 import { PasskeyResponse, passkeySite } from '@/lib/auth/webauthn'
 import { clientIp } from '@/lib/http/client-ip'
 import { deleteMyComputer } from '@/lib/db/device-codes'
-import { checkDeviceCode, giveOptions, giveVerify, type DeviceRefusal } from '@/lib/storefront-api/device'
+import { checkDeviceCode, giveOff, giveOptions, giveVerify, type DeviceRefusal } from '@/lib/storefront-api/device'
+import { passkeys } from '@/lib/auth/session'
 import type { CodeLook } from '@/lib/db/device-codes'
 import { errName } from '@/lib/log'
 
@@ -32,14 +33,25 @@ async function site() {
   return passkeySite((await headers()).get('host') ?? '')
 }
 
-/** Check code: the dialog's facts (store, started, network, room, a passkey) for the code typed. */
-export async function checkCodeAction(typed: unknown): Promise<DeviceAnswer<CodeLook>> {
+/** Check code: the dialog's facts (store, started, network, room, a passkey) for the code typed; `off`: passkeys are
+ *  off (Admin › Staff), so Give key asks for none. */
+export async function checkCodeAction(typed: unknown): Promise<DeviceAnswer<CodeLook & { off: boolean }>> {
   const code = Code.safeParse(typed)
   if (!code.success) return { ok: false, why: 'bad_code' }
   const w = await who()
   if (!w.ok) return w
-  const r = await checkDeviceCode(w.p, code.data, await clientIp())
-  return r.ok ? { ok: true, value: r.look } : r
+  const [r, pk] = await Promise.all([checkDeviceCode(w.p, code.data, await clientIp()), passkeys()])
+  return r.ok ? { ok: true, value: { ...r.look, off: pk.off } } : r
+}
+
+/** Give key while passkeys are off: the approval in one step (the definer refuses it while they are on). */
+export async function giveOffAction(typed: unknown, mine: unknown = false): Promise<DeviceAnswer<string>> {
+  const code = Code.safeParse(typed)
+  if (!code.success) return { ok: false, why: 'bad_code' }
+  const w = await who()
+  if (!w.ok) return w
+  const r = await giveOff(w.p, code.data, await clientIp(), mine === true)
+  return r.ok ? { ok: true, value: r.store } : r
 }
 
 /** Give key, step 1: the options the device signs (a challenge for this code alone). `mine`: "This is my computer" ticked

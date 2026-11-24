@@ -17,6 +17,7 @@
 // =============================================================================
 
 import { keysMatch, needsFreshNotice, NOTICE_LEAD_MS, noticeStood } from '@/domains/billing/collect'
+import { addMonths } from '@/domains/time/month'
 import { FREE_DAYS, LOT_MONTHS, type SeatPlan } from './prices'
 
 const DAY = 86_400_000
@@ -58,12 +59,15 @@ export function microUsdFor(credits: number, rateE4: number, loadingBp = LOADING
 /** List cost in paise (no loading), rounded up: what the platform's daily ceiling counts. */
 export const listPaise = (listMicroUsd: bigint, rateE4: number): bigint => (listMicroUsd * BigInt(rateE4) + PAISE_DEN - 1n) / PAISE_DEN
 
+/** The USD/INR rates a typed rate or a rupee bill may sit in (rupees × 10,000: ₹50 to ₹200); fx_rates' CHECK says the same. */
+export const FX_RATE_BAND_E4 = [50_0000, 200_0000] as const
+
 /** A rate as written ("94.1997") → rupees × 10,000, exactly (never through a float); null when it isn't one. */
 export function parseRate(text: string): number | null {
   const m = /^(\d{2,3})(?:\.(\d{1,4}))?$/.exec(text.trim())
   if (!m) return null
   const v = Number(m[1]) * 10_000 + Number((m[2] ?? '').padEnd(4, '0'))
-  return v >= 50_0000 && v <= 200_0000 ? v : null
+  return v >= FX_RATE_BAND_E4[0] && v <= FX_RATE_BAND_E4[1] ? v : null
 }
 
 /** Whether a stored rate may price a use now. */
@@ -73,13 +77,6 @@ export const rateUsable = (rateDay: Date | null, now: Date) => !!rateDay && now.
 
 export const LOT_KINDS = ['grant', 'pack', 'credits', 'seat', 'return'] as const
 export type LotKind = (typeof LOT_KINDS)[number]
-
-/** n calendar months on; a day past the target month's end falls to that month's last day (31 Jan + 1 → 28 Feb). */
-export function addMonths(from: Date, n: number): Date {
-  const y = from.getUTCFullYear(), m = from.getUTCMonth() + n
-  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-  return new Date(Date.UTC(y, m, Math.min(from.getUTCDate(), last), from.getUTCHours(), from.getUTCMinutes(), from.getUTCSeconds(), from.getUTCMilliseconds()))
-}
 
 /** A use-by date: 12 months for anything bought (and a credit returned after its lot ended); 90 days for the free 20. */
 export function expiresAt(kind: LotKind, from: Date): Date {

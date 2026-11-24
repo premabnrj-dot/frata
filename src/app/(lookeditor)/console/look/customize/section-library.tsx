@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog } from '@/components/ui/dialog'
-import { MAX_COMMERCE_DESIGNS, MAX_PER_PAGE, SECTION_INFO, SECTION_KEYS, SECTION_KINDS, SECTION_NAMES, searchDesigns, searchSections, type SectionKey } from '@/domains/themes/sections'
+import { MAX_COMMERCE_DESIGNS, MAX_PER_PAGE, SECTION_INFO, SECTION_KEYS, SECTION_KINDS, SECTION_NAMES, searchDesigns, searchSections } from '@/domains/themes/sections-facts'
+import type { SectionKey } from '@/domains/themes/sections'
 
 /** A design as the library shows it (Theme Studio TS0b); its picture is drawn on the server (speed review 4). */
 export type LibraryDesign = { id: string; name: string; line: string; tags: string[]; thumb: React.ReactNode

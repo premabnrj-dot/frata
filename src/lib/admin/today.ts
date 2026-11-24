@@ -15,6 +15,8 @@ import { trialView } from './trials'
 import { monthStartIST } from '@/domains/time/month'
 import { codeSource } from '@/domains/themes/source'
 import { listPartners } from './partners'
+import { dueCostItems } from './costs'
+import { cashLowItems } from './cash'
 import { domainsNeedingFrrata } from './addresses'
 import { apiShops } from './storefront-api'
 import { apiShopState } from '@/domains/storefront-api/admin-view'
@@ -46,6 +48,8 @@ const READERS: Record<TodayKind, Reader> = {
     return rows.map((r) => ({ kind: 'overpaid' as const, key: r.id + (r.at?.toISOString() ?? ''), title: `${r.shop} paid ${inr(Number(r.over))} more than due`,
       line: `${r.number ?? 'Invoice'}${r.at ? ` · paid ${ago(r.at, now)}` : ''}`, action: 'Record refund', href: `/admin/billing/invoice/${r.id}`, since: r.at }))
   },
+  cost_due: async (staff, now) => dueCostItems(staff, istDayKey(now)),
+  cash_low: async (staff, now) => cashLowItems(staff, istDayKey(now)),
   issue_run: async (_staff, now) => {
     const monthStart = monthStartIST(now)
     const [r] = await adminDb().select({ n: sql<number>`count(*)::int`, first: sql<Date | null>`min(${frrataInvoices.periodStart})`, drafted: sql<Date | null>`min(${frrataInvoices.draftedAt})` })

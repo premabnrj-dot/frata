@@ -2228,9 +2228,10 @@ do $$ begin
 end $$;
 
 -- 52. The Accountant (0072): only an owner or admin of THIS shop invites, lists or revokes an accountant; the role is
--- fixed; remove takes accountants only; no API role or staff runs the definers.
+-- fixed; remove takes accountants only; no API role or staff runs the definers. Since 0174 the app runs none of them
+-- (Settings › People's app_invite_person replaced them): their own checks are proved here as the definer's owner.
 insert into members (tenant_id, user_id, role) values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'staff');
-begin; set local role frata_app;
+begin;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ declare i uuid; begin
   begin perform app_invite_accountant('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'ca@example.in'); raise exception 'FAIL: staff invited an accountant';
@@ -2250,7 +2251,7 @@ do $$ declare i uuid; begin
 end $$;
 rollback;
 do $$ begin
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_app']) r,
              unnest(array['app_invite_accountant(uuid,uuid,text)', 'app_remove_accountant(uuid,uuid,uuid)', 'app_accountant_invites(uuid)', 'app_revoke_accountant_invite(uuid,uuid,uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
 end $$;
@@ -3488,7 +3489,7 @@ do $$ declare r text; f text; begin
      or to_regprocedure('app_partner_invite(uuid,text,text,uuid[])') is not null or to_regprocedure('app_partner_assign(uuid,uuid,uuid,boolean)') is not null
      or to_regprocedure('app_partner_remove_member(uuid,uuid)') is not null or to_regprocedure('app_partner_create_shop(uuid,text,text,text,integer,integer,integer,integer)') is not null then
     raise exception 'FAIL: an old partner signature survives'; end if;
-  -- O1 (drizzle/0167): sign-up's v1 and v2 and the partner's PIN-code signature are gone; only v3 and partner v2 remain.
+  -- O1 (drizzle/0177): sign-up's v1 and v2 and the partner's PIN-code signature are gone; only v3 and partner v2 remain.
   if to_regprocedure('app_create_shop(uuid,text,text,text,text[])') is not null
      or to_regprocedure('app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)') is not null
      or to_regprocedure('app_partner_create_shop(uuid,uuid,text,text,text,text,integer,integer,integer,integer)') is not null then
@@ -4402,6 +4403,208 @@ do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; l1 uuid; begin
   exception when sqlstate 'P0001' then if sqlerrm <> 'rate' then raise; end if; end;
 end $$;
 reset role;
+-- C1·B Move to Studio Plus now (0168–0169; plan § Follow-up C1·B with its three reviews). G moves Studio → Studio Plus with
+-- Studio's renewal open: the renewal is closed (never failed, no email), the old mandate queued for cancelling, Y untouched.
+-- A renewal with the bank makes the move wait; a claim waits while a start is open; a renewal claimed after a start makes
+-- the start's capture a refund (and queues its mandate); a renewal of an ended seat buys nothing and takes no invoice
+-- number; a start without a token buys nothing; one start at a time; every other seat move is has_seat; merchant billing
+-- rows are untouched.
+do $$ begin
+  perform set_config('proof.yb89p', (select pm.partner_id::text from partner_members pm where pm.user_id = 'aaaaaaaa-0000-0000-0000-000000000190' and pm.role = 'owner'), true);
+  perform set_config('proof.merchant89b', (select md5(coalesce((select string_agg(t::text, ',' order by t::text) from frrata_payments t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from frrata_invoices t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_accounts t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_mandate_setups t), ''))), true);
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; p record; begin
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89m0001', false);
+  if app_pc_apply('order_proof89m0001', 'pay_proof89m0001', true, 353882, 'INR', true, null, 'token_proof89m0001') <> 'applied' then raise exception 'FAIL: B · G''s Studio'; end if;
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0001', false);
+  if app_pc_apply('order_proof89q0001', 'pay_proof89q0001', true, 353882, 'INR', true, null, 'token_proof89q0001') <> 'applied' then raise exception 'FAIL: B · Y''s Studio'; end if;
+end $$;
+reset role;
+update partner_seats set period_end = now() + interval '1 day' where partner_id in (current_setting('proof.g89p')::uuid, current_setting('proof.yb89p')::uuid) and ended_at is null;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190';
+  gp uuid := current_setting('proof.g89p')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; r record; gr uuid; yr uuid; p record; t text;
+begin
+  for r in select * from app_pc_renewals(100, null, null) x where x.partner_id in (gp, yp) loop
+    if r.partner_id = gp then gr := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+    else yr := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27'); end if;
+  end loop;
+  if gr is null or yr is null then raise exception 'FAIL: B · the two renewals'; end if;
+  perform set_config('proof.gr89b', gr::text, true); perform set_config('proof.yr89b', yr::text, true);
+  -- G starts Studio Plus: its renewal can't be claimed while the start is open; Y's can
+  select * into p from app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  -- a start sent to the gateway holds the claim (an abandoned one, never sent, doesn't: 2nd review L5)
+  perform app_pc_purchase_order(p.id, 'order_proof89m0002', false);
+  if app_pc_claim(gr) then raise exception 'FAIL: B · a renewal claimed while a start is open'; end if;
+  -- a second start while the first is with the gateway waits
+  t := null;
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 500, 'plus', 'card', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'start_open' then raise exception 'FAIL: B · two starts at once (%)', t; end if;
+  -- the Plus capture: the old seat ends, its renewal closes, the old mandate is queued, 500 credits arrive
+  if app_pc_apply('order_proof89m0002', 'pay_proof89m0002', true, 1179882, 'INR', true, null, 'token_proof89m0002') <> 'applied' then raise exception 'FAIL: B · the move'; end if;
+  -- Y's renewal is claimed (no start of Y's is open), so Y's move waits
+  if not app_pc_claim(yr) then raise exception 'FAIL: B · Y''s renewal claim'; end if;
+  t := null;
+  begin perform app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'renewal_paying' then raise exception 'FAIL: B · a move while Studio''s payment is with the bank (%)', t; end if;
+  -- every other move waits for the renewal
+  t := null;
+  begin perform app_partner_credit_buy(G, proof.sess(G), proof.h(G), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'has_seat' then raise exception 'FAIL: B · Studio Plus → Studio at once (%)', t; end if;
+end $$;
+reset role;
+do $$ declare gp uuid := current_setting('proof.g89p')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; gr uuid := current_setting('proof.gr89b')::uuid; yr uuid := current_setting('proof.yr89b')::uuid; begin
+  if (select closed_reason from partner_credit_purchases where id = gr) is distinct from 'Moved to Studio Plus'
+     or (select failed_at from partner_credit_purchases where id = gr) is not null then raise exception 'FAIL: B · G''s renewal not closed as moved'; end if;
+  if exists (select 1 from partner_credit_notices n where n.purchase_id = gr and n.kind = 'renewal_failed') then raise exception 'FAIL: B · a renewal-failed email for a move'; end if;
+  if (select plan from partner_seats where partner_id = gp and ended_at is null) <> 'plus' or (select count(*) from partner_seats where partner_id = gp and ended_at is null) <> 1
+  then raise exception 'FAIL: B · G''s live seat is not Studio Plus alone'; end if;
+  if (select token_id from partner_billing where partner_id = gp) <> 'token_proof89m0002' or (select mandate_max from partner_billing where partner_id = gp) <> 1200000
+  then raise exception 'FAIL: B · G''s new mandate'; end if;
+  if not exists (select 1 from partner_mandate_cancels m where m.partner_id = gp and m.token_id = 'token_proof89m0001' and m.cancelled_at is null)
+  then raise exception 'FAIL: B · the old mandate not queued for cancelling'; end if;
+  if not exists (select 1 from partner_credit_entries e join partner_credit_purchases p on p.id = e.purchase_id where p.partner_id = gp and p.plan = 'plus' and e.kind = 'seat' and e.credits = 500)
+  then raise exception 'FAIL: B · Studio Plus''s 500 credits'; end if;
+  -- Y untouched by G's move
+  if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' or (select token_id from partner_billing where partner_id = yp) <> 'token_proof89q0001'
+     or (select closed_at from partner_credit_purchases where id = yr) is not null or exists (select 1 from partner_mandate_cancels where partner_id = yp)
+  then raise exception 'FAIL: B · G''s move touched Y'; end if;
+  -- the race: Y's renewal unclaimed, Y starts Studio Plus, then the renewal is claimed anyway (a run before the lock)
+  update partner_credit_purchases set claimed_at = null where id = yr;
+end $$;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; p record; begin
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0002', false);
+end $$;
+reset role;
+update partner_credit_purchases set claimed_at = now() + interval '1 second' where id = current_setting('proof.yr89b')::uuid;
+do $$ begin perform set_config('proof.counter89b', (select coalesce(sum(next), 0)::text from platform_counters where kind = 'invoice'), true); end $$;
+set local role frata_app;
+do $$ declare yp uuid := current_setting('proof.yb89p')::uuid; begin
+  -- Studio's renewal went first: the Studio Plus capture buys nothing, its new mandate is queued for cancelling
+  if app_pc_apply('order_proof89q0002', 'pay_proof89q0002', true, 1179882, 'INR', true, null, 'token_proof89q0002') <> 'refund_due' then raise exception 'FAIL: B · two months on one day'; end if;
+  -- the renewal itself buys its period
+  perform app_pc_purchase_order(current_setting('proof.yr89b')::uuid, 'order_proof89q0003', true);
+  if app_pc_apply('order_proof89q0003', 'pay_proof89q0003', true, 353882, 'INR', true, null, null) <> 'applied' then raise exception 'FAIL: B · Y''s renewal'; end if;
+end $$;
+reset role;
+do $$ declare gp uuid := current_setting('proof.g89p')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; begin
+  if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' then raise exception 'FAIL: B · a refunded start moved Y'; end if;
+  if not exists (select 1 from partner_mandate_cancels where partner_id = yp and token_id = 'token_proof89q0002') then raise exception 'FAIL: B · a refunded start''s mandate left live'; end if;
+  -- G's old renewal, reopened as if its capture came late: an ended seat's renewal buys nothing, takes no invoice number
+  update partner_credit_purchases set closed_at = null, closed_reason = null, gateway_order_id = 'order_proof89m0003', claimed_at = now() where id = current_setting('proof.gr89b')::uuid;
+  perform set_config('proof.counter89b', (select coalesce(sum(next), 0)::text from platform_counters where kind = 'invoice'), true);
+end $$;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; p record; t text; begin
+  if app_pc_apply('order_proof89m0003', 'pay_proof89m0003', true, 353882, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: B · an ended seat''s renewal bought credits'; end if;
+  -- a start without a mandate buys nothing (Y's renewal is paid; Y may start again)
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0004', false);
+  if app_pc_apply('order_proof89q0004', 'pay_proof89q0004', true, 1179882, 'INR', true, null, null) <> 'refund_due' then raise exception 'FAIL: B · a seat moved without its mandate'; end if;
+end $$;
+reset role;
+do $$ declare gr uuid := current_setting('proof.gr89b')::uuid; yp uuid := current_setting('proof.yb89p')::uuid; begin
+  if exists (select 1 from partner_invoices where purchase_id = gr) or exists (select 1 from partner_credit_entries where purchase_id = gr)
+  then raise exception 'FAIL: B · an ended seat''s renewal took an invoice or credits'; end if;
+  if (select coalesce(sum(next), 0)::text from platform_counters where kind = 'invoice') <> current_setting('proof.counter89b')
+  then raise exception 'FAIL: B · a refunded renewal took an invoice number'; end if;
+  if (select plan from partner_seats where partner_id = yp and ended_at is null) <> 'studio' then raise exception 'FAIL: B · a tokenless start moved Y'; end if;
+  if (select md5(coalesce((select string_agg(t::text, ',' order by t::text) from frrata_payments t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from frrata_invoices t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_accounts t), '')
+    || coalesce((select string_agg(t::text, ',' order by t::text) from billing_mandate_setups t), ''))) <> current_setting('proof.merchant89b')
+  then raise exception 'FAIL: B · merchant billing rows changed'; end if;
+  -- a closed attempt of an ended seat is closed, never failed, and sends nothing
+  update partner_credit_purchases set refund_due_at = null, refund_payment_id = null, refund_amount = null, closed_at = null, claimed_at = null, gateway_order_id = null where id = current_setting('proof.gr89b')::uuid;
+end $$;
+set local role frata_app;
+do $$ begin
+  if not app_pc_close(current_setting('proof.gr89b')::uuid, 'Not paid') then raise exception 'FAIL: B · closing'; end if;
+  -- the cancel queue: due, tried, done
+  perform app_pc_token_cancel_tried(current_setting('proof.g89p')::uuid, 'token_proof89m0001', 'gateway');
+  if exists (select 1 from app_pc_token_cancels(100) x where x.token_id = 'token_proof89m0001') then raise exception 'FAIL: B · a failed cancel retried at once'; end if;
+end $$;
+reset role;
+do $$ begin
+  if (select failed_at from partner_credit_purchases where id = current_setting('proof.gr89b')::uuid) is not null
+     or exists (select 1 from partner_credit_notices where purchase_id = current_setting('proof.gr89b')::uuid and kind = 'renewal_failed')
+  then raise exception 'FAIL: B · an ended seat''s renewal failed or emailed'; end if;
+  if (select tries from partner_mandate_cancels where token_id = 'token_proof89m0001') <> 1 then raise exception 'FAIL: B · a failed cancel''s try not kept'; end if;
+  -- one version of every definer (a changed signature would leave a second, granted to PUBLIC)
+  if exists (select 1 from pg_proc where proname like 'app_pc_%' or proname like 'app_partner_credit%' group by proname having count(*) > 1)
+  then raise exception 'FAIL: B · two versions of a credits definer'; end if;
+end $$;
+-- C1·B, second security review: a refund booked is final (the renewal failing later never turns it into Studio Plus);
+-- the queue never offers the live mandate; a cancelled token settles its queue row; a failed seat's retry with the bank
+-- makes the banner's Pay wait.
+update partner_seats set period_end = now() + interval '1 day' where partner_id = current_setting('proof.yb89p')::uuid and ended_at is null;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; yp uuid := current_setting('proof.yb89p')::uuid; p record; r record; r2 uuid; begin
+  select * into p from app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 500, 'plus', 'upi', 1200000, 999900, 0, 0, 179982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  perform app_pc_purchase_order(p.id, 'order_proof89q0005', false);
+  select * into r from app_pc_renewals(100, null, null) x where x.partner_id = yp;
+  r2 := app_pc_renewal_begin(r.seat_id, r.period_end, 1, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if r2 is null then raise exception 'FAIL: B2 · Y''s second renewal'; end if;
+  perform set_config('proof.yr2', r2::text, true);
+end $$;
+reset role;
+update partner_credit_purchases set claimed_at = now() + interval '1 second', gateway_order_id = 'order_proof89q0006' where id = current_setting('proof.yr2')::uuid;
+set local role frata_app;
+do $$ declare yp uuid := current_setting('proof.yb89p')::uuid; begin
+  if app_pc_apply('order_proof89q0005', 'pay_proof89q0005', true, 1179882, 'INR', true, null, 'token_proof89q0005') <> 'refund_due' then raise exception 'FAIL: B2 · the start not refunded'; end if;
+  if app_pc_apply('order_proof89q0006', 'pay_proof89q0006', false, 353882, 'INR', true, 'declined', null) <> 'failed' then raise exception 'FAIL: B2 · the renewal''s failure'; end if;
+  if app_pc_apply('order_proof89q0005', 'pay_proof89q0005', true, 1179882, 'INR', true, null, 'token_proof89q0005') = 'applied' then raise exception 'FAIL: B2 · a booked refund bought Studio Plus'; end if;
+  if exists (select 1 from app_pc_token_cancels(100) x where x.partner_id = yp and x.token_id = 'token_proof89q0001') then raise exception 'FAIL: B2 · the live mandate offered for cancelling'; end if;
+  if not app_pc_token_event('token_proof89q0005', 'cancelled') then raise exception 'FAIL: B2 · a cancelled token event'; end if;
+end $$;
+reset role;
+-- 60 booked refunds ahead of one real straggler: the straggler is still asked about first (re-check MED)
+insert into partner_credit_purchases (partner_id, kind, credits, taxable, cgst, sgst, igst, total, test, invoice_test, buyer_name, buyer_state,
+  buyer_address, seller_name, seller_address, sac, prefix, fy, receipt, gateway_order_id, refund_due_at, refund_payment_id, refund_amount, created_at)
+select current_setting('proof.yb89p')::uuid, 'pack', 100, 199900, 0, 0, 35982, 235882, true, true, 'Yarn', '29', 'Bengaluru', 'Frrata', 'Jaipur', '998315',
+  'FRR/', '26-27', 'pc_refundpile' || g, 'order_proofpile' || lpad(g::text, 4, '0'), now(), 'pay_proofpile' || lpad(g::text, 4, '0'), 235882, now() - interval '1 day'
+from generate_series(1, 60) g;
+insert into partner_credit_purchases (partner_id, kind, credits, taxable, cgst, sgst, igst, total, test, invoice_test, buyer_name, buyer_state,
+  buyer_address, seller_name, seller_address, sac, prefix, fy, receipt, gateway_order_id, created_at)
+values (current_setting('proof.yb89p')::uuid, 'pack', 100, 199900, 0, 0, 35982, 235882, true, true, 'Yarn', '29', 'Bengaluru', 'Frrata', 'Jaipur', '998315',
+  'FRR/', '26-27', 'pc_straggler1', 'order_proofstraggle1', now() - interval '3 hours');
+set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_pc_unsettled(interval '2 hours', 50) x where x.gateway_order_id = 'order_proofstraggle1') then raise exception 'FAIL: B2 · booked refunds crowd out a straggler'; end if;
+end $$;
+reset role;
+delete from partner_credit_purchases where receipt like 'pc_refundpile%' or receipt = 'pc_straggler1';
+set local role frata_app;
+do $$ begin perform 1; end $$;
+reset role;
+insert into partner_mandate_cancels (partner_id, token_id) values (current_setting('proof.yb89p')::uuid, 'token_proof89q0001');
+do $$ begin
+  if (select plan from partner_seats where partner_id = current_setting('proof.yb89p')::uuid and ended_at is null) <> 'studio' then raise exception 'FAIL: B2 · Y moved by a refunded start'; end if;
+  if (select cancelled_at from partner_mandate_cancels where token_id = 'token_proof89q0005') is null then raise exception 'FAIL: B2 · a cancelled token''s queue row left open'; end if;
+end $$;
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000190'; yp uuid := current_setting('proof.yb89p')::uuid; r record; r3 uuid; t text; begin
+  if exists (select 1 from app_pc_token_cancels(100) x where x.token_id = 'token_proof89q0001') then raise exception 'FAIL: B2 · the live mandate offered for cancelling'; end if;
+  -- the seat failed; a retry is with the bank; the banner's Pay waits
+  select * into r from app_pc_renewals(100, null, null) x where x.partner_id = yp;
+  r3 := app_pc_renewal_begin(r.seat_id, r.period_end, 2, now() + interval '25 hours', 'studio', 150, 299900, 0, 0, 53982, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  if r3 is null or not app_pc_claim(r3) then raise exception 'FAIL: B2 · the retry'; end if;
+  begin perform app_partner_credit_buy(Y, proof.sess(Y), proof.h(Y), 'seat_start', 150, 'studio', 'upi', 360000, 299900, 0, 0, 53982, true, true, 'Frrata', '', 'Jaipur', '998315', 'FRR/', '26-27');
+  exception when sqlstate 'P0001' then t := sqlerrm; end;
+  if t is distinct from 'renewal_paying' then raise exception 'FAIL: B2 · Pay while a retry is with the bank (%)', t; end if;
+end $$;
+reset role;
 -- a suspended partner reads and buys nothing
 update partners set suspended_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000190';
 set local role frata_app;
@@ -4425,6 +4628,7 @@ do $$ declare r text; f text; begin
     'app_pc_unsettled(interval, integer)', 'app_pc_close(uuid, text)', 'app_pc_renewals(integer, timestamptz, uuid)',
     'app_pc_renewal_begin(uuid, timestamptz, integer, timestamptz, text, integer, bigint, bigint, bigint, bigint, boolean, text, text, text, text, text, text)',
     'app_pc_renewals_notified(integer)', 'app_pc_seat_end(uuid, boolean)', 'app_pc_token_cancels(integer)', 'app_pc_token_cancelled(uuid, text)',
+    'app_pc_token_cancel_tried(uuid, text, text)',
     'app_pc_token_event(text, text)', 'app_pc_refunds_due(integer)', 'app_pc_refund_claim(uuid)', 'app_pc_refund_done(uuid, text)',
     'app_pc_dispute(text)', 'app_pc_notices_claim(integer, uuid[])', 'app_pc_notice_done(uuid, boolean, text)',
     'app_fx_rate_latest()', 'app_pc_reserve(uuid, uuid, text, uuid, text, text, integer, boolean)', 'app_pc_settle(uuid, bigint)', 'app_pc_return(uuid, text)'] loop
@@ -4436,7 +4640,7 @@ do $$ declare r text; f text; begin
   foreach f in array array['app_pc_owner(uuid, uuid, text, boolean, boolean)', 'app_pc_lots(uuid, boolean)', 'app_pc_balance(uuid, boolean)',
     'app_pc_charged(uuid)', 'app_pc_window(uuid)', 'app_pc_link_used(uuid, uuid)', 'app_pc_notice(uuid, text, text, uuid, uuid)',
     'app_pc_on_partner_approved()', 'app_pc_issue(uuid)', 'app_pc_give_back(uuid, integer)',
-    'app_pc_debt(uuid, boolean)', 'app_pc_debt_draw(uuid, boolean)'] loop
+    'app_pc_debt(uuid, boolean)', 'app_pc_debt_draw(uuid, boolean)', 'app_pc_cancel_mandate(uuid, text)'] loop
     foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder', 'frata_admin', 'frata_app'] loop
       if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run the internal %', r, f; end if;
     end loop;
@@ -4451,7 +4655,7 @@ do $$ declare r text; f text; begin
   if not has_function_privilege('frata_admin', 'app_fx_rate_set(date, integer)', 'execute') then raise exception 'FAIL: Admin cannot set the rate'; end if;
   foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
     foreach f in array array['partner_billing', 'partner_seats', 'partner_credit_purchases', 'partner_invoices', 'partner_credit_uses',
-      'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates'] loop
+      'partner_credit_entries', 'partner_client_budgets', 'partner_credit_notices', 'partner_credit_tries', 'fx_rates', 'partner_mandate_cancels'] loop
       if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') or has_table_privilege(r, f, 'update')
          or has_table_privilege(r, f, 'delete') or has_table_privilege(r, f, 'truncate') then raise exception 'FAIL: % reaches %', r, f; end if;
     end loop;
@@ -4459,7 +4663,7 @@ do $$ declare r text; f text; begin
 end $$;
 rollback;
 
--- § 102 · Sign-up without a PIN code (O1, drizzle/0166; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
+-- § 105 · Sign-up without a PIN code (O1, drizzle/0176; plan docs/plans/2026-11-23-o1-signup.md O1·2). v3 keeps every
 -- refusal of v1 (§ 17, § 30's retired name) and v2 (§ 49): confirmed email, one shop a person, taken, bad and retired
 -- addresses, another person's code, a code twice, a claimed email gets no trial, frozen terms; the new store has no
 -- pickup PIN code, its audit no 'pickup', and 'signup_ms' only inside 0..86,400,000. The partner's v2 keeps § 28's
@@ -4475,40 +4679,40 @@ update shop_settings set published_at = now() where tenant_id = '22222222-2222-2
 update shop_settings set published_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
 set local role frata_app;
 do $$ declare t uuid; r record; c uuid; d jsonb; A uuid := 'aaaaaaaa-0000-0000-0000-000000000201'; B uuid := 'aaaaaaaa-0000-0000-0000-000000000202'; begin
-  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000003', 'Squat', 'squat-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 102 unconfirmed email made a shop';
+  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000003', 'Squat', 'squat-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 105 unconfirmed email made a shop';
   exception when raise_exception then if sqlerrm <> 'email_unconfirmed' then raise; end if; end;
-  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000002', 'Second', 'second-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 102 an owner made a second shop';
+  begin perform app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000002', 'Second', 'second-shop', '{}', 'growth', 'h-102-0', 1::smallint, null, null); raise exception 'FAIL: 105 an owner made a second shop';
   exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
-  begin perform app_create_shop_v3(A, 'Taken', 'proof-a', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 a taken address was accepted';
+  begin perform app_create_shop_v3(A, 'Taken', 'proof-a', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 a taken address was accepted';
   exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
-  begin perform app_create_shop_v3(A, 'Bad', '-bad-', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 a bad address was accepted';
+  begin perform app_create_shop_v3(A, 'Bad', '-bad-', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 a bad address was accepted';
   exception when raise_exception then if sqlerrm <> 'bad_slug' then raise; end if; end;
   perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b102-new');
-  if app_name_check('proof-b') <> 'taken' then raise exception 'FAIL: 102 the retired name looked free'; end if;
-  begin perform app_create_shop_v3(A, 'Squatter', 'proof-b', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 sign-up took a retired name';
+  if app_name_check('proof-b') <> 'taken' then raise exception 'FAIL: 105 the retired name looked free'; end if;
+  begin perform app_create_shop_v3(A, 'Squatter', 'proof-b', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 sign-up took a retired name';
   exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
-  begin perform app_create_shop_v3(A, 'Plan', 'proof-102-plan', '{}', 'gold', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 an unknown plan';
+  begin perform app_create_shop_v3(A, 'Plan', 'proof-102-plan', '{}', 'gold', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 an unknown plan';
   exception when raise_exception then if sqlerrm <> 'bad_plan' then raise; end if; end;
-  begin perform app_create_shop_v3(A, '   ', 'proof-102-blank', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 102 a blank name';
+  begin perform app_create_shop_v3(A, '   ', 'proof-102-blank', '{}', 'growth', 'h-102-a', 1::smallint, null, null); raise exception 'FAIL: 105 a blank name';
   exception when raise_exception then if sqlerrm <> 'bad_name' then raise; end if; end;
   -- a code: another person cannot spend it; it is spent once
   c := app_signup_code_issue(A, 'phone-hmac-102', 'code-hmac-102', 1::smallint);
-  if not app_signup_code_verify(A, c, 'code-hmac-102') then raise exception 'FAIL: 102 the right code did not verify'; end if;
-  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 102 a code spent by another person';
+  if not app_signup_code_verify(A, c, 'code-hmac-102') then raise exception 'FAIL: 105 the right code did not verify'; end if;
+  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 105 a code spent by another person';
   exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
   select * into r from app_create_shop_v3(A, '  Proof A102  ', 'proof-a102', array['women','ethnic'], 'growth', 'h-102-a', 1::smallint, c, 41500);
-  if not r.trial then raise exception 'FAIL: 102 a first sign-up got no trial'; end if;
-  begin perform app_create_shop_v3(A, 'Again', 'proof-a102-again', '{}', 'growth', 'h-102-x', 1::smallint, null, null); raise exception 'FAIL: 102 one person made two shops';
+  if not r.trial then raise exception 'FAIL: 105 a first sign-up got no trial'; end if;
+  begin perform app_create_shop_v3(A, 'Again', 'proof-a102-again', '{}', 'growth', 'h-102-x', 1::smallint, null, null); raise exception 'FAIL: 105 one person made two shops';
   exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
-  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 102 a code used twice';
+  begin perform app_create_shop_v3(B, 'Proof B102', 'proof-b102', '{}', 'growth', 'h-102-b', 1::smallint, c, null); raise exception 'FAIL: 105 a code used twice';
   exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
   perform set_config('app.tenant_id', r.tenant_id::text, true);
-  if (select name from tenants) <> 'Proof A102' then raise exception 'FAIL: 102 new shop name'; end if;
-  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 102 the new store has a pickup PIN code'; end if;
-  if (select sells from shop_settings) <> array['women','ethnic'] then raise exception 'FAIL: 102 what the store sells'; end if;
-  if (select count(*) from tenant_plans) <> 1 then raise exception 'FAIL: 102 new shop plan'; end if;
+  if (select name from tenants) <> 'Proof A102' then raise exception 'FAIL: 105 new shop name'; end if;
+  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 105 the new store has a pickup PIN code'; end if;
+  if (select sells from shop_settings) <> array['women','ethnic'] then raise exception 'FAIL: 105 what the store sells'; end if;
+  if (select count(*) from tenant_plans) <> 1 then raise exception 'FAIL: 105 new shop plan'; end if;
   select detail into d from audit_events where action = 'shop.created';
-  if d ? 'pickup' or (d->>'signup_ms')::int is distinct from 41500 or d->>'plan' <> 'growth' or (d->>'trial')::boolean is not true then raise exception 'FAIL: 102 the audit detail (%)', d; end if;
+  if d ? 'pickup' or (d->>'signup_ms')::int is distinct from 41500 or d->>'plan' <> 'growth' or (d->>'trial')::boolean is not true then raise exception 'FAIL: 105 the audit detail (%)', d; end if;
 end $$;
 rollback;
 begin;
@@ -4516,25 +4720,25 @@ do $$ declare r record; d jsonb; begin
   -- As the definer runs it (superuser here, to check the rows): a claimed email, frozen terms, the clamp.
   insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'h-102-taken', 1, '11111111-1111-1111-1111-111111111111');
   select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000203', 'Proof C102', 'proof-c102', '{}', 'launch', 'h-102-taken', 1::smallint, null, -1);
-  if r.trial or exists (select 1 from shop_trials where tenant_id = r.tenant_id) then raise exception 'FAIL: 102 a claimed email got a trial'; end if;
+  if r.trial or exists (select 1 from shop_trials where tenant_id = r.tenant_id) then raise exception 'FAIL: 105 a claimed email got a trial'; end if;
   select detail into d from audit_events where tenant_id = r.tenant_id and action = 'shop.created';
-  if d ? 'signup_ms' then raise exception 'FAIL: 102 a negative time was kept'; end if;
+  if d ? 'signup_ms' then raise exception 'FAIL: 105 a negative time was kept'; end if;
   select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000204', 'Proof D102', 'proof-d102', '{}', 'growth', 'h-102-new', 1::smallint, null, null);
-  if not r.trial or (select days from shop_trials where tenant_id = r.tenant_id) <> (select days from trial_settings) then raise exception 'FAIL: 102 the trial terms were not frozen'; end if;
-  if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: 102 the new shop''s plan row has no trial end'; end if;
-  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 102 a null time was kept'; end if;
-  if (select pickup_pincode from shop_settings where tenant_id = r.tenant_id) is not null then raise exception 'FAIL: 102 pickup'; end if;
+  if not r.trial or (select days from shop_trials where tenant_id = r.tenant_id) <> (select days from trial_settings) then raise exception 'FAIL: 105 the trial terms were not frozen'; end if;
+  if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: 105 the new shop''s plan row has no trial end'; end if;
+  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 105 a null time was kept'; end if;
+  if (select pickup_pincode from shop_settings where tenant_id = r.tenant_id) is not null then raise exception 'FAIL: 105 pickup'; end if;
   -- the clamp's top edge
   delete from members where user_id = 'aaaaaaaa-0000-0000-0000-000000000204';
   select * into r from app_create_shop_v3('aaaaaaaa-0000-0000-0000-000000000204', 'Proof E102', 'proof-e102', '{}', 'growth', 'h-102-e', 1::smallint, null, 86400001);
-  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 102 a time over a day was kept'; end if;
+  if (select detail from audit_events where tenant_id = r.tenant_id and action = 'shop.created') ? 'signup_ms' then raise exception 'FAIL: 105 a time over a day was kept'; end if;
   -- privileges: frata_app only
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) ro,
              unnest(array['app_create_shop_v3(uuid,text,text,text[],text,text,smallint,uuid,integer)', 'app_partner_create_shop_v2(uuid,uuid,text,text,text,integer,integer,integer,integer)']) f
-             where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: 102 another role may create a store'; end if;
+             where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: 105 another role may create a store'; end if;
   if not has_function_privilege('frata_app', 'app_create_shop_v3(uuid,text,text,text[],text,text,smallint,uuid,integer)', 'execute')
      or not has_function_privilege('frata_app', 'app_partner_create_shop_v2(uuid,uuid,text,text,text,integer,integer,integer,integer)', 'execute') then
-    raise exception 'FAIL: 102 the app cannot create a store'; end if;
+    raise exception 'FAIL: 105 the app cannot create a store'; end if;
 end $$;
 rollback;
 -- the partner's v2: P approved (owner), Q an applicant, R declined, D a Builder on P's first store
@@ -4550,25 +4754,25 @@ select proof.check('aaaaaaaa-0000-0000-0000-000000000205');
 do $$ declare P uuid := 'aaaaaaaa-0000-0000-0000-000000000205'; Q uuid := 'aaaaaaaa-0000-0000-0000-000000000206'; R uuid := 'aaaaaaaa-0000-0000-0000-000000000207';
   D uuid := 'aaaaaaaa-0000-0000-0000-000000000208'; t uuid; inv uuid;
 begin
-  begin perform app_partner_create_shop_v2(Q, proof.sess(Q), proof.h(Q), 'Q102', 'proof-q102', 2000, 24, 90, 10); raise exception 'FAIL: 102 an applicant made a store';
+  begin perform app_partner_create_shop_v2(Q, proof.sess(Q), proof.h(Q), 'Q102', 'proof-q102', 2000, 24, 90, 10); raise exception 'FAIL: 105 an applicant made a store';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
-  begin perform app_partner_create_shop_v2(R, proof.sess(R), proof.h(R), 'R102', 'proof-r102', 2000, 24, 90, 10); raise exception 'FAIL: 102 a declined partner made a store';
+  begin perform app_partner_create_shop_v2(R, proof.sess(R), proof.h(R), 'R102', 'proof-r102', 2000, 24, 90, 10); raise exception 'FAIL: 105 a declined partner made a store';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
-  begin perform app_partner_create_shop_v2(P, proof.sess(P), 'not-a-check', 'P102 X', 'proof-p102-x', 2000, 24, 90, 10); raise exception 'FAIL: 102 a partner store without a check';
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), 'not-a-check', 'P102 X', 'proof-p102-x', 2000, 24, 90, 10); raise exception 'FAIL: 105 a partner store without a check';
   exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
   t := app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102', 'proof-p102', 2000, 24, 90, 1);
-  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102 two', 'proof-p102-two', 2000, 24, 90, 1); raise exception 'FAIL: 102 past the cap of unopened stores';
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Proof P102 two', 'proof-p102-two', 2000, 24, 90, 1); raise exception 'FAIL: 105 past the cap of unopened stores';
   exception when sqlstate 'P0001' then if sqlerrm <> 'too_many' then raise; end if; end;
-  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Taken', 'proof-a', 2000, 24, 90, 10); raise exception 'FAIL: 102 a partner took a taken address';
+  begin perform app_partner_create_shop_v2(P, proof.sess(P), proof.h(P), 'Taken', 'proof-a', 2000, 24, 90, 10); raise exception 'FAIL: 105 a partner took a taken address';
   exception when sqlstate 'P0001' then if sqlerrm <> 'slug_taken' then raise; end if; end;
   inv := app_partner_invite(P, proof.sess(P), proof.h(P), 'b102@kiln.test', 'builder', array[t]);
   perform app_partner_accept(D, inv);
   perform proof.check(D);
-  begin perform app_partner_create_shop_v2(D, proof.sess(D), proof.h(D), 'D102', 'proof-d102-x', 2000, 24, 90, 10); raise exception 'FAIL: 102 a Builder made a store';
+  begin perform app_partner_create_shop_v2(D, proof.sess(D), proof.h(D), 'D102', 'proof-d102-x', 2000, 24, 90, 10); raise exception 'FAIL: 105 a Builder made a store';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
   perform set_config('app.tenant_id', t::text, true);
-  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 102 the partner''s store has a pickup PIN code'; end if;
-  if (select count(*) from partner_links) <> 1 then raise exception 'FAIL: 102 the partner''s link'; end if;
+  if (select count(*) from shop_settings) <> 1 or (select pickup_pincode from shop_settings) is not null then raise exception 'FAIL: 105 the partner''s store has a pickup PIN code'; end if;
+  if (select count(*) from partner_links) <> 1 then raise exception 'FAIL: 105 the partner''s link'; end if;
   perform set_config('app.tenant_id', '', true);
 end $$;
 rollback;
@@ -4578,7 +4782,7 @@ select proof.check('aaaaaaaa-0000-0000-0000-000000000205');
 select app_partner_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000205', proof.sess('aaaaaaaa-0000-0000-0000-000000000205'), proof.h('aaaaaaaa-0000-0000-0000-000000000205'), 'Proof P102', 'proof-p102', 2000, 24, 90, 10);
 reset role;
 do $$ declare d jsonb := (select detail from audit_events a join tenants t on t.id = a.tenant_id where t.slug = 'proof-p102' and a.action = 'shop.created'); begin
-  if d is null or d ? 'pickup' or d->>'by' <> 'partner' then raise exception 'FAIL: 102 the partner''s audit detail (%)', d; end if;
+  if d is null or d ? 'pickup' or d->>'by' <> 'partner' then raise exception 'FAIL: 105 the partner''s audit detail (%)', d; end if;
 end $$;
 rollback;
 
@@ -5783,11 +5987,15 @@ begin
     then raise exception 'FAIL: 88 the switch reached the real passkey check'; end if;
   begin perform public.app_partner_need_real(p, s, '', false); raise exception 'FAIL: 88 the real partner check passed on the switch';
   exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
-  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all', 'app_handover_invite'] loop
+  -- A handover invite follows the switch (owner 2026-11-23, drizzle/0171); managing passkeys keeps the real check.
+  if (select prosrc from pg_proc where proname = 'app_handover_invite') !~ 'app_partner_need\(' then raise exception 'FAIL: 88 the handover invite ignores the switch'; end if;
+  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all'] loop
     if (select prosrc from pg_proc where proname = fn) !~ 'app_partner_need_real\(' or (select prosrc from pg_proc where proname = fn) ~ 'app_partner_need\('
       then raise exception 'FAIL: 88 % no longer asks for a real passkey', fn; end if;
   end loop;
-  foreach fn in array array['app_staff_challenge', 'app_staff_add_passkey', 'app_staff_approve', 'app_staff_remove_passkey', 'app_staff_list',
+  -- Admin › Staff's list follows the switch (names only; owner 2026-11-23, drizzle/0171); adding, approving and removing don't.
+  if (select prosrc from pg_proc where proname = 'app_staff_list') !~ 'app_passkeys_off' then raise exception 'FAIL: 88 the staff list ignores the switch'; end if;
+  foreach fn in array array['app_staff_challenge', 'app_staff_add_passkey', 'app_staff_approve', 'app_staff_remove_passkey',
                             'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
     if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
   end loop;
@@ -5811,6 +6019,66 @@ begin
     if has_function_privilege('frata_app', 'public.' || fn, 'execute') or has_function_privilege('anon', 'public.' || fn, 'execute')
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
+end $$;
+-- § 88 (cont.) · Passkeys off from Admin › Staff (drizzle/0170–0171; owner 2026-11-23). Off from Admin has no end date;
+-- only an Admin turns passkeys off, with their own passkey in the last 5 minutes; an Admin turns them on with none; each
+-- change names the person in the audit; Give key's passkey-free door opens only while off; one role holds each door.
+reset role;
+do $$ declare adm uuid := 'aaaaaaaa-0000-0000-0000-000000000035'; sup uuid := 'aaaaaaaa-0000-0000-0000-000000000001';
+  s uuid := gen_random_uuid(); k uuid; n int;
+begin
+  delete from public.platform_switches;
+  if public.app_passkeys_off() then raise exception 'FAIL: 88b passkeys off with no switch row'; end if;
+  begin perform public.app_admin_passkeys_set(sup, s, 'x', true); raise exception 'FAIL: 88b support staff turned passkeys off';
+  exception when others then if sqlerrm <> 'not_admin' then raise; end if; end;
+  begin perform public.app_admin_passkeys_set(adm, s, 'nope', true); raise exception 'FAIL: 88b passkeys turned off without a passkey';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  insert into public.staff_passkeys (user_id, credential_id, public_key, name) values (adm, 'proof88b', 'k', 'proof') returning id into k;
+  insert into public.staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at) values (adm, s, k, 'h88b', now() + interval '1 hour');
+  select count(*) into n from public.audit_events where action = 'platform.passkeys_off' and actor_kind = 'staff' and actor_user_id = adm;
+  if public.app_admin_passkeys_set(adm, s, 'h88b', true) is not true then raise exception 'FAIL: 88b an Admin with a fresh passkey could not turn passkeys off'; end if;
+  if not public.app_passkeys_off() or (select w.until from public.platform_switches w where w.key = 'passkeys_off') is not null
+    then raise exception 'FAIL: 88b passkeys off from Admin has an end date'; end if;
+  if (select count(*) from public.audit_events where action = 'platform.passkeys_off' and actor_kind = 'staff' and actor_user_id = adm) <> n + 1
+    then raise exception 'FAIL: 88b no audit row names the Admin'; end if;
+  if not exists (select 1 from public.staff_notices where kind = 'passkeys_off' and about = 'admin2@frata.test')
+     or (select count(distinct to_email) from public.staff_notices where kind = 'passkeys_off') < (select count(*) from public.platform_staff where role = 'admin')
+    then raise exception 'FAIL: 88b turning passkeys off emailed not every master admin'; end if;
+  if (public.app_passkeys_state()->>'off')::boolean is not true or public.app_passkeys_state()->>'by' <> 'admin2@frata.test'
+    then raise exception 'FAIL: 88b the state does not say who turned passkeys off'; end if;
+  if (select prosrc from pg_proc where proname = 'app_studio_proved') !~ 'app_passkeys_off' then raise exception 'FAIL: 88b Studio ignores the switch'; end if;
+  -- Give key while off (§ 81's store and people): the Partner owner gives a key with no passkey and no step-up, once;
+  -- another network still needs "This is my computer"; a Builder still gets nothing; the store's audit says passkeys off.
+  perform public.app_device_code_start(repeat('a', 62) || '8b', repeat('b', 62) || '8b', 'proof-e81', repeat('9', 64));
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f3', 'e8100000-0000-0000-0000-0000000000d3', null, repeat('b', 62) || '8b', repeat('9', 64), true);
+    raise exception 'FAIL: 88b a Builder gave a key while passkeys are off';
+  exception when others then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('8', 64), false);
+    raise exception 'FAIL: 88b a code from another network given without This is my computer';
+  exception when others then if sqlerrm <> 'not_mine' then raise; end if; end;
+  if public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('9', 64), false) <> 'Proof E81'
+    then raise exception 'FAIL: 88b the Partner owner could not give a key while passkeys are off'; end if;
+  begin perform public.app_device_code_give_off('e8100000-0000-0000-0000-0000000000f1', 'e8100000-0000-0000-0000-0000000000d1', null, repeat('b', 62) || '8b', repeat('9', 64), false);
+    raise exception 'FAIL: 88b a code given twice while passkeys are off';
+  exception when others then if sqlerrm <> 'not_found' then raise; end if; end;
+  if not exists (select 1 from public.audit_events where tenant_id = 'e8100000-0000-0000-0000-000000000001' and action = 'build_key.device_confirmed' and detail->>'passkeys' = 'off')
+    then raise exception 'FAIL: 88b Give key while off left no audit row saying so'; end if;
+  if public.app_admin_passkeys_set(adm, gen_random_uuid(), null, false) is not false then raise exception 'FAIL: 88b an Admin could not turn passkeys on'; end if;
+  if public.app_passkeys_off() then raise exception 'FAIL: 88b passkeys still off after an Admin turned them on'; end if;
+  -- While on, the doors that follow the switch refuse a missing step-up again (security review LOW, 2026-11-23).
+  if exists (select 1 from public.app_studio_proved(adm, '00000000-0000-0000-0000-000000000000', null, null)) then raise exception 'FAIL: 88b Studio binds with no step-up while on'; end if;
+  begin perform public.app_staff_list(adm, gen_random_uuid(), null); raise exception 'FAIL: 88b the staff list read with no passkey while on';
+  exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  if not exists (select 1 from public.staff_notices where kind = 'passkeys_on' and about = 'admin2@frata.test') then raise exception 'FAIL: 88b turning passkeys on emailed no one'; end if;
+  begin perform public.app_device_code_give_off(adm, s, null, 'x', null, true); raise exception 'FAIL: 88b Give key without a passkey while passkeys are on';
+  exception when others then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  delete from public.staff_stepups where token_hash = 'h88b'; delete from public.staff_passkeys where id = k;
+  if has_function_privilege('frata_app', 'public.app_admin_passkeys_set(uuid, uuid, text, boolean)', 'execute')
+     or not has_function_privilege('frata_admin', 'public.app_admin_passkeys_set(uuid, uuid, text, boolean)', 'execute')
+     or has_function_privilege('frata_admin', 'public.app_device_code_give_off(uuid, uuid, text, text, text, boolean)', 'execute')
+     or not has_function_privilege('frata_app', 'public.app_device_code_give_off(uuid, uuid, text, text, text, boolean)', 'execute')
+     or has_function_privilege('frata_builder', 'public.app_passkeys_state()', 'execute') or has_function_privilege('anon', 'public.app_passkeys_state()', 'execute')
+    then raise exception 'FAIL: 88b a role holds the wrong door'; end if;
 end $$;
 -- § 98 · One brand record (one-address plan P1·2, drizzle/0155; spec § 5). Each store reads and writes only its own
 -- brand_tokens, brand_seasons and brand_proposals; a logo file outside the store's own brand folder is refused, in
@@ -6108,4 +6376,649 @@ do $$ declare who uuid := '99999999-9999-9999-9999-999999999999'; begin
   exception when check_violation then null; end;
 end $$;
 rollback;
-\echo 'tenancy proof — all checks passed (through § 102)'
+-- § 91 · Studio's agent V3a (drizzle/0166–0167; docs/plans/2026-11-22-v3a-runtime.md R2; ADR-0020 § 4–5 as amended;
+-- the R2 tenancy audits and security review folded in). A store and a partner read only their own sessions. The lock is
+-- held by the database: app_current_partner() answers only for a bind row of THIS transaction (a token replayed in
+-- another, or a bind rolled back with its savepoint, binds nothing), written only by app_studio_partner (the signed-in
+-- person: Frrata staff and partner step-ups REAL and live, an owner or an assigned Lead, on THIS store) or
+-- app_studio_bind_turn (an open turn whose person is still live); a variable set by hand binds nothing. The bind proves a
+-- person: sessions are made for, turns opened on, spend read and turns closed for that person only. A later partner, the
+-- brand's own owner, a support visit, a non-staff partner person, an unassigned Lead and a Lead who owns another store
+-- bind nothing; the passkeys-off switch opens nothing; sign-out (its step-up row deleted) ends a turn. Caps are required,
+-- held to hard ceilings, the day worked out in the database. Vendor ids and the build key are written once. The cron
+-- ends, cleans and deletes without a bind and settles at most the reserve then. Everything is undone at the end.
+begin;
+insert into tenants (id, slug, name) values
+  ('c9100000-0000-0000-0000-000000000001', 'proof-91-a', 'Proof 91 A'), ('c9100000-0000-0000-0000-000000000002', 'proof-91-b', 'Proof 91 B');
+insert into partners (id, user_id, email, name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('c9100000-0000-0000-0000-0000000000f1', 'a9100000-0000-0000-0000-000000000001', 'po@p91.test', 'P', '919800000001', 'Jaipur', '0', 1, now(), now()),
+  ('c9100000-0000-0000-0000-0000000000f2', 'a9100000-0000-0000-0000-000000000009', 'qo@p91.test', 'Q', '919800000009', 'Surat', '0', 1, now(), now());
+insert into partner_members (id, partner_id, user_id, email, role, accepted_at) values
+  ('c9100000-0000-0000-0000-0000000000a1', 'c9100000-0000-0000-0000-0000000000f1', 'a9100000-0000-0000-0000-000000000001', 'po@p91.test', 'owner', now()),
+  ('c9100000-0000-0000-0000-0000000000a2', 'c9100000-0000-0000-0000-0000000000f1', 'a9100000-0000-0000-0000-000000000002', 'lead@p91.test', 'lead', now()),
+  ('c9100000-0000-0000-0000-0000000000a3', 'c9100000-0000-0000-0000-0000000000f1', 'a9100000-0000-0000-0000-000000000003', 'lx@p91.test', 'lead', now()),
+  ('c9100000-0000-0000-0000-0000000000a4', 'c9100000-0000-0000-0000-0000000000f1', 'a9100000-0000-0000-0000-000000000004', 'l2@p91.test', 'lead', now()),
+  ('c9100000-0000-0000-0000-0000000000a9', 'c9100000-0000-0000-0000-0000000000f2', 'a9100000-0000-0000-0000-000000000009', 'qo@p91.test', 'owner', now());
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-0000000000f1', 2000, 24, 90);
+insert into partner_assignments (partner_member_id, tenant_id) values
+  ('c9100000-0000-0000-0000-0000000000a2', 'c9100000-0000-0000-0000-000000000001'), ('c9100000-0000-0000-0000-0000000000a3', 'c9100000-0000-0000-0000-000000000001');
+insert into members (tenant_id, user_id, role, partner_member_id) values
+  ('c9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000001', 'partner', 'c9100000-0000-0000-0000-0000000000a1'),
+  ('c9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000002', 'partner', 'c9100000-0000-0000-0000-0000000000a2'),
+  ('c9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000003', 'partner', 'c9100000-0000-0000-0000-0000000000a3'),
+  ('c9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000004', 'partner', 'c9100000-0000-0000-0000-0000000000a4');
+insert into members (tenant_id, user_id, role) values
+  ('c9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000005', 'owner'),
+  ('c9100000-0000-0000-0000-000000000002', 'a9100000-0000-0000-0000-000000000002', 'owner');
+-- Staff: the partner owner, the Lead, the unassigned Lead, a support person with no membership, Q's owner. Not lx.
+insert into platform_staff (user_id, email, role) values
+  ('a9100000-0000-0000-0000-000000000001', 'po@p91.test', 'support'), ('a9100000-0000-0000-0000-000000000002', 'lead@p91.test', 'support'),
+  ('a9100000-0000-0000-0000-000000000004', 'l2@p91.test', 'support'), ('a9100000-0000-0000-0000-000000000006', 'sup@p91.test', 'support'),
+  ('a9100000-0000-0000-0000-000000000009', 'qo@p91.test', 'support');
+-- Real, live step-ups on one browser session for every staff person (staff) and every partner person (partner), as the
+-- passkey checks write them. Hashes sh91-<user> and ph91-<user>.
+insert into staff_passkeys (id, user_id, credential_id, public_key, name)
+  select ('c9100000-0000-0000-0000-' || lpad(row_number() over ()::text, 12, '0'))::uuid, user_id, 'proof91-' || user_id, 'proof', 'Proof 91' from platform_staff where email like '%@p91.test';
+insert into staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at)
+  select k.user_id, 'c9100000-0000-0000-0000-00000000ee01', k.id, 'sh91-' || k.user_id, now() + interval '1 hour' from staff_passkeys k where k.credential_id like 'proof91-%';
+insert into partner_passkeys (partner_member_id, user_id, credential_id, public_key, name)
+  select pm.id, pm.user_id, 'proof91p-' || pm.id, 'proof', 'Proof 91' from partner_members pm where pm.email like '%@p91.test';
+insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at)
+  select k.partner_member_id, k.user_id, 'c9100000-0000-0000-0000-00000000ee01', k.id, 'ph91-' || k.user_id, now() + interval '1 hour' from partner_passkeys k where k.credential_id like 'proof91p-%';
+set local role frata_app;
+do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; b constant uuid := 'c9100000-0000-0000-0000-000000000002';
+  p constant uuid := 'c9100000-0000-0000-0000-0000000000f1'; q constant uuid := 'c9100000-0000-0000-0000-0000000000f2';
+  po constant uuid := 'a9100000-0000-0000-0000-000000000001'; lead constant uuid := 'a9100000-0000-0000-0000-000000000002';
+  ss constant uuid := 'c9100000-0000-0000-0000-00000000ee01'; s uuid; so uuid; t uuid; t2 uuid; n int; r record;
+begin
+  -- Nothing with no store set; no partner bound with no store set.
+  if exists (select 1 from studio_sessions) then raise exception 'FAIL: 91 a session with no store set'; end if;
+  if app_studio_partner(po, ss, 'sh91-' || po, 'ph91-' || po) is not null then raise exception 'FAIL: 91 bound a partner with no store set'; end if;
+  perform set_config('app.tenant_id', a::text, true);
+  -- Who binds on A: the partner owner and the assigned staff Lead, with real step-ups; nobody else.
+  if app_studio_partner('a9100000-0000-0000-0000-000000000003', ss, 'sh91-a9100000-0000-0000-0000-000000000003', 'ph91-a9100000-0000-0000-0000-000000000003') is not null then raise exception 'FAIL: 91 a partner person who is not staff bound'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000004', ss, 'sh91-a9100000-0000-0000-0000-000000000004', 'ph91-a9100000-0000-0000-0000-000000000004') is not null then raise exception 'FAIL: 91 an unassigned Lead bound'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000005', ss, 'sh91-a9100000-0000-0000-0000-000000000005', 'ph91-a9100000-0000-0000-0000-000000000005') is not null then raise exception 'FAIL: 91 the brand''s owner bound a partner'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000006', ss, 'sh91-a9100000-0000-0000-0000-000000000006', 'ph91-a9100000-0000-0000-0000-000000000006') is not null then raise exception 'FAIL: 91 a support person with no membership bound'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000009', ss, 'sh91-a9100000-0000-0000-0000-000000000009', 'ph91-a9100000-0000-0000-0000-000000000009') is not null then raise exception 'FAIL: 91 an unlinked partner bound'; end if;
+  if app_studio_partner(lead, ss, 'sh91-' || lead, 'wrong') is not null then raise exception 'FAIL: 91 bound with a wrong partner step-up'; end if;
+  if app_studio_partner(lead, ss, 'wrong', 'ph91-' || lead) is not null then raise exception 'FAIL: 91 bound with a wrong staff step-up'; end if;
+  if app_studio_partner(lead, gen_random_uuid(), 'sh91-' || lead, 'ph91-' || lead) is not null then raise exception 'FAIL: 91 bound from another browser session'; end if;
+  -- A variable set by hand binds nothing; frata_app makes no session by hand.
+  perform set_config('app.studio_bind', 'made-up', true); perform set_config('app.partner_id', p::text, true);
+  if app_current_partner() is not null then raise exception 'FAIL: 91 a hand-set variable bound a partner'; end if;
+  begin perform app_studio_new_session(); raise exception 'FAIL: 91 a session with nobody bound'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_bound' then raise; end if; end;
+  begin insert into studio_sessions (tenant_id, partner_id, partner_member_id, user_id) values (a, p, 'c9100000-0000-0000-0000-0000000000a2', lead);
+    raise exception 'FAIL: 91 frata_app made a session by hand'; exception when insufficient_privilege then null; end;
+  -- The partner owner binds and makes their own session; it is theirs, not the Lead's.
+  if app_studio_partner(po, ss, 'sh91-' || po, 'ph91-' || po) is distinct from p then raise exception 'FAIL: 91 the partner owner did not bind'; end if;
+  so := app_studio_new_session();
+  if (select user_id from studio_sessions where id = so) <> po then raise exception 'FAIL: 91 the session is not the bound person''s'; end if;
+  -- The Lead binds and makes theirs; the owner's session is not the Lead's to use.
+  if app_studio_partner(lead, ss, 'sh91-' || lead, 'ph91-' || lead) is distinct from p then raise exception 'FAIL: 91 the assigned staff Lead did not bind'; end if;
+  s := app_studio_new_session();
+  begin perform app_studio_open_turn(so, 500000, 3000000, 10000000, 3); raise exception 'FAIL: 91 a turn on another person''s session';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  if exists (select 1 from app_studio_spend_of(so)) then raise exception 'FAIL: 91 read another person''s session spend'; end if;
+  -- Caps: required, held to the ceilings, checked under the lock.
+  begin perform app_studio_open_turn(s, 500000, null, 10000000, 3); raise exception 'FAIL: 91 a null cap'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 9000000000, 90000000000, 900000000000, 3); raise exception 'FAIL: 91 caps over the ceilings'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 7500001, 3000000, 10000000, 3); raise exception 'FAIL: 91 a turn a micro-dollar over its ceiling'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 500000, 3000000, 270000001, 3); raise exception 'FAIL: 91 a platform day over its ceiling'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 600000, 500000, 10000000, 3); raise exception 'FAIL: 91 a turn over the person''s day';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'person_day' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 500000, 3000000, 400000, 3); raise exception 'FAIL: 91 a turn over the platform day';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'platform_day' then raise; end if; end;
+  begin perform app_studio_open_turn(s, 500000, 3000000, 10000000, 1); raise exception 'FAIL: 91 a new session over the open cap (the owner''s is open)';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'sessions' then raise; end if; end;
+  t := app_studio_open_turn(s, 500000, 3000000, 10000000, 3);
+  begin perform app_studio_open_turn(s, 500000, 3000000, 10000000, 3); raise exception 'FAIL: 91 two open turns';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'turn_open' then raise; end if; end;
+  -- Vendor ids and the build key: once, and only a session build key of this store by this person.
+  if not app_studio_set_vendor(s, 'runtime', 'sesn_proof91') or app_studio_set_vendor(s, 'runtime', 'sesn_other') then raise exception 'FAIL: 91 a runtime id written not once'; end if;
+  begin perform app_studio_set_vendor(s, 'runtime', 'bad value!'); raise exception 'FAIL: 91 a vendor id of any shape'; exception when sqlstate 'P0001' then null; end;
+  if app_studio_set_key(s, gen_random_uuid()) then raise exception 'FAIL: 91 a build key that is no key'; end if;
+  begin update studio_sessions set build_key_id = gen_random_uuid() where id = s; raise exception 'FAIL: 91 frata_app wrote a build key id'; exception when insufficient_privilege then null; end;
+  -- The turn's person, spend and binds are no role's.
+  begin perform 1 from studio_turn_keys; raise exception 'FAIL: 91 frata_app read a turn''s person'; exception when insufficient_privilege then null; end;
+  begin perform 1 from studio_spend_days; raise exception 'FAIL: 91 frata_app read spend'; exception when insufficient_privilege then null; end;
+  begin perform 1 from studio_binds; raise exception 'FAIL: 91 frata_app read the binds'; exception when insufficient_privilege then null; end;
+  begin insert into studio_binds (token, xact, tenant_id, partner_id, user_id, member_id) values ('x', pg_current_xact_id()::text, a, q, lead, 'c9100000-0000-0000-0000-0000000000a9');
+    raise exception 'FAIL: 91 frata_app wrote a bind'; exception when insufficient_privilege then null; end;
+  -- frata_app never closes a turn or ends a session by hand, and never deletes.
+  begin update studio_turns set ended_at = now() where id = t; raise exception 'FAIL: 91 frata_app closed a turn by hand'; exception when insufficient_privilege then null; end;
+  begin update studio_sessions set ended_at = now() where id = s; raise exception 'FAIL: 91 frata_app ended a session by hand'; exception when insufficient_privilege then null; end;
+  begin delete from studio_messages; raise exception 'FAIL: 91 frata_app deleted lines'; exception when insufficient_privilege then null; end;
+  insert into studio_messages (tenant_id, partner_id, session_id, kind, text) values (a, p, s, 'person', 'Make the accent warmer');
+  begin insert into studio_messages (tenant_id, partner_id, session_id, kind, text) values (a, p, s, 'person', repeat('a', 2001));
+    raise exception 'FAIL: 91 a line over 2000'; exception when check_violation then null; end;
+  begin insert into studio_messages (tenant_id, partner_id, session_id, kind, proposal_id) values (a, p, s, 'card', gen_random_uuid());
+    raise exception 'FAIL: 91 a card pointing at no proposal'; exception when foreign_key_violation then null; end;
+  begin insert into studio_tool_calls (tenant_id, partner_id, session_id, turn_id, tool_use_id, name, input) values (a, p, so, t, 'sevt_x', 'store_facts', '{}');
+    raise exception 'FAIL: 91 a tool call on another session''s turn'; exception when foreign_key_violation then null; end;
+  -- asTurn's person: live now; closing settles uncapped.
+  select * into r from app_turn_actor(t);
+  if r.tenant_id is distinct from a or r.partner_id is distinct from p or r.session_id is distinct from s or r.user_id is distinct from lead then raise exception 'FAIL: 91 app_turn_actor did not answer for the Lead'; end if;
+  if not app_studio_close_turn(t, 'ended', null, 700000, 90000) then raise exception 'FAIL: 91 the turn did not close'; end if;
+  if app_studio_close_turn(t, 'ended', null, 1, 1) then raise exception 'FAIL: 91 a turn closed twice'; end if;
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a closed turn still has an actor'; end if;
+  select spent_micro, largest_micro into r from app_studio_spend_of(s);
+  if r.spent_micro <> 700000 or r.largest_micro <> 90000 then raise exception 'FAIL: 91 the session spend is % / %', r.spent_micro, r.largest_micro; end if;
+  t2 := app_studio_open_turn(s, 2300000, 3000000, 10000000, 3);
+  if t2 is null then raise exception 'FAIL: 91 a turn within the cap refused'; end if;
+  -- 'stopped' needs the person; the owner bound cannot stop the Lead's session.
+  if app_studio_partner(po, ss, 'sh91-' || po, 'ph91-' || po) is distinct from p then raise exception 'FAIL: 91 rebind'; end if;
+  if app_studio_end_session(s, 'stopped', 0) then raise exception 'FAIL: 91 one person stopped another''s session'; end if;
+end $$;
+commit;
+-- A bind belongs to its transaction: a token replayed in another, or a bind rolled back with its savepoint, binds nothing.
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', true);
+  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is null then raise exception 'FAIL: 91 bind for the replay'; end if;
+  perform set_config('proof91.token', current_setting('app.studio_bind'), false);
+end $$;
+commit;
+begin; set local role frata_app;
+do $$ declare n int; begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', true);
+  perform set_config('app.studio_bind', current_setting('proof91.token'), true);
+  perform pg_current_xact_id();
+  if app_current_partner() is not null then raise exception 'FAIL: 91 a token replayed in another transaction bound'; end if;
+  if exists (select 1 from studio_sessions) then raise exception 'FAIL: 91 a replayed token read sessions'; end if;
+end $$;
+savepoint sp;
+do $$ begin
+  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is null then raise exception 'FAIL: 91 bind in a savepoint'; end if;
+end $$;
+rollback to savepoint sp;
+do $$ begin
+  if app_current_partner() is not null then raise exception 'FAIL: 91 a bind outlived its savepoint'; end if;
+end $$;
+rollback;
+-- A new transaction on A with no bind: nothing to read, spend and closing refuse, the turn binds only while live.
+begin; set local role frata_app;
+do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; b constant uuid := 'c9100000-0000-0000-0000-000000000002';
+  p constant uuid := 'c9100000-0000-0000-0000-0000000000f1'; s uuid; t uuid; n int;
+begin
+  perform set_config('app.tenant_id', a::text, true);
+  if exists (select 1 from studio_sessions) or exists (select 1 from studio_messages) then raise exception 'FAIL: 91 rows read with no partner bound'; end if;
+  select d.session_id, d.turn_id into s, t from app_studio_due(10) d where d.tenant_id = a and d.kind = 'advance';
+  if t is null then raise exception 'FAIL: 91 the cron does not see the open turn'; end if;
+  if exists (select 1 from app_studio_spend_of(s)) then raise exception 'FAIL: 91 spend read with no partner bound'; end if;
+  if app_studio_close_turn(t, 'ended', null, 0, 0) then raise exception 'FAIL: 91 a turn closed with no partner bound'; end if;
+  if app_studio_end_session(s, 'stopped', 0) then raise exception 'FAIL: 91 a session stopped with nobody bound'; end if;
+  if app_studio_bind_turn(t) is distinct from p then raise exception 'FAIL: 91 the live turn did not bind'; end if;
+  select count(*) into n from studio_messages; if n <> 1 then raise exception 'FAIL: 91 the bound turn sees % lines', n; end if;
+  perform set_config('app.tenant_id', b::text, true);
+  if app_current_partner() is not null then raise exception 'FAIL: 91 A''s bind answered on B'; end if;
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 app_turn_actor answered for A''s turn on B'; end if;
+  if app_studio_bind_turn(t) is not null then raise exception 'FAIL: 91 B bound A''s turn'; end if;
+  if app_studio_partner('a9100000-0000-0000-0000-000000000002', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000002', 'ph91-a9100000-0000-0000-0000-000000000002') is not null then raise exception 'FAIL: 91 a Lead bound the partner on a store they own'; end if;
+  if app_studio_end_session(s, 'switch', null) then raise exception 'FAIL: 91 B ended A''s session'; end if;
+  if exists (select 1 from app_studio_session_facts(s)) or exists (select 1 from app_studio_cleanup_of(s)) or exists (select 1 from app_studio_delete_of(s)) then raise exception 'FAIL: 91 B read A''s session facts'; end if;
+  if app_studio_settle_ended(s, 1) then raise exception 'FAIL: 91 B settled A''s session'; end if;
+end $$;
+rollback;
+-- The person goes: each removal ends the open turn's actor; the switch opens nothing; sign-out ends it.
+do $$ declare t uuid; begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', false);
+  select id into t from studio_turns where tenant_id = 'c9100000-0000-0000-0000-000000000001' and ended_at is null and paused_at is null and failed_at is null;
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the open turn has no actor before any removal'; end if;
+  delete from partner_assignments where partner_member_id = 'c9100000-0000-0000-0000-0000000000a2';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 an unassigned Lead''s turn still runs'; end if;
+  insert into partner_assignments (partner_member_id, tenant_id) values ('c9100000-0000-0000-0000-0000000000a2', 'c9100000-0000-0000-0000-000000000001');
+  update partner_links set removed_at = now() where tenant_id = 'c9100000-0000-0000-0000-000000000001';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs for an unlinked partner'; end if;
+  update partner_links set removed_at = null where tenant_id = 'c9100000-0000-0000-0000-000000000001';
+  update staff_stepups set expires_at = now() - interval '1 second' where user_id = 'a9100000-0000-0000-0000-000000000002';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn runs past its staff check'; end if;
+  update staff_stepups set expires_at = now() + interval '1 hour' where user_id = 'a9100000-0000-0000-0000-000000000002';
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the restored Lead has no actor'; end if;
+  -- A suspended partner's turn stops at its next check (stress list, 2026-11-23); reinstated, it runs again.
+  update partners set suspended_at = now() where id = (select partner_id from studio_turns where id = t);
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a suspended partner''s turn still runs'; end if;
+  update partners set suspended_at = null where id = (select partner_id from studio_turns where id = t);
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the reinstated partner''s turn has no actor'; end if;
+  -- A turn opened while passkeys were off from Admin (0171) holds no step-up: it runs only while they stay off, and ends
+  -- at its next check once an Admin turns them on (orchestrator 2026-11-23: "that is the right direction").
+  create temp table k91 on commit drop as select turn_id, staff_stepup_id, partner_stepup_id from studio_turn_keys where turn_id = t;
+  update studio_turn_keys set staff_stepup_id = null, partner_stepup_id = null where turn_id = t;
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn with no step-up runs while passkeys are on'; end if;
+  insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', null, 'proof', 'proof 91 off from Admin');
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn opened while passkeys are off does not run'; end if;
+  delete from platform_switches where key = 'passkeys_off';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a turn opened while off still runs once passkeys are on'; end if;
+  update studio_turn_keys x set staff_stepup_id = k.staff_stepup_id, partner_stepup_id = k.partner_stepup_id from k91 k where x.turn_id = k.turn_id;
+  if not exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 the turn''s step-ups did not come back'; end if;
+  -- Sign-out deletes the partner step-up (app_partner_pk_signout): the turn's person goes with it, switch or not.
+  insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', now() + interval '1 day', 'proof', 'proof 91');
+  delete from partner_stepups where user_id = 'a9100000-0000-0000-0000-000000000002';
+  if exists (select 1 from app_turn_actor(t)) then raise exception 'FAIL: 91 a signed-out person''s turn runs under the switch'; end if;
+  delete from platform_switches where key = 'passkeys_off';
+  perform set_config('app.tenant_id', '', false);
+end $$;
+-- The cron ends a dead person's session without binding: the turn fails and settles at most its reserve.
+begin; set local role frata_app;
+do $$ declare a constant uuid := 'c9100000-0000-0000-0000-000000000001'; s uuid; r record; begin
+  perform set_config('app.tenant_id', a::text, true);
+  select d.session_id into s from app_studio_due(10) d where d.tenant_id = a and d.kind = 'advance';
+  select * into r from app_studio_session_facts(s);
+  if r.person_live is not true then raise exception 'FAIL: 91 a person with no step-up is not live (facts ignore the step-up)'; end if;
+  if r.turn_open is not true or r.turn_sent_at is null or r.spent_micro is null then raise exception 'FAIL: 91 the facts miss the open turn'; end if;
+  if app_studio_settle_ended(s, 1) then raise exception 'FAIL: 91 an open session settled as ended'; end if;
+  if not app_studio_end_session(s, 'actor', null) then raise exception 'FAIL: 91 the cron could not end the session'; end if;
+  if app_studio_end_session(s, 'actor', 1) then raise exception 'FAIL: 91 a session ended twice'; end if;
+  if not app_studio_settle_ended(s, 999999999) then raise exception 'FAIL: 91 the cron could not settle the ended turn'; end if;
+  if app_studio_settle_ended(s, 1) then raise exception 'FAIL: 91 an ended turn settled twice'; end if;
+  perform 1 from app_studio_cleanup_of(s);
+  if not found then raise exception 'FAIL: 91 no clean-up ids for an ended session'; end if;
+  if not app_studio_mark(s, 'cleaned') or app_studio_mark(s, 'cleaned') then raise exception 'FAIL: 91 cleaned not once'; end if;
+  if exists (select 1 from app_studio_cleanup_of(s)) then raise exception 'FAIL: 91 clean-up ids after cleaning'; end if;
+  if exists (select 1 from app_studio_delete_of(s)) then raise exception 'FAIL: 91 a session ended today is due for deletion'; end if;
+  if app_studio_mark(s, 'deleted') then raise exception 'FAIL: 91 a session ended today was marked deleted'; end if;
+end $$;
+commit;
+do $$ begin
+  if (select measured_micro from studio_spend_turns t join studio_turns x on x.id = t.turn_id where x.failed_reason = 'actor' and x.tenant_id = 'c9100000-0000-0000-0000-000000000001') <> 2300000
+    then raise exception 'FAIL: 91 an unbound end settled above the reserve'; end if;
+  if exists (select 1 from studio_turn_keys k join studio_turns x on x.id = k.turn_id where x.tenant_id = 'c9100000-0000-0000-0000-000000000001') then raise exception 'FAIL: 91 a closed turn kept its person'; end if;
+end $$;
+-- A later partner: P unlinked, Q linked to A, Q's owner staff with a members row: Q binds and reads none of P's rows.
+update partner_links set removed_at = now() where tenant_id = 'c9100000-0000-0000-0000-000000000001';
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-0000000000f2', 2000, 24, 90);
+insert into members (tenant_id, user_id, role, partner_member_id) values ('c9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000009', 'partner', 'c9100000-0000-0000-0000-0000000000a9');
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', 'c9100000-0000-0000-0000-000000000001', true);
+  if app_studio_partner('a9100000-0000-0000-0000-000000000009', 'c9100000-0000-0000-0000-00000000ee01', 'sh91-a9100000-0000-0000-0000-000000000009', 'ph91-a9100000-0000-0000-0000-000000000009') is distinct from 'c9100000-0000-0000-0000-0000000000f2'::uuid then raise exception 'FAIL: 91 the later partner did not bind'; end if;
+  if exists (select 1 from studio_sessions) or exists (select 1 from studio_messages) or exists (select 1 from studio_turns) then raise exception 'FAIL: 91 a later partner reads the earlier partner''s Studio'; end if;
+end $$;
+rollback;
+-- Undo the committed fixtures.
+delete from studio_sessions where tenant_id in ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-000000000002');
+delete from studio_spend_people where user_id in ('a9100000-0000-0000-0000-000000000001', 'a9100000-0000-0000-0000-000000000002');
+delete from studio_spend_days where day = to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD');
+delete from studio_binds;
+delete from partner_stepups where token_hash like 'ph91-%'; delete from partner_passkeys where credential_id like 'proof91p-%';
+delete from staff_stepups where token_hash like 'sh91-%'; delete from staff_passkeys where credential_id like 'proof91-%';
+delete from members where tenant_id in ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-000000000002');
+delete from partner_assignments where tenant_id = 'c9100000-0000-0000-0000-000000000001';
+delete from partner_links where tenant_id = 'c9100000-0000-0000-0000-000000000001';
+-- An approved partner gets lane C's billing row and its free credits (drizzle/0164's trigger): those go first.
+delete from partner_credit_entries where partner_id in (select id from partners where email like '%@p91.test');
+delete from partner_billing where partner_id in (select id from partners where email like '%@p91.test');
+delete from partner_members where email like '%@p91.test'; delete from partners where email like '%@p91.test';
+delete from platform_staff where email like '%@p91.test';
+delete from tenants where id in ('c9100000-0000-0000-0000-000000000001', 'c9100000-0000-0000-0000-000000000002');
+do $$ declare r text; tb text; fn text; begin
+  foreach tb in array array['studio_sessions', 'studio_turns', 'studio_tool_calls', 'studio_proposals', 'studio_messages', 'studio_turn_keys', 'studio_spend_sessions', 'studio_spend_turns', 'studio_spend_days', 'studio_spend_people', 'studio_binds'] loop
+    if not (select relrowsecurity from pg_class where oid = ('public.' || tb)::regclass) then raise exception 'FAIL: 91 % has no RLS', tb; end if;
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+      if has_table_privilege(r, 'public.' || tb, 'select') or has_table_privilege(r, 'public.' || tb, 'insert') or has_table_privilege(r, 'public.' || tb, 'update')
+         or has_table_privilege(r, 'public.' || tb, 'delete') or has_any_column_privilege(r, 'public.' || tb, 'select')
+        then raise exception 'FAIL: 91 % holds a grant on %', r, tb; end if;
+    end loop;
+    if has_table_privilege('frata_app', 'public.' || tb, 'delete') then raise exception 'FAIL: 91 frata_app may delete from %', tb; end if;
+    if exists (select 1 from pg_policies where tablename = tb and roles @> array['frata_app']::name[] and (qual ~ 'is null' or with_check ~ 'is null'))
+      then raise exception 'FAIL: 91 % has a null-store branch', tb; end if;
+  end loop;
+  foreach tb in array array['studio_turn_keys', 'studio_spend_sessions', 'studio_spend_turns', 'studio_spend_days', 'studio_spend_people', 'studio_binds'] loop
+    if has_table_privilege('frata_app', 'public.' || tb, 'select') or has_any_column_privilege('frata_app', 'public.' || tb, 'select') or has_table_privilege('frata_app', 'public.' || tb, 'insert')
+      then raise exception 'FAIL: 91 frata_app reaches %', tb; end if;
+  end loop;
+  foreach fn in array array['ended_at', 'end_reason', 'build_key_id', 'runtime_id', 'vault_id', 'file_id', 'cleaned_at', 'deleted_at', 'user_id', 'partner_id', 'tenant_id'] loop
+    if has_column_privilege('frata_app', 'public.studio_sessions', fn, 'update') then raise exception 'FAIL: 91 frata_app can write studio_sessions.% by hand', fn; end if;
+  end loop;
+  if has_table_privilege('frata_app', 'public.studio_sessions', 'insert') or has_table_privilege('frata_app', 'public.studio_turns', 'insert') then raise exception 'FAIL: 91 frata_app makes sessions or turns by hand'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_sequence_privilege(r, 'public.studio_messages_seq_seq', 'usage') then raise exception 'FAIL: 91 % holds the lines sequence', r; end if;
+  end loop;
+  foreach fn in array array['app_current_partner()', 'app_studio_sweep_binds()', 'app_studio_partner(uuid, uuid, text, text)', 'app_studio_bind_turn(uuid)', 'app_turn_actor(uuid)',
+    'app_studio_new_session()', 'app_studio_set_vendor(uuid, text, text)', 'app_studio_set_key(uuid, uuid)', 'app_studio_open_turn(uuid, bigint, bigint, bigint, integer)',
+    'app_studio_spend_of(uuid)', 'app_studio_close_turn(uuid, text, text, bigint, bigint)', 'app_studio_end_session(uuid, text, bigint)',
+    'app_studio_settle_ended(uuid, bigint)', 'app_studio_session_facts(uuid)', 'app_studio_cleanup_of(uuid)', 'app_studio_delete_of(uuid)', 'app_studio_mark(uuid, text)', 'app_studio_due(integer)',
+    'app_studio_bound()', 'app_studio_write_bind(uuid, uuid, uuid, uuid, uuid, uuid)', 'app_studio_person(uuid, uuid)', 'app_studio_proved(uuid, uuid, uuid, uuid)',
+    'app_studio_own_session(uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint, boolean)'] loop
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+      if has_function_privilege(r, 'public.' || fn, 'execute') then raise exception 'FAIL: 91 % can run %', r, fn; end if;
+    end loop;
+    if not coalesce((select p.prosecdef and 'search_path=""' = any(p.proconfig) from pg_proc p where p.oid = ('public.' || fn)::regprocedure), false)
+      then raise exception 'FAIL: 91 % is not a definer with an empty search_path', fn; end if;
+  end loop;
+  foreach fn in array array['app_studio_bound()', 'app_studio_write_bind(uuid, uuid, uuid, uuid, uuid, uuid)', 'app_studio_person(uuid, uuid)', 'app_studio_proved(uuid, uuid, uuid, uuid)', 'app_studio_own_session(uuid)', 'app_studio_settle(uuid, uuid, bigint, bigint, boolean)'] loop
+    if has_function_privilege('frata_app', 'public.' || fn, 'execute') then raise exception 'FAIL: 91 frata_app can run the internal %', fn; end if;
+  end loop;
+  if (select pg_get_function_result('app_studio_due(integer)'::regprocedure)) <> 'TABLE(session_id uuid, tenant_id uuid, turn_id uuid, kind text)' then raise exception 'FAIL: 91 the cron list returns more than ids'; end if;
+  if (select pg_get_function_result('app_turn_actor(uuid)'::regprocedure)) <> 'TABLE(tenant_id uuid, partner_id uuid, session_id uuid, user_id uuid, member_id uuid)' then raise exception 'FAIL: 91 app_turn_actor returns more than ids'; end if;
+end $$;
+-- 102. Admin › Costs (drizzle/0172; spec docs/specs/2026-11-23-admin-costs.md, tenancy review 2026-11-23): two platform
+-- tables only frata_admin touches, with exactly the privileges the spec lists, RLS on and one permissive policy each.
+do $$ declare r text; t text; p text; begin
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
+    foreach t in array array['cost_items', 'cost_payments'] loop
+      foreach p in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+        if has_table_privilege(r, 'public.' || t, p) then raise exception 'FAIL: 102 % holds % on %', r, p, t; end if;
+      end loop;
+      if has_any_column_privilege(r, 'public.' || t, 'select') then raise exception 'FAIL: 102 % reads a column of %', r, t; end if;
+    end loop;
+  end loop;
+  foreach p in array array['select', 'insert', 'update'] loop
+    if not has_table_privilege('frata_admin', 'public.cost_items', p) then raise exception 'FAIL: 102 Admin cannot % cost_items', p; end if;
+  end loop;
+  foreach p in array array['delete', 'truncate', 'references', 'trigger'] loop
+    if has_table_privilege('frata_admin', 'public.cost_items', p) then raise exception 'FAIL: 102 Admin holds % on cost_items', p; end if;
+  end loop;
+  foreach p in array array['select', 'insert', 'delete'] loop
+    if not has_table_privilege('frata_admin', 'public.cost_payments', p) then raise exception 'FAIL: 102 Admin cannot % cost_payments', p; end if;
+  end loop;
+  foreach p in array array['update', 'truncate', 'references', 'trigger'] loop
+    if has_table_privilege('frata_admin', 'public.cost_payments', p) then raise exception 'FAIL: 102 Admin holds % on cost_payments', p; end if;
+  end loop;
+  foreach t in array array['cost_items', 'cost_payments'] loop
+    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 102 % without RLS', t; end if;
+    if (select count(*) from pg_policies where schemaname = 'public' and tablename = t) <> 1
+       or exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and (permissive <> 'PERMISSIVE' or roles <> '{frata_admin}'::name[]))
+    then raise exception 'FAIL: 102 % must have exactly one permissive policy, to frata_admin', t; end if;
+  end loop;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
+    if has_function_privilege(r, 'public.admin_fx_rate_latest()', 'execute') then raise exception 'FAIL: 102 % runs admin_fx_rate_latest', r; end if;
+  end loop;
+  if not has_function_privilege('frata_admin', 'public.admin_fx_rate_latest()', 'execute') then raise exception 'FAIL: 102 Admin cannot read the rate'; end if;
+  if not coalesce((select p2.prosecdef and 'search_path=""' = any(p2.proconfig) from pg_proc p2 where p2.oid = 'public.admin_fx_rate_latest()'::regprocedure), false)
+    then raise exception 'FAIL: 102 admin_fx_rate_latest is not a definer with an empty search_path'; end if;
+  -- exactly these grants, and no column-level grant on either table (re-audit 2026-11-23, findings 6–7)
+  if (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cost_items'::regclass and a.grantee <> c.relowner) <> 'INSERT,SELECT,UPDATE'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cost_payments'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT'
+     or exists (select 1 from pg_class c, aclexplode(c.relacl) a where c.oid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and a.grantee <> c.relowner and a.grantee <> 'frata_admin'::regrole)
+  then raise exception 'FAIL: 102 the Costs tables carry a grant beyond the spec'; end if;
+  if exists (select 1 from pg_attribute where attrelid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and attacl is not null)
+  then raise exception 'FAIL: 102 a column-level grant on the Costs tables'; end if;
+  if (select pg_get_function_result('public.admin_fx_rate_latest()'::regprocedure)) <> 'TABLE(day date, rate_e4 integer)' then raise exception 'FAIL: 102 admin_fx_rate_latest returns more than the rate'; end if;
+  -- no view, rule or function reads the tables (the Admin library is the only reader), and no role holds another's powers
+  if exists (select 1 from pg_depend d join pg_rewrite w on w.oid = d.objid where d.refobjid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and w.ev_class not in ('public.cost_items'::regclass, 'public.cost_payments'::regclass))
+  then raise exception 'FAIL: 102 a view or rule reads the Costs tables'; end if;
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosrc ~ 'cost_(items|payments)')
+  then raise exception 'FAIL: 102 a function reads the Costs tables'; end if;
+  if exists (select 1 from pg_auth_members m where m.member in (select oid from pg_roles where rolname in ('frata_app', 'frata_admin', 'frata_builder')) and m.roleid in (select oid from pg_roles where rolname like 'frata\_%'))
+  then raise exception 'FAIL: 102 a frata role holds another frata role'; end if;
+  -- nothing copies a row out: no rule or trigger on the tables, no function that depends on them (a `begin atomic` body records its
+  -- dependencies), no publication that carries them (tenancy re-audit 2026-11-23, finding 1)
+  if exists (select 1 from pg_rewrite where ev_class in ('public.cost_items'::regclass, 'public.cost_payments'::regclass))
+  then raise exception 'FAIL: 102 a rule on a Costs table'; end if;
+  if exists (select 1 from pg_trigger where tgrelid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass) and not tgisinternal)
+  then raise exception 'FAIL: 102 a trigger on a Costs table'; end if;
+  if exists (select 1 from pg_depend where classid = 'pg_proc'::regclass and refobjid in ('public.cost_items'::regclass, 'public.cost_payments'::regclass))
+  then raise exception 'FAIL: 102 a function depends on a Costs table'; end if;
+  if exists (select 1 from pg_publication_tables where schemaname = 'public' and tablename in ('cost_items', 'cost_payments'))
+  then raise exception 'FAIL: 102 a publication carries a Costs table'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from cost_items; raise exception 'FAIL: 102 frata_app read costs'; exception when insufficient_privilege then null; end;
+  begin insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values (gen_random_uuid(), '2026-11-01', '2026-11-01', 1, 'INR', 1);
+    raise exception 'FAIL: 102 frata_app forged a payment'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_builder;
+do $$ begin begin perform 1 from cost_payments; raise exception 'FAIL: 102 frata_builder read payments'; exception when insufficient_privilege then null; end; end $$;
+rollback;
+begin; set local role frata_admin;
+insert into cost_items (id, name, category, kind, cadence, amount, currency, anchor_on) values ('00000000-0000-0000-0000-0000000c0001', 'Vercel Pro', 'infrastructure', 'recurring', 'monthly', 20000000, 'USD', '2026-11-26');
+insert into cost_items (id, name, category, kind, amount, currency, anchor_on) values ('00000000-0000-0000-0000-0000000c0002', 'Logo', 'design', 'one_time', 2500000, 'INR', '2026-11-09');
+insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, gst_paise) values ('00000000-0000-0000-0000-0000000c0001', '2026-11-26', '2026-11-23', 20000000, 'USD', 188400, 0);
+insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0001', '2026-11-26', '2026-11-23', 20000000, 'USD', 188400) on conflict do nothing;
+do $$ begin
+  if (select count(*) from cost_payments where item_id = '00000000-0000-0000-0000-0000000c0001') <> 1 then raise exception 'FAIL: 102 the same bill paid twice is two rows'; end if;
+  if (select inr_paise from cost_payments where item_id = '00000000-0000-0000-0000-0000000c0001') <> 188400 then raise exception 'FAIL: 102 Admin cannot read a payment back'; end if;
+  begin delete from cost_items where id = '00000000-0000-0000-0000-0000000c0002'; raise exception 'FAIL: 102 Admin deleted an item'; exception when insufficient_privilege then null; end;
+  begin update cost_payments set inr_paise = 1 where item_id = '00000000-0000-0000-0000-0000000c0001'; raise exception 'FAIL: 102 Admin edited a payment'; exception when insufficient_privilege then null; end;
+end $$;
+-- every CHECK refuses a bad row (each in its own savepoint)
+do $$ declare bad text; begin
+  foreach bad in array array[
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', null, 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'one_time', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'nope', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 0, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 1, 'EUR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('   ', 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 1, 'INR', '0001-01-01')$q$,
+    $q$insert into cost_items (name, category, kind, amount, currency, anchor_on, varies) values ('x', 'ai', 'one_time', 1, 'INR', '2026-11-01', true)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2499999)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, gst_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2500000, 2500001)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values (gen_random_uuid(), '2026-11-09', '2026-11-09', 1, 'INR', 1)$q$,
+    $q$insert into cost_items (name, vendor, category, kind, cadence, amount, currency, anchor_on) values ('x', repeat('v', 81), 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on, note) values ('x', 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01', repeat('n', 301))$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'daily', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values (repeat('n', 81), 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 1000000001, 'INR', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on) values ('x', 'ai', 'recurring', 'monthly', 50000000001, 'USD', '2026-11-01')$q$,
+    $q$insert into cost_items (name, category, kind, cadence, amount, currency, anchor_on, ends_on) values ('x', 'ai', 'recurring', 'monthly', 1, 'INR', '2026-11-01', '2101-01-01')$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 1, 'EUR', 1)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise, note) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 2500000, 'INR', 2500000, repeat('n', 301))$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2101-01-01', 2500000, 'INR', 2500000)$q$,
+    $q$insert into cost_payments (item_id, period_for, paid_on, amount, currency, inr_paise) values ('00000000-0000-0000-0000-0000000c0002', '2026-11-09', '2026-11-09', 1000000001, 'INR', 1000000001)$q$
+  ] loop
+    begin execute bad; raise exception 'FAIL: 102 a bad cost row was accepted: %', bad;
+    exception when check_violation or foreign_key_violation then null; end;
+  end loop;
+end $$;
+rollback;
+begin;
+insert into fx_rates (day, rate_e4, source, fetched_at) values ('2099-01-01', 942000, 'manual', now()) on conflict do nothing;
+set local role frata_admin;
+do $$ begin
+  if (select rate_e4 from admin_fx_rate_latest()) is distinct from 942000 then raise exception 'FAIL: 102 Admin cannot read the latest rate'; end if;
+end $$;
+rollback;
+
+-- § 103 · Settings › People (drizzle/0173–0174; docs/specs/2026-11-23-add-partner.md). The owner and a Manager add
+-- people by role inside their own store only; a Manager gives Staff and Accountants only; the people limit holds; a
+-- partner invited by email sees only invitations to its own confirmed address; accept writes a no-share link and
+-- deletes the partner's older keys; another partner, a Lead and a store read nothing they weren't sent.
+begin;
+insert into tenants (id, slug, name) values ('10300000-0000-0000-0000-0000000000a1', 'proof-103', 'Proof 103'), ('10300000-0000-0000-0000-0000000000a2', 'proof-103b', 'Proof 103 B');
+insert into auth.users (id, email, email_confirmed_at) values
+  ('10300000-0000-0000-0000-0000000000f1', 'owner@p103.test', now()), ('10300000-0000-0000-0000-0000000000f2', 'manager@p103.test', now()),
+  ('10300000-0000-0000-0000-0000000000f3', 'po@p103.test', now()), ('10300000-0000-0000-0000-0000000000f4', 'lead@p103.test', now()),
+  ('10300000-0000-0000-0000-0000000000f5', 'other@p103.test', now()), ('10300000-0000-0000-0000-0000000000f6', 'joiner@p103.test', now()),
+  ('10300000-0000-0000-0000-0000000000f7', 'ownerb@p103.test', now());
+insert into members (tenant_id, user_id, role) values
+  ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f1', 'owner'),
+  ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f2', 'admin'),
+  ('10300000-0000-0000-0000-0000000000a2', '10300000-0000-0000-0000-0000000000f7', 'owner');
+insert into partners (id, user_id, email, name, business_name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f3', 'po@p103.test', 'Riya', 'Kesar 103', '919876543103', 'Jaipur', '0', 1, now(), now()),
+  ('10300000-0000-0000-0000-0000000000c2', '10300000-0000-0000-0000-0000000000f5', 'other@p103.test', 'Other', 'Other 103', '919876543104', 'Pune', '0', 1, now(), now());
+insert into partner_members (id, partner_id, user_id, email, role, accepted_at) values
+  ('10300000-0000-0000-0000-0000000000b1', '10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f3', 'po@p103.test', 'owner', now()),
+  ('10300000-0000-0000-0000-0000000000b2', '10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f4', 'lead@p103.test', 'lead', now()),
+  ('10300000-0000-0000-0000-0000000000b3', '10300000-0000-0000-0000-0000000000c2', '10300000-0000-0000-0000-0000000000f5', 'other@p103.test', 'owner', now());
+-- A key the partner made on this store before an earlier removal: re-adding must not bring it back (tenancy H2).
+insert into storefront_keys (tenant_id, kind, name, hash, prefix, partner_id, created_by) values
+  ('10300000-0000-0000-0000-0000000000a1', 'public', 'Old 103', repeat('7', 64), 'frs_pub_103103', '10300000-0000-0000-0000-0000000000c1', '10300000-0000-0000-0000-0000000000f3');
+insert into platform_switches (key, until, set_by, reason) values ('passkeys_off', null, 'proof', 'proof § 103') on conflict (key) do update set until = null;
+set local role frata_app;
+select set_config('app.tenant_id', '10300000-0000-0000-0000-0000000000a1', true);
+do $$ declare i uuid; r uuid; t uuid; begin
+  -- A Manager gives Staff and Accountants only; never a Manager; nobody gives owner or partner.
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'x1@p103.test', 'admin'); raise exception 'FAIL: 103 a Manager invited a Manager';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f1', 'x1@p103.test', 'owner'); raise exception 'FAIL: 103 an invite gave owner';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f1', 'x1@p103.test', 'partner'); raise exception 'FAIL: 103 an invite gave partner';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f7', 'x1@p103.test', 'staff'); raise exception 'FAIL: 103 another store''s owner invited here';
+  exception when others then if sqlerrm <> 'not_manager' then raise; end if; end;
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f1', 'manager@p103.test', 'staff'); raise exception 'FAIL: 103 re-invited a member';
+  exception when others then if sqlerrm <> 'already_member' then raise; end if; end;
+  -- The owner invites a Manager; a Manager can't replace or cancel it.
+  i := app_invite_person('10300000-0000-0000-0000-0000000000f1', 'joiner@p103.test', 'admin');
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'joiner@p103.test', 'staff'); raise exception 'FAIL: 103 a Manager downgraded the owner''s invite';
+  exception when others then if sqlerrm <> 'invited' then raise; end if; end;
+  begin perform app_cancel_person_invite('10300000-0000-0000-0000-0000000000f2', i); raise exception 'FAIL: 103 a Manager cancelled a Manager invite';
+  exception when others then if sqlerrm <> 'no_invite' then raise; end if; end;
+  -- The limit (Launch fallback 3): the Manager member + 2 more open invites fill it.
+  perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'x2@p103.test', 'staff');
+  begin perform app_invite_person('10300000-0000-0000-0000-0000000000f2', 'x3@p103.test', 'staff'); raise exception 'FAIL: 103 passed the people limit';
+  exception when others then if sqlerrm <> 'at_limit' then raise; end if; end;
+  if (select used from app_people_room('10300000-0000-0000-0000-0000000000f1')) <> 3 then raise exception 'FAIL: 103 the room count'; end if;
+  if exists (select 1 from app_person_invites('10300000-0000-0000-0000-0000000000f3')) then raise exception 'FAIL: 103 a non-member read invites'; end if;
+  -- A Manager removes neither the owner, nor themself, nor another Manager.
+  begin perform app_remove_person('10300000-0000-0000-0000-0000000000f2', '10300000-0000-0000-0000-0000000000f1'); raise exception 'FAIL: 103 a Manager removed the owner';
+  exception when others then if sqlerrm <> 'no_person' then raise; end if; end;
+  begin perform app_remove_person('10300000-0000-0000-0000-0000000000f2', '10300000-0000-0000-0000-0000000000f2'); raise exception 'FAIL: 103 a Manager removed themself';
+  exception when others then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  -- A partner by email: only the owner sends; a Manager can't.
+  begin perform app_partner_request_send('10300000-0000-0000-0000-0000000000f2', 'po@p103.test'); raise exception 'FAIL: 103 a Manager invited a partner';
+  exception when others then if sqlerrm <> 'not_owner' then raise; end if; end;
+  r := app_partner_request_send('10300000-0000-0000-0000-0000000000f1', 'po@p103.test');
+  if (select partner_id from partner_requests where id = r) is not null then raise exception 'FAIL: 103 a request names its partner before an answer'; end if;
+  -- Another partner, and a Lead of the right partner, see nothing and answer nothing.
+  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f5', null, null)) then raise exception 'FAIL: 103 another partner sees the request'; end if;
+  if exists (select 1 from app_partner_requests('10300000-0000-0000-0000-0000000000f4', null, null)) then raise exception 'FAIL: 103 a Lead sees the request'; end if;
+  begin perform app_partner_answer_request('10300000-0000-0000-0000-0000000000f5', null, null, r, true); raise exception 'FAIL: 103 another partner accepted';
+  exception when others then if sqlerrm <> 'no_request' then raise; end if; end;
+  if (select count(*) from app_partner_requests('10300000-0000-0000-0000-0000000000f3', null, null)) <> 1 then raise exception 'FAIL: 103 the partner owner does not see it'; end if;
+  t := app_partner_answer_request('10300000-0000-0000-0000-0000000000f3', null, null, r, true);
+  if t is distinct from '10300000-0000-0000-0000-0000000000a1' then raise exception 'FAIL: 103 accept returned another store'; end if;
+end $$;
+-- Store B: the owner invites the other partner, who declines; the store then reads the decline, and the slot is free.
+select set_config('app.tenant_id', '10300000-0000-0000-0000-0000000000a2', true);
+do $$ declare r uuid; begin
+  r := app_partner_request_send('10300000-0000-0000-0000-0000000000f7', 'other@p103.test');
+  if app_partner_answer_request('10300000-0000-0000-0000-0000000000f5', null, null, r, false) is not null then raise exception 'FAIL: 103 a decline returned a store'; end if;
+  if (select count(*) from partner_requests where declined_at is not null) <> 1 then raise exception 'FAIL: 103 the store does not read its decline'; end if;
+  if exists (select 1 from partner_links where tenant_id = '10300000-0000-0000-0000-0000000000a2') then raise exception 'FAIL: 103 a decline linked the partner'; end if;
+  perform app_partner_request_send('10300000-0000-0000-0000-0000000000f7', 'other@p103.test');
+  perform app_partner_request_cancel('10300000-0000-0000-0000-0000000000f7');
+end $$;
+-- The other store sees none of store A's rows.
+do $$ begin
+  if exists (select 1 from partner_requests where tenant_id <> '10300000-0000-0000-0000-0000000000a2') then raise exception 'FAIL: 103 a store reads another store''s partner requests'; end if;
+  if exists (select 1 from app_person_invites('10300000-0000-0000-0000-0000000000f7')) then raise exception 'FAIL: 103 a store reads another store''s invites'; end if;
+  begin insert into partner_requests (tenant_id, email, created_by, expires_at) values ('10300000-0000-0000-0000-0000000000a2', 'z@p103.test', '10300000-0000-0000-0000-0000000000f7', now());
+    raise exception 'FAIL: 103 frata_app wrote a partner request';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ begin
+  if not exists (select 1 from partner_links where tenant_id = '10300000-0000-0000-0000-0000000000a1' and partner_id = '10300000-0000-0000-0000-0000000000c1'
+                  and removed_at is null and share_bps = 0) then raise exception 'FAIL: 103 accept did not write a no-share link'; end if;
+  if not exists (select 1 from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f3' and role = 'partner')
+    then raise exception 'FAIL: 103 accept did not add the partner owner'; end if;
+  if exists (select 1 from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f4')
+    then raise exception 'FAIL: 103 a Lead joined without an assignment'; end if;
+  if exists (select 1 from storefront_keys where tenant_id = '10300000-0000-0000-0000-0000000000a1' and name = 'Old 103' and revoked_at is null)
+    then raise exception 'FAIL: 103 a re-added partner got its old key back'; end if;
+end $$;
+-- Claim: the owner's Manager invite joins at sign-in, as that role only, in that store only.
+do $$ begin
+  perform app_claim_invites('10300000-0000-0000-0000-0000000000f6');
+  if (select role from members where tenant_id = '10300000-0000-0000-0000-0000000000a1' and user_id = '10300000-0000-0000-0000-0000000000f6') is distinct from 'admin'
+    then raise exception 'FAIL: 103 claim gave the wrong role'; end if;
+  -- Store A is now at its limit (2 Managers + 1 open Staff invite of 3): a further invite's claim is skipped and stays open.
+  insert into invites (tenant_id, email, role, created_by, expires_at) values ('10300000-0000-0000-0000-0000000000a1', 'x2@p103.test', 'staff', '10300000-0000-0000-0000-0000000000f1', now() + interval '1 day')
+    on conflict do nothing;
+  insert into auth.users (id, email, email_confirmed_at) values ('10300000-0000-0000-0000-0000000000f8', 'x2@p103.test', now());
+  insert into members (tenant_id, user_id, role) values ('10300000-0000-0000-0000-0000000000a1', '10300000-0000-0000-0000-0000000000f9', 'staff');
+  perform app_claim_invites('10300000-0000-0000-0000-0000000000f8');
+  if exists (select 1 from members where user_id = '10300000-0000-0000-0000-0000000000f8') then raise exception 'FAIL: 103 a claim passed the limit'; end if;
+  if not exists (select 1 from invites where email = 'x2@p103.test' and accepted_at is null and revoked_at is null) then raise exception 'FAIL: 103 a refused claim closed the invite'; end if;
+  if exists (select 1 from members where user_id = '10300000-0000-0000-0000-0000000000f6' and tenant_id <> '10300000-0000-0000-0000-0000000000a1')
+    then raise exception 'FAIL: 103 claim joined another store'; end if;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r,
+             unnest(array['app_invite_person(uuid,text,text)', 'app_remove_person(uuid,uuid)', 'app_cancel_person_invite(uuid,uuid)',
+                          'app_partner_request_send(uuid,text)', 'app_partner_answer_request(uuid,uuid,text,uuid,boolean)', 'app_people_mail(text,text,text,uuid,text)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: 103 another role runs the people definers'; end if;
+  if has_function_privilege('frata_app', 'app_people_mail(text,text,text,uuid,text)', 'execute') then raise exception 'FAIL: 103 the app sends address mail directly'; end if;
+end $$;
+-- 104. Admin › Cashflow (drizzle/0175; spec docs/specs/2026-11-23-admin-cashflow.md, reviews 2026-11-23): four platform tables only frata_admin
+-- touches, with exactly the privileges the spec lists, RLS on and one permissive policy each; nothing copies a row out of them.
+do $$ declare r text; t text; p text; tbls regclass[] := array['public.cash_accounts', 'public.cash_balances', 'public.cash_entries', 'public.cash_settings']::regclass[]; begin
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder'] loop
+    foreach t in array array['cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings'] loop
+      foreach p in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+        if has_table_privilege(r, 'public.' || t, p) then raise exception 'FAIL: 104 % holds % on %', r, p, t; end if;
+      end loop;
+      if has_any_column_privilege(r, 'public.' || t, 'select') then raise exception 'FAIL: 104 % reads a column of %', r, t; end if;
+    end loop;
+  end loop;
+  -- exactly these grants, to frata_admin only, and no column-level grant
+  if (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_accounts'::regclass and a.grantee <> c.relowner) <> 'INSERT,SELECT,UPDATE'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_balances'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_entries'::regclass and a.grantee <> c.relowner) <> 'DELETE,INSERT,SELECT,UPDATE'
+     or (select string_agg(a.privilege_type, ',' order by a.privilege_type) from pg_class c, aclexplode(c.relacl) a where c.oid = 'public.cash_settings'::regclass and a.grantee <> c.relowner) <> 'SELECT,UPDATE'
+     or exists (select 1 from pg_class c, aclexplode(c.relacl) a where c.oid = any(tbls) and a.grantee <> c.relowner and a.grantee <> 'frata_admin'::regrole)
+  then raise exception 'FAIL: 104 the Cash tables carry a grant beyond the spec'; end if;
+  if exists (select 1 from pg_attribute where attrelid = any(tbls) and attacl is not null) then raise exception 'FAIL: 104 a column-level grant on the Cash tables'; end if;
+  foreach t in array array['cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings'] loop
+    if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then raise exception 'FAIL: 104 % without RLS', t; end if;
+    if (select count(*) from pg_policies where schemaname = 'public' and tablename = t) <> 1
+       or exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and (permissive <> 'PERMISSIVE' or roles <> '{frata_admin}'::name[]))
+    then raise exception 'FAIL: 104 % must have exactly one permissive policy, to frata_admin', t; end if;
+  end loop;
+  -- nothing copies a row out: no rule, no trigger, no dependent function, no publication
+  if exists (select 1 from pg_rewrite where ev_class = any(tbls)) then raise exception 'FAIL: 104 a rule on a Cash table'; end if;
+  if exists (select 1 from pg_trigger where tgrelid = any(tbls) and not tgisinternal) then raise exception 'FAIL: 104 a trigger on a Cash table'; end if;
+  if exists (select 1 from pg_depend where classid = 'pg_proc'::regclass and refobjid = any(tbls)) then raise exception 'FAIL: 104 a function depends on a Cash table'; end if;
+  if exists (select 1 from pg_publication_tables where schemaname = 'public' and tablename in ('cash_accounts', 'cash_balances', 'cash_entries', 'cash_settings')) then raise exception 'FAIL: 104 a publication carries a Cash table'; end if;
+  if exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosrc ~ 'cash_(accounts|balances|entries|settings)') then raise exception 'FAIL: 104 a function reads a Cash table'; end if;
+  -- Billing's three new indexes (Cashflow reads money in by month through them)
+  if (select count(*) from pg_indexes where schemaname = 'public' and indexname in ('frrata_payments_captured', 'frrata_payments_refunded', 'frrata_invoices_test')) <> 3 then raise exception 'FAIL: 104 a Billing index for Cashflow is missing'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from cash_balances; raise exception 'FAIL: 104 frata_app read a balance'; exception when insufficient_privilege then null; end;
+  begin insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 1, '2026-11-01'); raise exception 'FAIL: 104 frata_app forged an entry'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_builder;
+do $$ begin begin perform 1 from cash_settings; raise exception 'FAIL: 104 frata_builder read the settings'; exception when insufficient_privilege then null; end; end $$;
+rollback;
+begin; set local role frata_admin;
+insert into cash_accounts (id, name) values ('00000000-0000-0000-0000-0000000d0001', 'Current account'), ('00000000-0000-0000-0000-0000000d0002', 'Reserve');
+-- two balances on one day made in one transaction (the same created_at): the later id is the latest
+insert into cash_balances (id, account_id, as_of, balance_paise) values ('00000000-0000-0000-0000-0000000e0001', '00000000-0000-0000-0000-0000000d0001', '2026-11-22', 17500000), ('00000000-0000-0000-0000-0000000e0002', '00000000-0000-0000-0000-0000000d0001', '2026-11-22', -5000);
+insert into cash_entries (id, kind, amount_paise, happened_on) values ('00000000-0000-0000-0000-0000000f0001', 'funding', 50000000, '2026-07-14');
+insert into cash_entries (id, kind, amount_paise, expected_on, account_id) values ('00000000-0000-0000-0000-0000000f0002', 'grant', 15000000, '2027-02-15', '00000000-0000-0000-0000-0000000d0002');
+do $$ declare bad text; begin
+  if (select id from cash_balances where account_id = '00000000-0000-0000-0000-0000000d0001' order by as_of desc, created_at desc, id desc limit 1) <> '00000000-0000-0000-0000-0000000e0002'
+  then raise exception 'FAIL: 104 the latest balance does not break a tie by id'; end if;
+  if (select count(*) from cash_settings) <> 1 then raise exception 'FAIL: 104 the settings row is not seeded once'; end if;
+  update cash_settings set floor_paise = 25000000, main_account_id = '00000000-0000-0000-0000-0000000d0001';
+  begin update cash_balances set balance_paise = 1; raise exception 'FAIL: 104 Admin edited a balance'; exception when insufficient_privilege then null; end;
+  begin delete from cash_accounts where id = '00000000-0000-0000-0000-0000000d0002'; raise exception 'FAIL: 104 Admin deleted an account'; exception when insufficient_privilege then null; end;
+  begin delete from cash_settings; raise exception 'FAIL: 104 Admin deleted the settings'; exception when insufficient_privilege then null; end;
+  begin insert into cash_settings (id) values (2); raise exception 'FAIL: 104 Admin added a second settings row'; exception when insufficient_privilege then null; end;
+  delete from cash_balances where id = '00000000-0000-0000-0000-0000000e0001';
+  update cash_entries set expected_on = null, happened_on = '2026-12-01' where id = '00000000-0000-0000-0000-0000000f0002';
+  foreach bad in array array[
+    $q$insert into cash_accounts (name) values ('   ')$q$,
+    $q$insert into cash_accounts (name) values (repeat('n', 61))$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise) values ('00000000-0000-0000-0000-0000000d0001', '2026-11-22', 100000000001)$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise) values ('00000000-0000-0000-0000-0000000d0001', '2101-01-01', 1)$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise, note) values ('00000000-0000-0000-0000-0000000d0001', '2026-11-22', 1, repeat('n', 301))$q$,
+    $q$insert into cash_balances (account_id, as_of, balance_paise) values (gen_random_uuid(), '2026-11-22', 1)$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('salary', 1, '2026-11-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 0, '2026-11-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 100000000001, '2026-11-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise) values ('funding', 1)$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on, expected_on) values ('funding', 1, '2026-11-01', '2026-12-01')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on) values ('funding', 1, '2019-12-31')$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on, note) values ('funding', 1, '2026-11-01', repeat('n', 301))$q$,
+    $q$insert into cash_entries (kind, amount_paise, happened_on, account_id) values ('funding', 1, '2026-11-01', gen_random_uuid())$q$,
+    $q$update cash_settings set floor_paise = -1$q$,
+    $q$update cash_settings set floor_paise = 100000000001$q$,
+    $q$update cash_settings set main_account_id = gen_random_uuid()$q$
+  ] loop
+    begin execute bad; raise exception 'FAIL: 104 a bad Cash row was accepted: %', bad;
+    exception when check_violation or foreign_key_violation then null; end;
+  end loop;
+end $$;
+rollback;
+\echo 'tenancy proof — all checks passed (through § 105)'

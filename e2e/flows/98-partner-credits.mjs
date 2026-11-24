@@ -30,8 +30,10 @@ export default {
       await db`delete from partner_client_budgets where partner_id = ${pid}`
       await db`delete from partner_credit_purchases where partner_id = ${pid}`
       await db`delete from partner_seats where partner_id = ${pid}`
+      await db`delete from partner_mandate_cancels where partner_id = ${pid}`
       await db`delete from partner_credit_tries where user_id = ${P.id}`
-      await db`insert into partner_billing (partner_id) values (${pid}) on conflict (partner_id) do update set legal_name = null, gstin = null, pan = null, state_code = null, address = null, details_at = null`
+      await db`insert into partner_billing (partner_id) values (${pid}) on conflict (partner_id) do update set legal_name = null, gstin = null, pan = null, state_code = null, address = null, details_at = null,
+        token_id = null, mandate_method = null, mandate_max = null, mandate_at = null, mandate_revoked_at = null`
       await db`insert into partner_credit_entries (partner_id, kind, credits, expires_at) values (${pid}, 'grant', 20, now() + interval '90 days')`
     }
     await clean()
@@ -77,13 +79,34 @@ export default {
         assert.deepEqual([b.legal_name, b.state_code], ['Pia Studio LLP', '27'])
       })
 
-      await t.step('a pack: credits arrive only after the server saw the payment; its invoice is a PDF', async () => {
+      await t.step('Checkout closed without paying: the dialog comes back on the wait; Esc closes it', async () => {
         await pia.goto(CONSOLE + '/partner/credits')
+        await pia.evaluate(() => { window.__rzpMode = 'dismiss' })
         await pia.getByRole('button', { name: 'Buy credits' }).first().click()
         await pia.getByRole('dialog', { name: 'Buy credits' }).getByRole('button', { name: 'Pay ₹2,358.82' }).click()
+        await pia.getByRole('dialog', { name: 'Waiting for your bank' }).waitFor()
+        await pia.keyboard.press('Escape')
+        await pia.waitForFunction(() => !document.querySelector('dialog[open]'))
+        await pia.evaluate(() => { window.__rzpMode = '' })
+      })
+
+      await t.step('a pack: Checkout opens in front of our dialog; credits arrive only after the server saw the payment; its invoice is a PDF', async () => {
+        await pia.goto(CONSOLE + '/partner/credits')
+        await pia.evaluate(() => { window.__rzpMode = 'frame' })
+        await pia.getByRole('button', { name: 'Buy credits' }).first().click()
+        await pia.getByRole('dialog', { name: 'Buy credits' }).getByRole('button', { name: 'Pay ₹2,358.82' }).click()
+        // The owner's bug (2026-11-23): our modal stayed in the top layer, over Checkout, and the page behind it was inert.
+        const frame = pia.getByRole('button', { name: 'Pay in the fake Checkout' })
+        await frame.waitFor()
+        assert.equal(await pia.locator('dialog[open]').count(), 0, 'no dialog of ours is open over Checkout')
+        await frame.click({ timeout: 3_000 })
+        await pia.evaluate(() => { window.__rzpMode = '' })
         await expectToast(pia, '100 credits added.', 'ok')
+        // Focus goes back to the button that opened the dialog, never the page's body (design review 2026-11-23).
+        await pia.waitForFunction(() => document.activeElement && document.activeElement.tagName !== 'BODY', null, { timeout: 2_000 })
+          .catch(() => { throw new Error('focus returned after Checkout') })
         await pia.getByText('120 credits').waitFor()
-        const [p] = await db`select paid_at, total, test, payment_id from partner_credit_purchases where partner_id = ${pid} and kind = 'pack'`
+        const [p] = await db`select paid_at, total, test, payment_id from partner_credit_purchases where partner_id = ${pid} and kind = 'pack' order by created_at desc limit 1`
         assert.ok(p.paid_at, 'paid'); assert.equal(Number(p.total), 235882); assert.equal(p.test, true)
         await pia.goto(CONSOLE + '/partner/credits?tab=payments')
         const inv = pia.getByRole('link', { name: /^FRR\/T\d{2}-\d{2}\/\d{6}$/ })
@@ -109,6 +132,37 @@ export default {
         const csv = await pia.context().request.get(CONSOLE + `/partner/credits/usage.csv?month=${month}-01`)
         assert.equal(csv.status(), 200); assert.match(csv.headers()['content-type'] ?? '', /text\/csv/)
         assert.match(await csv.text(), /^"When","Client"/)
+      })
+
+      await t.step('Studio, then Studio Plus at once: its credits stay, the old AutoPay is cancelled (C1·B)', async () => {
+        await pia.goto(CONSOLE + '/partner/credits?tab=plan')
+        await pia.evaluate(() => { window.__rzpMode = 'frame' })
+        await pia.getByRole('button', { name: 'Start Studio', exact: true }).click()
+        await pia.getByRole('dialog', { name: 'Start Studio' }).getByRole('button', { name: 'Pay ₹3,538.82' }).click()
+        await pia.getByRole('button', { name: 'Pay in the fake Checkout' }).click({ timeout: 3_000 })
+        await expectToast(pia, 'Studio started. 150 credits added.', 'ok')
+        await pia.goto(CONSOLE + '/partner/credits?tab=plan')
+        await pia.getByRole('button', { name: 'Move to Studio Plus' }).click()
+        const d = pia.getByRole('dialog', { name: 'Move to Studio Plus' })
+        await d.getByText('Studio credits left').waitFor()
+        await d.getByText('150 stay').waitFor()
+        await d.getByText('₹1,799.82').waitFor()
+        await pia.screenshot({ path: t.out('move-plus') })
+        await pia.evaluate(() => { window.__rzpMode = 'frame' })
+        await d.getByRole('button', { name: 'Pay ₹11,798.82' }).click()
+        const frame = pia.getByRole('button', { name: 'Pay in the fake Checkout' })
+        await frame.waitFor()
+        assert.equal(await pia.locator('dialog[open]').count(), 0, 'no dialog of ours over Checkout (Move to Studio Plus)')
+        await frame.click({ timeout: 3_000 })
+        await pia.evaluate(() => { window.__rzpMode = '' })
+        await expectToast(pia, 'Studio Plus started. 500 credits added.', 'ok')
+        const seats = await db`select plan from partner_seats where partner_id = ${pid} and ended_at is null`
+        assert.deepEqual(seats.map((x) => x.plan), ['plus'])
+        const [q] = await db`select count(*)::int n from partner_mandate_cancels where partner_id = ${pid} and cancelled_at is null`
+        assert.equal(q.n, 1, 'the old Studio mandate is queued for cancelling')
+        await pia.goto(CONSOLE + '/partner/credits?tab=payments')
+        await pia.getByText('Old Studio AutoPay').waitFor()
+        await pia.getByText('Cancelling', { exact: true }).waitFor()
       })
 
       await t.step('phone: the tabs scroll, Buy credits is a sheet', async () => {
@@ -140,6 +194,8 @@ export default {
       await pia.context().close()
     } finally {
       await db`delete from partner_assignments where partner_member_id in (select id from partner_members where user_id = ${L.id})`
+      // Every store's seat for the Lead (80-partner-team, run before, gives the same Lead other stores), then Kesar's.
+      await db`delete from members where partner_member_id in (select id from partner_members where user_id = ${L.id})`
       await db`delete from members where user_id = ${L.id} and tenant_id = ${KESAR}`
       await db`delete from partner_members where user_id = ${L.id}`
       await clean()

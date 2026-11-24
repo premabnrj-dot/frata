@@ -252,7 +252,7 @@
     "why": "Owner, 2026-11-22: the Studio step is named Website, not Site (the brand's own site built as code, glossary § Surfaces); the Studio workbench shell (WB·3)"
   },
   {
-    "file": "src/app/(partner)/partner/fixtures/studio/_workbench/workbench.tsx",
+    "file": "src/components/studio/shell.tsx",
     "rule": "W4",
     "text": "Website",
     "why": "Owner, 2026-11-22: the Studio step is named Website, not Site (the brand's own site built as code, glossary § Surfaces); the Studio workbench shell (WB·3)"
@@ -262,6 +262,12 @@
     "rule": "W2",
     "text": "Bust or chest: around the fullest part, tape level.",
     "why": "A store's own Size help words the agent proposes, as drawn in the approved Studio redraw (16 Nov); store content, not Frrata's words; a test-only fixture"
+  },
+  {
+    "file": "src/domains/studio/words.ts",
+    "rule": "W4",
+    "text": "websites",
+    "why": "Studio state 8, the owner-approved states mockup (2026-11-23): the brand's own code site, Website in the glossary's exception (owner 2026-11-15), said to a partner"
   },
   {
     "file": "src/app/(partner)/partner/(workspace)/credits/actions.ts",

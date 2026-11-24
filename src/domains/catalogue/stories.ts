@@ -7,8 +7,8 @@ import { z } from 'zod'
 // shop's, and whether a paired piece is, is the server's (src/lib/catalogue/extras.ts).
 // =============================================================================
 
-export const MAX_STORIES = 6, MAX_NOTES = 3, MAX_PAIRS = 2
-export const STORY_LIMITS = { title: 60, text: 300, note: 60 } as const
+import { MAX_NOTES, MAX_PAIRS, MAX_STORIES, STORY_LIMITS } from './stories-facts'
+export * from './stories-facts'
 
 const photo = z.object({
   base: z.string().max(300),
@@ -44,11 +44,3 @@ export function cleanPairIds(input: unknown, self: string): string[] {
   const me = self.toLowerCase()
   return [...new Set(input.filter((x): x is string => typeof x === 'string' && UUID.test(x)).map((x) => x.toLowerCase()).filter((x) => x !== me))].slice(0, MAX_PAIRS)
 }
-
-/** What a shopper is offered for a paired piece: Add only with no options (one variant) and buyable; else Choose (its
- *  page), so a sized piece is never put in the bag without its size (architecture review 6). */
-export const pairAction = (p: { options: string[]; variants: number }): 'add' | 'choose' =>
-  p.options.length === 0 && p.variants === 1 ? 'add' : 'choose'
-
-/** A piece as the editor's "Pair it with" card shows it (src/lib/queries/catalogue.ts reads it). */
-export type Piece = { id: string; title: string; status: string; options: string[]; base: string | null; widths: number[] | null; price: number | null; sizes: number; buyable: boolean }

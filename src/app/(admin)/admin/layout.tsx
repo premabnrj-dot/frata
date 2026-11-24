@@ -10,12 +10,17 @@ import type { TodayArea } from '@/domains/admin/today'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { adminHealth } from '@/lib/admin/health'
-import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
 import { gateState } from '@/lib/admin/passkeys'
 import { StaffGate } from '@/components/passkeys/passkey-gate'
 import { signOutAction } from './sign-out/actions'
 import { Toaster } from '@/components/ui/toast'
+import { Banner } from '@/components/ui/banner'
+import { Icon } from '@/components/icons/icon'
+import { isMasterAdmin } from '@/domains/tenancy/staff-words'
+import { passkeys } from '@/lib/auth/session'
+import { TurnPasskeysOn } from './staff/passkeys-switch'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     )
   }
   // Both at once (speed review on the plan): neither waits on the other.
-  const [own, n] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null)])
+  const [own, n, pk] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null), passkeys()])
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). Neel N4 (owner-approved
   // mockup): Today first, then four groups, each item with the count of what waits in it (todayCounts, the same list
@@ -72,6 +77,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staffItem = item('/admin/staff', 'Staff', 'staff', 'staff')
   const plans = item('/admin/plans', 'Plans', 'plans')
   const billingItem = item('/admin/billing', 'Billing', 'payments', 'billing')
+  // Costs is a master admin's page; support staff are not shown it (the page and every action refuse them too).
+  const costsItems = (ADMIN_ONLY as readonly string[]).includes(staff.role) ? [item('/admin/costs', 'Costs', 'costs', 'costs'), item('/admin/cashflow', 'Cashflow', 'cashflow', 'cash')] : []
   const appsItem = item('/admin/apps', 'Apps', 'apps')
   const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people')
   const themesItem = item('/admin/themes', 'Themes', 'themes', 'themes')
@@ -84,12 +91,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: '', items: [today] },
     { label: 'Merchants', items: [merchants, trialsItem, offersItem, namesItem, apiItem] },
     { label: 'People', items: [partnersItem, staffItem] },
-    { label: 'Money', items: [plans, billingItem] },
+    { label: 'Money', items: [plans, billingItem, ...costsItems] },
     { label: 'Platform', items: [appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity] },
   ]
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Frrata Admin" groups={groups}
-      tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, apiItem, staffItem, plans, billingItem, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
+      tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, apiItem, staffItem, plans, billingItem, ...costsItems, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
+      {/* Passkeys off from Admin › Staff (owner 2026-11-23, docs/mockups/2026-11-23-admin-passkeys-switch.html § Off):
+          on every Admin page until an Admin turns them on; Support staff see it without the button. */}
+      {pk.off && <Banner tone="warn" title={<span className="inline-flex items-center gap-2.5"><Icon name="key" className="size-4" />Passkeys are off</span>} action={isMasterAdmin(staff.role)
+        ? <TurnPasskeysOn /> : undefined} />}
       {children}
     </AppShell>
   )

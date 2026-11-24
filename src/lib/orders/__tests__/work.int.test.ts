@@ -126,7 +126,7 @@ describe.skipIf(!host)('order work', () => {
       await tx.insert(orderLines).values({ tenantId: A, orderId: i, variantId: v!.id, title: 'M', qty: 1, unitPrice: 100000, taxableValue: 95238, kind: 'preorder', position: 1 })
       await w.confirm(tx, A, riya, i, later(28))
       await tx.update(variants).set({ stock: 0 }).where(eq(variants.id, v!.id))
-      expect(await w.pack(tx, A, riya, i, later(29))).toMatchObject({ ok: false, error: expect.stringMatching(/not in stock yet/) })
+      expect(await w.pack(tx, A, riya, i, later(29))).toMatchObject({ ok: false, error: expect.stringMatching(/aren’t in stock yet/) })
       await tx.update(variants).set({ stock: 1 }).where(eq(variants.id, v!.id))
       expect(await w.pack(tx, A, riya, i, later(30))).toMatchObject({ ok: true, preordersTaken: 1, soldOut: [v!.id] })
 

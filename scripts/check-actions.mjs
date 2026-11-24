@@ -24,10 +24,12 @@ import { pathToFileURL } from 'node:url'
 // store choice itself (the switch and the tenant check; check:capabilities pins its callers
 // holds which files may call it).
 // apiRequest (src/lib/storefront-api/request.ts) is the Storefront API's door: the shop from a key's definer row (ADR-0018).
+// requireStudio (src/lib/studio/with-studio.ts) is Studio's door: requireStaff and requirePartner for one person on one
+// browser session, requireMember(['partner']) on the switcher's store, never a support visit (ADR-0020).
 // saveBrand, decideBrand, undoBrand (src/lib/content/save.ts, one-address P1·3): the brand record's one writer, and
 // saveCheckout, undoCheckout beside them (the checkout design's, one-address P2·6); each asks
 // requireMember and writes through asMember itself, so an action that calls one is behind both.
-const CHOKEPOINTS = ['saveBrand', 'decideBrand', 'undoBrand', 'saveCheckout', 'undoCheckout', 'requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
+const CHOKEPOINTS = ['saveBrand', 'decideBrand', 'undoBrand', 'saveCheckout', 'undoCheckout', 'requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest', 'requireStudio']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -40,6 +42,7 @@ const ENTRY_POINTS = {
   'src/app/api/auth/send-email/route.ts': ['Supabase Send Email Hook, Standard Webhooks signature (ADR-0011)', 'hookSigned('],
   'src/app/api/cron/drain/route.ts': ['Vercel Cron, every 5 minutes (email plan)', 'isCronRequest('],
   'src/app/api/cron/infra/route.ts': ['Vercel Cron', 'isCronRequest('],
+  'src/app/api/cron/studio/route.ts': ['Vercel Cron, every minute (Studio V3a: ids only from app_studio_due)', 'isCronRequest('],
   'src/app/api/cron/credits/route.ts': ['Vercel Cron, hourly (Studio credits, C1)', 'isCronRequest('],
   'src/app/api/webhooks/whatsapp/route.ts': ['Meta webhook: HMAC of the raw body with Frrata\'s app secret; each item routed by its own id through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/ekcode/route.ts': ['Meta webhook for EkCode\'s number: HMAC of the raw body with EkCode\'s app secret; only its own number\'s statuses, through a definer', 'verifyMetaSignature('],
@@ -182,10 +185,11 @@ for (const file of walk('src/app/(console)')) {
 
 // A console page is guarded by its OWN check: Next renders the layout and the
 // page in parallel, so the layout's requireMember protects nothing below it.
+// requireStudio counts: it calls requireMember(['partner']) itself (Studio's store-only preview, 2026-11-23).
 for (const file of ['src/app/(console)', 'src/app/(lookeditor)', 'src/app/(lookpreview)'].flatMap((d) => (existsSync(d) ? walk(d) : []))) {
   if (!file.endsWith('/page.tsx')) continue
-  if (!/\brequire(Member|Capability)\(/.test(code(readFileSync(file, 'utf8')))) {
-    failures.push(`${file}  console page that does not call requireMember( or requireCapability( itself — the layout's check does not cover it`)
+  if (!/\brequire(Member|Capability|Studio)\(/.test(code(readFileSync(file, 'utf8')))) {
+    failures.push(`${file}  console page that does not call requireMember(, requireCapability( or requireStudio( itself — the layout's check does not cover it`)
   }
 }
 

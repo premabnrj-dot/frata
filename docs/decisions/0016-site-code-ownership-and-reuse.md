@@ -69,3 +69,8 @@ branch is protected" reads as follows.
 4. **Partner skills** come from a partner-level repository holding no brand content (point 1's layers).
 5. **Unchanged:** no organisation-wide token; secret scanning on; no key in a repository (the gate refuses every
    key-shaped string, `frs_build_` included); the fleet sets each deployment's key.
+
+## Amendment (the organisation's name, owner 2026-11-24)
+The organisation is **`FrrataGit`** (a new organisation in the owner's same GitHub account), in place of `frrata`
+(point 1 of the amendment above). Its plan, two-factor and member rules are unchanged. Repositories already in `frrata`
+(the starter) move or are re-created there; the steps are in `docs/setup-studio-hosting.md`.

@@ -1167,15 +1167,85 @@
     {
       "idx": 166,
       "version": "7",
-      "when": 1795424794457,
-      "tag": "0166_signup_without_pickup",
+      "when": 1795394200000,
+      "tag": "0166_studio",
       "breakpoints": true
     },
     {
       "idx": 167,
       "version": "7",
-      "when": 1795443467175,
-      "tag": "0167_signup_drop_old_definers",
+      "when": 1795394202000,
+      "tag": "0167_studio_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 168,
+      "version": "7",
+      "when": 1795415430737,
+      "tag": "0168_studio_mandate_cancels",
+      "breakpoints": true
+    },
+    {
+      "idx": 169,
+      "version": "7",
+      "when": 1795415459782,
+      "tag": "0169_studio_plus_now",
+      "breakpoints": true
+    },
+    {
+      "idx": 170,
+      "version": "7",
+      "when": 1795437628490,
+      "tag": "0170_passkeys_off",
+      "breakpoints": true
+    },
+    {
+      "idx": 171,
+      "version": "7",
+      "when": 1795437674340,
+      "tag": "0171_passkeys_off_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1795442556635,
+      "tag": "0172_admin_costs",
+      "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1795457879842,
+      "tag": "0173_people_and_partner_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1795457936176,
+      "tag": "0174_people_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1795460873899,
+      "tag": "0175_admin_cash",
+      "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1795498782545,
+      "tag": "0176_signup_without_pickup",
+      "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1795498786109,
+      "tag": "0177_signup_drop_old_definers",
       "breakpoints": true
     }
   ]

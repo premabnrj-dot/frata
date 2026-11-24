@@ -6,10 +6,16 @@
 
 export type StaffNoticeKind = 'staff_added' | 'staff_removed' | 'request_approved' | 'passkey_added' | 'passkey_removed'
   | 'partner_passkey_added' | 'partner_passkey_removed' | 'partner_request_made' | 'partner_request_approved'
-  | 'partner_role_changed'
+  | 'partner_role_changed' | 'passkeys_off' | 'passkeys_on'
+  /** Settings › People (drizzle/0174): to the person invited to a store (`about` the store, `detail` the role) and to a
+   *  partner owner a store asked (`about` the store). The store's name is the merchant's text: plain, capped at 60. */
+  | 'store_invite' | 'store_partner_invite'
 /** The partner side's kinds (T1b, drizzle/0129): sent to the person and the partner's owner (an owner's own recovery:
  *  every Frrata admin too). The email's button opens the workspace, not Admin. */
-export const isPartnerNotice = (k: StaffNoticeKind) => k.startsWith('partner_')
+export const isPartnerNotice = (k: StaffNoticeKind) => k.startsWith('partner_') || k === 'store_partner_invite'
+/** A store's invitation to a person: the button opens the console's sign-in. */
+export const isStoreInvite = (k: StaffNoticeKind) => k === 'store_invite'
+const GIVEN_LABEL: Record<string, string> = { admin: 'Manager', staff: 'Staff', accountant: 'Accountant' }
 
 export function staffSecurityWords(n: { kind: StaffNoticeKind; about: string; by: string | null; detail: string | null }): { subject: string; body: string } {
   const by = n.by ?? 'Frrata'
@@ -28,6 +34,11 @@ export function staffSecurityWords(n: { kind: StaffNoticeKind; about: string; by
       : { subject: `${n.about} asked Frrata for a new passkey`, body: `${n.about} can't use their passkey. We'll call the phone on their record. We can approve a new one after 24 hours.` }
     // T1c: the detail is the new role's word (Lead or Builder).
     case 'partner_role_changed': return { subject: `${n.about} is now a ${n.detail ?? 'new role'}`, body: `${by} made ${n.about} a ${n.detail ?? 'new role'}. Their stores stay the same.` }
+    // Passkeys off or on for everyone from Admin › Staff (drizzle/0171); `about` is the master admin who did it.
+    case 'passkeys_off': return { subject: 'Passkeys are off for all staff and partners', body: `${n.about} turned passkeys off. Staff and partners now sign in with an email code alone.` }
+    case 'passkeys_on': return { subject: 'Passkeys are on for all staff and partners', body: `${n.about} turned passkeys on. Staff and partners confirm with a passkey again.` }
+    case 'store_invite': return { subject: `${n.by ?? 'The owner'} added you to ${n.about}`, body: `Sign in to join as ${GIVEN_LABEL[n.detail ?? ''] ?? 'a member'}. This invitation expires in 14 days.` }
+    case 'store_partner_invite': return { subject: `${n.about} wants you as its partner`, body: `${n.by ?? 'The owner'} sent this invitation. It expires in 14 days.` }
     case 'partner_request_approved': return { subject: `A new passkey was approved for ${n.about}`, body: `${by} approved a new passkey for ${n.about}. ${n.about} can create it on the same device within 10 minutes.` }
   }
 }

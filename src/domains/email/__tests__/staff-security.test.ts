@@ -13,8 +13,20 @@ describe('staff security emails', () => {
       expect(w.body.length).toBeGreaterThan(5)
     }
   })
+  it('passkeys off or on for everyone name the master admin (drizzle/0171)', () => {
+    expect(staffSecurityWords({ kind: 'passkeys_off', about: 'asha@frrata.com', by: 'asha@frrata.com', detail: null }))
+      .toEqual({ subject: 'Passkeys are off for all staff and partners', body: expect.stringMatching(/^asha@frrata.com turned passkeys off\. .*email code alone/) })
+    expect(staffSecurityWords({ kind: 'passkeys_on', about: 'asha@frrata.com', by: null, detail: null }).body).toMatch(/^asha@frrata.com turned passkeys on\./)
+  })
   it('a role change names the new role and that the stores stay (T1c)', () => {
     expect(staffSecurityWords({ kind: 'partner_role_changed', about: 'meera@pixelthread.in', by: 'ananya@pixelthread.in', detail: 'Builder' }))
       .toEqual({ subject: 'meera@pixelthread.in is now a Builder', body: 'ananya@pixelthread.in made meera@pixelthread.in a Builder. Their stores stay the same.' })
+  })
+  it('words the two store invitations (Settings › People), with a fallback for a missing sender or role', () => {
+    expect(staffSecurityWords({ kind: 'store_invite', about: 'House Of Ayuda', by: 'prem@ayuda.in', detail: 'staff' }))
+      .toEqual({ subject: 'prem@ayuda.in added you to House Of Ayuda', body: 'Sign in to join as Staff. This invitation expires in 14 days.' })
+    expect(staffSecurityWords({ kind: 'store_invite', about: 'House Of Ayuda', by: null, detail: null }).body).toMatch(/as a member/)
+    expect(staffSecurityWords({ kind: 'store_partner_invite', about: 'House Of Ayuda', by: 'prem@ayuda.in', detail: null }))
+      .toEqual({ subject: 'House Of Ayuda wants you as its partner', body: 'prem@ayuda.in sent this invitation. It expires in 14 days.' })
   })
 })

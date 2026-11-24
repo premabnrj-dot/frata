@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.14.0
+  version: 3.18.1
   owner: owner
-  verified: 2026-11-22
+  verified: 2026-11-23
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
   covers: ["src/middleware.ts", "src/lib/db/tenant.ts"]
 ---
@@ -62,6 +62,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
   holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
   waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
+- **Admin › Costs** (2026-11-23, drizzle/0172, proof § 102, `check:tenant` § 10): platform tables only `frata_admin`
+  touches; every export re-checks `ADMIN_ONLY` — [reference/money-and-gst.md](reference/money-and-gst.md) § Admin › Costs.
 - **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
   `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
 - **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
@@ -110,29 +112,6 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   new build serves and the old functions have run out. A rollback past the drop re-creates the old functions WITH their
   revoke/grant (`docs/setup.md` § Sign-up definers); previews share the database, so open branches move first.
 
-### The analytics database (A·2, ADR-0013, 2026-11-11; plan docs/plans/2026-11-11-guardrails-infra-a2.md § A2·1 as built)
-
-- Visits live in a **second Postgres** (`frata-analytics`), migrated from `drizzle-analytics/`
-  (`drizzle.analytics.config.ts`, `npm run db:generate:analytics`), schema in `src/lib/db/analytics-schema.ts`.
-  The same locks: `frata_app` with RLS, `withAnalyticsTenant` (`src/lib/db/analytics.ts`), the
-  tenant from `requireMember` or the host. `check:tenant` § 8 and `scripts/verify/analytics-tenancy.sql` hold it.
-- Never open it inside a main-database transaction or await it from one; it may be down, and Console › Analytics then says "Visits unavailable". A rate of orders per visit divides
-  only over a window visits fully cover (`coverage` in `src/domains/analytics/traffic.ts`).
-- Raw events are written only through `ingest_events()` and read only by the fold. Partitions live in `ev`, which
-  has no grant; a new grant there is a bug. Rollups keep raw source inputs, classified on read (§ Attribution).
-- Role settings there use `alter role … in database` (a throwaway server shares its roles with the main database).
-- **The visit beacon** is `src/beacon/fe.ts`, built into `public/fe.js` (`npm run build:beacon`; `check:beacon` fails a
-  stale file, the 1.7 kB ceiling, a cost field, `href`/`hash`/cookies or a DOM write). It is not a React island: no shop
-  page's script grows. Its rules shared with the server are in `src/domains/analytics/beacon-rules.ts`, never copied.
-  Its ingest `/api/shop/e` (`src/lib/analytics/ingest.ts`) is off until `ANALYTICS_INGEST_ON`. It runs the header
-  checks before the cached shop lookup, stores paths only as the shop's own shapes, and drops personal-looking tags. A
-  page tells the beacon what happened with a server-drawn `<i hidden data-fe=…>` marker, never with component code.
-- Its migrations never go to the main project. Both databases are named `postgres`, and 0000 refuses to run there.
-  They reach the analytics project only as the paste from `scripts/ops/analytics-paste.mjs` (docs/setup.md
-  § Analytics database), never through the main account's Supabase tools.
-- Grant each object by name, with the exact privilege. TRUNCATE ignores RLS. No default-privilege grants, no
-  `alter policy` (drop and create), and nothing ever disables RLS. `check:tenant` § 8 fails each.
-
 ## Auth
 
 - Supabase auth only (an email code, and a link that opens `/auth/confirm`, which signs in only when the person presses
@@ -144,6 +123,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
   layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
   its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
+  A door that asks several checks in one call wraps them in `oncePerCall` (`session.ts`, an AsyncLocalStorage memo of
+  `signedInUser`, `sessionIdOf` and `accessOf` for that call only): `requireStudio` does, so a poll asks once, not three
+  times (2026-11-23).
 - **Staff passkeys** (ADR-0007 amended 2026-11-12; `docs/specs/2026-11-12-staff-passkeys.md`): staff access and every
   support visit need a live passkey step-up on this browser session. `app_access_for(user, session, stepup hash)`
   answers `staffConfirmedAt` and drops support visits without one, in the query every signed-in request already runs.
@@ -152,6 +134,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
   The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
   `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Passkeys off** (owner 2026-11-23, drizzle/0171): a master admin turns passkeys off for everyone on Admin › Staff
+  (`app_admin_passkeys_set`, their own passkey in the last 5 minutes; on needs none). While `app_passkeys_off()`, every
+  definer that follows `app_partner_need` or a staff step-up counts this sign-in as checked; passkey lists, adds and
+  removals keep the real check, so their screens say "Passkeys are off". Read the state through `passkeys()` (`session.ts`).
 - **Partner passkeys** (T1b, 2026-11-15; `docs/specs/2026-11-15-partner-login.md`, drizzle/0128–0129): the same design
   for partner people. `app_access_for(user, session, staff hash, partner hash)` counts a `members` row with a
   `partner_member_id` only with a live partner step-up (answers `partnerConfirmedAt` and `partnerHeld`). `requirePartner`
@@ -236,10 +222,11 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   new owner's verified email for the shop's trial or ends it (one trial per business). A partner shop's trial starts at
   creation and it cannot be published until it has an owner (trigger in 0066). A partner's cap counts its
   shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
-- **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0164, proof § 89): ten
-  platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
+- **Studio credits** (C1, 2026-11-22; plan `docs/plans/2026-11-22-c1-credits.md`, drizzle/0163–0165 and 0168–0169, proof
+  § 89): eleven platform-scope tables (`partner_billing`, `partner_seats`, `partner_credit_purchases`, `partner_invoices`,
   `partner_credit_uses`, `partner_credit_entries`, `partner_client_budgets`, `partner_credit_notices`, `partner_credit_tries`,
-  `fx_rates`) that NO Frrata role reads (P2's pattern; `check:tenant` names them). The ledger is `partner_credit_entries`,
+  `fx_rates`, `partner_mandate_cancels`) that NO Frrata role reads (P2's pattern; `check:tenant` names them; the one carve-out is
+  `admin_fx_rate_latest()`, a definer that gives `frata_admin` the latest rate row for Admin › Costs, drizzle/0172). The ledger is `partner_credit_entries`,
   append-only lots and draws; a balance is a sum, never stored. Rows that point at each other carry the partner in a
   composite foreign key on `(partner_id, id)` (`partner_links` and `partner_members` gained that key), and those keys are
   RESTRICT: a tenant or partner person with Studio uses can't be deleted until an erase flow decides what happens to them.
@@ -251,7 +238,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   free 20 are granted by a trigger on `partners` (approval is a plain update). The SQL restates the pure rules in
   `src/domains/studio/credits.ts`; `sql-drift.test.ts` pins the numbers. Their background work runs hourly in `/api/cron/credits`
   (`src/lib/studio/run.ts`): stragglers, seat renewals and their notices, renewal orders, refunds, mandate cancels and the
-  partner's emails, never in the daily outbox job. ONE billing inbox serves both families (drizzle/0165):
+  partner's emails, never in the daily outbox job. A mandate no longer used goes on `partner_mandate_cancels` (a queue,
+  never one overwritten slot) and the run cancels it with retries. Studio → Studio Plus starts at once (C1·B, 0169):
+  a start buys only with a token, and never on a day the old seat's renewal is also taken (the claim waits for an open
+  start; a start captured after a renewal was claimed is refunded). ONE billing inbox serves both families (drizzle/0165):
   `/api/webhooks/billing` and `app_apply_billing_event` route a partner's payment by OUR stored order id, a token event to
   both merchant and partner mandates, and a refund Frrata didn't make or a dispute to a clawback (what was spent becomes a
   debt, `app_pc_debt`, paid from bought credits). A change to the merchant billing webhook is a change to partner credits:
@@ -278,7 +268,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `accessFor` puts its stores in `builds`, so `requireMember`/`asMember` can never carry one and every tuple refuses it
   in words (`BUILDER_REFUSED`, drawn once by `Panel`). A Builder enters only through `requireCapability(cap)` in the
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
-  read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
+  read (Studio's `asTurn` is the one other maker: a partner person's tool reads as frata_builder, § Studio's agent); `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
   column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0155), the live
   `brand_tokens` columns and `shop_settings.logo_url`, and, for Brand › Checkout's preview (one-address P2, drizzle/0161), the live
   `checkout_design` columns and `shop_settings`' seven public delivery, returns and Pay on delivery facts, and nothing else, with
@@ -299,7 +289,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   script on the console origin (the Meta SDK, the look preview) into a stolen
   staff session (`sessionCookieOptions`, src/lib/security-headers.ts). Signed-in console pages
   carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
-  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security).
+  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security). Framed only by the
+  console itself (SAMEORIGIN, `frame-ancestors 'self'`, on the console host; DENY elsewhere): `/console/theme-preview/*`
+  and, for Studio's preview pane, `/console/studio-preview[/*]`: the store alone, `requireStudio`'s store only, in an iframe sandboxed to `allow-same-origin` (owner 2026-11-23; `/console/preview` is DENY like every console page; `src/lib/__tests__/framing.test.ts`).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does; `requireShop` also weighs `Sec-Fetch-Site` (`src/lib/auth/fetch-site.ts`: sibling stores
@@ -468,28 +460,32 @@ console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are 
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
 
-## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a)
+## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a, docs/plans/2026-11-22-v3a-runtime.md)
 
 - **The loop runs outside the sandbox, code inside it, anything that touches Frrata on Frrata's server.** The runtime is
-  Managed Agents behind one adapter (runtime.ts under src/lib/studio, V3a·4): start, send, interrupt, stop, budget,
-  usage. Nothing else calls Anthropic for a session.
-- **Every custom tool runs through `asTurn(turn, cap, work)`**, the second Actor maker beside `require-capability.ts`.
-  The turn is Frrata's own open-turn row (one a session), never an id from a webhook or a tool's input. The person is
-  re-checked by `app_turn_actor` in its own short transaction, which closes; reads then run outside any transaction as
-  `frata_builder`, whatever the role; a write takes its `*In(tx)` form in its own `withTenant`. Every id in a tool's
-  input is matched with `where tenant_id = turn.tenant`.
-- **Tools call the console's own saves**, never a second writer: the agent's content, brand words, tokens and logos are
-  proposals a person applies; Apply runs that save as the person. No tool publishes, hands over, opens a store, touches
-  a domain or a key, or reads orders, shoppers, costs or members. A Builder's turn proposes nothing.
-- **`app.partner_id`** is a third setting beside `app.tenant_id` and `app.member_role`, set only by `requireMember` /
-  `requireCapability`; every `studio_*` table has a restrictive policy on tenant and partner and composite foreign keys
-  to its session. Credits and costs live in partner-scope definer-only tables, never a tenant row.
-- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, sent as a header
-  (ADR-0018's build-key amendment), looked up uncached.
-- Anthropic's webhooks are stored in `webhook_events` (`anthropic:<session>:<event>`) and each tool runs in that webhook's
-  `after()`, once per tool-use id, with a per-minute Studio cron as the net; never the shared outbox drain.
-- **`check:studio`** (V3a·10, to be written) holds the shape: executors through `asTurn`, never `db()`; no cached loader
-  inside a transaction; the agent file pins its model, web tools off, hosts equal to the policy.
+  Managed Agents behind one adapter (`src/lib/studio/runtime.ts`, `runtime-managed.ts`; the client only in `client.ts`,
+  `check:config`): vaults, files, start (always with a budget), budget, send, answer, interrupt, events, usage, archive,
+  remove. Nothing else calls Anthropic for a session. Tests use `e2e/fakes/anthropic.mjs`, never the live API.
+- **A person enters through `requireStudio()`** (`with-studio.ts`): `STUDIO_OPEN=staff`, Frrata staff with a live staff
+  check who is also a live partner person with their check, both on one browser session, on the switcher's store where
+  they are the partner (never a support visit). `withStudio` then asks the database to bind them.
+- **The partner is a database-held bind, never a setting:** `app_current_partner()` answers only for a `studio_binds` row
+  of THIS transaction whose token is in `app.studio_bind`, written only by `app_studio_partner` (withStudio) or
+  `app_studio_bind_turn` (asTurn, the advance). The bind proves a person (user, membership, the two step-up rows).
+  Every `studio_*` shop table has a restrictive `partner_only` policy on tenant and bound partner and composite foreign
+  keys to its session; spend, turn keys and binds are platform-scope, definer-only tables (drizzle/0167, proof § 91).
+- **Every custom tool runs through `asTurn(turn, work)`** (`as-turn.ts`), the second Actor maker beside
+  `require-capability.ts` (`check:capabilities`). The turn is Frrata's own open-turn row, from the cron's ids-only work
+  list or the person's own session, never an id from a request, an event or a tool's input (`check:studio` pins who
+  imports the advance and asTurn). The person is re-checked by `app_turn_actor` in its own short transaction, which
+  closes; reads then run outside any transaction as `frata_builder` through `ctx.reads` (`src/lib/queries/builder.ts`,
+  one connection per advance: `withBuilderScope`); a write is `ctx.write((tx, partnerId) => …)`, a store transaction the
+  database bound again. The person gone at either point answers `actor`.
+- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, a header credential for
+  `api.frrata.shop` only (ADR-0018's build-key amendment), looked up uncached; never reflected in an answer.
+- **`check:studio`** holds the shape: the agent file against the policy, the definers' callers, tool imports, the doors
+  (who may import the advance, asTurn, sessions.ts and cron.ts), no runtime call or cached loader inside a transaction,
+  no id-shaped tool input.
 
 ## Reference files — open the one for the work in hand
 
@@ -498,7 +494,9 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 
 | Open | When | Sections |
 |---|---|---|
-| [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials |
+| [reference/money-and-gst.md](reference/money-and-gst.md) | anything that stores, computes or moves money (paise, profit, fees, refunds), GST, Razorpay keys, trials | Money, GST, Razorpay keys that stop working, Trials, Admin › Costs |
 | [reference/catalogue-and-content.md](reference/catalogue-and-content.md) | products (writing, importing, links), what a store sells (category packs), a store's content, search and sharing, photos, delivery zones, attribution, EkCode | A store's content, Category packs, Writing products, Importing products, Catalogue links, Search and sharing, Photos, Delivery, Attribution, EkCode |
 | [reference/modules-themes-sites.md](reference/modules-themes-sites.md) | a module (apps), a theme (retiring, ADR-0014), or the kit and fleet rules for shop websites as code | Modules, Themes, Shop websites as code |
 | [reference/speed.md](reference/speed.md) | a page, query, cache or background job: the budgets, what holds each, and the findings P1–P15 | Speed |
+| [reference/studio.md](reference/studio.md) | Studio's agent: tools and Apply, the advance, the screen, Send, Stop and the cron as built (V3a) | Tools and Apply, The advance, The screen, Send and the cron |
+| [reference/analytics-database.md](reference/analytics-database.md) | visits, the analytics database, its migrations or the visit beacon | The analytics database |

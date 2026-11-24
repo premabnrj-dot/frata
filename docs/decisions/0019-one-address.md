@@ -16,7 +16,8 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
   on Frrata's host. Amendment 7 put code sites on their own registrable domain to keep them away from checkout's origin.
 
 ## Decision
-1. **One address per store:** the brand's domain, or `<store>.frrata.shop`. `frrata.com` is never a store or site host.
+1. **One address per store:** the brand's domain, or `<store>.frrata.online` (amended 2026-11-24, § Amendment; was
+   `<store>.frrata.shop`). Frrata's public site is `frrata.shop`, and neither it nor `frrata.com` is a store or site host.
    No sites domain is bought; one separate preview domain is (point 8).
 2. **Frrata at the door.** Frrata's app holds the store's host. Reserved paths (one list, `src/domains/tenancy/reserved.ts`:
    `^/(cart|checkout|orders|account|policies|api|_next|_frrata|_vercel|\.well-known|og|icon|email|s|secure)(/|$)` and
@@ -40,8 +41,9 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
    change on an open store by anyone but the owner or a Manager waits for the owner's yes.
 7. **ADR-0018:** a public key answers for a store whose predicate is `one_address` as it does for a proved Website today;
    `siteOrigin` and `checkoutOrigin` then hold the same origin. Test keys before a domain are unchanged.
-8. **Previews** live on one separate registrable domain where Frrata's app serves nothing (no fourth tenant source).
-9. **`frrata.shop` goes to the Public Suffix List.** No security property depends on the listing: `__Host-` cookies only,
+8. **Previews** live on one separate registrable domain where Frrata's app serves nothing (no fourth tenant source):
+   **`frratapreview.online`** (owner, 2026-11-24; § Amendment).
+9. **`frrata.online` goes to the Public Suffix List** (was `frrata.shop`; § Amendment). No security property depends on the listing: `__Host-` cookies only,
    no `Domain` cookie, and fetch metadata on every personal or state-changing route hold before it.
 
 ## Consequences
@@ -50,7 +52,7 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
   each.
 - A site page costs Frrata one more edge request and its document's bytes again, plus every RSC navigation and prefetch,
   on the `frata` team's bill: about ₹0.21 per 1,000 views on Vercel's Flat Rate CDN, ₹1.26–4.57 metered (₹103.40 a
-  dollar). The router counts in ADR-0017 rule 11's kill line; hosting is priced only on measured numbers (the billing read
+  dollar: ₹94 × 1.10, `frata-unit-economics` § The dollar rate). The router counts in ADR-0017 rule 11's kill line; hosting is priced only on measured numbers (the billing read
   and the pilot's request counts first). One address is parity with Shopify, not a gain; its gain is the checkout lift it
   must earn (H-1).
 - EkCode's shop session moves to the secure host; current shoppers sign in once more.
@@ -58,3 +60,21 @@ test-key amendment · Studio's runtime record, drafted as ADR-0019, becomes ADR-
 
 ## Owner decisions
 The spec's § Owner decisions, 1–25.
+
+## Amendment (owner, 2026-11-24: the three domains; plan `docs/plans/2026-11-24-domains.md`)
+The history above is left as written; this section and the marked points 1, 8 and 9 are the rule from today.
+**First statement, SUPERSEDED the same day by the second below (kept as history):** "We need to replace frrata.shop with
+frrata.store (I can renew this for 3 years)" and "preview domain can be: frratapreview.store (can buy for 3 years)": stores
+on `frrata.store`, previews on `frratapreview.store`.
+**Second statement, the rule (owner, 2026-11-24, verbatim): "one change. - It would be actually frrata.online for merchant
+subdomains, and frratapreview.online for the testing. Please note."**
+- **The store domain is `frrata.online`.** A store's Frrata address is `<store>.frrata.online`; the Storefront API host is
+  `api.frrata.online` (ADR-0018 amendment); the secure host is `secure.<store>.frrata.online`. It is the Public Suffix
+  List candidate (point 9).
+- **The preview domain is `frratapreview.online`** (O6): the separate registrable preview domain of point 8; Frrata's app
+  serves nothing on it.
+- **Frrata's public site is `frrata.shop`** (owner, 2026-11-24: "public domain can be frrata.shop", unchanged by the second
+  statement). This reverses the context line above ("frrata.com will be the public domain. .shop will remain the
+  subdomain"): `.shop` is no longer a store domain, and `frrata.com` is not named as public. `frrata.shop` is therefore no
+  longer the Public Suffix List candidate.
+- Not decided: whether `frrata.com` is kept, redirected or dropped (the domains plan lists it as an open question).

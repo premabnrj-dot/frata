@@ -19,6 +19,12 @@ import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
 export type DialogSpec = {
   /** The More item's or the button's words: "End trial…". */
   label: string
+  /** The button's words on a phone, when shorter ("Add" for "Add cost"). */
+  short?: string
+  /** An icon drawn before the label on the button (not in a More item). */
+  icon?: ReactNode
+  /** A small button (30 px; 44 on a phone) for a row or a band. */
+  size?: 'sm'
   /** The dialog's question: "End Noor Threads' trial?". */
   title: string
   /** What happens, one or two short sentences. */
@@ -34,13 +40,16 @@ export type DialogSpec = {
   confirm?: boolean
 }
 
-/** The spec's action, with the passkey step when the server asks for it. */
-const withConfirm = (spec: DialogSpec) => !spec.confirm ? spec.action : async (form: FormData): Promise<ActionResult> => {
-  const r = await spec.action(form)
+/** The action first; the passkey only when the server asks for a fresh one (never while passkeys are off for everyone,
+ *  Admin › Staff, drizzle/0171), then the same form again; nothing typed is lost. */
+export const confirmWhenAsked = (action: (form: FormData) => Promise<ActionResult>) => async (form: FormData): Promise<ActionResult> => {
+  const r = await action(form)
   if (!r || !('error' in r) || r.error !== STAFF_CONFIRM_FIRST) return r
   const c = await confirmPasskey()
-  return c.ok ? spec.action(form) : { error: c.error }
+  return c.ok ? action(form) : { error: c.error }
 }
+/** The spec's action, with the passkey step when the server asks for it. */
+const withConfirm = (spec: DialogSpec) => (spec.confirm ? confirmWhenAsked(spec.action) : spec.action)
 
 function Body({ spec, onClose, onError, error }: { spec: DialogSpec; onClose: () => void; onError: (m: string | null) => void; error: string | null }) {
   return (
@@ -62,7 +71,7 @@ export function DialogButton({ spec, variant = 'secondary' }: { spec: DialogSpec
   const close = () => { setOpen(false); setError(null) }
   return (
     <>
-      <Button type="button" variant={variant} onClick={() => setOpen(true)}>{spec.label.replace(/…$/, '')}</Button>
+      <Button type="button" variant={variant} {...(spec.size ? { size: spec.size } : {})} onClick={() => setOpen(true)}>{spec.icon}{spec.short ? <><span className="max-md:hidden">{spec.label.replace(/…$/, '')}</span><span className="md:hidden">{spec.short}</span></> : spec.label.replace(/…$/, '')}</Button>
       <Dialog open={open} onClose={close} title={spec.title} description={spec.description} actions={null}>
         {open ? <Body spec={spec} onClose={close} onError={setError} error={error} /> : null}
       </Dialog>

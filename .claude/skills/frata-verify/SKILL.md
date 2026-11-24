@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.12.0
+  version: 1.13.1
   owner: owner
   verified: 2026-11-23
   covers: ["scripts/verify/**", "e2e/run.mjs", "e2e/stack.mjs", "scripts/check-mockup.mjs"]
@@ -18,6 +18,7 @@ metadata:
 npm test            # npm run gates (the list: npm run gates:list), then vitest
 npm run typecheck
 npm run build       # postbuild: check:client-bundle, check:storefront-build (shop and Console JS budgets), check:pdf-trace
+npm run weight -- /console/brand   # after a build: what one page loads first, heaviest first, which components bring each file
 ```
 
 A gate you added: plant a violation and watch it fail before trusting it. Before every `git commit` the pre-bash hook
@@ -56,6 +57,24 @@ no tenant → no rows; A sees only A; (13 checks, incl. support visits, invites,
 cannot write into B (orders, outbox); host and membership lookups; API roles
 denied; `frata_app` has no BYPASSRLS. Changed a policy? Also break it on purpose
 (e.g. disable RLS on a table) and confirm the proof fails.
+
+## Studio's agent — never the live API (V3a, 2026-11-23)
+
+Every test of Studio's runtime runs against the fake Managed Agents server `e2e/fakes/anthropic.mjs` (vaults, files,
+budgets with the pause and the settle-only rule, cursor-listed events, one idle a round; the person's words script the
+agent: "accent", "logo", "facts", "preview", "two", "expensive"). Unit tests start it in-process; the e2e stack runs it on
+loopback (`PORTS.anthropic`) and sets the Studio settings for `next start`; a flow fails its next call of a path with
+`POST /_test/fail`. Its clock follows real time: a turn adopts only a message created no earlier than it was sent.
+
+```bash
+# the throwaway Postgres above, its role passwords set (alter role frata_app/frata_admin/frata_builder password 'x')
+INT_DB_HOST=localhost:54330 ADMIN_URL=postgres://postgres@localhost:54330/frata_proof npx vitest run src/lib/studio   # or 54340, the e2e stack's cluster
+npm run e2e -- --only studio-agent,studio     # the live screen on the fake, and the workbench fixture
+```
+The int tests share one database: `runStudioCron(…, onlyStore)` keeps a file's cron to its own store, and each file ends
+its store's sessions after (the open-session cap is platform-wide). Run them on a **fresh** database: a reused one keeps ended
+sessions of earlier runs whose fake is gone, their clean-up fails every minute and fills the cron's 20 a kind, so this
+run's sessions are never cleaned (the plan's residual, seen in a test). Live runs happen only in `frata-studio-eval`.
 
 ## Live proof on Supabase (nothing kept)
 
@@ -149,7 +168,8 @@ stock taken once), a price change mid-checkout, a double submit. Then
 
 ## Header and cookie proof — before claiming a security fix
 
-- `curl -sI` a console page, a shop page and `/console/theme-preview/*`. Read the
+- `curl -sI` a console page, a shop page, `/console/theme-preview/*` and `/console/preview` (both SAMEORIGIN on the
+  console host only). Read the
   CSP, X-Frame-Options and the `Set-Cookie` flags (HttpOnly, Secure, SameSite,
   Max-Age).
 - Send a POST from another Origin to each changed route: expect 403.

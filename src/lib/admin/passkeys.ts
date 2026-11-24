@@ -114,3 +114,11 @@ export type StaffRow = { userId: string; email: string; role: 'admin' | 'support
 export async function staffWithPasskeys(staff: StaffOk, proof: Proof): Promise<StaffRow[]> {
   return one<StaffRow[]>(sql`select app_staff_list(${staff.userId}::uuid, ${proof.sessionId}::uuid, ${proof.hash}) as r`)
 }
+
+/** Admin › Staff's switch (drizzle/0171 app_admin_passkeys_set): an Admin turns passkeys off for everyone, with their own
+ *  passkey in the last 5 minutes (`proof`, this session's step-up), or on (no check). Off has no end date. */
+export async function setPasskeysOff(staff: StaffOk, proof: Proof | null, off: boolean): Promise<Result<boolean>> {
+  const w = who(staff)
+  if (!w) return { ok: false, error: 'Sign in again.' }
+  return run('passkeys switch', () => one<boolean>(sql`select app_admin_passkeys_set(${w.userId}::uuid, ${w.sessionId}::uuid, ${stepupOf(w, proof)}, ${off}) as r`))
+}
